@@ -155,12 +155,9 @@ components:
 
 ## Voice & Tone
 
-- **Button labels**: verb-object pairs. "Get Started", "Request Indexing", "View Code", "View on GitHub". Never "OK", "Submit", "Click here".
-- **Headlines**: state outcome, not feature. "Get your pages indexed in 48 hours" beats "Powerful indexing API integration".
-- **Body copy**: technical but friendly. Address the reader directly ("your pages", "your data"). Avoid corporate hedging ("solutions that empower teams").
-- **Empty states**: acknowledge → explain value → provide action. Existing example: "Search Console keeps data for the last 16 months" → quote → CTA to retain forever.
-- **Error messages**: 3-part. What broke, why it matters, how to fix. Never blame the user.
-- **No emoji** in production copy. Internal status badges may use status pip dots, not emoji.
+[`COPY.md`](COPY.md) owns every user-facing string: the canonical assets, the register per
+context, the truth rules with their standing evidence, and the banned language. Read it before
+writing a label, heading, empty state or error.
 
 ## Avoid
 
