@@ -602,7 +602,7 @@ export const feedback = sqliteTable('feedback', {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// V1 net-new tables (per V1.md line 99–120)
+// V1 net-new tables. The boundary that decides what lives here: docs/arch/README.md
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Cloudflare Queue mirror of submitted URLs. Distinct from generic `jobs`.

@@ -1,7 +1,12 @@
 # Glossary
 
-Draft recovered vocabulary for this article refresh. Existing public and protocol names are preserved.
-No prior glossary was found. This file does not rename product concepts or certify product capabilities.
+Canonical vocabulary for Request Indexing. Every user-visible string, public API name, doc
+heading, and route segment uses these terms and no synonyms.
+
+Engine terms belong to gscdump. `@gscdump/contracts` and the gscdump glossary win for protocol
+types, operation names, and source status values; this file never renames one. What it owns is
+the vocabulary of this app: accounts, teams, the site list, the dashboard, and the Google
+Indexing API submissions this app still runs itself.
 
 ## Map
 
@@ -19,6 +24,9 @@ No prior glossary was found. This file does not rename product concepts or certi
 | onboarding | onboarding wizard, users.onboarding_completed_at | First-run setup an account completes once | setup |
 | connect | Connect site controls, registerSite | Attaching a Site to a Team | connect |
 | funnel milestone | pro_events table | First-time record of one step toward an active account | (internal) |
+| Submission | indexing_jobs table | Site 1—N Submission, unique on (site, path, transport) | "Submit" |
+| Investigation | indexing_investigations table | Site 1—N Investigation, unique on (site, url, issue) | (not surfaced as a noun) |
+| Quota | usages table | Site 1—N daily counter, unique on (site, date, key) | "limit" |
 
 Collisions: the product's submission history and Google's indexing state are different evidence. Never imply one proves the other.
 
@@ -72,6 +80,36 @@ Collisions: the product's submission history and Google's indexing state are dif
 **Never:** conversion event or activation event as synonyms. This term is internal and has no customer word.
 **Casing:** lowercase in prose; stored values stay snake_case.
 
+### Submission
+
+**Is:** one Indexing API notification this app sent for one URL, and its outcome. Table `indexing_jobs`, keyed on `(site, path, transport)`.
+
+**Use for:** the act and the record. The control that starts it says **Submit**.
+
+**Never:** request, push, ping, or index (as a verb). A Submission is a notification Google accepted, never evidence that a page is indexed. The Banned table below holds that line.
+
+**Casing:** `Submission` in prose, `submit` on a control, `indexing_jobs` in identifiers.
+
+### Investigation
+
+**Is:** a user's own status and note against one indexing issue on one URL. Table `indexing_investigations`. Statuses are `investigated`, `monitoring`, `false_positive`, `wont_fix`, `fixed`.
+
+**Use for:** the tracker only. It records what a person decided, never what Google observed.
+
+**Never:** inspection. A live inspection is gscdump's `inspect.create` operation and a different thing entirely. Also never audit, review, or triage.
+
+**Casing:** `Investigation` in prose, `indexing_investigations` in identifiers.
+
+### Quota
+
+**Is:** the counter for a metered action against a Site on a date. Table `usages`, keyed on `(site, date, key)`.
+
+**Use for:** the daily Indexing API ceiling and any other per-Site counter.
+
+**Never:** credit, allowance, limit (bare), usage (as the customer word for the ceiling).
+
+**Casing:** `Quota` in prose, `usages` in identifiers.
+
 ## Banned
 
 | Never | Use instead | Why |
@@ -83,6 +121,10 @@ These restrictions apply to prose meanings, not stored enum values or existing r
 
 ## Open questions
 
-No naming redesign is proposed. This is a bounded article glossary, not an exhaustive app audit.
-The existing UI uses submission labels; keep exact labels in procedures and distinguish them from Google's index state in explanations.
-Root coordinator accepted this bounded article vocabulary on 15 September 2026 before drafting. No app-wide audit is claimed.
+Naming calls this file does not settle. Add one here, resolve it, fold the answer into the
+entry above, then delete it from this list.
+
+1. This file grew from a bounded article vocabulary accepted on 2026-09-15. It now covers the
+   app's own nouns, but it has never been audited against every route segment and UI label.
+   The Site, Team, and Connect entries say "match the visible product label", which is a
+   deferral, not a decision. Settle each one against the shipped label.

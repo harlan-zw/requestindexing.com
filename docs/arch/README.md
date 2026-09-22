@@ -1,6 +1,9 @@
-> Implementation notes for [VISION.md](./VISION.md). A small Search Console and indexing app on top of the hosted gscdump engine.
+# Architecture
 
-## Architecture
+A small Search Console and indexing app on top of the hosted gscdump engine. The product
+filter it implements is [`VISION.md`](../../VISION.md).
+
+## Shape
 
 ```
         ┌──────────────────────────────────────────┐
