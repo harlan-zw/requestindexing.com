@@ -7,7 +7,7 @@ It is product surface over the hosted gscdump engine. Almost nothing here is a d
 
 - [`VISION.md`](VISION.md) — the product filter. It exists to reject ideas. Read before any non-trivial feature work.
 - [`DESIGN.md`](DESIGN.md) — the visual filter. Read before UI work.
-- [`GLOSSARY.md`](GLOSSARY.md) — every product concept. Read before a user-visible string, a public name, a route segment, or a doc heading.
+- [`GLOSSARY.md`](GLOSSARY.md) — every product concept this app owns. Read before a user-visible string, a public name, a route segment, or a doc heading. Engine terms are gscdump's; that glossary wins for protocol types and source status values.
 - [`docs/arch/README.md`](docs/arch/README.md) — the gscdump boundary, the local tables, the four integration seams.
 - [`docs/work/`](docs/work/README.md) — open briefs, one `EXECUTE-*.md` per initiative. `ls docs/work/` shows everything unfinished. The contract is in its README.
 - `docs/audits/` — dated audit records. Method and findings as they stood on the date.
