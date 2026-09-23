@@ -17,7 +17,7 @@ keywords:
 
 The Google Indexing API's default publish quota is **200 requests per day per Google Cloud project**, shared across the websites using that project. Google describes this default as an onboarding and testing allowance, with additional approval required for usage and resource provisioning. [Check Google's current quota documentation](https://developers.google.com/search/apis/indexing-api/v3/quota-pricing).
 
-These limits apply to the Indexing API. They do not describe Search Console's manual request-indexing allowance or a third-party tool's plan.
+These limits apply to the Indexing API. They do not describe Search Console's manual request-indexing allowance or a third-party tool's plan. The URL Inspection API, which reads index status, has [its own allowance, per property and per project](https://gscdump.com/learn-google-search-console/api/rate-limits#url-inspection-has-a-different-allowance).
 
 ## The default project limits
 
