@@ -246,7 +246,9 @@ const marketingTools = [
               History beyond 16 months
             </h3>
             <p class="text-toned text-sm leading-relaxed">
-              Google wipes your Search Console data every 16 months. We keep it as long as you need, searchable and exportable.
+              Search Console only shows the last <NuxtLink to="https://gscdump.com/learn-google-search-console/limits/16-month-data-retention" target="_blank" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+                16 months
+              </NuxtLink>, and older days age out every day. We keep it as long as you need, searchable and exportable.
             </p>
           </div>
 

@@ -86,7 +86,7 @@ console.log(data)
 
 This is an additional snippet, not a second standalone file. Metadata describes the last notification Google received for that URL. It does not establish index status. [Google's usage guide](https://developers.google.com/search/apis/indexing-api/v3/using-api) documents the distinction.
 
-For index information, use the separate [URL Inspection API](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect) and its Search Console authorization scope. Adding a metadata call to this script does not turn it into an indexing checker.
+For index information, use the separate [URL Inspection API](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect) and its [Search Console authorization scope](https://gscdump.com/learn-google-search-console/api/authentication). Adding a metadata call to this script does not turn it into an indexing checker.
 
 ## When you have several URLs
 

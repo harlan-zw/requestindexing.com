@@ -93,6 +93,11 @@ const links = [
         target: '_blank',
       },
       {
+        label: 'Built on gscdump',
+        to: 'https://gscdump.com',
+        target: '_blank',
+      },
+      {
         label: 'Built with Nuxt UI Pro',
         to: 'https://ui.nuxt.com/pro?aff=5zj9e',
         target: '_blank',
