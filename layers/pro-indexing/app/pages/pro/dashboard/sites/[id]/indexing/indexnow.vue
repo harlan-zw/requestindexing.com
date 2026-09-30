@@ -98,6 +98,7 @@ async function saveKey() {
   const siteId = engineId.value
   if (!siteId || !canWrite.value || busy.value || !key.value.trim())
     return
+  const draft = { key: key.value, keyLocation: keyLocation.value }
   const parsed = indexNowConfigureV1Schema.safeParse({ key: key.value.trim(), ...(keyLocation.value.trim() ? { keyLocation: keyLocation.value.trim() } : {}) })
   if (!parsed.success) {
     action.value = { _tag: 'error', message: parsed.error.issues.some(issue => issue.path[0] === 'key')
@@ -117,8 +118,10 @@ async function saveKey() {
     return
   }
   connection.data.value = result.data
-  key.value = ''
-  keyLocation.value = result.data._tag === 'disconnected' ? '' : result.data.keyLocation
+  if (key.value === draft.key && keyLocation.value === draft.keyLocation) {
+    key.value = ''
+    keyLocation.value = result.data._tag === 'disconnected' ? '' : result.data.keyLocation
+  }
   action.value = { _tag: 'message', message: 'Key saved. Publish the key file, then verify it.' }
 }
 
@@ -146,6 +149,7 @@ async function submitUrls() {
   const siteId = engineId.value
   if (!siteId || !canWrite.value || busy.value || !canSubmit.value)
     return
+  const draft = urlInput.value
   const fingerprint = JSON.stringify(urls.value)
   if (batch?.fingerprint !== fingerprint)
     batch = { fingerprint, idempotencyKey: nanoid() }
@@ -165,10 +169,15 @@ async function submitUrls() {
     return
   }
   action.value = { _tag: 'message', message: `Submission recorded: ${receiptLabels[result.data.submissionReceipt._tag]}.` }
-  urlInput.value = ''
+  if (urlInput.value === draft)
+    urlInput.value = ''
   batch = undefined
   receiptOffset.value = 0
-  await receipts.refresh()
+  await refreshIndexNow()
+}
+
+async function refreshIndexNow() {
+  await Promise.all([connection.refresh(), receipts.refresh()])
 }
 
 watch(engineId, () => {
@@ -276,7 +285,7 @@ function formatDate(value: string) {
         <p class="mb-4 text-base text-muted">
           A receipt records the notification outcome. Search engines decide whether to index each URL.
         </p>
-        <UiButton purpose="secondary" class="mb-4 min-h-11" :loading="mounted && receipts.status.value === 'pending'" @click="receipts.refresh()">
+        <UiButton purpose="secondary" class="mb-4 min-h-11" :loading="mounted && (connection.status.value === 'pending' || receipts.status.value === 'pending')" @click="refreshIndexNow()">
           Refresh receipts
         </UiButton>
         <p v-if="receipts.error.value" class="text-base text-error">

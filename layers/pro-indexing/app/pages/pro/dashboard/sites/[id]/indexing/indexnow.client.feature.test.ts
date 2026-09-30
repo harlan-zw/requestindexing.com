@@ -7,6 +7,7 @@ const fixture = vi.hoisted(() => ({
   verify: vi.fn(),
   submit: vi.fn(),
   refresh: vi.fn(),
+  refreshConnection: vi.fn(),
   connected: { _tag: 'connected', host: 'example.com', keyLocation: 'https://example.com/abc12345.txt', verifiedAt: '2026-09-30T00:00:00.000Z' },
 }))
 const connectionData = ref<Record<string, unknown>>(fixture.connected)
@@ -22,7 +23,7 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscdump/_internal', () => ({
     data: key().includes('connection') ? connectionData : receiptData,
     status: readStatus,
     error: key().includes('connection') ? connectionError : receiptError,
-    refresh: fixture.refresh,
+    refresh: key().includes('connection') ? fixture.refreshConnection : fixture.refresh,
   }),
 }))
 
@@ -89,6 +90,7 @@ beforeEach(() => {
   connectionData.value = { ...fixture.connected }
   receiptData.value = { submissionReceipts: [], pagination: { hasMore: false } }
   fixture.refresh.mockResolvedValue(undefined)
+  fixture.refreshConnection.mockResolvedValue(undefined)
   fixture.configure.mockResolvedValue({ _tag: 'verification-required', host: 'example.com', keyLocation: 'https://example.com/newkey12.txt', reason: null })
   fixture.verify.mockResolvedValue(fixture.connected)
   fixture.submit.mockResolvedValue({ submissionReceipt: { _tag: 'queued' } })
@@ -120,6 +122,46 @@ describe('indexNow page', () => {
     expect(host.querySelector('input')!.value).toBe('')
     expect(host.textContent).toContain('https://example.com/newkey12.txt')
     expect(button(host, 'Submit URLs').disabled).toBe(true)
+  })
+
+  it.each(['success', 'rejected'])('keeps newer key and location drafts after a pending save is %s', async (outcome) => {
+    const pending = Promise.withResolvers<unknown>()
+    fixture.configure.mockReturnValueOnce(pending.promise)
+    const host = mount()
+    const [key, location] = [...host.querySelectorAll('input')]
+    await fill(key!, 'firstkey12')
+    await fill(location!, 'https://example.com/firstkey12.txt')
+    button(host, 'Save key').click()
+    await flush()
+    await fill(key!, 'newerdraft12')
+    await fill(location!, 'https://example.com/newerdraft12.txt')
+    if (outcome === 'success')
+      pending.resolve({ _tag: 'verification-required', host: 'example.com', keyLocation: 'https://example.com/firstkey12.txt', reason: null })
+    else
+      pending.reject(new Error('save unavailable'))
+    await flush()
+    expect(key!.value).toBe('newerdraft12')
+    expect(location!.value).toBe('https://example.com/newerdraft12.txt')
+    expect(button(host, 'Save key').disabled).toBe(false)
+  })
+
+  it.each(['success', 'rejected'])('keeps a newer URL draft after a pending submission is %s', async (outcome) => {
+    const pending = Promise.withResolvers<unknown>()
+    fixture.submit.mockReturnValueOnce(pending.promise)
+    const host = mount()
+    const input = host.querySelector('textarea')!
+    await fill(input, 'https://example.com/first')
+    button(host, 'Submit URLs').click()
+    await flush()
+    await fill(input, 'https://example.com/newer')
+    if (outcome === 'success')
+      pending.resolve({ submissionReceipt: { _tag: 'queued' } })
+    else
+      pending.reject(new Error('submit unavailable'))
+    await flush()
+    expect(input.value).toBe('https://example.com/newer')
+    expect(fixture.submit.mock.calls[0]![0].body.urls).toEqual(['https://example.com/first'])
+    expect(button(host, 'Submit URLs').disabled).toBe(false)
   })
 
   it('deduplicates URL lines and retains a batch key after a network failure', async () => {
@@ -171,7 +213,7 @@ describe('indexNow page', () => {
     const host = mount()
     expect(host.textContent).toContain('IndexNow setup could not load.')
     button(host, 'Retry loading').click()
-    expect(fixture.refresh).toHaveBeenCalledOnce()
+    expect(fixture.refreshConnection).toHaveBeenCalledOnce()
   })
 
   it('shows empty receipt guidance and allows receipt refresh', () => {
@@ -179,6 +221,21 @@ describe('indexNow page', () => {
     expect(host.textContent).toContain('No submission receipts yet')
     button(host, 'Refresh receipts').click()
     expect(fixture.refresh).toHaveBeenCalledOnce()
+  })
+
+  it('refreshes verification after a delivery rejects the key', async () => {
+    fixture.refreshConnection.mockImplementation(async () => {
+      connectionData.value = { _tag: 'verification-required', host: 'example.com', keyLocation: 'https://example.com/abc12345.txt', reason: 'invalid-key' }
+    })
+    const host = mount()
+    await fill(host.querySelector('textarea')!, 'https://example.com/new')
+    expect(button(host, 'Submit URLs').disabled).toBe(false)
+    button(host, 'Refresh receipts').click()
+    await flush()
+    expect(fixture.refresh).toHaveBeenCalledOnce()
+    expect(fixture.refreshConnection).toHaveBeenCalledOnce()
+    expect(button(host, 'Submit URLs').disabled).toBe(true)
+    expect(host.textContent).toContain('IndexNow rejected the key.')
   })
 
   it('keeps setup and submission disabled for a read-only Team role', async () => {
