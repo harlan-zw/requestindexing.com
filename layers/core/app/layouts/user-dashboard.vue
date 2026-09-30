@@ -94,7 +94,7 @@ const supportLinks: UiNavLink[] = [
     </template>
 
     <header class="sticky top-0 z-20 border-b border-default bg-default/85 backdrop-blur-sm">
-      <div class="dashboard-container flex min-h-16 items-center justify-between gap-4">
+      <div class="pro-container flex min-h-16 items-center justify-between gap-4">
         <h1 class="flex min-w-0 items-center gap-2 text-title text-highlighted">
           <UIcon v-if="pageIcon" :name="pageIcon" class="size-5 shrink-0 text-primary" aria-hidden="true" />
           <span class="truncate">{{ pageTitle }}</span>
@@ -105,7 +105,7 @@ const supportLinks: UiNavLink[] = [
       </div>
     </header>
 
-    <div class="dashboard-container grid gap-8 py-6 lg:grid-cols-[minmax(0,1fr)_16rem] lg:py-8">
+    <div class="pro-container grid gap-8 py-6 lg:grid-cols-[minmax(0,1fr)_16rem] lg:py-8">
       <div class="min-w-0">
         <slot />
       </div>
