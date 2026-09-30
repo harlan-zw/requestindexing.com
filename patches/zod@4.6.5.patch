@@ -1,0 +1,26 @@
+diff --git a/v4/core/regexes.js b/v4/core/regexes.js
+index e433775ab3fd5fba02d9648ba05182a3bfcd0792..c9c5918b0df696148880e0050230221629785251 100644
+--- a/v4/core/regexes.js
++++ b/v4/core/regexes.js
+@@ -72,7 +72,7 @@ export const currencyCode = /^(?:AED|AFN|ALL|AMD|AOA|ARS|AUD|AWG|AZN|BAM|BBD|BDT
+ export const iban = /^[A-Z]{2}(?!00|01|99)\d{2}[A-Z0-9]{11,30}$/;
+ const dateSource = `(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))`;
+ /** Anchors a pattern source. The interpolation lives here rather than at the call site because
+- * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
++ * esbuild will not drop a `PURE` call whose own argument interpolates a variable, but it
+  * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */
+ function anchor(source) {
+     return new RegExp(`^${source}$`);
+diff --git a/v4/core/util.js b/v4/core/util.js
+index 7a6e969b9d31455fc9a15f474a1d48dbafe36361..1d8cf2bcb909a9904b911a2667cfff5c8648e3d1 100644
+--- a/v4/core/util.js
++++ b/v4/core/util.js
+@@ -397,7 +397,7 @@ export function optionalKeys(shape) {
+         return shape[k]._zod.optin !== undefined && shape[k]._zod.optout === "optional";
+     });
+ }
+-// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle.
++// Wrapped in a `PURE` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle.
+ export const NUMBER_FORMAT_RANGES = /*@__PURE__*/ (() => ({
+     safeint: [Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+     int32: [-2147483648, 2147483647],

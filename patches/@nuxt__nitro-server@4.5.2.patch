@@ -1,0 +1,9 @@
+diff --git a/dist/h3.mjs b/dist/h3.mjs
+index b57f25a25a8b62a48adbb0d3d767e6bb3c509aaa..94e883dc1b2d21dde24ff10613ae19f1f74b0ca1 100644
+--- a/dist/h3.mjs
++++ b/dist/h3.mjs
+@@ -1,3 +1,2 @@
+-import { H3Error, H3Event, createError, deleteCookie, getCookie, getRequestURL, sanitizeStatusCode, setCookie } from "h3";
+ export * from "h3";
+-export { H3Error, H3Event, createError, deleteCookie, getCookie, getRequestURL, sanitizeStatusCode, setCookie };
++export { H3Error, H3Event, createError, deleteCookie, getCookie, getRequestURL, sanitizeStatusCode, setCookie } from "h3";

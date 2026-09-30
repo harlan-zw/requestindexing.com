@@ -16,7 +16,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "generate": "nuxt generate",
-    "preview": "wrangler dev",
+    "preview": "wrangler dev --cwd .output",
     "deploy": "node --experimental-strip-types scripts/deploy-cloudflare.ts",
     "postinstall": "nuxt prepare",
     "release": "bumpp",

@@ -1,7 +1,9 @@
 minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
+  - '@harlan-zw/nuxt-cloudflare@0.4.4'
+  - nuxt-og-image@6.10.1
   - '@harlan-zw/nuxt-checkin@0.3.0'
-  - '@harlan-zw/nuxt-cloudflare@0.4.3'
+  - nuxt-skew-protection@1.6.1
   - '@gscdump/contracts@4.8.0'
   - '@gscdump/engine@4.8.0'
   - '@gscdump/lakehouse@4.8.0'
@@ -42,8 +44,11 @@ overrides:
   vue: 3.5.43
 
 patchedDependencies:
+  '@nuxt/nitro-server@4.5.2': patches/@nuxt__nitro-server@4.5.2.patch
   '@nuxt/ui@4.11.2': patches/@nuxt__ui@4.11.2.patch
-  nuxt@4.5.2: patches/nuxt@4.5.2.patch
+  nitropack@2.13.4: patches/nitropack@2.13.4.patch
+  nuxt-auth-utils@0.5.30: patches/nuxt-auth-utils@0.5.30.patch
+  zod@4.6.5: patches/zod@4.6.5.patch
 
 allowBuilds:
   '@parcel/watcher': true
@@ -63,7 +68,7 @@ catalog:
   '@gscdump/sdk': 4.8.0
   '@harlan-zw/comark-content': 0.1.5
   '@harlan-zw/nuxt-checkin': 0.3.0
-  '@harlan-zw/nuxt-cloudflare': 0.4.3
+  '@harlan-zw/nuxt-cloudflare': 0.4.4
   '@harlan-zw/nuxt-domain-events': 0.1.2
   '@harlan-zw/nuxt-dx': 0.2.1
   '@harlan-zw/nuxt-sentry': 0.2.0
@@ -123,11 +128,11 @@ catalog:
   nitro-cloudflare-dev: ^0.2.2
   node-fetch: ^3.3.2
   nuxt: ^4.5.2
-  nuxt-ai-ready: ^2.4.0
+  nuxt-ai-ready: https://pkg.pr.new/nuxt-ai-ready@8b2f4e085f48510f09b28110eecaa0e713896fd3
   nuxt-auth-utils: ^0.5.30
-  nuxt-og-image: ^6.9.1
+  nuxt-og-image: ^6.10.1
   nuxt-schema-org: ^6.3.2
-  nuxt-skew-protection: ^1.5.4
+  nuxt-skew-protection: ^1.6.1
   ohash: ^2.0.12
   oxc-parser: 0.151.0
   postmark: ^5.1.0
