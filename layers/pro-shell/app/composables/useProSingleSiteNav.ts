@@ -7,9 +7,11 @@
 // sidebar and it never flips when the reader crosses between them.
 
 import type { MaybeRefOrGetter } from 'vue'
+import type { UiNavLink } from '#layers/design-system/app/shared/nav'
 import type { ProNavSection, ProSiteNavFlags, ProSiteNavLink } from './useProSiteNav'
 import { computed, toValue } from 'vue'
 import { readProFeatureFlags } from '../../shared/manifest'
+import { integrationsRailLinks } from '../utils/integrations-pending'
 import { decorateSiteNavLink, useProNavSetupBadges } from './useProNavSetupBadges'
 import { useProSiteNav } from './useProSiteNav'
 
@@ -48,7 +50,7 @@ export function useProSingleSiteNav(siteSource: MaybeRefOrGetter<ProNavSite | nu
   })
   const siteLabel = computed(() => site.value?.name || siteDomain.value || 'Site')
 
-  const { gscConnected, gscSetup } = useProNavSetupBadges()
+  const { gscConnected, gscSetup, integrationsSetup } = useProNavSetupBadges()
 
   // The favicon plus site-name header row replaces the synthesized Overview
   // link, exactly as upstream does.
@@ -71,7 +73,12 @@ export function useProSingleSiteNav(siteSource: MaybeRefOrGetter<ProNavSite | nu
   const decoratedPinnedLinks = computed<ProSiteNavLink[]>(() => pinnedLinks.value.map(decorate))
   const decoratedSections = computed<ProNavSection[]>(() =>
     sections.value.map(section => ({ ...section, links: section.links.map(decorate) })))
-  const railLinks = computed<ProSiteNavLink[]>(() => footerLinks.value.map(decorate))
+  // A pending Integration joins the rail above Site settings, as upstream. An
+  // account with one Site only ever sees this sidebar, so it must carry it.
+  const railLinks = computed<UiNavLink[]>(() => [
+    ...integrationsRailLinks(integrationsSetup.value),
+    ...footerLinks.value.map(decorate),
+  ])
 
   return {
     site,

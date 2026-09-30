@@ -1,6 +1,6 @@
 // Ported from nuxtseo.com's `layers/saas/app/composables/useProUserMenu.ts`,
-// cut to what this app offers: no billing, API tokens, preferences,
-// integrations, support page, feedback drawer or workspace creation.
+// cut to what this app offers: no billing, API tokens, preferences, support
+// page, feedback drawer or workspace creation.
 //
 // Three groups, laid out as two columns plus a full-width footer row:
 // Workspace (switch team, team pages), Account (person pages), then Sign out.
@@ -68,6 +68,8 @@ export function useProUserMenu(options: { singleSite: MaybeRefOrGetter<boolean> 
     const personal: ProUserMenuItem[] = [
       { label: 'Account', type: 'label' },
       { label: 'Account', icon: 'user', to: '/pro/dashboard/account' },
+      // Always here. The rail carries Integrations only while one is pending.
+      { label: 'Integrations', icon: 'plug', to: '/pro/dashboard/integrations' },
       { label: 'Developers', icon: 'terminal', to: '/pro/dashboard/developers' },
     ]
 
