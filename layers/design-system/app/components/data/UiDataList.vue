@@ -63,6 +63,12 @@ const {
 
 defineSlots<{
   'default'?: (props: { item: T, index: number }) => unknown
+  /**
+   * The list's identity mark, in place of `icon`. A list that reads through
+   * one Source passes its `UiSourceLogos` here, so the header names where the
+   * rows came from instead of decorating the title.
+   */
+  'mark'?: () => unknown
   'header-trailing'?: () => unknown
   'empty'?: () => unknown
   'footer'?: () => unknown
@@ -108,12 +114,14 @@ function itemKey(item: T, index: number): string | number {
 <template>
   <div class="flex flex-col" :aria-busy="isLoading">
     <!-- Header -->
-    <div v-if="title || icon || $slots['header-trailing']" class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-1 pb-2.5">
-      <div v-if="title || icon" class="flex items-center gap-2">
-        <div v-if="icon && hasSemanticColor" class="p-1 rounded-md" :class="iconClasses!.bg">
-          <UiIcon :name="icon" class="size-3.5" :class="iconClasses!.text" />
-        </div>
-        <UiNavIcon v-else-if="icon" :icon="icon" />
+    <div v-if="title || icon || $slots.mark || $slots['header-trailing']" class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-1 pb-2.5">
+      <div v-if="title || icon || $slots.mark" class="flex items-center gap-2">
+        <slot name="mark">
+          <div v-if="icon && hasSemanticColor" class="p-1 rounded-md" :class="iconClasses!.bg">
+            <UiIcon :name="icon" class="size-3.5" :class="iconClasses!.text" />
+          </div>
+          <UiNavIcon v-else-if="icon" :icon="icon" />
+        </slot>
         <!-- UiHelpLabel renders its text through UiTooltip, whose root is a
              reka TooltipProvider with no DOM node — a fallthrough `class` would
              be dropped. Wrap it in a real span so the title size/tone lands. -->
