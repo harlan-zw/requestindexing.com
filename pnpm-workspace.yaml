@@ -1,6 +1,7 @@
 minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
   - '@harlan-zw/nuxt-checkin@0.3.0'
+  - nuxt-skew-protection@1.6.1
   - '@gscdump/contracts@4.3.0'
   - '@gscdump/engine@4.3.0'
   - '@gscdump/lakehouse@4.3.0'
@@ -129,7 +130,7 @@ catalog:
   nuxt-auth-utils: ^0.5.30
   nuxt-og-image: https://pkg.pr.new/nuxt-og-image@84d38ff54e632717d642ed7aea0f33da87ff426d
   nuxt-schema-org: ^6.3.2
-  nuxt-skew-protection: https://pkg.pr.new/nuxt-skew-protection@6ea740bf757b4eb0d1f1f3512fc594dfb6407c93
+  nuxt-skew-protection: ^1.6.1
   ohash: ^2.0.12
   oxc-parser: 0.151.0
   postmark: ^5.1.0

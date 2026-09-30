@@ -220,8 +220,8 @@ catalogs:
       specifier: ^6.3.2
       version: 6.3.2
     nuxt-skew-protection:
-      specifier: https://pkg.pr.new/nuxt-skew-protection@6ea740bf757b4eb0d1f1f3512fc594dfb6407c93
-      version: 1.6.0
+      specifier: ^1.6.1
+      version: 1.6.1
     ohash:
       specifier: ^2.0.12
       version: 2.0.12
@@ -445,7 +445,7 @@ importers:
         version: 0.5.30(patch_hash=3c0b1ac5c31a06f88c3245c37515fa964d126188bdc2decc4b27ec72477fd82d)(magic-string@1.4.2)(magicast@0.5.5)(oxc-parser@0.151.0)(rolldown@1.2.11)(unplugin@3.4.0(esbuild@0.28.1)(rolldown@1.2.11)(rollup@4.62.4)(vite@8.2.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1)))
       nuxt-skew-protection:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/nuxt-skew-protection@6ea740bf757b4eb0d1f1f3512fc594dfb6407c93(97a4a96a4a31c50ae63d67eef97ad8b1)
+        version: 1.6.1(97a4a96a4a31c50ae63d67eef97ad8b1)
       ohash:
         specifier: 'catalog:'
         version: 2.0.12
@@ -7111,9 +7111,8 @@ packages:
     peerDependencies:
       vue: 3.5.43
 
-  nuxt-skew-protection@https://pkg.pr.new/nuxt-skew-protection@6ea740bf757b4eb0d1f1f3512fc594dfb6407c93:
-    resolution: {integrity: sha512-y+t5MOPVbLCx23qUG/5uQZ8FzV/sEr93P2kfabVLW7LK/xJ0k64xaPN+4vnCP+yK0Nfd+IIkyKUrnnTRYOIzHg==, tarball: https://pkg.pr.new/nuxt-skew-protection@6ea740bf757b4eb0d1f1f3512fc594dfb6407c93}
-    version: 1.6.0
+  nuxt-skew-protection@1.6.1:
+    resolution: {integrity: sha512-axlCJOhenKZbTDiD0viAX87ZyKzQqy9VGNuMOS0BoY13vtovS5LEk9E4VQZT1hLLetunKd9plSmaYTWWPKk+hQ==}
     hasBin: true
     peerDependencies:
       '@nuxtjs/robots': '>=5.6.7'
@@ -16586,7 +16585,7 @@ snapshots:
       - vite
       - zod
 
-  nuxt-skew-protection@https://pkg.pr.new/nuxt-skew-protection@6ea740bf757b4eb0d1f1f3512fc594dfb6407c93(97a4a96a4a31c50ae63d67eef97ad8b1):
+  nuxt-skew-protection@1.6.1(97a4a96a4a31c50ae63d67eef97ad8b1):
     dependencies:
       '@nuxt/kit': 4.5.2(magic-string@1.4.2)(magicast@0.5.5)(oxc-parser@0.151.0)(rolldown@1.2.11)(unplugin@3.4.0(esbuild@0.28.1)(rolldown@1.2.11)(rollup@4.62.4)(vite@8.2.1(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1)))
       '@nuxtjs/robots': 6.2.3(60b2aa60dae3807fb544ee3e4bfd64d4)
