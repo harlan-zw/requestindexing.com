@@ -39,24 +39,13 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteSitemapChanges },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.createSitemapAction },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.recoverSitePermission },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getTopAssociation },
   // `analytics.rows.query` answers a raw grouped read. Every sparkline reads
   // its `(dimension, date)` series here, because a list report rejects `date`.
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryRows },
-  // Entity detail pages read the preset bundle rather than one request per
-  // preset.
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteAnalysisBundle },
   // Indexing coverage history and the sitemap URL views.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexingTransitions },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSitemapUrls },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listAvailableSites },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getCanonicalMismatches },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getContentVelocity },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getCtrCurve },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getDarkTraffic },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getDeviceGap },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getKeywordBreadth },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getPositionDistribution },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexNowConnection },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.configureSiteIndexNowConnection },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.verifySiteIndexNowConnection },
@@ -99,12 +88,11 @@ export type GscdumpV1ProxyOperation = ResolvedHttpV1Operation<BrowserOperationEn
 /**
  * Operations whose path parameter is a gscdump *user* id rather than a Site
  * id. The browser client sends an opaque, syntactically valid placeholder (see
- * `GSCDUMP_SESSION_USER_ID` in `useGscdump.ts`). The upstream path always names
- * the caller's own stored gscdump user id, so the value the browser sends is
- * never trusted or forwarded.
+ * `GSCDUMP_SESSION_USER_ID` in `useProGscdumpBing.ts`). The upstream path
+ * always names the caller's own stored gscdump user id, so the value the
+ * browser sends is never trusted or forwarded.
  */
 const USER_SCOPED_OPERATION_IDS: ReadonlySet<string> = new Set([
-  protocol.surfaces.partner.operations.listAvailableSites.id,
   protocol.surfaces.partner.operations.listUserBingSites.id,
 ])
 

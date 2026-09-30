@@ -20,7 +20,6 @@ import type {
 import type { BingReportingWindow } from '../../../shared/bing-reporting-window'
 import type { BingIntegrationRow, BingIntegrationSiteRef, BingIntegrationState, BingSitemapSubmitOutcome } from '../../utils/bing-integration-view'
 import type { BingIndexingEvidence } from '../../utils/bing-view'
-import { GSCDUMP_SESSION_USER_ID } from '~~/layers/core/app/composables/useGscdump'
 import { readProFeatureFlags } from '#layers/pro-shell/shared/manifest'
 import { bingGrantTarget, summarizeBingIntegration, toBingIntegrationRows } from '../../utils/bing-integration-view'
 import { parseGscdumpError } from '../_gscdump-error'
@@ -117,6 +116,13 @@ export function useProGscdumpBingEvidence(
     [limit, offset, enabled],
   )
 }
+
+/**
+ * The fleet read names a gscdump user, and the browser never learns its own
+ * id. It sends this syntactically valid placeholder, and the proxy always
+ * substitutes the caller's stored id when it builds the upstream request.
+ */
+const GSCDUMP_SESSION_USER_ID = 'u_session-proxy'
 
 /**
  * gscdump's Bing state for every Site the caller can see, plus their one

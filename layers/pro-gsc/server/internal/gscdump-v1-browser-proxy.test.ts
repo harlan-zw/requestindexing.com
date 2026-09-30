@@ -148,12 +148,9 @@ describe('selectGscdumpV1ProxyTarget', () => {
 
   // The browser never learns its gscdump user id. Whatever id it sends, the
   // upstream path names the caller's own stored id.
-  it.each([
-    ['GET', 'users/u_someone-else/indexing/bing/sites', 'users/u_me/indexing/bing/sites'],
-    ['GET', 'users/u_session-proxy/available-sites', 'users/u_me/available-sites'],
-  ])('sends %s %s upstream as the caller\'s own gscdump user', (method, path, upstream) => {
-    const operation = resolveGscdumpV1ProxyOperation(method, 'partner', path, flags)!
-    expect(selectGscdumpV1ProxyTarget(operation, 'u_me')).toEqual({ _tag: 'self', path: upstream })
+  it('sends the Bing fleet read upstream as the caller\'s own gscdump user', () => {
+    const operation = resolveGscdumpV1ProxyOperation('GET', 'partner', 'users/u_someone-else/indexing/bing/sites', flags)!
+    expect(selectGscdumpV1ProxyTarget(operation, 'u_me')).toEqual({ _tag: 'self', path: 'users/u_me/indexing/bing/sites' })
   })
 
   it('refuses a user operation when the caller has no gscdump user', () => {

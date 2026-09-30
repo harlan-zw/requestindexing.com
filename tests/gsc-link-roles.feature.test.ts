@@ -11,7 +11,7 @@ import { migratedSqlite, proDatabase, seedMembership, seedSite, seedUser, siteRo
 const h = vi.hoisted(() => ({
   requireCaller: vi.fn(),
   deleteSite: vi.fn(async () => ({ deleted: true })),
-  autoLinkGsc: vi.fn(async () => 'gsd_new'),
+  autoLinkGsc: vi.fn(async () => ({ _tag: 'Linked' as const, gscdumpSiteId: 'gsd_new' })),
   db: null as unknown,
 }))
 

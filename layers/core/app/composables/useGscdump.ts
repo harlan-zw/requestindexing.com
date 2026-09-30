@@ -13,7 +13,7 @@ import type {
   GscdumpSitemapsResponse,
 } from '@gscdump/contracts'
 import type { RollingPeriod } from '@gscdump/sdk/period'
-import type { GscdumpV1Client, GscdumpV1OperationInput, GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
+import type { GscdumpV1Client, GscdumpV1OperationInput } from '@gscdump/sdk/v1'
 import type { BuilderState, Column, Filter, Metric } from 'gscdump/query'
 import { toPartnerError } from '@gscdump/sdk/partner-errors'
 import { periodToDays as gscPeriodToDays } from '@gscdump/sdk/period'
@@ -78,8 +78,6 @@ export interface GscdumpAnalysisResponse {
   }
 }
 
-type V1AvailableSitesData = GscdumpV1OperationResponse<'partner.users.sites.available.list'>['data']
-
 // ===== Session-proxied v1 client =====
 //
 // The browser never holds a gscdump API key. Requests go same-origin to the
@@ -88,13 +86,6 @@ type V1AvailableSitesData = GscdumpV1OperationResponse<'partner.users.sites.avai
 // credential server-side, and forwards upstream: the key never reaches
 // browser memory. `'session-proxy'` is an opaque literal that only satisfies
 // the SDK's transport shape; the proxy discards it entirely.
-//
-// A few allowlisted operations are keyed by gscdump user id rather than site
-// id (`partner.users.sites.available.list`, the Bing fleet read). The browser
-// doesn't know its own gscdump user id (never shipped down); it sends this
-// syntactically-valid placeholder and the proxy always substitutes the
-// caller's real, stored id when building the upstream request.
-export const GSCDUMP_SESSION_USER_ID = 'u_session-proxy'
 
 function createV1Client(): GscdumpV1Client {
   return createGscdumpV1Client({
@@ -221,10 +212,6 @@ export function useGscdump() {
     return runV1<GscdumpSitemapsResponse>(client => client.getSiteSitemaps(input), silent)
   }
 
-  function listAvailableSites(input: GscdumpV1OperationInput<'partner.users.sites.available.list'>, silent = false) {
-    return runV1<V1AvailableSitesData>(client => client.listAvailableSites(input), silent)
-  }
-
   return {
     error,
     getSiteAnalysis,
@@ -233,7 +220,6 @@ export function useGscdump() {
     getSiteSitemaps,
     getPageTrend,
     getQueryTrend,
-    listAvailableSites,
     listSiteIndexingUrls,
     queryAnalyticsReport,
     queryAnalyticsReportDetail,
@@ -454,53 +440,6 @@ export function useGscdumpIndexingDiagnostics(
       server: false,
       immediate: options?.immediate ?? true,
       watch: (options?.watch ?? true) ? [_siteId] : undefined,
-    },
-  )
-}
-
-export function useGscdumpConnectedSites(options?: { immediate?: boolean }) {
-  return useAsyncData<{ sites: Array<{
-    siteId: string
-    siteUrl: string
-    syncStatus: 'pending' | 'syncing' | 'synced'
-    syncProgress?: { completed: number, total: number, percent: number }
-    lastSyncAt: number | null
-    newestDateSynced: string | null
-    oldestDateSynced: string | null
-  }> }>(
-    'gscdump:connected-sites',
-    async () => {
-      const { listAvailableSites } = useGscdump()
-      // Silent + a bare 401 treated as "not connected": most users have never
-      // linked a gscdump account, and that's an expected empty state here,
-      // not a failure worth toasting.
-      const result = await listAvailableSites({ params: { userId: GSCDUMP_SESSION_USER_ID }, query: {} }, true)
-        .catch((e) => {
-          const status = (e as { status?: number, statusCode?: number } | null)?.status
-            ?? (e as { statusCode?: number } | null)?.statusCode
-          if (status === 401)
-            return null
-          throw e
-        })
-      if (!result)
-        return { sites: [] }
-      return {
-        sites: result.sites.flatMap(site => site.registered && site.siteId
-          ? [{
-              siteId: site.siteId,
-              siteUrl: site.siteUrl,
-              syncStatus: site.syncStatus === 'error' || !site.syncStatus ? 'pending' as const : site.syncStatus,
-              syncProgress: site.syncProgress,
-              lastSyncAt: site.lastSyncAt ?? null,
-              newestDateSynced: site.newestDateSynced ?? null,
-              oldestDateSynced: site.oldestDateSynced ?? null,
-            }]
-          : []),
-      }
-    },
-    {
-      server: false,
-      immediate: options?.immediate ?? true,
     },
   )
 }
