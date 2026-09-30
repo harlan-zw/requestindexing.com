@@ -41,8 +41,8 @@ module '#auth-utils' {
     hasSites?: boolean
     /**
      * Search Console grant state, published as one block by
-     * `buildGscSessionFields`. `pro-gate.global.ts` and both
-     * integration-readiness policies read these.
+     * `buildGscSessionFields`. `pro-gate.global.ts` and the
+     * integration-readiness policy read these.
      */
     gscConnected?: boolean
     gscEmail?: string | null

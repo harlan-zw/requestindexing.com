@@ -4,8 +4,10 @@ import { logger } from '~~/shared/server/logger'
 import { forgetGscdumpAccountStatus } from '#layers/pro-gsc/server/utils/gscdump-account-status'
 import { probeGscdumpUserKey, shouldRepairGscdumpKey } from '#layers/pro-gsc/server/utils/gscdump-key-repair'
 import { scheduleGscdumpOnboardingReconcile } from '#layers/pro-gsc/server/utils/reconcile-gscdump-onboarding'
+import { releaseRefusedSites } from '#layers/pro-gsc/server/utils/site-registration-refusal'
 import { resolveGscGrant } from '#layers/pro-gsc/shared/gsc-grant'
 import { safeAuthRedirect } from '#layers/pro-saas-auth/shared/utils/auth-redirect'
+import { readCurrentTeam } from '#layers/pro-saas/server/utils/current-team'
 import { gscScopeMissingRedirect } from '#layers/pro-saas/shared/onboarding'
 
 function errorDetails(error: unknown) {
@@ -251,16 +253,25 @@ export default defineEventHandler(async (event) => {
   // Reconcile gscdump-dependent side effects asynchronously. User database
   // provisioning can lag OAuth; this waits in the background and avoids turning
   // a healthy provisioning state into a callback warning.
+  // The sealed cookie's `currentTeamId` outlives a removal from that team, so
+  // the team this callback acts on and reseals comes from the database.
+  const currentTeam = await readCurrentTeam(db, session.user.id)
+
   if (gscdumpUserId) {
     // The grant just changed, so a cached `scope_missing` from the old one
     // must not greet the user on the page they return to. Only a fresh
     // lifecycle read may say what the new grant is.
     await forgetGscdumpAccountStatus(gscdumpUserId)
       .catch((error: unknown) => logger.error('[google auth] cached gscdump account status not cleared:', errorDetails(error).message))
+    // A reconnect is the user acting on a refused Site, so the reconcile below
+    // may ask gscdump about it once more.
+    await releaseRefusedSites(db, {
+      teamIds: currentTeam ? [currentTeam.teamId] : [],
+      ownerId: session.user.id,
+    }).catch((error: unknown) => logger.error('[google auth] refused Sites not released:', errorDetails(error).message))
     scheduleGscdumpOnboardingReconcile(event, {
       userId: session.user.id,
       gscdumpUserId,
-      currentTeamId: session.user.currentTeamId ?? null,
     })
   }
 
@@ -272,7 +283,7 @@ export default defineEventHandler(async (event) => {
   await setUserSession(event, {
     user: {
       ...session.user,
-      currentTeamId: session.user.currentTeamId ?? null,
+      currentTeamId: currentTeam?.teamId ?? null,
     },
     gscConnected: true,
     gscEmail: googleUser?.email,

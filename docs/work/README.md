@@ -11,5 +11,3 @@ Append progress to the `## Log`. Never open a separate progress file.
 
 Move a brief to `shipped/` only when its `Done means:` is verified in production. A brief may
 never sit in both folders at once.
-
-Nothing is open right now.

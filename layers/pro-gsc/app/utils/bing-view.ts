@@ -6,8 +6,10 @@
 // actually returns here. Upstream reads an app-surface host that reports more
 // connection reasons; `partner.sites.indexing.bing.connection.get` reports one
 // (`permission-lost`), so this file states only what the contract states.
+//
+// The Bing row on Integrations has its own model in `bing-integration-view.ts`.
 
-import type { BingConnectionV1, BingDataV1 } from '@gscdump/contracts/v1/http'
+import type { BingConnectionV1, BingDataV1, PartnerBingIndexingEvidenceV1Response } from '@gscdump/contracts/v1/http'
 import { parseGscdumpError } from '../composables/_gscdump-error'
 
 type BingTrafficRows = Extract<BingDataV1, { dataset: 'traffic' }>['rows']
@@ -93,17 +95,16 @@ export interface BingConnectionSetupState {
 /**
  * Copy for a connection that cannot be read yet, or `null` once it is ready.
  *
- * There is no Connect button here. Bing authorization is granted against the
- * gscdump account that owns the Site, not against this app, so a button would
- * lead nowhere it can act. The copy says where the work happens instead.
+ * Linking and reconnecting start on Integrations, where one Bing grant serves
+ * every Site. The page renders this copy with a link there.
  */
 export function bingConnectionSetupState(connection: BingConnectionView): BingConnectionSetupState | null {
   switch (connection._tag) {
     case 'disconnected':
       return {
         icon: 'search',
-        title: 'Bing is not connected for this Site',
-        description: 'Connect Bing Webmaster Tools in Search Indexing. Collection starts with the next daily sync.',
+        title: 'Bing is not linked for this Site',
+        description: 'Link this Site to Bing on Integrations. Bing\'s crawl record for this Site then shows here.',
       }
     case 'verification-required':
       return {
@@ -114,12 +115,118 @@ export function bingConnectionSetupState(connection: BingConnectionView): BingCo
     case 'reauth':
       return {
         icon: 'warning',
-        title: 'Reconnect Bing',
-        description: 'Bing authorization or Site permission is no longer available. Reconnect in Search Indexing.',
+        title: 'Bing stopped accepting this connection',
+        description: 'Bing authorization or Site permission is no longer available. Reconnect Bing on Integrations to resume collection.',
       }
     case 'ready':
       return null
   }
+}
+
+/** One row of `partner.sites.indexing.bing.evidence.list`. */
+export type BingIndexingEvidence = PartnerBingIndexingEvidenceV1Response['data']['indexingEvidence'][number]
+
+export const BING_CRAWL_DETAILS_PAGE_SIZE = 25
+
+/** The `bingPage` query value, or page 1 for anything that is not a positive integer. */
+export function parseBingCrawlDetailsPage(value: unknown): number {
+  if (typeof value !== 'string' && typeof value !== 'number')
+    return 1
+  if (typeof value === 'string' && value.trim() === '')
+    return 1
+  const parsed = Number(value)
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1
+}
+
+export function bingCrawlDetailsPageCount(total: number): number {
+  return Math.max(1, Math.ceil(Math.max(0, total) / BING_CRAWL_DETAILS_PAGE_SIZE))
+}
+
+export type BingCrawlDetailBadge
+  = | { label: 'Current', status: 'neutral' }
+    | { label: 'Stale', status: 'warning' }
+    | { label: 'Unknown', status: 'neutral' }
+    | { label: 'Unavailable', status: 'warning' | 'error' }
+
+/**
+ * One row of the crawl details table. Bing reports discovery and crawl times,
+ * never an indexed verdict, so no row claims one.
+ */
+export type BingCrawlDetailView
+  = | {
+    _tag: 'observed'
+    url: string
+    observedAt: string
+    discoveryTime: string | null
+    lastCrawlTime: string | null
+    originHttpStatus: number | null
+    detail: null
+    badge: BingCrawlDetailBadge
+  }
+  | {
+    _tag: 'unknown' | 'unavailable'
+    url: string
+    observedAt: string
+    detail: string
+    badge: BingCrawlDetailBadge
+  }
+
+function unavailableDetail(reason: Extract<BingIndexingEvidence, { _tag: 'unavailable' }>['reason']): string {
+  switch (reason) {
+    case 'authentication-required':
+      return 'Bing authorization expired'
+    case 'permission-denied':
+      return 'Bing permission missing'
+    case 'site-unverified':
+      return 'Site verification required'
+    case 'throttled':
+      return 'Bing delayed this URL'
+    case 'quota-unavailable':
+      return 'Bing quota unavailable'
+    case 'provider-error':
+      return 'Bing was unavailable'
+  }
+}
+
+function toBingCrawlDetailView(evidence: BingIndexingEvidence): BingCrawlDetailView {
+  switch (evidence._tag) {
+    case 'observed':
+      return {
+        _tag: 'observed',
+        url: evidence.url,
+        observedAt: evidence.observedAt,
+        discoveryTime: evidence.discoveryTime,
+        lastCrawlTime: evidence.lastCrawlTime,
+        originHttpStatus: evidence.originHttpStatus,
+        detail: null,
+        badge: evidence.freshness === 'stale'
+          ? { label: 'Stale', status: 'warning' }
+          : { label: 'Current', status: 'neutral' },
+      }
+    case 'unknown':
+      return {
+        _tag: 'unknown',
+        url: evidence.url,
+        observedAt: evidence.observedAt,
+        detail: evidence.reason === 'not-discovered' ? 'No discovery time returned' : 'No crawl observation returned',
+        badge: { label: 'Unknown', status: 'neutral' },
+      }
+    case 'unavailable':
+      return {
+        _tag: 'unavailable',
+        url: evidence.url,
+        observedAt: evidence.observedAt,
+        detail: unavailableDetail(evidence.reason),
+        badge: {
+          label: 'Unavailable',
+          status: evidence.reason === 'authentication-required' || evidence.reason === 'permission-denied' ? 'error' : 'warning',
+        },
+      }
+  }
+}
+
+export function toBingCrawlDetailViews(evidence: readonly BingIndexingEvidence[]): BingCrawlDetailView[] {
+  return evidence.map(toBingCrawlDetailView)
 }
 
 export interface BingRequestErrorState {

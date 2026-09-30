@@ -63,7 +63,7 @@ export interface BucketTopEntitiesOptions {
 }
 
 export function bucketTopEntities(opts: BucketTopEntitiesOptions): TopEntityStackResult {
-  const { dates, rows, topN = 5, totals, maxBuckets = 10, otherLabel = 'Other', excludeKey } = opts
+  const { dates, rows, topN = 5, totals, maxBuckets = 10, otherLabel = 'All Others', excludeKey } = opts
   if (!dates.length)
     return { buckets: [], series: [] }
 
@@ -136,4 +136,34 @@ export function bucketTopEntities(opts: BucketTopEntitiesOptions): TopEntityStac
   }
 
   return { buckets, series: bucketedSeries }
+}
+
+export interface TopEntityStackRow {
+  i: number
+  values: number[]
+  shares: number[]
+  total: number
+}
+
+/** Preserve counts for details and express each plotted bucket as a percentage. */
+export function topEntityStackRows({ buckets, series }: TopEntityStackResult): TopEntityStackRow[] {
+  return buckets.map((_, i) => {
+    const values = series.map(s => s.values[i] ?? 0)
+    const total = values.reduce((sum, value) => sum + value, 0)
+    return { i, values, shares: values.map(value => total > 0 ? value / total * 100 : 0), total }
+  })
+}
+
+/** Project the full reporting-day axis onto the chart's bucket domain. */
+export function topEntityStackTimeline(buckets: TopEntityStackBucket[]): { dates: string[], positions: number[] } {
+  const dates: string[] = []
+  for (const bucket of buckets) {
+    const start = Date.parse(`${bucket.start}T00:00:00Z`)
+    const end = Date.parse(`${bucket.end}T00:00:00Z`)
+    for (let day = start; day <= end; day += 86_400_000)
+      dates.push(new Date(day).toISOString().slice(0, 10))
+  }
+  // Match the Overview's first-to-last-day axis, including a shorter final bucket.
+  const positions = dates.map((_, i) => dates.length === 1 ? 0 : i / (dates.length - 1) * buckets.length - 0.5)
+  return { dates, positions }
 }

@@ -4,17 +4,19 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { logger } from '~~/shared/server/logger'
 import { dispatchEvent } from '#domain-events/server'
 import { sites } from '#layers/pro-saas/server/database'
+import { readCurrentTeam } from '#layers/pro-saas/server/utils/current-team'
 import { autoLinkGsc } from './auto-link-gsc'
 import { rememberGscdumpAccountStatus } from './gscdump-account-status'
 import { useGscdumpClient } from './gscdump-client'
+import { unlinkUnreadableGscdumpSites } from './gscdump-site-access'
 import { updateOnboardingState } from './onboarding'
+import { notRefused } from './site-registration-refusal'
 import { syncUserGscdumpTeams } from './sync-user-gscdump-teams'
 
 export interface ReconcileGscdumpOnboardingOptions {
   event?: H3Event
   userId: number
   gscdumpUserId: string
-  currentTeamId?: number | null
   waitForReady?: boolean
 }
 
@@ -53,7 +55,7 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     return {
       userId,
       gscdumpUserId,
-      teamId: opts.currentTeamId ?? null,
+      teamId: null,
       linkedSites: 0,
       attemptedSites: 0,
     }
@@ -64,7 +66,7 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     return {
       userId,
       gscdumpUserId,
-      teamId: opts.currentTeamId ?? null,
+      teamId: null,
       linkedSites: 0,
       attemptedSites: 0,
     }
@@ -92,7 +94,11 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
   await syncUserGscdumpTeams(event, { userId, gscdumpUserId })
     .catch((e: unknown) => logger.error('[gscdump reconcile] syncUserGscdumpTeams failed:', e))
 
-  const currentTeamId = opts.currentTeamId ?? null
+  // The team comes from the database, checked against membership, never from
+  // the caller. A removed member's cookie still names the old team, and
+  // linking that team's Sites to this grant would block its members from
+  // linking their own.
+  const currentTeamId = (await readCurrentTeam(db, userId))?.teamId ?? null
   if (!currentTeamId) {
     return {
       userId,
@@ -103,14 +109,26 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     }
   }
 
+  // A Site linked to a gscdump Site this partner cannot read never gets data.
+  // Unlink it first, so the query below links it again in this partner's pool.
+  await unlinkUnreadableGscdumpSites({
+    db,
+    teamId: currentTeamId,
+    readableSiteIds: new Set(lifecycle.sites.map(site => site.siteId)),
+    readSiteAccess: gscdump.readSiteAccess,
+  })
+
   // Reconcile every unlinked site on the user's current team, not just the
-  // ones they created: the grant being reconciled belongs to the team.
+  // ones they created: the grant being reconciled belongs to the team. A Site
+  // gscdump refused waits for the user, so the hourly run cannot spend the
+  // shared registration budget asking the same question again.
   const unlinkedSites = await db
     .select({ id: sites.id, url: sites.property })
     .from(sites)
     .where(and(
-      currentTeamId ? eq(sites.teamId, currentTeamId) : eq(sites.ownerId, userId),
+      eq(sites.teamId, currentTeamId),
       isNull(sites.gscdumpSiteId),
+      notRefused(),
     ))
 
   if (!unlinkedSites.length) {
@@ -151,7 +169,10 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     ),
   )
 
-  const linkedSites = results.filter(result => result.status === 'fulfilled' && result.value).length
+  const linkedSites = results.filter(result => result.status === 'fulfilled' && result.value._tag === 'Linked').length
+  const refusedSites = results.filter(result => result.status === 'fulfilled' && result.value._tag === 'Refused').length
+  if (refusedSites)
+    logger.log(`[gscdump reconcile] gscdump refused ${refusedSites} Site registrations (Free allowance or duplicate property)`)
   logger.log(`[gscdump reconcile] auto-link complete: ${linkedSites}/${unlinkedSites.length}`)
 
   return {

@@ -165,10 +165,10 @@ export const gscBrandSplitColors = {
 
 /**
  * Top-entity stacked trend (`UiTopEntityStackChart`): 10 identity hues, ranked
- * by entity rank, plus the neutral "Other" residual in the last slot. Ten
- * because the queries trend tracks the top 10 canonical queries — the first five
- * hues are the ones `gscTopPagesColors` uses, so a page and a query of the same
- * rank read alike.
+ * by entity rank, plus the neutral "Other" residual in the last slot. Every
+ * current caller tracks the top 5; the spare hues keep a wider caller safe. The
+ * first five hues are the ones `gscTopPagesColors` uses, so a page and a query
+ * of the same rank read alike.
  */
 export const gscTopEntityColors: VizColor[] = [
   viz('bg-blue-500', '#3b82f6', 'text-blue-500'),

@@ -44,6 +44,16 @@ describe('selectTopAssociations', () => {
     expect(result.size).toBe(0)
   })
 
+  // The hosted report writes the top raw variant over `queryCanonical`. The
+  // table asks by clustering key, so the answer must come back under it.
+  it('keys a relabelled canonical query by its clustering key', () => {
+    const result = selectTopAssociations([
+      { queryCanonical: 'cotton tree caravan park', queryCanonicalKey: 'caravan cotton park tree', page: 'https://example.com/park', clicks: 12 },
+    ], options)
+
+    expect(result.get('caravan cotton park tree')).toBe('https://example.com/park')
+  })
+
   it('reads the top keyword for a page table by swapping the fields', () => {
     const result = selectTopAssociations([
       { page: 'https://example.com/a', query: 'one', clicks: 2 },

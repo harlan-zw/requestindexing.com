@@ -5,7 +5,6 @@ import type {
   GscdumpDataResponse,
   GscdumpDataRow,
   GscdumpIndexingDiagnosticsResponse,
-  GscdumpIndexingResponse,
   GscdumpIndexingUrlsResponse,
   GscdumpMeta,
   GscdumpPageTrendResponse,
@@ -13,13 +12,12 @@ import type {
   GscdumpSitemapsResponse,
 } from '@gscdump/contracts'
 import type { RollingPeriod } from '@gscdump/sdk/period'
-import type { GscdumpV1Client, GscdumpV1OperationInput, GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
+import type { GscdumpV1Client, GscdumpV1OperationInput } from '@gscdump/sdk/v1'
 import type { BuilderState, Column, Filter, Metric } from 'gscdump/query'
 import { toPartnerError } from '@gscdump/sdk/partner-errors'
 import { periodToDays as gscPeriodToDays } from '@gscdump/sdk/period'
 import { createGscdumpV1Client } from '@gscdump/sdk/v1'
 import { and, between, contains, country, date, device, daysAgo as gscDaysAgo, page as pageColumn, queryCanonical, query as queryColumn } from 'gscdump/query'
-import { loadDashboardSiteSummary } from '../utils/dashboard-site-card'
 
 export type {
   GscdumpAnalysisPreset as AnalysisPreset,
@@ -78,8 +76,6 @@ export interface GscdumpAnalysisResponse {
   }
 }
 
-type V1AvailableSitesData = GscdumpV1OperationResponse<'partner.users.sites.available.list'>['data']
-
 // ===== Session-proxied v1 client =====
 //
 // The browser never holds a gscdump API key. Requests go same-origin to the
@@ -88,13 +84,6 @@ type V1AvailableSitesData = GscdumpV1OperationResponse<'partner.users.sites.avai
 // credential server-side, and forwards upstream: the key never reaches
 // browser memory. `'session-proxy'` is an opaque literal that only satisfies
 // the SDK's transport shape; the proxy discards it entirely.
-//
-// `partner.users.sites.available.list` is the one allowlisted operation keyed
-// by gscdump user id rather than site id. The browser doesn't know its own
-// gscdump user id (never shipped down); it sends this syntactically-valid
-// placeholder and the proxy always substitutes the caller's real, stored id
-// when building the upstream request.
-const GSCDUMP_SESSION_USER_ID = 'u_session-proxy'
 
 function createV1Client(): GscdumpV1Client {
   return createGscdumpV1Client({
@@ -205,10 +194,6 @@ export function useGscdump() {
     return runV1<GscdumpAnalysisResponse>(client => client.getSiteAnalysis(input), silent)
   }
 
-  function getSiteIndexing(input: GscdumpV1OperationInput<'partner.sites.indexing.get'>, silent = false) {
-    return runV1<GscdumpIndexingResponse>(client => client.getSiteIndexing(input), silent)
-  }
-
   function listSiteIndexingUrls(input: GscdumpV1OperationInput<'partner.sites.indexing.urls.list'>, silent = false) {
     return runV1<GscdumpIndexingUrlsResponse>(client => client.listSiteIndexingUrls(input), silent)
   }
@@ -221,19 +206,13 @@ export function useGscdump() {
     return runV1<GscdumpSitemapsResponse>(client => client.getSiteSitemaps(input), silent)
   }
 
-  function listAvailableSites(input: GscdumpV1OperationInput<'partner.users.sites.available.list'>, silent = false) {
-    return runV1<V1AvailableSitesData>(client => client.listAvailableSites(input), silent)
-  }
-
   return {
     error,
     getSiteAnalysis,
-    getSiteIndexing,
     getSiteIndexingDiagnostics,
     getSiteSitemaps,
     getPageTrend,
     getQueryTrend,
-    listAvailableSites,
     listSiteIndexingUrls,
     queryAnalyticsReport,
     queryAnalyticsReportDetail,
@@ -375,132 +354,6 @@ export function useGscdumpSitemaps(
       server: false,
       immediate: options?.immediate ?? true,
       watch: (options?.watch ?? true) ? [_siteId] : undefined,
-    },
-  )
-}
-
-export function useGscdumpIndexing(
-  siteId: MaybeRefOrGetter<string>,
-  days?: MaybeRefOrGetter<number>,
-  options?: { immediate?: boolean, watch?: boolean },
-) {
-  const _siteId = computed(() => toValue(siteId))
-  const _days = computed(() => toValue(days) ?? 28)
-  const key = computed(() => `gscdump:indexing:${_siteId.value}:${_days.value}`)
-
-  return useAsyncData<GscdumpIndexingResponse>(
-    key,
-    async () => {
-      if (!_siteId.value)
-        return null as unknown as GscdumpIndexingResponse
-      const { getSiteIndexing } = useGscdump()
-      return getSiteIndexing({ params: { siteId: _siteId.value }, query: { days: _days.value } })
-    },
-    {
-      server: false,
-      immediate: options?.immediate ?? true,
-      watch: (options?.watch ?? true) ? [_siteId, _days] : undefined,
-    },
-  )
-}
-
-export function useGscdumpIndexingUrls(
-  siteId: MaybeRefOrGetter<string>,
-  params?: MaybeRefOrGetter<{
-    limit?: number
-    offset?: number
-    status?: 'indexed' | 'not_indexed' | 'pending'
-    issue?: string
-    search?: string
-  }>,
-  options?: { immediate?: boolean, watch?: boolean },
-) {
-  const _siteId = computed(() => toValue(siteId))
-  const _params = computed(() => toValue(params) ?? {})
-  const key = computed(() => ['gscdump', 'indexing-urls', _siteId.value, JSON.stringify(_params.value)].join(':'))
-
-  return useAsyncData<GscdumpIndexingUrlsResponse>(
-    key,
-    async () => {
-      if (!_siteId.value)
-        return null as unknown as GscdumpIndexingUrlsResponse
-      const { listSiteIndexingUrls } = useGscdump()
-      return listSiteIndexingUrls({ params: { siteId: _siteId.value }, query: _params.value })
-    },
-    {
-      server: false,
-      immediate: options?.immediate ?? true,
-      watch: (options?.watch ?? true) ? [_siteId, _params] : undefined,
-    },
-  )
-}
-
-export function useGscdumpIndexingDiagnostics(
-  siteId: MaybeRefOrGetter<string>,
-  options?: { immediate?: boolean, watch?: boolean },
-) {
-  const _siteId = computed(() => toValue(siteId))
-  const key = computed(() => `gscdump:indexing-diagnostics:${_siteId.value}`)
-
-  return useAsyncData<GscdumpIndexingDiagnosticsResponse>(
-    key,
-    async () => {
-      if (!_siteId.value)
-        return null as unknown as GscdumpIndexingDiagnosticsResponse
-      const { getSiteIndexingDiagnostics } = useGscdump()
-      return getSiteIndexingDiagnostics({ params: { siteId: _siteId.value }, query: {} })
-    },
-    {
-      server: false,
-      immediate: options?.immediate ?? true,
-      watch: (options?.watch ?? true) ? [_siteId] : undefined,
-    },
-  )
-}
-
-export function useGscdumpConnectedSites(options?: { immediate?: boolean }) {
-  return useAsyncData<{ sites: Array<{
-    siteId: string
-    siteUrl: string
-    syncStatus: 'pending' | 'syncing' | 'synced'
-    syncProgress?: { completed: number, total: number, percent: number }
-    lastSyncAt: number | null
-    newestDateSynced: string | null
-    oldestDateSynced: string | null
-  }> }>(
-    'gscdump:connected-sites',
-    async () => {
-      const { listAvailableSites } = useGscdump()
-      // Silent + a bare 401 treated as "not connected": most users have never
-      // linked a gscdump account, and that's an expected empty state here,
-      // not a failure worth toasting.
-      const result = await listAvailableSites({ params: { userId: GSCDUMP_SESSION_USER_ID }, query: {} }, true)
-        .catch((e) => {
-          const status = (e as { status?: number, statusCode?: number } | null)?.status
-            ?? (e as { statusCode?: number } | null)?.statusCode
-          if (status === 401)
-            return null
-          throw e
-        })
-      if (!result)
-        return { sites: [] }
-      return {
-        sites: result.sites.flatMap(site => site.registered && site.siteId
-          ? [{
-              siteId: site.siteId,
-              siteUrl: site.siteUrl,
-              syncStatus: site.syncStatus === 'error' || !site.syncStatus ? 'pending' as const : site.syncStatus,
-              syncProgress: site.syncProgress,
-              lastSyncAt: site.lastSyncAt ?? null,
-              newestDateSynced: site.newestDateSynced ?? null,
-              oldestDateSynced: site.oldestDateSynced ?? null,
-            }]
-          : []),
-      }
-    },
-    {
-      server: false,
-      immediate: options?.immediate ?? true,
     },
   )
 }
@@ -690,93 +543,4 @@ export function useGscdumpTableData<T = GscdumpDataRow>(options: GscdumpTableOpt
     setSort,
     toggleSort,
   }
-}
-
-export function useGscdumpDates(
-  siteId: MaybeRefOrGetter<string | undefined>,
-  period: MaybeRefOrGetter<Period>,
-  options?: { immediate?: boolean, watch?: boolean },
-) {
-  const _siteId = computed(() => toValue(siteId))
-  const _period = computed(() => toValue(period))
-  const key = computed(() => `gscdump:dates:${_siteId.value}:${_period.value}`)
-
-  return useAsyncData(
-    key,
-    async () => {
-      const siteIdVal = _siteId.value
-      if (!siteIdVal)
-        return null
-
-      const { queryAnalyticsReportDetail } = useGscdump()
-      const days = periodToDays(_period.value)
-
-      const state: BuilderState = {
-        dimensions: ['date'],
-        filter: between(date, daysAgo(days), daysAgo(1)),
-        orderBy: { column: 'date', dir: 'asc' },
-      }
-
-      const comparison: BuilderState = {
-        dimensions: ['date'],
-        filter: between(date, daysAgo(days * 2), daysAgo(days + 1)),
-      }
-
-      const result = await queryAnalyticsReportDetail({
-        params: { siteId: siteIdVal },
-        body: { state, comparison },
-      })
-
-      return {
-        dates: result.daily,
-        period: result.totals,
-        prevPeriod: result.previousTotals ?? null,
-        meta: result.meta,
-        hasPrevData: !!result.previousTotals,
-      }
-    },
-    {
-      server: false,
-      immediate: options?.immediate ?? true,
-      watch: (options?.watch ?? true) ? [_siteId, _period] : undefined,
-    },
-  )
-}
-
-export function useGscdumpSiteSummary(
-  siteId: MaybeRefOrGetter<string | undefined>,
-  period: MaybeRefOrGetter<Period>,
-  options?: { immediate?: boolean, watch?: boolean },
-) {
-  const _siteId = computed(() => toValue(siteId))
-  const _period = computed(() => toValue(period))
-  const key = computed(() => `gscdump:site-summary:${_siteId.value}:${_period.value}`)
-
-  return useAsyncData(
-    key,
-    async () => {
-      const siteIdVal = _siteId.value
-      if (!siteIdVal)
-        return null
-
-      const days = periodToDays(_period.value)
-      const query = {
-        startDate: daysAgo(days),
-        endDate: daysAgo(1),
-        prevStartDate: daysAgo(days * 2),
-        prevEndDate: daysAgo(days + 1),
-      }
-      const { getPageTrend, getQueryTrend } = useGscdump()
-
-      return loadDashboardSiteSummary({
-        getQueryTotal: () => getQueryTrend({ params: { siteId: siteIdVal }, query }, true).then(result => result.total),
-        getPageTotal: () => getPageTrend({ params: { siteId: siteIdVal }, query }, true).then(result => result.total),
-      })
-    },
-    {
-      server: false,
-      immediate: options?.immediate ?? true,
-      watch: (options?.watch ?? true) ? [_siteId, _period] : undefined,
-    },
-  )
 }

@@ -28,8 +28,17 @@ const conflictEmail = computed(() => route.query.email as string | undefined)
 const noAccountFound = computed(() => error.value === 'no_account')
 const conflictError = computed(() => error.value === 'use_existing_provider' && !!conflictProvider.value)
 const emailNotVerified = computed(() => error.value === 'email_not_verified')
+const emailLookupFailed = computed(() => error.value === 'email_lookup_failed')
+// The refusing provider, when the callback named one.
+const refusingProvider = computed(() => {
+  if (conflictProvider.value === 'google')
+    return 'Google'
+  if (conflictProvider.value === 'github')
+    return 'GitHub'
+  return null
+})
 
-const errorVariant = computed<'no_account' | 'conflict' | 'email_not_verified' | 'generic' | null>(() => {
+const errorVariant = computed<'no_account' | 'conflict' | 'email_not_verified' | 'email_lookup_failed' | 'generic' | null>(() => {
   if (!error.value)
     return null
   if (noAccountFound.value)
@@ -38,6 +47,8 @@ const errorVariant = computed<'no_account' | 'conflict' | 'email_not_verified' |
     return 'conflict'
   if (emailNotVerified.value)
     return 'email_not_verified'
+  if (emailLookupFailed.value)
+    return 'email_lookup_failed'
   return 'generic'
 })
 
@@ -47,7 +58,9 @@ const errorTitle = computed(() => {
   if (conflictError.value)
     return 'Account exists with another sign-in method'
   if (emailNotVerified.value)
-    return 'Verify your email with Google first'
+    return refusingProvider.value ? `Verify your email with ${refusingProvider.value} first` : 'Verify your email first'
+  if (emailLookupFailed.value)
+    return 'We could not check your email'
   if (error.value)
     return 'Sign in failed'
   return undefined
@@ -61,8 +74,14 @@ const errorDescription = computed(() => {
     const emailNote = conflictEmail.value ? `Your account at ${conflictEmail.value} signs in with ${provider}.` : `Your account signs in with ${provider}.`
     return `${emailNote} Continue with ${provider} to access it.`
   }
-  if (emailNotVerified.value)
-    return 'Google says this account has an unverified email. Verify with Google, then try again.'
+  if (emailNotVerified.value) {
+    const provider = refusingProvider.value ?? 'Your sign-in provider'
+    return `${provider} reports that your email is not verified. Sign-in needs a verified email to keep your account and team invitations safe. Verify it, then try again.`
+  }
+  if (emailLookupFailed.value) {
+    const provider = refusingProvider.value ?? 'Your sign-in provider'
+    return `${provider} did not answer our email check, so sign-in stopped. This is usually temporary. Try again in a minute.`
+  }
   // Raw provider failures (config errors, network errors) arrive as free text.
   if (error.value)
     return error.value

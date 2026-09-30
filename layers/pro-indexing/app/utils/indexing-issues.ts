@@ -105,20 +105,6 @@ export const investigationStatusConfig: Record<string, { label: string, icon: st
   monitoring: { label: 'Monitoring', icon: 'i-lucide-eye', color: 'warning' },
 }
 
-export const coverageLabels: Record<string, { short: string, color: string }> = {
-  'Crawled - currently not indexed': { short: 'Crawled, not indexed', color: 'text-error' },
-  'Discovered - currently not indexed': { short: 'Discovered, not indexed', color: 'text-warning' },
-  'Server error (5xx)': { short: 'Server error', color: 'text-error' },
-  'Not found (404)': { short: '404', color: 'text-error' },
-  'Soft 404': { short: 'Soft 404', color: 'text-error' },
-  'URL is unknown to Google': { short: 'Unknown', color: 'text-warning' },
-  'Blocked by robots.txt': { short: 'Robots blocked', color: 'text-warning' },
-}
-
-export function coverageLabel(state: string) {
-  return coverageLabels[state] || { short: state, color: 'text-muted' }
-}
-
 /** Map from issue type to its group id */
 export const issueTypeToGroup: Record<string, string> = Object.fromEntries(
   issueGroups.flatMap(g => g.issueTypes.map(t => [t, g.id])),

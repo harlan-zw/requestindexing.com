@@ -12,20 +12,28 @@ export { useProGscdumpAnalysis } from './useProGscdumpAnalysis'
 export {
   type BingDataset,
   type BingSiteId,
+  useProBingAuthorize,
+  useProBingIntegration,
+  useProBingSiteSitemap,
   useProGscdumpBingConnection,
   useProGscdumpBingData,
   type UseProGscdumpBingDataOptions,
+  useProGscdumpBingEvidence,
   useProGscdumpBingVerify,
 } from './useProGscdumpBing'
 export { useProGscdumpData } from './useProGscdumpData'
 export { useProGscdumpDataDetail } from './useProGscdumpDataDetail'
 export { useProGscdumpDates } from './useProGscdumpDates'
 export {
+  type GscdumpInspectRefused,
+  indexingUrlsQueryKey,
+  useProGscdumpCanonicalMismatches,
   useProGscdumpIndexing,
   useProGscdumpIndexingDiagnostics,
   useProGscdumpIndexingUrls,
   useProGscdumpInspectUrls,
 } from './useProGscdumpIndexing'
+export { useProGscdumpPeriodCount, type UseProGscdumpPeriodCountOptions } from './useProGscdumpPeriodCount'
 export { useProGscdumpSitemapChanges, useProGscdumpSitemaps } from './useProGscdumpSitemaps'
 export {
   type Dimension,

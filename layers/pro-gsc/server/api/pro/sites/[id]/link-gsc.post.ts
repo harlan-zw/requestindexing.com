@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 import { normalizeRegistrationTarget } from 'gscdump'
 import { z } from 'zod'
 import { useGscdumpTeamsClient } from '#layers/pro-gsc/server/utils/gscdump-teams-client'
+import { refusalError } from '#layers/pro-gsc/server/utils/user-entitlements'
 import { sites, teams, users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 
@@ -9,7 +10,9 @@ const bodySchema = z.object({
   gscSiteUrl: z.string().min(1),
 })
 
-export default defineProApiHandler({ body: bodySchema, site: true }, async ({ event, body, site: access }) => {
+// Linking changes the Site for the whole team, so a viewer may not run it.
+// Same ability as nuxtseo.com.
+export default defineProApiHandler({ body: bodySchema, site: { ability: 'write-data' } }, async ({ event, body, site: access }) => {
   const { db, siteId, caller } = access
   const { gscSiteUrl } = body
   const registrationTarget = normalizeRegistrationTarget(gscSiteUrl)
@@ -26,7 +29,7 @@ export default defineProApiHandler({ body: bodySchema, site: true }, async ({ ev
     throw createError({ statusCode: 400, message: 'Google account not connected to gscdump. Please reconnect your Google account.' })
 
   // Delegate to autoLinkGsc which handles: find matching GSC property, register if needed, update site row
-  const gscdumpSiteId = await autoLinkGsc({
+  const link = await autoLinkGsc({
     db,
     gscdumpUserId: user.gscdumpUserId,
     siteId,
@@ -34,8 +37,11 @@ export default defineProApiHandler({ body: bodySchema, site: true }, async ({ ev
     preferredSiteUrl: gscSiteUrl,
   })
 
-  if (!gscdumpSiteId)
+  if (link._tag === 'Refused')
+    throw refusalError(link.refusal)
+  if (link._tag === 'NotLinked')
     throw createError({ statusCode: 404, message: 'GSC site not found or no access' })
+  const { gscdumpSiteId } = link
 
   // B3 mirror: bind the gscdump userSite to the pro team's mirrored gscdump
   // team. The site's own `team_id` is the authority now, so the mirror no

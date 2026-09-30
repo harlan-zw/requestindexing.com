@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { NuxtError } from '#app'
+import { domAnimation, LazyMotion, MotionConfig } from 'motion-v'
+import { ConfigProvider } from 'reka-ui'
 
 const { error } = defineProps<{ error: NuxtError }>()
 
@@ -43,7 +45,9 @@ function describeError(status: number): ErrorCopy {
 
 const status = computed(() => Number(error.statusCode) || 500)
 const copy = computed(() => describeError(status.value))
+const isNotFound = computed(() => status.value === 404)
 
+const route = useRoute()
 const { loggedIn } = useUserSession()
 
 const primaryAction = computed(() => {
@@ -70,40 +74,68 @@ useHead({
     lang: 'en',
   },
 })
+
+// This file replaces `app.vue` while an error shows, so it mounts the same
+// providers and the same toaster.
+const useIdFunction = () => useId()
+const appConfig = useAppConfig()
+const toasterConfig = computed(() => typeof appConfig.toaster === 'object' && appConfig.toaster !== null ? appConfig.toaster : {})
+const scrollBody = { padding: 0, margin: 0 } as const
 </script>
 
 <template>
-  <UApp>
-    <div class="flex min-h-dvh flex-col bg-default">
-      <!-- A signed-in user hitting an error stays in the app context: no
-           marketing navigation, no footer, no creator card. -->
-      <Header v-if="!loggedIn" />
-      <div v-else class="border-b border-default">
-        <div class="dashboard-container flex min-h-16 items-center">
-          <NuxtLink to="/pro/dashboard" class="inline-flex items-center rounded-md text-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-            <OgBrand :size="26" wordmark semantic />
-          </NuxtLink>
-        </div>
-      </div>
+  <ConfigProvider :use-id="useIdFunction" :scroll-body="scrollBody">
+    <LazyMotion :features="domAnimation">
+      <MotionConfig reduced-motion="user">
+        <UApp :toaster="null" :tooltip="{ delayDuration: 0 }" :scroll-body="scrollBody">
+          <!-- A signed-in user keeps the dashboard around the error, as on
+               nuxtseo.com. The sidebar stays, so after a 404 or a crash the
+               reader still has every way onward. -->
+          <NuxtLayout v-if="loggedIn" name="pro-dashboard">
+            <UiEmptyState
+              :icon="isNotFound ? 'compass' : 'caution'"
+              :title="copy.title"
+              :description="copy.message"
+              heading-tag="h1"
+            >
+              <div class="flex items-center justify-center gap-2">
+                <UiButton icon="home" @click="clearError({ redirect: primaryAction.to })">
+                  {{ primaryAction.label }}
+                </UiButton>
+                <!-- A retry can recover a transient error by rendering the
+                     route again. A 404 has no page to render, so it gets none. -->
+                <UiButton v-if="!isNotFound" purpose="secondary" icon="refresh" @click="clearError({ redirect: route.fullPath })">
+                  Try again
+                </UiButton>
+              </div>
+            </UiEmptyState>
+          </NuxtLayout>
 
-      <main class="flex flex-1 items-center justify-center px-4 py-16">
-        <div class="w-full max-w-md text-center">
-          <p class="mb-2 font-mono text-sm text-muted">
-            {{ status }}
-          </p>
-          <h1 class="mb-3 font-title text-2xl font-semibold tracking-tight text-highlighted">
-            {{ copy.title }}
-          </h1>
-          <p class="mb-6 text-muted">
-            {{ copy.message }}
-          </p>
-          <UButton @click="clearError({ redirect: primaryAction.to })">
-            {{ primaryAction.label }}
-          </UButton>
-        </div>
-      </main>
+          <div v-else class="flex min-h-dvh flex-col bg-default">
+            <Header />
 
-      <Footer v-if="!loggedIn" />
-    </div>
-  </UApp>
+            <main class="flex flex-1 items-center justify-center px-4 py-16">
+              <div class="w-full max-w-md text-center">
+                <p class="mb-2 font-mono text-sm text-muted">
+                  {{ status }}
+                </p>
+                <h1 class="mb-3 font-title text-2xl font-semibold tracking-tight text-highlighted">
+                  {{ copy.title }}
+                </h1>
+                <p class="mb-6 text-muted">
+                  {{ copy.message }}
+                </p>
+                <UButton @click="clearError({ redirect: primaryAction.to })">
+                  {{ primaryAction.label }}
+                </UButton>
+              </div>
+            </main>
+
+            <Footer />
+          </div>
+        </UApp>
+        <UiToaster v-bind="toasterConfig" />
+      </MotionConfig>
+    </LazyMotion>
+  </ConfigProvider>
 </template>

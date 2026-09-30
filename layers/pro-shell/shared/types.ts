@@ -2,7 +2,7 @@
 // Imported by both the build-time module and runtime composables.
 
 import type { Component, Ref } from 'vue'
-import type { IntegrationReadiness } from './policies/integration-readiness'
+import type { IntegrationReadiness } from '#layers/pro-saas/shared/policies/integration-readiness'
 
 /**
  * Runtime-registered feature. Layers register these via the `pro:feature`

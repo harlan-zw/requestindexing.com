@@ -1,7 +1,8 @@
-import type { Column, Filter, Metric } from 'gscdump/query'
+import type { GscSearchType } from '@gscdump/contracts'
+import type { Filter, Metric } from 'gscdump/query'
 import type { MaybeRefOrGetter } from 'vue'
+import type { BreakdownDimension, BreakdownInput } from '../../../shared/analytics-requests'
 import type {
-  BuilderState,
   GscComparisonFilter,
   GscdumpDataResponse,
   GscdumpDataRow,
@@ -9,22 +10,20 @@ import type {
 } from '../../../shared/gscdump-api'
 import type { GscFacet } from '../../../shared/utils/gsc-facets'
 import type { CompareMode, Period } from '../useGscPeriod'
-import { contains, country, date, device, page as pageColumn, queryCanonical, query as queryColumn } from 'gscdump/query'
 import { useRoute } from 'nuxt/app'
 import { computed, shallowRef, toValue, watch } from 'vue'
-import { andFilter, dateFilter } from '../../../shared/utils/filter-wire'
 import {
   breakdownWindow,
-  facetsToFilters,
   hasCurrentWindowTraffic,
   hasMoreRows,
   isMoversFilter,
 } from '../../../shared/utils/gsc-facets'
 import { compareRange, periodToDateRange } from '../useGscPeriod'
+import { useProGscFilters } from '../useProGscFilters'
 import { useProTableState } from '../useProTableState'
 import { useProGscdumpData } from './useProGscdumpData'
 
-export type Dimension = 'page' | 'query' | 'queryCanonical' | 'country' | 'device' | 'date'
+export type Dimension = BreakdownDimension
 
 export interface ProGscdumpTableOptions<T = GscdumpDataRow> {
   siteId: MaybeRefOrGetter<string | undefined>
@@ -32,6 +31,8 @@ export interface ProGscdumpTableOptions<T = GscdumpDataRow> {
   period?: MaybeRefOrGetter<Period>
   stableData?: MaybeRefOrGetter<boolean>
   compareMode?: MaybeRefOrGetter<CompareMode>
+  /** Search type slice. Defaults to the control bar's picker. */
+  searchType?: MaybeRefOrGetter<GscSearchType | undefined>
   pageSize?: number
   defaultSort?: { column: string, direction: 'asc' | 'desc' }
   /** Apply this preset filter before the first request starts. */
@@ -50,11 +51,6 @@ export interface ProGscdumpTableOptions<T = GscdumpDataRow> {
    */
   loadMore?: boolean
   /**
-   * Report the distinct group count without entering load-more accumulation.
-   * Lets a single-page overview list show the true total.
-   */
-  includeTotal?: boolean
-  /**
    * Seed the initial preset filter from the `?filter=` query param, for the
    * overview's "View all" mover deep links. Read once at construction.
    */
@@ -67,15 +63,6 @@ export interface ProGscdumpTableOptions<T = GscdumpDataRow> {
    */
   dimensionSortAccessor?: (row: T) => string
 }
-
-const DIMENSION_COLUMNS = {
-  country,
-  date,
-  device,
-  page: pageColumn,
-  query: queryColumn,
-  queryCanonical,
-} satisfies Record<Dimension, Column<Dimension>>
 
 /** Columns the server breakdown can order by. Anything else is a text sort. */
 const METRIC_SORT_COLUMNS = new Set<string>(['clicks', 'impressions', 'ctr', 'position'])
@@ -103,7 +90,6 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
     pageSize = 50,
     defaultSort,
     loadMore = false,
-    includeTotal = false,
   } = options
 
   const _siteId = computed(() => toValue(options.siteId) ?? '')
@@ -112,6 +98,8 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
   const _compareMode = computed(() => toValue(options.compareMode) ?? 'previous')
   const _extraFilters = computed(() => toValue(options.extraFilters) ?? [])
   const _facets = computed(() => toValue(options.facets))
+  const filters = useProGscFilters()
+  const _searchType = computed(() => toValue(options.searchType) ?? filters.searchType.value)
 
   // Deep-link the mover filter from `?filter=`.
   const routeFilter = options.initFilterFromUrl ? toValue(useRoute().query.filter) : undefined
@@ -134,36 +122,23 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
     ? { column: 'clicks' as Metric, dir: 'desc' as const }
     : { column: sort.value.column as Metric, dir: sort.value.direction }))
 
-  function whereFor(window: { start: string, end: string }) {
-    return andFilter(
-      dateFilter(window),
-      q.value ? contains(DIMENSION_COLUMNS[dimension], q.value) : null,
-      ...facetsToFilters(_facets.value),
-      ..._extraFilters.value,
-    )
-  }
-
-  const state = computed<BuilderState>(() => ({
-    dimensions: [dimension],
-    filter: whereFor(range.value),
-    orderBy: { column: orderBy.value.column, dir: orderBy.value.dir },
+  // The preset filter is the movers re-ranking the report contract accepts.
+  // The request builder drops it when there is no comparison range.
+  const request = computed<BreakdownInput>(() => ({
+    searchType: _searchType.value,
+    dimension,
+    range: range.value,
+    comparisonRange: comparisonRange.value,
+    search: q.value || undefined,
+    facets: _facets.value,
+    extraFilters: _extraFilters.value,
+    orderBy: orderBy.value,
     rowLimit: window.value.limit,
     startRow: window.value.offset,
+    moversFilter: isMoversFilter(filter.value) ? filter.value as GscComparisonFilter : undefined,
   }))
 
-  const comparison = computed<BuilderState | undefined>(() => comparisonRange.value
-    ? { dimensions: [dimension], filter: whereFor(comparisonRange.value) }
-    : undefined)
-
-  // The preset filter is the movers re-ranking the report contract accepts.
-  // Without a comparison range there are no deltas, so it is a no-op.
-  const moversFilter = computed<GscComparisonFilter | undefined>(() =>
-    (comparisonRange.value && isMoversFilter(filter.value)) ? filter.value as GscComparisonFilter : undefined)
-
-  const query = useProGscdumpData(_siteId, state, {
-    comparison,
-    filter: moversFilter,
-  })
+  const query = useProGscdumpData(_siteId, request)
 
   const isLoading = computed(() => query.pending.value)
   /** True only while fetching page 2 or later, so the table stays put. */
@@ -176,7 +151,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
   const resetKey = computed(() => {
     if (!loadMore)
       return ''
-    const { rowLimit: _rowLimit, startRow: _startRow, ...rest } = state.value
+    const { rowLimit: _rowLimit, startRow: _startRow, ...rest } = request.value
     return `${_siteId.value}|${JSON.stringify(rest)}|${filter.value}`
   })
 
@@ -236,9 +211,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
 
     return {
       rows,
-      total: (loadMore || includeTotal)
-        ? (result.totalCount || zeroFilteredCount)
-        : zeroFilteredCount,
+      total: loadMore ? (result.totalCount || zeroFilteredCount) : zeroFilteredCount,
       totalClicks,
       totalImpressions,
       hasPrevData,

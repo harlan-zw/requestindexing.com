@@ -39,6 +39,8 @@ The rule that decides where code goes: if a capability could live in gscdump, it
 | Sitemap discovery, drift, submission | gscdump |
 | Multi-engine submission (IndexNow, Bing) | gscdump, when it ships |
 | Analytics queries and the archive | gscdump |
+| Free allowance, Meters, held Sites, and their refusals | gscdump |
+| The words a refusal, a hold, or an allowance email uses | this app |
 | Accounts, teams, site list, session | this app |
 | Dashboard UI and the job-to-be-done | this app |
 | Google Indexing API submission and its quota | this app, for now |
@@ -71,7 +73,7 @@ Site and account state is a cache, never the record. The webhook receiver mirror
 
 - **Partner API**: `layers/pro-gsc/server/utils/gscdump-origin.ts` builds the v1 client from a server-held key.
 - **Browser**: no key reaches the client. `layers/pro-gsc/server/api/_gscdump/[surface]/v1/[...path].ts` proxies a closed allowlist of operations with team-scoped ownership checks.
-- **Webhooks**: `layers/pro-gsc/server/api/webhooks/gscdump.post.ts` verifies the HMAC, dedupes by delivery id, and treats deliveries as invalidation signals.
+- **Webhooks**: `layers/pro-gsc/server/api/webhooks/gscdump.post.ts` verifies the HMAC, dedupes by delivery id, and treats deliveries as invalidation signals. The one exception is `user.allowance.notice`: gscdump sends no email to a partner's user, so this app sends its own.
 - **Realtime**: tickets minted through the same proxy; the socket only ever says state changed.
 
 ## Not built

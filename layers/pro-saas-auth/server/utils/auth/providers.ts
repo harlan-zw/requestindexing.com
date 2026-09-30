@@ -1,7 +1,7 @@
 import type { H3Event } from 'h3'
 import type { AuthProviderId, NormalizedIdentity } from '../../../shared/types/auth'
 import { z } from 'zod'
-import { logWarn } from '~~/shared/logging'
+import { logError } from '~~/shared/logging'
 
 const githubContextSchema = z.object({
   tokens: z.object({ access_token: z.string() }),
@@ -46,24 +46,25 @@ const githubProvider: AuthProvider = {
   async resolveIdentity(_event, context) {
     const { tokens, user } = githubContextSchema.parse(context)
     interface GhEmail { email: string, primary: boolean, verified: boolean }
-    const emails = await $fetch<GhEmail[]>('https://api.github.com/user/emails', {
+    // A failed lookup is not an unverified email. The provider was unreachable,
+    // so sign-in cannot decide either way and says so with its own error.
+    const lookup = await $fetch<GhEmail[]>('https://api.github.com/user/emails', {
       headers: {
         'Authorization': `Bearer ${tokens.access_token}`,
         'Accept': 'application/vnd.github+json',
         // GitHub's REST API answers 403 to any request without a User-Agent.
-        // Without this every GitHub sign-in silently lost the verified email
-        // list and fell back to the profile email, which may be unverified.
+        // Without this every GitHub sign-in lost the verified email list.
         'User-Agent': 'request-indexing.com',
       },
-    }).catch((err: unknown) => {
-      // Not fatal: the profile email below still identifies the account. It is
-      // logged because a persistent failure means every GitHub sign-in loses
-      // its verified-email check.
-      logWarn('auth.optional_probe_failed', err, { stage: 'github_user_emails' })
-      return [] as GhEmail[]
     })
+      .then(emails => ({ _tag: 'Ok' as const, emails }))
+      .catch((err: unknown) => {
+        // An error, not a warning: while it persists, every GitHub sign-in is refused.
+        logError('auth.email_lookup_failed', err, { provider: 'github' })
+        return { _tag: 'Failed' as const, emails: [] as GhEmail[] }
+      })
 
-    const verified = emails
+    const verified = lookup.emails
       .filter(e => e.verified)
       .sort((a, b) => (b.primary ? 1 : 0) - (a.primary ? 1 : 0))
       .map(e => e.email)
@@ -73,6 +74,7 @@ const githubProvider: AuthProvider = {
       providerUserId: String(user.id),
       email,
       emailVerified: !!email && verified.includes(email),
+      emailLookupFailed: lookup._tag === 'Failed',
       name: user.login ?? user.name ?? null,
       avatarUrl: user.avatar_url ?? (user.login ? `https://github.com/${user.login}.png` : null),
       allVerifiedEmails: verified,

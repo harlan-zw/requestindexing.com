@@ -4,11 +4,11 @@ minimumReleaseAgeExclude:
   - nuxt-og-image@6.10.1
   - '@harlan-zw/nuxt-checkin@0.3.0'
   - nuxt-skew-protection@1.6.1
-  - '@gscdump/contracts@4.6.0'
-  - '@gscdump/engine@4.6.0'
-  - '@gscdump/lakehouse@4.6.0'
-  - '@gscdump/sdk@4.6.0'
-  - gscdump@4.6.0
+  - '@gscdump/contracts@4.8.0'
+  - '@gscdump/engine@4.8.0'
+  - '@gscdump/lakehouse@4.8.0'
+  - '@gscdump/sdk@4.8.0'
+  - gscdump@4.8.0
   - '@vitejs/plugin-vue@6.0.9'
   - '@harlan-zw/nuxt-sentry@0.2.0'
 
@@ -63,9 +63,9 @@ allowBuilds:
 catalog:
   '@antfu/eslint-config': ^9.5.1
   '@cloudflare/workers-types': ^5.20260929.1
-  '@gscdump/contracts': 4.6.0
-  '@gscdump/engine': 4.6.0
-  '@gscdump/sdk': 4.6.0
+  '@gscdump/contracts': 4.8.0
+  '@gscdump/engine': 4.8.0
+  '@gscdump/sdk': 4.8.0
   '@harlan-zw/comark-content': 0.1.5
   '@harlan-zw/nuxt-checkin': 0.3.0
   '@harlan-zw/nuxt-cloudflare': 0.4.4
@@ -117,7 +117,7 @@ catalog:
   eslint: ^10.11.0
   globby: ^16.2.4
   googlethis: ^1.8.0
-  gscdump: 4.6.0
+  gscdump: 4.8.0
   h3: ^1.15.11
   happy-dom: ^20.0.0
   hookable: ^6.1.2

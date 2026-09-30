@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// The fleet sidebar body: workspace destinations, then the Site roster.
+// The fleet sidebar body: Team destinations, then the Site roster.
 // Adapted from nuxtseo.com's `ProDashboardSidebarNav.vue`, minus the group
 // switcher, the monitoring rail and the Reports/Alerts/Chat rows. Account lives
 // in the user menu, as upstream; the rail keeps Manage Sites.
@@ -11,6 +11,9 @@ import type { UiNavLink } from '#layers/design-system/app/shared/nav'
 import type { ProNavSite } from '#layers/pro-shell/app/composables/useProSingleSiteNav'
 import { computed } from 'vue'
 import { NuxtLink, UiFavicon, UiIcon, UiNavList, UiSkeleton } from '#components'
+import { HELD_LABEL, HELD_TITLE } from '#layers/pro-gsc/shared/entitlement-copy'
+import { useProNavSetupBadges } from '#layers/pro-shell/app/composables/useProNavSetupBadges'
+import { integrationsRailLinks } from '#layers/pro-shell/app/utils/integrations-pending'
 
 const { sites, loading = false } = defineProps<{
   sites: ProNavSite[]
@@ -21,7 +24,7 @@ const emit = defineEmits<{ navigate: [] }>()
 
 const primaryLinks = computed<UiNavLink[]>(() => [
   { label: 'Dashboard', icon: 'home', to: '/pro/dashboard', active: p => p === '/pro/dashboard' },
-  { label: 'Indexing', icon: 'database', to: '/pro/dashboard/web-indexing' },
+  { label: 'Indexing', icon: 'database', to: '/pro/dashboard/indexing' },
 ])
 
 function hostnameOf(value: string): string {
@@ -32,6 +35,14 @@ function hostnameOf(value: string): string {
     return value
   }
 }
+
+// Integrations joins the rail only while one is pending. It always lives in
+// the user menu, as upstream.
+const { integrationsSetup } = useProNavSetupBadges()
+const railLinks = computed<UiNavLink[]>(() => [
+  ...integrationsRailLinks(integrationsSetup.value),
+  { label: 'Manage Sites', icon: 'settings', to: '/pro/dashboard/sites', active: p => p === '/pro/dashboard/sites' },
+])
 
 interface FleetSiteLink extends UiNavLink { domain: string }
 
@@ -44,6 +55,7 @@ const siteLinks = computed<FleetSiteLink[]>(() => sites.map((site) => {
     label: site.name || domain || 'Site',
     to,
     domain,
+    ...(site.hold ? { badge: HELD_LABEL, badgeColor: 'warning' as const, title: HELD_TITLE } : {}),
     active: (path: string) => path === to || path.startsWith(`${to}/`),
   }
 }))
@@ -54,7 +66,7 @@ const siteLinks = computed<FleetSiteLink[]>(() => sites.map((site) => {
     <UiNavList
       variant="sidebar"
       tone="default"
-      label="Workspace"
+      label="Team"
       :links="primaryLinks"
       @click="emit('navigate')"
     />
@@ -97,7 +109,7 @@ const siteLinks = computed<FleetSiteLink[]>(() => sites.map((site) => {
       <UiNavList
         variant="sidebar"
         label="Manage"
-        :links="[{ label: 'Manage Sites', icon: 'settings', to: '/pro/dashboard/sites', active: p => p === '/pro/dashboard/sites' }]"
+        :links="railLinks"
         @click="emit('navigate')"
       />
     </div>

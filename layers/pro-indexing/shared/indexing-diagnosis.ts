@@ -2,6 +2,7 @@ import type { ClassifySearchConsoleStageInput, SearchConsoleStageIssue, SearchCo
 import type { SiteTriage } from '@gscdump/sdk/site-triage'
 import type { CrawlRecencyHistogram } from './crawl-recency'
 import type { QualityBudget } from './quality-budget'
+import { parseCoverageState } from 'gscdump'
 import { buildCrawlRecencyHistogram } from './crawl-recency'
 
 const DISCOVERY_WELL_LINKED_SHARE = 0.5
@@ -441,6 +442,9 @@ function hasCanonicalMismatch(row: IndexingEvidenceUrl): boolean {
 function sitemapMembership(row: IndexingEvidenceUrl): boolean | null {
   if (row.sitemaps?.length)
     return true
+  // This reads the prose, not `parseCoverageState`: the parser maps "Submitted
+  // and indexed" and "Indexed, not submitted in sitemap" to one `indexed` tag,
+  // and sitemap membership is the part that tag drops.
   const state = row.coverageState?.toLowerCase() ?? ''
   if (state.includes('not submitted in sitemap'))
     return false
@@ -454,9 +458,10 @@ function rowsForIssue(rows: IndexingEvidenceUrl[] | null | undefined, issueType:
   const exact = all.filter(row => row.issueType === issueType)
   if (exact.length)
     return exact
+  // gscdump's parser maps Google's coverage prose to the same tag the issue
+  // type would carry, so a row with no issue type still joins its bucket.
   if (issueType === 'crawled_not_indexed') {
-    const coverage = all.filter(row => row.coverageState?.toLowerCase().includes('crawled')
-      && row.coverageState?.toLowerCase().includes('not indexed'))
+    const coverage = all.filter(row => parseCoverageState(row.coverageState)._tag === 'crawled_not_indexed')
     if (coverage.length)
       return coverage
   }

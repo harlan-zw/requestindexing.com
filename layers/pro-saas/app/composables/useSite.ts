@@ -10,8 +10,8 @@ import { useProSiteInjection } from './useProSiteInjection'
  * GSC readiness flags ride along because they are the common check at site
  * scope; the full sync surface is still `useProGscStatus`.
  *
- * A route id that names no Site never reaches a page: the layout answers 404
- * for it first.
+ * A route id that names no Site never reaches a page: the layout sends the
+ * reader to the Sites list first.
  */
 export function useSite(pageTitle?: string) {
   const route = useRoute()
@@ -33,7 +33,7 @@ export function useSite(pageTitle?: string) {
     }
   })
 
-  const { isNotConnected, isReady, isProcessing, data: gscData } = useProGscStatus(siteId)
+  const { isNotConnected, isReady, isProcessing, hold, data: gscData } = useProGscStatus(siteId)
 
   if (pageTitle) {
     useSeoMeta({ title: () => `${pageTitle} - ${siteName.value}` })
@@ -48,6 +48,8 @@ export function useSite(pageTitle?: string) {
     isNotConnected,
     isReady,
     isProcessing,
+    /** Why gscdump holds the Site before its first import, or null. */
+    hold,
     gscData,
   }
 }
