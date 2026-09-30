@@ -13,14 +13,14 @@ catalogs:
       specifier: ^5.20260816.1
       version: 5.20260816.1
     '@gscdump/contracts':
-      specifier: 3.8.0
-      version: 3.8.0
+      specifier: 4.3.0
+      version: 4.3.0
     '@gscdump/engine':
-      specifier: 3.8.0
-      version: 3.8.0
+      specifier: 4.3.0
+      version: 4.3.0
     '@gscdump/sdk':
-      specifier: 3.8.0
-      version: 3.8.0
+      specifier: 4.3.0
+      version: 4.3.0
     '@harlan-zw/comark-content':
       specifier: 0.1.2
       version: 0.1.2
@@ -175,8 +175,8 @@ catalogs:
       specifier: ^1.8.0
       version: 1.8.0
     gscdump:
-      specifier: 3.8.0
-      version: 3.8.0
+      specifier: 4.3.0
+      version: 4.3.0
     h3:
       specifier: ^1.15.11
       version: 1.15.11
@@ -285,13 +285,13 @@ importers:
     dependencies:
       '@gscdump/contracts':
         specifier: 'catalog:'
-        version: 3.8.0
+        version: 4.3.0
       '@gscdump/engine':
         specifier: 'catalog:'
-        version: 3.8.0(@cloudflare/workers-types@5.20260816.1)(@opentelemetry/api@1.9.1)(valibot@1.4.2(typescript@6.0.3))(zod@4.4.3)
+        version: 4.3.0(@cloudflare/workers-types@5.20260816.1)(@opentelemetry/api@1.9.1)(valibot@1.4.2(typescript@6.0.3))(zod@4.4.3)
       '@gscdump/sdk':
         specifier: 'catalog:'
-        version: 3.8.0
+        version: 4.3.0
       '@harlan-zw/comark-content':
         specifier: 'catalog:'
         version: 0.1.2(571f4335386f985378a8682eb392f10f)
@@ -408,7 +408,7 @@ importers:
         version: 16.2.3
       gscdump:
         specifier: 'catalog:'
-        version: 3.8.0
+        version: 4.3.0
       h3:
         specifier: 'catalog:'
         version: 1.15.11
@@ -1667,26 +1667,26 @@ packages:
   '@floating-ui/vue@1.1.11':
     resolution: {integrity: sha512-HzHKCNVxnGS35r9fCHBc3+uCnjw9IWIlCPL683cGgM9Kgj2BiAl8x1mS7vtvP6F9S/e/q4O6MApwSHj8hNLGfw==}
 
-  '@gscdump/contracts@3.8.0':
-    resolution: {integrity: sha512-U3/qtuVvB3BEFTObWZ/bg8CtYVBAha31ybQJV0Q9K0Yrua/4NCY7clYQkVB6VkzZPqA2H10JQ3xDBTHYRm9org==}
-    engines: {node: '>=22'}
+  '@gscdump/contracts@4.3.0':
+    resolution: {integrity: sha512-YDUuUzn0aJy3eOUbPwI1qr207PyltsCQJ3w5GHOzrZeSVOAFrCrsqU1t94A+Z5ymU65p6g0Amnw3FL2T+loFjQ==}
+    engines: {node: '>=22.13.0'}
 
-  '@gscdump/engine@3.8.0':
-    resolution: {integrity: sha512-2OTEnm6nmwX2Dzu2T6cmF1pGGQm8T7v3u27zHGnbCJRSGJTEucDJHWqMAzhN82Mbwxy9kPTL8NFl6LEqYb1h5w==}
-    engines: {node: '>=22'}
+  '@gscdump/engine@4.3.0':
+    resolution: {integrity: sha512-PV6AfnD+fWuueuz+JmTr0F5IrfROsFpN5Pu//EjvdMWUsPzJopldJywlqd1GPBF4KwvOkOCF6Q6odSG8nQ6HNg==}
+    engines: {node: '>=22.13.0'}
     peerDependencies:
       '@duckdb/node-api': ^1.5.5-r.4
     peerDependenciesMeta:
       '@duckdb/node-api':
         optional: true
 
-  '@gscdump/lakehouse@3.8.0':
-    resolution: {integrity: sha512-hPUp900O9mJ5coM4QhJ6Mj92bi4rMR21qCnicg1ZeF240r6MJqkVtqDJ1QeR7A2vSNw+mS8XWbpy9u8ZuNimLg==}
-    engines: {node: '>=22'}
+  '@gscdump/lakehouse@4.3.0':
+    resolution: {integrity: sha512-8CdRaUqK8CWCZljRlNh+ccyDnuzrbnirpQ9jXQgjTkldKcTOtcuZH2b2RUt68N0nuY5WSjRZQEeqJMYnNEMZyw==}
+    engines: {node: '>=22.13.0'}
 
-  '@gscdump/sdk@3.8.0':
-    resolution: {integrity: sha512-7Xu1CIQeneCOtbnA2tpamu3CTrX7vkr3i5oQhzen9p4wyFYTqX1FRwEuWWONdMMD3HNqr7aDgkevZeUTt0VF4w==}
-    engines: {node: '>=22'}
+  '@gscdump/sdk@4.3.0':
+    resolution: {integrity: sha512-UsibPl1KPTTPGhg6tRGYv/s/ZhxxWB68ed/oItpKQW5r6AQOfglYqlz7uY4dQE+avJWso90D7xVU7P21lH6Vgg==}
+    engines: {node: '>=22.13.0'}
 
   '@harlan-zw/comark-content@0.1.2':
     resolution: {integrity: sha512-P99T0mExWam6fsl4LalQ7ihXlzoHYGNk4m3Sbvo6VPoTlKzx9XxNamdUtpXaRJyFO/GXBXYIv+20YTOHU9+ZqQ==}
@@ -6211,9 +6211,9 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  gscdump@3.8.0:
-    resolution: {integrity: sha512-4D+eSzMoLV/GpXMNXUx60PgmTPH6PultyaHwelzhJ66ygvykR+BmfqpMxCU7y63AD8fAICVh6O5YSC3T8stksw==}
-    engines: {node: '>=22'}
+  gscdump@4.3.0:
+    resolution: {integrity: sha512-6HmdLQzlrWQOr+xojWtoqOWXiegrcmfUK1NY7jveaxE43xX3ayhORDFdVeJih/Gb1EeeQi4e2+ElqfTlQ3Nw0Q==}
+    engines: {node: '>=22.13.0'}
 
   gzip-size@7.0.0:
     resolution: {integrity: sha512-O1Ld7Dr+nqPnmGpdhzLmMTQ4vAsD+rHwMm1NLUmoUFFymBOMKxCCrtDxqdBRYXdeEPEi3SyoR4TizJLQrnKBNA==}
@@ -10094,16 +10094,16 @@ snapshots:
       - '@vue/composition-api'
       - vue
 
-  '@gscdump/contracts@3.8.0':
+  '@gscdump/contracts@4.3.0':
     dependencies:
       zod: 4.6.5
 
-  '@gscdump/engine@3.8.0(@cloudflare/workers-types@5.20260816.1)(@opentelemetry/api@1.9.1)(valibot@1.4.2(typescript@6.0.3))(zod@4.4.3)':
+  '@gscdump/engine@4.3.0(@cloudflare/workers-types@5.20260816.1)(@opentelemetry/api@1.9.1)(valibot@1.4.2(typescript@6.0.3))(zod@4.4.3)':
     dependencies:
-      '@gscdump/contracts': 3.8.0
-      '@gscdump/lakehouse': 3.8.0
+      '@gscdump/contracts': 4.3.0
+      '@gscdump/lakehouse': 4.3.0
       drizzle-orm: 1.0.0-rc.4(@cloudflare/workers-types@5.20260816.1)(@opentelemetry/api@1.9.1)(valibot@1.4.2(typescript@6.0.3))(zod@4.4.3)
-      gscdump: 3.8.0
+      gscdump: 4.3.0
       pathe: 2.0.3
       proper-lockfile: 4.1.2
     transitivePeerDependencies:
@@ -10155,12 +10155,12 @@ snapshots:
       - valibot
       - zod
 
-  '@gscdump/lakehouse@3.8.0': {}
+  '@gscdump/lakehouse@4.3.0': {}
 
-  '@gscdump/sdk@3.8.0':
+  '@gscdump/sdk@4.3.0':
     dependencies:
-      '@gscdump/contracts': 3.8.0
-      gscdump: 3.8.0
+      '@gscdump/contracts': 4.3.0
+      gscdump: 4.3.0
       ofetch: 1.5.1
       zod: 4.6.5
 
@@ -15459,9 +15459,9 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  gscdump@3.8.0:
+  gscdump@4.3.0:
     dependencies:
-      '@gscdump/contracts': 3.8.0
+      '@gscdump/contracts': 4.3.0
       ofetch: 1.5.1
 
   gzip-size@7.0.0:

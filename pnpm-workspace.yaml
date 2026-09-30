@@ -9,11 +9,11 @@ minimumReleaseAgeExclude:
   - '@harlan-zw/nuxt-use-query@0.1.0'
   - '@harlan-zw/nuxt-wide-events@0.1.0'
   - nuxt-skew-protection@1.4.3
-  - '@gscdump/contracts@3.8.0'
-  - '@gscdump/engine@3.8.0'
-  - '@gscdump/lakehouse@3.8.0'
-  - '@gscdump/sdk@3.8.0'
-  - gscdump@3.8.0
+  - '@gscdump/contracts@4.3.0'
+  - '@gscdump/engine@4.3.0'
+  - '@gscdump/lakehouse@4.3.0'
+  - '@gscdump/sdk@4.3.0'
+  - gscdump@4.3.0
   - '@vitejs/plugin-vue@6.0.9'
 
 shellEmulator: true
@@ -59,9 +59,9 @@ patchedDependencies:
 catalog:
   '@antfu/eslint-config': ^9.3.0
   '@cloudflare/workers-types': ^5.20260816.1
-  '@gscdump/contracts': 3.8.0
-  '@gscdump/engine': 3.8.0
-  '@gscdump/sdk': 3.8.0
+  '@gscdump/contracts': 4.3.0
+  '@gscdump/engine': 4.3.0
+  '@gscdump/sdk': 4.3.0
   '@harlan-zw/comark-content': 0.1.2
   '@harlan-zw/nuxt-checkin': 0.3.0
   '@harlan-zw/nuxt-cloudflare': 0.4.3
@@ -113,7 +113,7 @@ catalog:
   eslint: ^10.8.1
   globby: ^16.2.3
   googlethis: ^1.8.0
-  gscdump: 3.8.0
+  gscdump: 4.3.0
   h3: ^1.15.11
   happy-dom: ^20.0.0
   hookable: ^6.1.1

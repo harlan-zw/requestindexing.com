@@ -78,15 +78,7 @@ export interface GscdumpAnalysisResponse {
   }
 }
 
-type V1ReportState = GscdumpV1OperationInput<'analytics.reports.query'>['body']['state']
 type V1AvailableSitesData = GscdumpV1OperationResponse<'partner.users.sites.available.list'>['data']
-
-// The contract's BuilderState is intentionally open to additive fields, while
-// the query package exposes a closed interface. They share the same runtime
-// grammar, so keep the unavoidable structural cast at this one boundary.
-function toV1ReportState(state: BuilderState): V1ReportState {
-  return state as unknown as V1ReportState
-}
 
 // ===== Session-proxied v1 client =====
 //
@@ -283,8 +275,8 @@ export function useGscdumpData(
       return queryAnalyticsReport({
         params: { siteId: _siteId.value },
         body: {
-          state: toV1ReportState(_state.value),
-          comparison: _comparison.value ? toV1ReportState(_comparison.value) : undefined,
+          state: _state.value,
+          comparison: _comparison.value,
           filter: _filter.value,
         },
       })
@@ -326,8 +318,8 @@ export function useGscdumpDataDetail(
       return queryAnalyticsReportDetail({
         params: { siteId: _siteId.value },
         body: {
-          state: toV1ReportState(_state.value),
-          comparison: _comparison.value ? toV1ReportState(_comparison.value) : undefined,
+          state: _state.value,
+          comparison: _comparison.value,
         },
       })
     },
@@ -614,8 +606,8 @@ export function useGscdumpTableData<T = GscdumpDataRow>(options: GscdumpTableOpt
     const result = await gscdump.queryAnalyticsReport({
       params: { siteId: siteIdVal },
       body: {
-        state: toV1ReportState(state),
-        comparison: toV1ReportState(comparison),
+        state,
+        comparison,
         filter: filter.value === 'default' ? undefined : filter.value,
       },
     }, true)
@@ -732,7 +724,7 @@ export function useGscdumpDates(
 
       const result = await queryAnalyticsReportDetail({
         params: { siteId: siteIdVal },
-        body: { state: toV1ReportState(state), comparison: toV1ReportState(comparison) },
+        body: { state, comparison },
       })
 
       return {
