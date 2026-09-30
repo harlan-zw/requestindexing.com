@@ -1,13 +1,15 @@
 import type { BingConnectionV1, BingDataV1 } from '@gscdump/contracts/v1/http'
+import { createGscdumpV1Protocol } from '@gscdump/contracts/v1/http'
 import { describe, expect, it } from 'vitest'
 import {
   bingConnectionSetupState,
-  bingIntegrationStatusLine,
+  bingCrawlDetailsPageCount,
   bingRequestErrorState,
   bingTrafficTotals,
   formatBingCtr,
-  projectBingIntegrationState,
+  parseBingCrawlDetailsPage,
   toBingConnectionView,
+  toBingCrawlDetailViews,
 } from './bing-view'
 
 type TrafficRows = Extract<BingDataV1, { dataset: 'traffic' }>['rows']
@@ -96,58 +98,51 @@ describe('bingRequestErrorState', () => {
   })
 })
 
-describe('projectBingIntegrationState', () => {
-  const read = (tag: 'ready' | 'disconnected' | 'reauth') => ({ _tag: 'Read', connection: { _tag: tag } }) as const
-
-  it('reads as unavailable while the Bing flag is off, whatever the Sites report', () => {
-    expect(projectBingIntegrationState({ enabled: false, linkedSites: 2, reads: [read('ready'), read('ready')] }))
-      .toEqual({ _tag: 'unavailable' })
-  })
-
-  it('waits on Search Console when no Site is linked yet', () => {
-    expect(projectBingIntegrationState({ enabled: true, linkedSites: 0, reads: [] }))
-      .toEqual({ _tag: 'awaiting-search-console' })
-  })
-
-  it('checks while the per-Site reads are in flight', () => {
-    expect(projectBingIntegrationState({ enabled: true, linkedSites: 2, reads: null }))
-      .toEqual({ _tag: 'checking' })
-  })
-
-  it('reports a failed read when no Site answered', () => {
-    expect(projectBingIntegrationState({ enabled: true, linkedSites: 2, reads: [{ _tag: 'Failed' }, { _tag: 'Failed' }] }))
-      .toEqual({ _tag: 'read-failed' })
-  })
-
-  it('tallies each Site by the state Bing reported', () => {
-    const state = projectBingIntegrationState({
-      enabled: true,
-      linkedSites: 5,
-      reads: [
-        read('ready'),
-        read('reauth'),
-        read('disconnected'),
-        { _tag: 'Read', connection: { _tag: 'verification-required', remoteSiteUrl: 'https://example.com', verification: { _tag: 'cname', name: 'a.example.com', value: 'verify.bing.com' } } },
-        { _tag: 'Failed' },
+describe('toBingCrawlDetailViews', () => {
+  // Parsed through the 4.8.0 response schema, so the rows are ones gscdump can send.
+  const evidence = createGscdumpV1Protocol().schemas.bingIndexingEvidenceResponse.client.parse({
+    data: {
+      searchEngine: 'bing',
+      siteUrl: 'https://example.com/',
+      indexingEvidence: [
+        { _tag: 'observed', searchEngine: 'bing', url: 'https://example.com/a', observedAt: '2026-09-30T08:00:00.000Z', providerEvidenceAt: '2026-09-30T08:00:00.000Z', freshness: 'stale', discoveryTime: '2026-09-01T08:00:00.000Z', lastCrawlTime: '2026-09-20T08:00:00.000Z', originHttpStatus: 200, documentSize: 1000, anchorCount: 3, totalChildUrlCount: 0, uncertaintyReason: 'indexed-verdict-unavailable' },
+        { _tag: 'unknown', searchEngine: 'bing', url: 'https://example.com/b', observedAt: '2026-09-30T08:00:00.000Z', reason: 'not-discovered' },
+        { _tag: 'unavailable', searchEngine: 'bing', url: 'https://example.com/c', observedAt: '2026-09-30T08:00:00.000Z', reason: 'permission-denied', retryAt: null },
       ],
-    })
-    expect(state).toEqual({ _tag: 'ready', total: 5, connected: 1, verification: 1, reconnect: 1, failed: 1 })
+      pagination: { total: 3, limit: 25, offset: 0, hasMore: false },
+    },
+    meta: { requestId: 'req_01', surface: 'partner', version: '1.0' },
+  }).data.indexingEvidence
+
+  it('badges each row by what Bing observed, never by an indexed verdict', () => {
+    expect(toBingCrawlDetailViews(evidence).map(row => [row.url, row.badge.label, row.detail])).toEqual([
+      ['https://example.com/a', 'Stale', null],
+      ['https://example.com/b', 'Unknown', 'No discovery time returned'],
+      ['https://example.com/c', 'Unavailable', 'Bing permission missing'],
+    ])
+  })
+
+  it('marks a lost permission as an error rather than a delay', () => {
+    expect(toBingCrawlDetailViews(evidence)[2]?.badge).toEqual({ label: 'Unavailable', status: 'error' })
   })
 })
 
-describe('bingIntegrationStatusLine', () => {
-  const ready = { _tag: 'ready', total: 3, connected: 2, verification: 0, reconnect: 0, failed: 0 } as const
-
-  it('states coverage as Sites connected out of Sites linked', () => {
-    expect(bingIntegrationStatusLine(ready)).toBe('2 of 3 Sites connected')
+describe('parseBingCrawlDetailsPage', () => {
+  it.each([
+    [undefined, 1],
+    ['', 1],
+    ['0', 1],
+    ['-2', 1],
+    ['1.5', 1],
+    ['abc', 1],
+    ['3', 3],
+    [4, 4],
+  ])('reads %j as page %i', (value, page) => {
+    expect(parseBingCrawlDetailsPage(value)).toBe(page)
   })
 
-  it('leads with the reconnect when a Site needs one', () => {
-    expect(bingIntegrationStatusLine({ ...ready, reconnect: 1 })).toBe('Reconnect needed for 1 Site. 2 of 3 Sites connected')
-    expect(bingIntegrationStatusLine({ ...ready, reconnect: 2 })).toBe('Reconnect needed for 2 Sites. 2 of 3 Sites connected')
-  })
-
-  it('says the Integration is not available yet while the flag is off', () => {
-    expect(bingIntegrationStatusLine({ _tag: 'unavailable' })).toBe('Not available yet')
+  it('counts at least one page, even with no rows', () => {
+    expect(bingCrawlDetailsPageCount(0)).toBe(1)
+    expect(bingCrawlDetailsPageCount(26)).toBe(2)
   })
 })

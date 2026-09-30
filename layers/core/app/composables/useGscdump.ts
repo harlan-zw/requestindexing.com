@@ -89,12 +89,12 @@ type V1AvailableSitesData = GscdumpV1OperationResponse<'partner.users.sites.avai
 // browser memory. `'session-proxy'` is an opaque literal that only satisfies
 // the SDK's transport shape; the proxy discards it entirely.
 //
-// `partner.users.sites.available.list` is the one allowlisted operation keyed
-// by gscdump user id rather than site id. The browser doesn't know its own
-// gscdump user id (never shipped down); it sends this syntactically-valid
-// placeholder and the proxy always substitutes the caller's real, stored id
-// when building the upstream request.
-const GSCDUMP_SESSION_USER_ID = 'u_session-proxy'
+// A few allowlisted operations are keyed by gscdump user id rather than site
+// id (`partner.users.sites.available.list`, the Bing fleet read). The browser
+// doesn't know its own gscdump user id (never shipped down); it sends this
+// syntactically-valid placeholder and the proxy always substitutes the
+// caller's real, stored id when building the upstream request.
+export const GSCDUMP_SESSION_USER_ID = 'u_session-proxy'
 
 function createV1Client(): GscdumpV1Client {
   return createGscdumpV1Client({

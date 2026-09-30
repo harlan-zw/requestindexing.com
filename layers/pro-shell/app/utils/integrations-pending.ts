@@ -4,7 +4,7 @@
 // is a pure function of the same two row states the Integrations page renders,
 // so the rail entry and the page cannot disagree.
 import type { UiNavLink, UiNavSetup } from '#layers/design-system/app/shared/nav'
-import type { BingIntegrationState } from '#layers/pro-gsc/app/utils/bing-view'
+import type { BingIntegrationState } from '#layers/pro-gsc/app/utils/bing-integration-view'
 import type { GscIntegrationState } from '#layers/pro-gsc/shared/gsc-integration-state'
 
 export const INTEGRATIONS_ROUTE = '/pro/dashboard/integrations'
@@ -26,8 +26,8 @@ export function pendingIntegrations(states: { gsc: GscIntegrationState, bing: Bi
   else if (states.gsc._tag === 'disconnected')
     pending.push({ name: 'Search Console', kind: 'connect' })
   // Bing is optional, so only a connection Bing stopped accepting counts: that
-  // stops data already arriving. A Site that never connected Bing owes nothing.
-  if (states.bing._tag === 'ready' && states.bing.reconnect > 0)
+  // stops data already arriving. A Site that never linked Bing owes nothing.
+  if (states.bing._tag === 'ready' && states.bing.summary.pending === 'reconnect')
     pending.push({ name: 'Bing', kind: 'reconnect' })
   return pending
 }

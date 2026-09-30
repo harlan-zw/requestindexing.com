@@ -6,8 +6,10 @@
 // actually returns here. Upstream reads an app-surface host that reports more
 // connection reasons; `partner.sites.indexing.bing.connection.get` reports one
 // (`permission-lost`), so this file states only what the contract states.
+//
+// The Bing row on Integrations has its own model in `bing-integration-view.ts`.
 
-import type { BingConnectionV1, BingDataV1 } from '@gscdump/contracts/v1/http'
+import type { BingConnectionV1, BingDataV1, PartnerBingIndexingEvidenceV1Response } from '@gscdump/contracts/v1/http'
 import { parseGscdumpError } from '../composables/_gscdump-error'
 
 type BingTrafficRows = Extract<BingDataV1, { dataset: 'traffic' }>['rows']
@@ -93,17 +95,16 @@ export interface BingConnectionSetupState {
 /**
  * Copy for a connection that cannot be read yet, or `null` once it is ready.
  *
- * There is no Connect button here. gscdump's partner v1 protocol has no Bing
- * connect or reconnect operation yet, so this app cannot start either. The
- * copy says so rather than point at a control that does not exist.
+ * Linking and reconnecting start on Integrations, where one Bing grant serves
+ * every Site. The page renders this copy with a link there.
  */
 export function bingConnectionSetupState(connection: BingConnectionView): BingConnectionSetupState | null {
   switch (connection._tag) {
     case 'disconnected':
       return {
         icon: 'search',
-        title: 'Bing is not connected for this Site',
-        description: 'Bing\'s crawl record for this Site shows here after Bing is connected. You cannot connect Bing from Request Indexing yet.',
+        title: 'Bing is not linked for this Site',
+        description: 'Link this Site to Bing on Integrations. Bing\'s crawl record for this Site then shows here.',
       }
     case 'verification-required':
       return {
@@ -115,89 +116,117 @@ export function bingConnectionSetupState(connection: BingConnectionView): BingCo
       return {
         icon: 'warning',
         title: 'Bing stopped accepting this connection',
-        description: 'Bing authorization or Site permission is no longer available. You cannot reconnect Bing from Request Indexing yet.',
+        description: 'Bing authorization or Site permission is no longer available. Reconnect Bing on Integrations to resume collection.',
       }
     case 'ready':
       return null
   }
 }
 
-/** One Site's Bing connection read, for the fleet summary on Integrations. */
-export type BingSiteRead
-  = | { _tag: 'Read', connection: BingConnectionView }
-    | { _tag: 'Failed' }
+/** One row of `partner.sites.indexing.bing.evidence.list`. */
+export type BingIndexingEvidence = PartnerBingIndexingEvidenceV1Response['data']['indexingEvidence'][number]
 
-export interface BingIntegrationInput {
-  /** The `bing` feature flag. Off means the proxy refuses every Bing read. */
-  enabled: boolean
-  /** Sites Search Console has linked to gscdump. Bing reads through that link. */
-  linkedSites: number
-  /** One read per linked Site, or null while they are in flight. */
-  reads: readonly BingSiteRead[] | null
+export const BING_CRAWL_DETAILS_PAGE_SIZE = 25
+
+/** The `bingPage` query value, or page 1 for anything that is not a positive integer. */
+export function parseBingCrawlDetailsPage(value: unknown): number {
+  if (typeof value !== 'string' && typeof value !== 'number')
+    return 1
+  if (typeof value === 'string' && value.trim() === '')
+    return 1
+  const parsed = Number(value)
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1
 }
+
+export function bingCrawlDetailsPageCount(total: number): number {
+  return Math.max(1, Math.ceil(Math.max(0, total) / BING_CRAWL_DETAILS_PAGE_SIZE))
+}
+
+export type BingCrawlDetailBadge
+  = | { label: 'Current', status: 'neutral' }
+    | { label: 'Stale', status: 'warning' }
+    | { label: 'Unknown', status: 'neutral' }
+    | { label: 'Unavailable', status: 'warning' | 'error' }
 
 /**
- * The Bing row on Integrations. Read-only: the partner protocol reports Bing's
- * state per Site but offers no connect, so the row counts what Bing reports.
+ * One row of the crawl details table. Bing reports discovery and crawl times,
+ * never an indexed verdict, so no row claims one.
  */
-export type BingIntegrationState
-  = | { _tag: 'unavailable' }
-    | { _tag: 'awaiting-search-console' }
-    | { _tag: 'checking' }
-    | { _tag: 'read-failed' }
-    | {
-      _tag: 'ready'
-      total: number
-      connected: number
-      verification: number
-      reconnect: number
-      failed: number
-    }
-
-export function projectBingIntegrationState(input: BingIntegrationInput): BingIntegrationState {
-  if (!input.enabled)
-    return { _tag: 'unavailable' }
-  if (input.linkedSites === 0)
-    return { _tag: 'awaiting-search-console' }
-  if (!input.reads)
-    return { _tag: 'checking' }
-  if (input.reads.every(read => read._tag === 'Failed'))
-    return { _tag: 'read-failed' }
-
-  const tally = { total: input.reads.length, connected: 0, verification: 0, reconnect: 0, failed: 0 }
-  for (const read of input.reads) {
-    if (read._tag === 'Failed')
-      tally.failed++
-    else if (read.connection._tag === 'ready')
-      tally.connected++
-    else if (read.connection._tag === 'verification-required')
-      tally.verification++
-    else if (read.connection._tag === 'reauth')
-      tally.reconnect++
+export type BingCrawlDetailView
+  = | {
+    _tag: 'observed'
+    url: string
+    observedAt: string
+    discoveryTime: string | null
+    lastCrawlTime: string | null
+    originHttpStatus: number | null
+    detail: null
+    badge: BingCrawlDetailBadge
   }
-  return { _tag: 'ready', ...tally }
+  | {
+    _tag: 'unknown' | 'unavailable'
+    url: string
+    observedAt: string
+    detail: string
+    badge: BingCrawlDetailBadge
+  }
+
+function unavailableDetail(reason: Extract<BingIndexingEvidence, { _tag: 'unavailable' }>['reason']): string {
+  switch (reason) {
+    case 'authentication-required':
+      return 'Bing authorization expired'
+    case 'permission-denied':
+      return 'Bing permission missing'
+    case 'site-unverified':
+      return 'Site verification required'
+    case 'throttled':
+      return 'Bing delayed this URL'
+    case 'quota-unavailable':
+      return 'Bing quota unavailable'
+    case 'provider-error':
+      return 'Bing was unavailable'
+  }
 }
 
-function sites(count: number): string {
-  return count === 1 ? '1 Site' : `${count} Sites`
-}
-
-/** The row's one-line status. Coverage, never a bare "Connected". */
-export function bingIntegrationStatusLine(state: BingIntegrationState): string {
-  switch (state._tag) {
+function toBingCrawlDetailView(evidence: BingIndexingEvidence): BingCrawlDetailView {
+  switch (evidence._tag) {
+    case 'observed':
+      return {
+        _tag: 'observed',
+        url: evidence.url,
+        observedAt: evidence.observedAt,
+        discoveryTime: evidence.discoveryTime,
+        lastCrawlTime: evidence.lastCrawlTime,
+        originHttpStatus: evidence.originHttpStatus,
+        detail: null,
+        badge: evidence.freshness === 'stale'
+          ? { label: 'Stale', status: 'warning' }
+          : { label: 'Current', status: 'neutral' },
+      }
+    case 'unknown':
+      return {
+        _tag: 'unknown',
+        url: evidence.url,
+        observedAt: evidence.observedAt,
+        detail: evidence.reason === 'not-discovered' ? 'No discovery time returned' : 'No crawl observation returned',
+        badge: { label: 'Unknown', status: 'neutral' },
+      }
     case 'unavailable':
-      return 'Not available yet'
-    case 'awaiting-search-console':
-      return 'Waiting for Search Console to link a Site'
-    case 'checking':
-      return 'Checking Sites'
-    case 'read-failed':
-      return 'Bing state could not be read'
-    case 'ready': {
-      const coverage = `${state.connected} of ${sites(state.total)} connected`
-      return state.reconnect ? `Reconnect needed for ${sites(state.reconnect)}. ${coverage}` : coverage
-    }
+      return {
+        _tag: 'unavailable',
+        url: evidence.url,
+        observedAt: evidence.observedAt,
+        detail: unavailableDetail(evidence.reason),
+        badge: {
+          label: 'Unavailable',
+          status: evidence.reason === 'authentication-required' || evidence.reason === 'permission-denied' ? 'error' : 'warning',
+        },
+      }
   }
+}
+
+export function toBingCrawlDetailViews(evidence: readonly BingIndexingEvidence[]): BingCrawlDetailView[] {
+  return evidence.map(toBingCrawlDetailView)
 }
 
 export interface BingRequestErrorState {

@@ -24,6 +24,7 @@ Indexing API submissions this app still runs itself.
 | onboarding | onboarding wizard, users.onboarding_completed_at | First-run setup an account completes once | setup |
 | connect | Connect site controls, registerSite | Attaching a Site to a Team | connect |
 | Integration | no table; `/pro/dashboard/integrations` | External service the app reads from: Google Search Console per account, Bing per Site | Integration |
+| Link | gscdump Site binding; Bing `partner.sites.indexing.bing.link.create` | A Site has 0 or 1 link per Integration that reads it | link, linked |
 | funnel milestone | pro_events table | First-time record of one step toward an active account | (internal) |
 | Submission | indexing_jobs table | Site 1—N Submission, unique on (site, path, transport) | "Submit" |
 | Investigation | indexing_investigations table | Site 1—N Investigation, unique on (site, url, issue) | (not surfaced as a noun) |
@@ -83,8 +84,18 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 **Is:** one external service Request Indexing reads from: Google Search Console and Bing Webmaster Tools. A cross-cutting concept with no table of its own. Search Console state lives on `google_accounts` and gscdump's account status; Bing state lives in gscdump, per Site.
 **Use for:** the Integrations page, its nav entry, and prose that covers more than one service at once.
 **Never:** connector, plugin, hookup, service (as a countable noun), third party.
-**Scope is part of the name.** Search Console authorises once per account. Bing authorises once per Site. A row that hides which one it is misreports coverage.
+**Scope is part of the name.** Search Console authorises once per account. Bing authorises once per account and links per Site. A row that hides which one it is misreports coverage.
 **Casing:** `Integration` in prose and UI, `integration` in identifiers.
+
+### Link
+
+**Is:** the binding between one Site and one Integration that reads it. Search Console links a Site to gscdump when the Site is connected. Bing links a Site with the Site owner's Bing grant, through gscdump's `partner.sites.indexing.bing.link.create`. gscdump owns the term.
+
+**Use for:** the per-Site binding and its state: "Link Site", "Linked Sites", "2 of 3 Sites linked", "Not linked".
+
+**Never:** connect, bind, attach, or sync for the per-Site binding. Connect names the grant ("Connect Bing", "Reconnect Bing") and attaching a Site to a Team.
+
+**Casing:** lowercase in prose; `Link` only at the start of a label.
 
 ### Funnel milestone
 **Is:** one first-time row in `pro_events` marking a step toward an active account.

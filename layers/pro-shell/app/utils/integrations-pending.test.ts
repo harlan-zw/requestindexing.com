@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { integrationsNavSetup, integrationsRailLinks, pendingIntegrations } from './integrations-pending'
 
-const bingReady = { _tag: 'ready', total: 2, connected: 2, verification: 0, reconnect: 0, failed: 0 } as const
+const bingReady = {
+  _tag: 'ready',
+  summary: { linked: 2, eligible: 2, linkable: 0, sitemapsMissing: 0, notEnabled: 0, pending: null },
+} as const
 
 describe('pendingIntegrations', () => {
   it('owes nothing while Search Console holds a grant and Bing is not available', () => {
@@ -18,11 +21,12 @@ describe('pendingIntegrations', () => {
       .toEqual([{ name: 'Search Console', kind: 'reconnect' }])
   })
 
-  // Bing is optional, so a Site that never connected it owes nothing. Only a
+  // Bing is optional, so a Site that never linked it owes nothing. Only a
   // connection Bing stopped accepting stops data that was already arriving.
-  it('counts Bing only when a Site needs a reconnect', () => {
-    expect(pendingIntegrations({ gsc: { _tag: 'checking' }, bing: { ...bingReady, connected: 0 } })).toEqual([])
-    expect(pendingIntegrations({ gsc: { _tag: 'checking' }, bing: { ...bingReady, connected: 1, reconnect: 1 } }))
+  it('counts Bing only when it needs a reconnect', () => {
+    expect(pendingIntegrations({ gsc: { _tag: 'checking' }, bing: { _tag: 'ready', summary: { ...bingReady.summary, linked: 0, pending: 'connect' } } }))
+      .toEqual([])
+    expect(pendingIntegrations({ gsc: { _tag: 'checking' }, bing: { _tag: 'ready', summary: { ...bingReady.summary, pending: 'reconnect' } } }))
       .toEqual([{ name: 'Bing', kind: 'reconnect' }])
   })
 })
