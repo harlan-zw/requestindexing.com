@@ -1,42 +1,94 @@
+import type { GscConnection } from './onboarding'
 import { describe, expect, it } from 'vitest'
 import {
   canAdvanceOnboardingStep,
+  gscScopeMissingRedirect,
   ONBOARDING_ROUTE,
   onboardingStepIndex,
   parseOnboardingCompletedFlag,
   parseOnboardingStep,
+  resolveGscConnection,
   resolveOnboardingCompletion,
   resolveOnboardingGate,
   resolveOnboardingResumeStep,
 } from './onboarding'
 
+const CONNECTED: GscConnection = { _tag: 'Connected' }
+const NOT_CONNECTED: GscConnection = { _tag: 'NotConnected' }
+const SCOPE_MISSING: GscConnection = { _tag: 'ScopeMissing' }
+
+describe('resolveGscConnection', () => {
+  it('reads a gscdump credential as connected', () => {
+    expect(resolveGscConnection({ gscdumpConnected: true, error: undefined })).toEqual(CONNECTED)
+    expect(resolveGscConnection({ gscdumpConnected: false, error: undefined })).toEqual(NOT_CONNECTED)
+  })
+
+  it('lets a scope-missing callback outrank a stored credential', () => {
+    // An account from an earlier grant keeps its gscdump key, but the grant
+    // Google just returned has no Search Console scope.
+    expect(resolveGscConnection({ gscdumpConnected: true, error: 'gsc_scope_missing' })).toEqual(SCOPE_MISSING)
+    expect(resolveGscConnection({ gscdumpConnected: false, error: 'gsc_scope_missing' })).toEqual(SCOPE_MISSING)
+  })
+
+  it('ignores an unrelated error value', () => {
+    expect(resolveGscConnection({ gscdumpConnected: true, error: 'google_auth_failed' })).toEqual(CONNECTED)
+  })
+})
+
+describe('gscScopeMissingRedirect', () => {
+  it('sends a wizard return back to the connect step', () => {
+    expect(gscScopeMissingRedirect('/pro/dashboard/onboarding?step=sites'))
+      .toBe('/pro/dashboard/onboarding?step=connect&error=gsc_scope_missing')
+  })
+
+  it('keeps any other return page and marks it', () => {
+    expect(gscScopeMissingRedirect('/pro/dashboard/account'))
+      .toBe('/pro/dashboard/account?error=gsc_scope_missing')
+    expect(gscScopeMissingRedirect('/pro/dashboard/sites/s_1?tab=pages#top'))
+      .toBe('/pro/dashboard/sites/s_1?tab=pages&error=gsc_scope_missing#top')
+  })
+
+  it('replaces an earlier error instead of stacking a second one', () => {
+    expect(gscScopeMissingRedirect('/pro/dashboard?error=google_auth_failed'))
+      .toBe('/pro/dashboard?error=gsc_scope_missing')
+  })
+
+  it('falls back to the dashboard when there is no return page', () => {
+    expect(gscScopeMissingRedirect(undefined)).toBe('/pro/dashboard?error=gsc_scope_missing')
+  })
+})
+
 describe('resolveOnboardingResumeStep', () => {
   it('starts at connect while nothing has been done', () => {
-    expect(resolveOnboardingResumeStep({ gscConnected: false, hasSites: false })).toBe('connect')
+    expect(resolveOnboardingResumeStep({ gsc: NOT_CONNECTED, hasSites: false })).toBe('connect')
   })
 
   it('resumes at sites once Google is connected and no site exists', () => {
-    expect(resolveOnboardingResumeStep({ gscConnected: true, hasSites: false })).toBe('sites')
+    expect(resolveOnboardingResumeStep({ gsc: CONNECTED, hasSites: false })).toBe('sites')
+  })
+
+  it('resumes at connect when Google returned no Search Console scope', () => {
+    expect(resolveOnboardingResumeStep({ gsc: SCOPE_MISSING, hasSites: false })).toBe('connect')
   })
 
   it('resumes at sync once a site exists, connected to Google or not', () => {
-    expect(resolveOnboardingResumeStep({ gscConnected: true, hasSites: true })).toBe('sync')
-    expect(resolveOnboardingResumeStep({ gscConnected: false, hasSites: true })).toBe('sync')
+    expect(resolveOnboardingResumeStep({ gsc: CONNECTED, hasSites: true })).toBe('sync')
+    expect(resolveOnboardingResumeStep({ gsc: NOT_CONNECTED, hasSites: true })).toBe('sync')
   })
 })
 
 describe('canAdvanceOnboardingStep', () => {
   it('lets a user leave the connect step without a Google grant', () => {
-    expect(canAdvanceOnboardingStep('connect', { gscConnected: false, hasSites: false })).toBe(true)
+    expect(canAdvanceOnboardingStep('connect', { gsc: NOT_CONNECTED, hasSites: false })).toBe(true)
   })
 
   it('holds the sites step until a site exists', () => {
-    expect(canAdvanceOnboardingStep('sites', { gscConnected: true, hasSites: false })).toBe(false)
-    expect(canAdvanceOnboardingStep('sites', { gscConnected: false, hasSites: true })).toBe(true)
+    expect(canAdvanceOnboardingStep('sites', { gsc: CONNECTED, hasSites: false })).toBe(false)
+    expect(canAdvanceOnboardingStep('sites', { gsc: NOT_CONNECTED, hasSites: true })).toBe(true)
   })
 
   it('lets the last step finish', () => {
-    expect(canAdvanceOnboardingStep('sync', { gscConnected: false, hasSites: true })).toBe(true)
+    expect(canAdvanceOnboardingStep('sync', { gsc: NOT_CONNECTED, hasSites: true })).toBe(true)
   })
 })
 
@@ -67,13 +119,13 @@ describe('resolveOnboardingGate', () => {
   const onboarded = {
     loggedIn: true,
     onboardingCompletedAt: '2026-09-01T00:00:00.000Z',
-    gscConnected: true,
+    gsc: CONNECTED,
     hasSites: true,
   }
   const halfway = {
     loggedIn: true,
     onboardingCompletedAt: null,
-    gscConnected: true,
+    gsc: CONNECTED,
     hasSites: false,
   }
 
@@ -96,7 +148,7 @@ describe('resolveOnboardingGate', () => {
   })
 
   it('does not send a user who already has a site back to the Google step', () => {
-    expect(resolveOnboardingGate({ ...halfway, gscConnected: false, hasSites: true, path: '/pro/dashboard' })).toEqual({
+    expect(resolveOnboardingGate({ ...halfway, gsc: NOT_CONNECTED, hasSites: true, path: '/pro/dashboard' })).toEqual({
       _tag: 'Redirect',
       path: ONBOARDING_ROUTE,
       query: { step: 'sync' },

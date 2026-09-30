@@ -1,4 +1,4 @@
-import { resolveOnboardingGate } from '#layers/pro-saas/shared/onboarding'
+import { resolveGscConnection, resolveOnboardingGate } from '#layers/pro-saas/shared/onboarding'
 
 // The onboarding gate. It used to be a `watch` plus a `router.push` inside two
 // dashboard layouts, which ran after the page had begun rendering and never saw
@@ -13,7 +13,7 @@ export default defineNuxtRouteMiddleware((to) => {
     path: to.path,
     loggedIn: loggedIn.value,
     onboardingCompletedAt: session.value?.onboardingCompletedAt ?? null,
-    gscConnected: !!session.value?.gscdumpConnected,
+    gsc: resolveGscConnection({ gscdumpConnected: !!session.value?.gscdumpConnected, error: to.query.error }),
     hasSites: !!session.value?.hasSites,
   })
 

@@ -6,6 +6,7 @@ import {
   ONBOARDING_STEPS,
   onboardingStepIndex,
   parseOnboardingStep,
+  resolveGscConnection,
   resolveOnboardingResumeStep,
 } from '#layers/pro-saas/shared/onboarding'
 
@@ -25,14 +26,21 @@ const router = useRouter()
 const toast = useToast()
 const { session, fetch: refreshSession } = useUserSession()
 
-const gscConnected = computed(() => !!session.value?.gscdumpConnected)
+// The callback returns `?error=gsc_scope_missing` when the user unticked
+// Search Console on Google's consent screen. That outranks a gscdump key left
+// from an earlier grant, so the step shows the retry instead of "connected".
+const gsc = computed(() => resolveGscConnection({
+  gscdumpConnected: !!session.value?.gscdumpConnected,
+  error: route.query.error,
+}))
+const gscConnected = computed(() => gsc.value._tag === 'Connected')
 const siteCount = ref(session.value?.hasSites ? 1 : 0)
 const hasSites = computed(() => siteCount.value > 0)
 
 const signedInWithGithub = computed(() => session.value?.user?.authProvider === 'github')
 
 function resumeStep(): OnboardingStep {
-  return resolveOnboardingResumeStep({ gscConnected: gscConnected.value, hasSites: hasSites.value })
+  return resolveOnboardingResumeStep({ gsc: gsc.value, hasSites: hasSites.value })
 }
 
 const step = ref<OnboardingStep>(parseOnboardingStep(route.query.step) ?? resumeStep())
@@ -96,7 +104,7 @@ function next() {
 
 const nextLabel = computed(() => step.value === 'sync' ? 'Go to dashboard' : 'Continue')
 const nextDisabled = computed(() => !canAdvanceOnboardingStep(step.value, {
-  gscConnected: gscConnected.value,
+  gsc: gsc.value,
   hasSites: hasSites.value,
 }))
 
@@ -131,6 +139,8 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         title="Search Console needs a Google account"
         description="You signed in with GitHub. Connecting below links your Google account to this login; you keep signing in with GitHub."
       />
+
+      <ProGscScopeMissingAlert v-if="gsc._tag === 'ScopeMissing'" />
 
       <div v-if="gscConnected" class="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 px-3 py-3">
         <UIcon name="i-heroicons-check-circle" class="size-5 shrink-0 text-primary" aria-hidden="true" />

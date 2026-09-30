@@ -1,8 +1,11 @@
 import { eq } from 'drizzle-orm'
-import { exchangeAuthCodeResult } from 'gscdump'
+import { exchangeAuthCodeResult, introspectAccessTokenResult } from 'gscdump'
 import { logger } from '~~/shared/server/logger'
 import { probeGscdumpUserKey, shouldRepairGscdumpKey } from '#layers/pro-gsc/server/utils/gscdump-key-repair'
 import { scheduleGscdumpOnboardingReconcile } from '#layers/pro-gsc/server/utils/reconcile-gscdump-onboarding'
+import { resolveGscGrant } from '#layers/pro-gsc/shared/gsc-grant'
+import { safeAuthRedirect } from '#layers/pro-saas-auth/shared/utils/auth-redirect'
+import { gscScopeMissingRedirect } from '#layers/pro-saas/shared/onboarding'
 
 function errorDetails(error: unknown) {
   const record = typeof error === 'object' && error !== null ? error as Record<string, unknown> : {}
@@ -51,6 +54,29 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 422, statusMessage: 'Failed to exchange authorization code' })
   }
   const tokenRes = tokenResult.value
+
+  // Google's consent screen lets the user untick Search Console and still
+  // finish. Check the grant before any side effect: a grant without the scope
+  // must not reach gscdump, set the session as connected, or record the
+  // `gsc_connected` funnel milestone. The token response carries the scope
+  // list; introspection covers the rare response without one.
+  const grantedScope = tokenRes.scope ?? await introspectAccessTokenResult(tokenRes.accessToken).then((result) => {
+    if (result.ok)
+      return result.value.scope
+    logger.warn('[google auth] token introspection failed, grant not checked:', result.error)
+    return undefined
+  })
+  const grant = resolveGscGrant(grantedScope)
+  if (grant._tag === 'ScopeMissing') {
+    logger.warn('[google auth] Search Console scope not granted for user:', session.user.id, 'granted:', grantedScope)
+    // The connect route already parsed this; the session is still untrusted storage.
+    const returnTo = safeAuthRedirect(session.googleOauthReturnTo)
+    await setUserSession(event, {
+      googleOauthState: undefined,
+      googleOauthReturnTo: undefined,
+    })
+    return sendRedirect(event, gscScopeMissingRedirect(returnTo))
+  }
 
   // Get user info (id, email, name)
   const googleUser = await $fetch<{ id: string, email: string, name?: string }>('https://www.googleapis.com/oauth2/v2/userinfo', {

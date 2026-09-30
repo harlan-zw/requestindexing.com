@@ -10,9 +10,21 @@ import type { SiteLookup, SiteResource } from '#layers/pro-saas/shared/site-look
 // exactly one Site, gets the Site nav; anything wider gets the fleet roster.
 import type { ProNavSite } from '#layers/pro-shell/app/composables/useProSingleSiteNav'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
+import { isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
 import { readSiteLookup, siteLookupKey } from '#layers/pro-saas/shared/site-lookup'
 
 const route = useRoute()
+const router = useRouter()
+
+// Every Search Console connect link returns to a dashboard page. When Google
+// gave no Search Console scope, the callback marks that page with
+// `?error=gsc_scope_missing`, so the shell is the one place that says so. The
+// retry returns to the same page without the marker.
+const gscScopeMissing = computed(() => isGscScopeMissingError(route.query.error))
+const gscRetryTo = computed(() => {
+  const { error: _error, ...query } = route.query
+  return router.resolve({ path: route.path, query, hash: route.hash }).fullPath
+})
 
 const { data: siteData, status: sitesStatus } = await fetchSites()
 const sites = computed<ProNavSite[]>(() => (siteData.value?.sites ?? []) as ProNavSite[])
@@ -145,6 +157,8 @@ const pageIcon = computed(() => typeof route.meta.icon === 'string' ? route.meta
         <UIcon :name="pageIcon" class="size-5 shrink-0 text-primary" aria-hidden="true" />
       </template>
     </UiPageHeader>
+
+    <ProGscScopeMissingAlert v-if="gscScopeMissing" :retry-to="gscRetryTo" class="mb-6" />
 
     <UiEmptyState
       v-if="siteStatus === 'error'"
