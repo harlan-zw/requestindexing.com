@@ -80,4 +80,20 @@ describe('useGscdumpClient', () => {
 
     expect(result).toEqual({ _tag: 'Refused', refusal: { reason: 'site_allowance', limit: 3 } })
   })
+
+  it('subscribes a Site only to the Site events a 4.6.0 gscdump server accepts', async () => {
+    v1Client.createSite.mockResolvedValueOnce({ data: { siteId: 's_1', status: 'pending' } })
+
+    await useGscdumpClient().registerSite({ userId: 'u_1', requestedUrl: 'example.com', webhookUrl: 'https://example.test/api/webhooks/gscdump' })
+
+    const events = v1Client.createSite.mock.lastCall?.[0].body.webhookEvents
+    expect([...events].sort()).toEqual([
+      'job.failed',
+      'site.analytics.ready',
+      'site.auth.failed',
+      'site.indexing.ready',
+      'site.lifecycle.changed',
+      'user.lifecycle.changed',
+    ])
+  })
 })
