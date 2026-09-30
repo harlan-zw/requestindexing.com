@@ -18,6 +18,12 @@ export default defineJob({
   name: 'users/send-welcome-email',
   queue: 'default',
   async handle(payload, ctx) {
+    // Kill switch: NUXT_NOTIFICATIONS_ENABLED=false holds the welcome email
+    // back while legacy data is migrated. `sendEmail` does not check it,
+    // because the Free allowance email must always send.
+    if (!useRuntimeConfig().notificationsEnabled)
+      return
+
     const { userId } = payload
 
     const user = await ctx.db.query.users.findFirst({

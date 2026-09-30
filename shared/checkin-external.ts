@@ -25,8 +25,8 @@ Match \`CHECKIN_DEPLOYMENT\` to active Worker version metadata, not the latest C
       id: 'site.operations',
       prompt: `Check the existing admin jobs and OAuth endpoints when a result needs details.
 Review gscdump connectivity and webhook evidence before attributing indexing failures to this site.
-Never enable notifications or bulk sync during check-in. Preserve the current runtime gate.
-An intentional pause is reported as evidence, not an outage.
+Never turn on NUXT_NOTIFICATIONS_ENABLED during check-in. It releases the welcome email and the bulk sync. Preserve the current runtime gate.
+An intentional pause is reported as evidence, not an outage. The Free allowance email is never paused.
 No system-health email exists. Do not create one or send test messages.
 
 Keep the daily schedule at 06:00 Australia/Sydney. Do not create a separate Sentry schedule.`,
