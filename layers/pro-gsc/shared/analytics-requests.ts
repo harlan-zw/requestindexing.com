@@ -154,6 +154,28 @@ export function breakdownRequest(input: BreakdownInput): ListReportRequest {
   })
 }
 
+export interface PeriodCountInput {
+  searchType: GscSearchType
+  dimension: BreakdownDimension
+  range: DateFilterRange
+  facets?: readonly GscFacet[]
+}
+
+/**
+ * The breakdown behind a distinct count for one period, such as "Queries
+ * ranked". The engine counts a comparison read over the full outer join of both
+ * windows, so this read never carries one. It asks for one row, because only
+ * the count is wanted.
+ */
+export function periodCountInput(input: PeriodCountInput): BreakdownInput {
+  return {
+    ...input,
+    comparisonRange: null,
+    orderBy: { column: 'clicks', dir: 'desc' },
+    rowLimit: 1,
+  }
+}
+
 export interface AssociationInput {
   searchType: GscSearchType
   /** Dimension the table rows are keyed by. The top of the other one is ranked. */

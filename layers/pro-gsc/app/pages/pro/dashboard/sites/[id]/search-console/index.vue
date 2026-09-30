@@ -10,6 +10,7 @@ import { periodToDateRange } from '#layers/pro-gsc/app/composables/useGscPeriod'
 import {
   useProEntitySparklines,
   useProGscdumpDates,
+  useProGscdumpPeriodCount,
   useProGscdumpTableData,
   useProGscQueryVariants,
   useProQueryPositionSparklines,
@@ -130,10 +131,9 @@ const primaryMetric = computed(() => lead.value.metric)
 const MOVER_ROWS = 3
 
 // ── Search Queries: a lead list plus the Growing and Declining movers ───────
-// `includeTotal` rides the lead list's own fetch, which feeds the hero's
-// "Queries ranked" count with no second query. New and Lost rankings live on
-// the Queries tab as filter chips; the lead list's "View all" is the doorway.
-const { rows: keywordRows, isLoading: keywordsLoading, totalRows: keywordTotalRows, setSort: setKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
+// New and Lost rankings live on the Queries tab as filter chips; the lead
+// list's "View all" is the doorway.
+const { rows: keywordRows, isLoading: keywordsLoading, setSort: setKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
   siteId: computed(() => gscdumpSiteId.value ?? undefined),
   dimension: 'queryCanonical',
   period,
@@ -141,7 +141,6 @@ const { rows: keywordRows, isLoading: keywordsLoading, totalRows: keywordTotalRo
   compareMode,
   facets: queryFacets,
   pageSize: 5,
-  includeTotal: true,
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
@@ -179,14 +178,13 @@ const queryMovers = computed(() => [
 // ── Pages: the lead list only ───────────────────────────────────────────────
 // Queries are the diagnosis; pages are where it landed. The page movers sit one
 // click away on the Pages tab, where Improving and Declining are filter chips.
-const { rows: pageRows, isLoading: pagesLoading, totalRows: pageTotalRows, setSort: setPageSort } = useProGscdumpTableData<GscdumpDataRow>({
+const { rows: pageRows, isLoading: pagesLoading, setSort: setPageSort } = useProGscdumpTableData<GscdumpDataRow>({
   siteId: computed(() => gscdumpSiteId.value ?? undefined),
   dimension: 'page',
   period,
   stableData,
   compareMode,
   pageSize: 5,
-  includeTotal: true,
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
@@ -258,8 +256,11 @@ const topLabel = computed(() => {
 })
 
 // Hero tail: "across how much surface" beside "how much traffic". Counts, not
-// chart series, and both ride the lead lists' `includeTotal`. No delta: the
-// comparison window's distinct count is not fetched.
+// chart series. Each is its own one-period read: the lead lists compare, and a
+// compared read counts every row either window has. No delta: the comparison
+// window's distinct count is not fetched.
+const queryCount = useProGscdumpPeriodCount({ siteId: gscdumpSiteId, dimension: 'queryCanonical', period, stableData, facets: queryFacets })
+const pageCount = useProGscdumpPeriodCount({ siteId: gscdumpSiteId, dimension: 'page', period, stableData })
 const heroEntityCounts = computed(() => [
   {
     key: 'queries',
@@ -267,8 +268,8 @@ const heroEntityCounts = computed(() => [
     title: 'Queries ranked',
     description: 'Distinct search queries this site ranked for in the selected period. Variants are grouped, so this counts canonical terms.',
     icon: 'search',
-    value: keywordTotalRows.value,
-    loading: siteLoading.value || keywordsLoading.value,
+    value: queryCount.count.value,
+    loading: siteLoading.value || queryCount.isLoading.value,
   },
   {
     key: 'pages',
@@ -276,8 +277,8 @@ const heroEntityCounts = computed(() => [
     title: 'Pages ranked',
     description: 'Distinct pages of this site that appeared in Google Search results in the selected period.',
     icon: 'file',
-    value: pageTotalRows.value,
-    loading: siteLoading.value || pagesLoading.value,
+    value: pageCount.count.value,
+    loading: siteLoading.value || pageCount.isLoading.value,
   },
 ])
 
