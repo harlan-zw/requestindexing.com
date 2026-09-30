@@ -132,6 +132,8 @@ These assets apply to Site connection, held Sites, URL Inspection refusals, the 
 | Usage, URL Inspections | The count starts again on {date}. |
 | Usage, URL Inspections without a cap | The count starts again on {date}. Your URL Inspections continue past the allowance. |
 | Usage, read failure | Your Free allowance could not load. Retry to read it again. |
+| Usage, no allowance | No Free allowance applies to your account. |
+| Usage page description | Your Free allowance, counted for your account across every Site. |
 | Email subject, 80% | Your Request Indexing account is near its Free allowance |
 | Email subject, 100% | Your Request Indexing account reached its Free allowance |
 | Email, Sites 80% | You have connected {used} of the {allowance} Sites in your Free allowance. |
@@ -172,6 +174,7 @@ section above, then delete it from this list.
 2. **Three descriptions of the product ship.** The site description, the landing meta
    description, and the README second sentence describe Request Indexing three ways, and only
    the README mentions multi-engine. Decide which is canonical for a one-sentence slot.
-3. **No support channel is named here.** The dashboard links a personal email and GitHub issues,
-   but this file names neither as the product's support channel. Refusal and hold copy carries
-   no contact line until one is chosen and recorded as a canonical asset.
+3. **No support channel is named here.** The account shell's "Get help" menu links an email
+   address, Discord, and GitHub issues, but this file names none of them as the product's
+   support channel. Refusal and hold copy carries no contact line until one is chosen and
+   recorded as a canonical asset.

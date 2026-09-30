@@ -1,30 +1,15 @@
 <script lang="ts" setup>
-import type { FreeAllowanceView } from '#layers/pro-gsc/shared/free-allowance'
-import { FREE_ALLOWANCE_HEADING, FREE_ALLOWANCE_READ_FAILURE, meterRows } from '#layers/pro-gsc/shared/entitlement-copy'
-
 definePageMeta({
-  proTab: { feature: 'settings', label: 'Usage', icon: 'i-ph-gauge-duotone', order: 95 },
-  title: 'Usage',
+  proTab: { feature: 'settings', label: 'API Usage', icon: 'i-ph-gauge-duotone', order: 95 },
+  title: 'API Usages',
+  // U4: this page counts API calls, not stored rows.
   icon: 'i-ph-gauge-duotone',
 })
 
-const { site, siteId, siteName } = useSite('Usage')
+const { site, siteId, siteName } = useSite('API Usage')
 
-// The Free allowance is gscdump's, per account, and gscdump counts it. While
-// the partner is exempt the view is `Hidden` and this page shows only the
-// Indexing API counter below, as it did before metering.
-const { data: allowanceData, status: allowanceStatus, refresh: refreshAllowance } = await useAsyncData(
-  'pro:usage:free-allowance',
-  () => $fetch<{ allowance: FreeAllowanceView }>('/api/pro/usage'),
-  { server: false },
-)
-const allowance = computed<FreeAllowanceView | null>(() => allowanceData.value?.allowance ?? null)
-const meters = computed(() => allowance.value?._tag === 'Metered' ? meterRows(allowance.value.entitlements) : [])
-const allowanceFailed = computed(() => allowanceStatus.value === 'error' || allowance.value?._tag === 'Unavailable')
-
-// The Indexing API Quota stays local: this app sends those notifications
-// itself. The endpoint returns `{ key, usage }` rows summed for the current
-// calendar month, so this section carries no date range.
+// The endpoint returns a bare array of `{ key, usage }` summed for the current
+// calendar month. It is not period-scoped, so this page carries no date range.
 const { data, status, error, refresh } = await useAsyncData(
   () => `usages:${siteId.value}`,
   () => $fetch<Array<{ key: string, usage: number }>>(`/api/sites/${siteId.value}/usages`),
@@ -55,41 +40,7 @@ const rows = computed(() => (data.value ?? []).map(row => ({
       </p>
     </div>
 
-    <UCard v-if="meters.length || allowanceFailed">
-      <template #header>
-        <h3 class="text-sm font-semibold text-highlighted">
-          {{ FREE_ALLOWANCE_HEADING }}
-        </h3>
-      </template>
-      <div v-if="allowanceFailed" class="flex min-h-24 flex-wrap items-center gap-3 text-sm text-muted" role="alert">
-        <span>{{ FREE_ALLOWANCE_READ_FAILURE }}</span>
-        <UButton label="Retry" color="neutral" variant="outline" size="sm" @click="refreshAllowance()" />
-      </div>
-      <dl v-else class="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <div v-for="meter in meters" :key="meter.key" class="min-w-0">
-          <dt class="text-sm text-muted">
-            {{ meter.label }}
-          </dt>
-          <dd class="mt-1 space-y-2">
-            <div class="font-mono text-2xl tabular-nums text-highlighted">
-              {{ meter.value }}
-            </div>
-            <UProgress
-              v-if="meter.percent !== null"
-              :model-value="meter.percent"
-              :color="meter.full ? 'warning' : 'primary'"
-              size="sm"
-              :aria-label="`${meter.label}: ${meter.value}`"
-            />
-            <p class="text-xs text-muted">
-              {{ meter.detail }}
-            </p>
-          </dd>
-        </div>
-      </dl>
-    </UCard>
-
-    <!-- U2: the shell already titles this page. -->
+    <!-- U2: the shell already titles this page "API Usages". -->
     <UCard>
       <div class="mb-4 text-sm text-muted">
         API calls this site has made so far this month.
