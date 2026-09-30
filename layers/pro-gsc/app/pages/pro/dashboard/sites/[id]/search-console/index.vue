@@ -4,6 +4,7 @@ import ProCardGsc from '#layers/pro-gsc/app/components/pro/ProCardGsc.vue'
 import ProGscControlBar from '#layers/pro-gsc/app/components/pro/ProGscControlBar.vue'
 import ProQueryLabel from '#layers/pro-gsc/app/components/pro/ProQueryLabel.vue'
 import { useProGscdumpDates, useProGscdumpTableData } from '#layers/pro-gsc/app/composables/useProGscdump'
+import { HELD_TITLE, holdMessage } from '#layers/pro-gsc/shared/entitlement-copy'
 
 definePageMeta({
   proTab: { feature: 'search-console', label: 'Overview', icon: 'i-lucide-layout-dashboard', order: 0 },
@@ -11,7 +12,7 @@ definePageMeta({
   icon: 'i-lucide-layout-dashboard',
 })
 
-const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected } = useSite('Search Console')
+const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, hold } = useSite('Search Console')
 
 const { period, columns, stableData, compareMode, zoomTo, resetZoom } = useProGscFilters()
 
@@ -25,16 +26,30 @@ function onZoom(range: { start: string, end: string } | null) {
 // Sample data preview, for a resolved Site that is not connected or is still
 // syncing. `site` must be resolved first: an unknown id used to fall through to
 // this shell, which showed another customer's domain as this Site's data (D5).
-const showDemoPreview = computed(() => !!site.value && (isNotConnected.value || (isProcessing.value && !isReady.value)))
-const demoMessage = computed(() => isNotConnected.value ? 'Sample search data' : 'Syncing your search data...')
-const demoDescription = computed(() => isNotConnected.value
-  ? 'Connect Google Search Console to see your real data.'
-  : 'Showing sample data while we backfill your Search Console history. This usually takes a few minutes.',
-)
-const demoCta = computed(() => isNotConnected.value
-  ? { label: 'Connect your site', to: '/pro/dashboard/search-console' }
-  : { label: 'View sync status', to: `/pro/dashboard/sites/${siteId.value}` },
-)
+//
+// A held Site gets the same shell with its own words. gscdump holds it before
+// its first import, so "syncing, a few minutes" would be untrue, and gscdump's
+// own hold message points to Local mode, which this app does not offer.
+const showDemoPreview = computed(() => !!site.value && (isNotConnected.value || !!hold.value || (isProcessing.value && !isReady.value)))
+const demoMessage = computed(() => {
+  if (isNotConnected.value)
+    return 'Sample search data'
+  return hold.value ? HELD_TITLE : 'Syncing your search data...'
+})
+const demoDescription = computed(() => {
+  if (isNotConnected.value)
+    return 'Connect Google Search Console to see your real data.'
+  return hold.value
+    ? holdMessage(hold.value)
+    : 'Showing sample data while we backfill your Search Console history. This usually takes a few minutes.'
+})
+const demoCta = computed(() => {
+  if (isNotConnected.value)
+    return { label: 'Connect your site', to: '/pro/dashboard/search-console' }
+  return hold.value
+    ? { label: 'Manage Sites', to: '/pro/dashboard/sites' }
+    : { label: 'View sync status', to: `/pro/dashboard/sites/${siteId.value}` }
+})
 interface DemoDatesResponse {
   dates: { date: string, clicks: number, impressions: number, position: number, ctr: number }[]
   period: { clicks: number, impressions: number, ctr: number, position: number }
