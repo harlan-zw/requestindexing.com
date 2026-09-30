@@ -20,10 +20,12 @@ const bing = useProBingSiteSitemap(() => siteId, () => teamId)
 const sitemap = computed(() => bing.sitemap.value)
 const outcome = ref<ReturnType<typeof bingSitemapSubmitMessage> | null>(null)
 
+// A submit Bing took re-reads the state above, which then says it. Only a
+// refusal or a missing answer needs its own line.
 async function submit() {
   outcome.value = null
   const result: BingSitemapSubmitOutcome | null = await bing.submit()
-  if (result)
+  if (result && result._tag !== 'submitted')
     outcome.value = bingSitemapSubmitMessage(result, siteName)
 }
 

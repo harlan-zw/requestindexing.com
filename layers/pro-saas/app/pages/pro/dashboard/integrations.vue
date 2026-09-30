@@ -229,6 +229,9 @@ const bingActionLoading = computed(() => !!bingCard.value
           :connected="!!bingSummary && bingSummary.linked > 0 && !bingSummary.pending"
         >
           <template v-if="bingAction" #action>
+            <!-- Below `sm` a bulk label squeezes the row name to one word, and
+                 each Site row below carries the same action. The grant stays,
+                 because one round trip unlocks every Site. -->
             <UiButton
               size="md"
               purpose="secondary"
@@ -236,6 +239,7 @@ const bingActionLoading = computed(() => !!bingCard.value
               :loading="bingActionLoading"
               :disabled="bingCard?.busy && !bingActionLoading"
               class="min-h-11 shrink-0"
+              :class="bingAction._tag === 'grant' ? '' : 'hidden sm:inline-flex'"
               @click="runBingAction"
             />
           </template>
