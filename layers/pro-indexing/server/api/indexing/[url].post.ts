@@ -6,6 +6,7 @@ import { createError, defineEventHandler, getQuery, getRouterParams } from 'h3'
 import { incrementUsage } from '~~/layers/core/server/app/services/usage'
 import { authenticateUser } from '~~/layers/core/server/app/utils/auth'
 import { googleAccounts, googleOAuthClients, indexingJobs, sites, teamMemberships, teams } from '~~/layers/core/server/db/schema'
+import { usableIndexingAccount } from '~~/layers/pro-indexing/server/utils/indexing-account'
 import { INDEXING_GRANT_INVALID_REASON, INDEXING_GRANT_MISSING_REASON } from '~~/layers/pro-indexing/shared/contracts/indexing-grant'
 import { checkProToolRateLimit } from '~~/layers/pro-saas/server/utils/rate-limit'
 import { normalizeSiteRef } from '~~/layers/pro-saas/shared/site-access'
@@ -167,11 +168,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'You do not have access to this site' })
   }
 
-  const account = await db.query.googleAccounts.findFirst({
+  const account = usableIndexingAccount(await db.query.googleAccounts.findFirst({
     where: and(eq(googleAccounts.userId, user.userId), eq(googleAccounts.type, 'indexing')),
-  })
-  // Only `/auth/google-indexing` writes this row. The reason code lets the
-  // Submit page swap in its grant action without matching this prose.
+  }))
+  // Only `/auth/google-indexing` writes this row, and a row without the
+  // Indexing API scope is no grant. The reason code lets the Submit page swap
+  // in its grant action without matching this prose.
   if (!account) {
     throw createError({
       statusCode: 401,

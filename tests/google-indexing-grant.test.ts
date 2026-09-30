@@ -2,6 +2,7 @@ import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
 import { createEvent } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { googleAccounts } from '../layers/core/server/db/schema'
 
 vi.mock('~~/layers/core/server/app/utils/auth', () => ({
   authenticateUser: async () => ({ userId: 1, email: 'dev@requestindexing.test', lastIndexingOAuthId: null }),
@@ -16,6 +17,9 @@ vi.mock('~~/layers/core/server/app/services/oauthPool', () => ({
 // One signed-in browser: the sealed session survives between the two legs of
 // the OAuth round trip, as the cookie does.
 let session: Record<string, unknown> = {}
+// The scope list Google's token response carries, and the grant rows written.
+let grantedScope = 'openid email profile https://www.googleapis.com/auth/indexing'
+let storedGrants: unknown[] = []
 const chain = () => ({ set: () => chain(), where: async () => undefined, values: async () => undefined })
 Object.assign(globalThis, {
   getUserSession: async () => session,
@@ -25,11 +29,16 @@ Object.assign(globalThis, {
   },
   useDrizzle: () => ({
     query: { googleAccounts: { findFirst: async () => undefined } },
-    insert: () => chain(),
+    insert: (table: unknown) => ({
+      values: async (row: unknown) => {
+        if (table === googleAccounts)
+          storedGrants.push(row)
+      },
+    }),
     update: () => chain(),
   }),
   $fetch: async (url: string) => url.includes('/token')
-    ? { access_token: 'access', refresh_token: 'refresh', id_token: 'id', expires_in: 3600, scope: 'https://www.googleapis.com/auth/indexing' }
+    ? { access_token: 'access', refresh_token: 'refresh', id_token: 'id', expires_in: 3600, scope: grantedScope }
     : { sub: '1', email: 'dev@requestindexing.test', email_verified: true },
 })
 
@@ -58,6 +67,8 @@ const declined = () => 'error=access_denied'
 
 beforeEach(() => {
   session = {}
+  grantedScope = 'openid email profile https://www.googleapis.com/auth/indexing'
+  storedGrants = []
 })
 
 describe('gET /auth/google-indexing', () => {
@@ -76,6 +87,21 @@ describe('gET /auth/google-indexing', () => {
     '/login',
   ])('falls back to the dashboard for the unsafe return path %s', async (returnTo) => {
     expect(await roundTrip(`/auth/google-indexing?returnTo=${encodeURIComponent(returnTo)}`, granted)).toBe('/pro/dashboard')
+  })
+
+  it('stores the grant when Google returns the Indexing API scope', async () => {
+    await roundTrip(`/auth/google-indexing?returnTo=${encodeURIComponent(SUBMIT_PAGE)}`, granted)
+
+    expect(storedGrants).toHaveLength(1)
+  })
+
+  // Google's consent screen can let the user untick the Indexing API and still
+  // finish. That grant cannot submit, so it must not read as one.
+  it('stores no grant and returns to the Submit page when Google leaves out the Indexing API scope', async () => {
+    grantedScope = 'openid email profile'
+
+    expect(await roundTrip(`/auth/google-indexing?returnTo=${encodeURIComponent(SUBMIT_PAGE)}`, granted)).toBe(SUBMIT_PAGE)
+    expect(storedGrants).toEqual([])
   })
 
   it('never returns to a cross-origin referrer', async () => {

@@ -1,7 +1,7 @@
 import type { UserSession } from '~~/layers/core/app/types'
 import type { GoogleAccountsSelect, GoogleOAuthClientsSelect } from '~~/layers/core/server/db/schema'
 import { and, eq } from 'drizzle-orm'
-import { GSC_INDEXING_SCOPE } from 'gscdump'
+import { GSC_INDEXING_SCOPE, hasIndexingScope } from 'gscdump'
 import {
   createError,
   defineEventHandler,
@@ -162,6 +162,14 @@ export default defineEventHandler(async (event) => {
   }
   const tokens = tokenResult.data
 
+  // Google's consent screen lets the user untick the Indexing API and still
+  // finish. That token cannot submit, so it is not stored: the Submit page
+  // then offers the grant again, and a grant stored earlier stays in place.
+  // A response without a scope list is read as the scopes this flow asked for.
+  const scope = tokens.scope ?? INDEXING_SCOPES.join(' ')
+  if (!hasIndexingScope(scope))
+    return sendRedirect(event, authPayload.returnTo || DEFAULT_RETURN_TO)
+
   if (!tokens.refresh_token || !tokens.id_token) {
     throw createError({
       statusCode: 401,
@@ -188,7 +196,6 @@ export default defineEventHandler(async (event) => {
     locale: profile.locale ?? 'en',
   }
 
-  const scope = tokens.scope ?? INDEXING_SCOPES.join(' ')
   const expiryDate = Date.now() + tokens.expires_in * 1000
   const tokenRecord: GoogleAccountsSelect['tokens'] = {
     refresh_token: tokens.refresh_token,
