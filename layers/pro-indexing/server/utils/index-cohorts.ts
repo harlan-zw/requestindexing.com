@@ -1,7 +1,7 @@
 import type { GscdumpIndexingUrl } from '#layers/pro-gsc/shared/gscdump-api'
 import type { IndexCohortsResponse } from '../../shared/contracts/index-cohorts'
 import type { IndexCohortPage } from '../../shared/index-cohorts'
-import { buildIndexCohortDiagnosis } from '../../shared/index-cohorts'
+import { buildIndexCohortDiagnosis, COHORT_MIN_ENUMERATED_SHARE } from '../../shared/index-cohorts'
 
 // Which part of this site does Google treat worse than the rest?
 //
@@ -12,12 +12,23 @@ import { buildIndexCohortDiagnosis } from '../../shared/index-cohorts'
 // therefore always 0 here, and the wire contract stays identical so the shared
 // cohort list and lead selector render unchanged.
 //
+// The list can hold far fewer not-indexed URLs than gscdump reports for the
+// Site. A rate built on it would then treat every unlisted URL as absent, so
+// below `COHORT_MIN_ENUMERATED_SHARE` the builder refuses with
+// `sampled-index-state` rather than rank sections (nuxtseo.com #1306).
+//
 // Pure data in, data out. The endpoint owns the fetch; this owns the decision.
 
 export interface IndexCohortSource {
   urls: ReadonlyArray<Pick<GscdumpIndexingUrl, 'url' | 'verdict' | 'sitemaps'>>
   /** The site URL the inspection set belongs to, used to resolve relative rows. */
   siteUrl?: string | null
+  /**
+   * The not-indexed count gscdump reports for the Site: the diagnostics
+   * `not_indexed` issue. 0 when the bucket is absent, because diagnostics
+   * lists only non-zero buckets.
+   */
+  reportedNotIndexed: number
 }
 
 /**
@@ -26,7 +37,7 @@ export interface IndexCohortSource {
  * counted as excluded rather than folded into a section rate it would distort.
  */
 type ParsedRow
-  = | { _tag: 'page', page: IndexCohortPage }
+  = | { _tag: 'page', page: IndexCohortPage, href: string }
     | { _tag: 'fragment' }
     | { _tag: 'unparsable' }
 
@@ -53,6 +64,7 @@ function parseRow(row: IndexCohortSource['urls'][number], base?: string | null):
 
   return {
     _tag: 'page',
+    href: parsed.href,
     page: {
       path: parsed.pathname,
       indexed: row.verdict === 'PASS',
@@ -74,14 +86,31 @@ export function buildIndexCohortsFromIndexingUrls(
   asOf: string | null = null,
 ): IndexCohortsResponse {
   const pages: IndexCohortPage[] = []
+  const notIndexedUrls = new Set<string>()
   let excludedFragments = 0
 
   for (const row of source.urls) {
     const parsed = parseRow(row, source.siteUrl)
-    if (parsed._tag === 'page')
+    if (parsed._tag === 'page') {
       pages.push(parsed.page)
-    else if (parsed._tag === 'fragment')
+      if (!parsed.page.indexed)
+        notIndexedUrls.add(parsed.href)
+    }
+    else if (parsed._tag === 'fragment') {
       excludedFragments += 1
+    }
+  }
+
+  const enumerated = notIndexedUrls.size
+  const reported = source.reportedNotIndexed
+  if (reported > 0 && enumerated / reported < COHORT_MIN_ENUMERATED_SHARE) {
+    return {
+      _tag: 'no-evidence',
+      crawlSettingsId: null,
+      asOf,
+      reason: 'sampled-index-state',
+      sample: { enumerated, reported },
+    }
   }
 
   const diagnosis = buildIndexCohortDiagnosis({
@@ -92,7 +121,7 @@ export function buildIndexCohortsFromIndexingUrls(
   })
 
   if (diagnosis._tag === 'no-evidence')
-    return { _tag: 'no-evidence', crawlSettingsId: null, asOf, reason: diagnosis.reason }
+    return { _tag: 'no-evidence', crawlSettingsId: null, asOf, reason: diagnosis.reason, sample: null }
 
   if (diagnosis._tag === 'uniform') {
     return {
