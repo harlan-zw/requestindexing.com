@@ -1,5 +1,7 @@
 minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
+  - '@harlan-zw/nuxt-cloudflare@0.4.4'
+  - nuxt-og-image@6.10.1
   - '@harlan-zw/nuxt-checkin@0.3.0'
   - nuxt-skew-protection@1.6.1
   - '@gscdump/contracts@4.6.0'
@@ -66,7 +68,7 @@ catalog:
   '@gscdump/sdk': 4.6.0
   '@harlan-zw/comark-content': 0.1.5
   '@harlan-zw/nuxt-checkin': 0.3.0
-  '@harlan-zw/nuxt-cloudflare': https://pkg.pr.new/harlan-zw/harlan-nuxt/@harlan-zw/nuxt-cloudflare@72b6ca43409478ad5958eed77ea332ab1b4c5cd9
+  '@harlan-zw/nuxt-cloudflare': 0.4.4
   '@harlan-zw/nuxt-domain-events': 0.1.2
   '@harlan-zw/nuxt-dx': 0.2.1
   '@harlan-zw/nuxt-sentry': 0.2.0
@@ -128,7 +130,7 @@ catalog:
   nuxt: ^4.5.2
   nuxt-ai-ready: https://pkg.pr.new/nuxt-ai-ready@8b2f4e085f48510f09b28110eecaa0e713896fd3
   nuxt-auth-utils: ^0.5.30
-  nuxt-og-image: https://pkg.pr.new/nuxt-og-image@84d38ff54e632717d642ed7aea0f33da87ff426d
+  nuxt-og-image: ^6.10.1
   nuxt-schema-org: ^6.3.2
   nuxt-skew-protection: ^1.6.1
   ohash: ^2.0.12
