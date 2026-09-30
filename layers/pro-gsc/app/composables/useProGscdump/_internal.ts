@@ -1,9 +1,34 @@
+import type { NuxtApp } from 'nuxt/app'
 import type { WatchSource } from 'vue'
 import { useProGscdump } from './useProGscdump'
 
 export interface GscdumpQueryOptions {
   immediate?: boolean
   watch?: boolean
+  /**
+   * Reuse a value the server wrote into the SSR payload under this query's key.
+   * Only the initial run reads it: the server render and client hydration see
+   * the same rows, so the HTML carries them and hydration does not refetch.
+   * Watch-triggered runs and manual refreshes always fetch.
+   *
+   * nuxtseo.com names this `ssrPayloadStaleTimeMs`, because its tables mount
+   * inside `<ClientOnly>` and need a stale window after hydration. These tables
+   * render on the server, so the hydration pass is the whole window.
+   */
+  seedFromSsrPayload?: boolean
+}
+
+/**
+ * `getCachedData` for queries that opt into SSR payload seeding. It returns the
+ * seeded value during the server render and client hydration, and nothing
+ * afterwards, so a later mount of the same key fetches fresh rows.
+ */
+export function ssrPayloadSeed<T>(key: string, nuxtApp: NuxtApp, ctx: { cause: string }): T | undefined {
+  if (ctx.cause !== 'initial')
+    return undefined
+  if (!import.meta.server && !nuxtApp.isHydrating)
+    return undefined
+  return nuxtApp.payload.data[key] as T | undefined
 }
 
 /**
@@ -29,6 +54,7 @@ export function useGscdumpQuery<T>(
   }, {
     server: false,
     immediate: options?.immediate ?? true,
+    ...(options?.seedFromSsrPayload ? { getCachedData: ssrPayloadSeed<T> } : {}),
     ...(shouldWatch ? { watch: [_siteId, ...watchSources] } : {}),
   })
 }

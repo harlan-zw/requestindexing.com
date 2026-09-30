@@ -224,6 +224,8 @@ export default defineNuxtConfig({
     '/get-started': { redirect: { to: '/pro/onboarding', statusCode: 301 } },
     // The Site picker moved under the Sites roster, matching nuxtseo.com.
     '/pro/dashboard/team/sites': { redirect: { to: '/pro/dashboard/sites/connect', statusCode: 301 } },
+    // The all-sites indexing page moved to nuxtseo.com's route.
+    '/pro/dashboard/web-indexing': { redirect: { to: '/pro/dashboard/indexing', statusCode: 301 } },
     // `/dashboard/**` and `/account/**` are 301'd to the one tree by
     // `layers/pro-saas/server/middleware/00-legacy-dashboard.ts`. A route rule
     // can only swap the prefix, and several of those pages moved further.
@@ -269,9 +271,10 @@ export default defineNuxtConfig({
           // sign-in at all.
           NUXT_OAUTH_GOOGLE_CLIENT_ID: process.env.NUXT_OAUTH_GOOGLE_CLIENT_ID
             || '32479086022-b2upoo15sfpo0fpmgdgi95fh6oths219.apps.googleusercontent.com',
-          // Kill switch for outbound user-facing sends (welcome email) and the
-          // daily site-sync fan-out. Set to 'false' while migrating legacy data
-          // so no user is emailed and no bulk sync is queued.
+          // Kill switch for the welcome email and the daily site-sync fan-out.
+          // Set to 'false' while migrating legacy data, so no welcome email is
+          // sent and no bulk sync is queued. The Free allowance email ignores
+          // this switch and always sends.
           NUXT_NOTIFICATIONS_ENABLED: process.env.NUXT_NOTIFICATIONS_ENABLED || 'false',
         },
         durable_objects: {
@@ -374,8 +377,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     checkinToken: '',
-    // Gates every outbound user-facing send and the daily sync fan-out.
-    // Override with NUXT_NOTIFICATIONS_ENABLED.
+    // Gates the welcome email and the daily sync fan-out. The Free allowance
+    // email always sends. Override with NUXT_NOTIFICATIONS_ENABLED.
     notificationsEnabled: true,
     key: '', // .env NUXT_KEY
     session: {

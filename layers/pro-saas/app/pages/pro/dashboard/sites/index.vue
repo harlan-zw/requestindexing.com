@@ -1,8 +1,10 @@
 <script lang="ts" setup>
+import type { SiteHoldReason } from '@gscdump/contracts'
 import type { DropdownMenuItem } from '@nuxt/ui'
-import type { SiteFleetRow } from '~~/layers/core/app/types'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
+import { HELD_LABEL, holdMessage, SITE_LINK_REFUSED } from '#layers/pro-gsc/shared/entitlement-copy'
 import ProAbilityGate from '#layers/pro-saas/app/components/pro/team/ProAbilityGate.vue'
+import { SITE_SYNC_LABELS } from '#layers/pro-saas/shared/site-sync'
 
 // The Site roster, ported from nuxtseo.com's `sites/index.vue` and cut to what
 // this app offers: no groups, no pause, no crawl or analytics columns. Each row
@@ -25,15 +27,10 @@ interface SiteRow {
   url: string
   property: string
   syncLabel: string
+  refused: boolean
+  /** gscdump holds the Site before its first import; the sync label does not apply. */
+  hold: SiteHoldReason | null
   to: string
-}
-
-const SYNC_LABELS: Record<SiteFleetRow['syncStatus'], string> = {
-  idle: 'Waiting to sync',
-  pending: 'Waiting to sync',
-  syncing: 'Syncing',
-  synced: 'Synced',
-  error: 'Sync failed',
 }
 
 const rows = computed<SiteRow[]>(() => (data.value?.sites ?? []).map(site => ({
@@ -41,11 +38,22 @@ const rows = computed<SiteRow[]>(() => (data.value?.sites ?? []).map(site => ({
   label: siteLabel(site),
   url: siteLabel(site),
   property: site.property,
-  syncLabel: SYNC_LABELS[site.syncStatus],
+  syncLabel: SITE_SYNC_LABELS[site.syncStatus],
+  refused: site.syncStatus === 'refused',
+  hold: site.hold,
   to: `/pro/dashboard/sites/${site.siteId}`,
 })))
 
 const loading = computed(() => status.value === 'pending' && !data.value)
+
+// nuxtseo.com's "Add sites" modal: the same form as the Connect a Site page,
+// opened in place. The Google grant returns to this page.
+const connectOpen = ref(false)
+async function onSiteConnected() {
+  // The sidebar reads the same `sites` key, so one refresh updates both. The
+  // modal stays open, so the user can connect the next suggestion.
+  await refresh()
+}
 
 const toast = useToast()
 const siteToRemove = ref<SiteRow | null>(null)
@@ -125,9 +133,11 @@ async function removeSite() {
       title="No Sites yet"
       description="Connect a Site from Google Search Console to see its indexing status and search data."
     >
-      <UiButton purpose="cta" icon="add" to="/pro/dashboard/sites/connect">
-        Connect a Site
-      </UiButton>
+      <ProAbilityGate ability="manage-sites">
+        <UiButton purpose="cta" icon="add" aria-haspopup="dialog" @click="connectOpen = true">
+          Connect a Site
+        </UiButton>
+      </ProAbilityGate>
     </UiEmptyState>
 
     <div v-else-if="rows.length" class="overflow-hidden rounded-xl border border-default bg-default">
@@ -136,7 +146,7 @@ async function removeSite() {
         <span class="text-xs text-dimmed tabular-nums">{{ rows.length }}</span>
         <div class="ml-auto">
           <ProAbilityGate ability="manage-sites">
-            <UiButton size="sm" purpose="cta" icon="add" to="/pro/dashboard/sites/connect">
+            <UiButton size="sm" purpose="cta" icon="add" aria-haspopup="dialog" @click="connectOpen = true">
               Connect a Site
             </UiButton>
           </ProAbilityGate>
@@ -174,7 +184,13 @@ async function removeSite() {
             <span class="block truncate font-mono text-xs text-muted">{{ row.property }}</span>
           </UiTableTd>
           <UiTableTd>
-            <span class="text-sm">{{ row.syncLabel }}</span>
+            <UTooltip v-if="row.hold" :text="holdMessage(row.hold)">
+              <UBadge color="warning" variant="subtle" :label="HELD_LABEL" />
+            </UTooltip>
+            <UTooltip v-else-if="row.refused" :text="SITE_LINK_REFUSED">
+              <span class="text-sm">{{ row.syncLabel }}</span>
+            </UTooltip>
+            <span v-else class="text-sm">{{ row.syncLabel }}</span>
           </UiTableTd>
           <UiTableTd>
             <UDropdownMenu :items="rowMenuItems(row)" :content="{ align: 'end', sideOffset: 6 }">
@@ -188,7 +204,11 @@ async function removeSite() {
         <li v-for="row in rows" :key="row.siteId" class="flex min-h-16 items-center gap-2 px-4 py-3">
           <NuxtLink :to="row.to" class="min-w-0 flex-1">
             <ProSiteIdentity :url="row.url" :size="18" />
-            <span class="mt-1 block pl-7 text-xs text-muted">{{ row.syncLabel }}</span>
+            <span v-if="row.hold" class="mt-1 block pl-7 text-xs text-muted">
+              <UBadge color="warning" variant="subtle" size="sm" :label="HELD_LABEL" class="mr-1" />{{ holdMessage(row.hold) }}
+            </span>
+            <span v-else-if="row.refused" class="mt-1 block pl-7 text-xs text-muted">{{ row.syncLabel }}. {{ SITE_LINK_REFUSED }}</span>
+            <span v-else class="mt-1 block pl-7 text-xs text-muted">{{ row.syncLabel }}</span>
           </NuxtLink>
           <UDropdownMenu :items="rowMenuItems(row)" :content="{ align: 'end', sideOffset: 6 }">
             <UiButton purpose="quiet" icon="more-horizontal" class="min-h-11 min-w-11" :aria-label="`Actions for ${row.label}`" />
@@ -196,6 +216,12 @@ async function removeSite() {
         </li>
       </ul>
     </div>
+
+    <UModal v-model:open="connectOpen" title="Connect a Site">
+      <template #body>
+        <ProSiteAddForm gsc-return-to="/pro/dashboard/sites" @connected="onSiteConnected" />
+      </template>
+    </UModal>
 
     <UModal
       v-model:open="confirmOpen"

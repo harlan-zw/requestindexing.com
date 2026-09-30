@@ -1,21 +1,21 @@
 <script lang="ts" setup>
 import type { ChartAnnotation, ChartAnnotationOptions } from '../../utils/chartAnnotations'
-import type { TopEntityStackBucket, TopEntityStackSeries } from '../../utils/topEntityStack'
-import { TextAlign } from '@unovis/ts'
+import type { TopEntityStackBucket, TopEntityStackRow, TopEntityStackSeries } from '../../utils/topEntityStack'
+import { StackedBar, TextAlign } from '@unovis/ts'
 import { VisAxis, VisCrosshair, VisLine, VisStackedBar, VisTooltip, VisXYContainer } from '@unovis/vue'
 import { useElementSize } from '@vueuse/core'
 import { computed, useTemplateRef } from 'vue'
 import { ClientOnly, UiChartAnnotations, UiEmptyState, UiSkeleton } from '#components'
 import { gscTopEntityColors } from '../../composables/dataVizColors'
+import { useChartTickPlan } from '../../composables/useChartTickPlan'
 import { indexAnnotationsByDay } from '../../utils/chartAnnotations'
+import { topEntityStackRows, topEntityStackTimeline } from '../../utils/topEntityStack'
 
 // Shared "top N + Other" stacked-bar trend chart (manual-review-2026-08:
 // search-console Queries / Pages / Countries). Dumb + presentational — the
 // top-N-and-Other bucketing is `bucketTopEntities` (pure, unit-tested); this
 // component only draws whatever `buckets`/`series` it's handed. One component,
 // three call sites (queries, pages-on-queries-table-view, countries).
-
-interface StackRow { i: number, values: number[] }
 
 const {
   buckets,
@@ -35,7 +35,7 @@ const {
   height?: number | string
   /** Format a metric value for the legend + tooltip. */
   format?: (value: number) => string
-  /** Format a bucket's label for the x-axis + tooltip header. Defaults to the bucket's start day, short. */
+  /** Format bucket labels for details. The axis uses the shared calendar tick planner. */
   xFormat?: (bucket: TopEntityStackBucket) => string
   emptyTitle?: string
   emptyDescription?: string
@@ -50,10 +50,9 @@ const emit = defineEmits<{
 const chartHeight = computed(() => Number(height) || 220)
 const margin = { left: 0, right: 0, top: 4, bottom: 28 }
 
-// gscTopEntityColors is a fixed 11-slot palette (10 identity hues + 1 neutral) —
-// topN + Other for the widest caller (the top-10 queries trend), and already
-// Tailwind-safelisted (dataVizColors.ts), so no new runtime class needs adding
-// here. Other always takes the neutral slot regardless of its position in
+// gscTopEntityColors is a fixed 11-slot palette (10 identity hues + 1 neutral),
+// wider than any current caller's topN (5) and already Tailwind-safelisted
+// (dataVizColors.ts), so no new runtime class needs adding here. Other always takes the neutral slot regardless of its position in
 // `series`, ranked entities keep their identity hue by rank order. `.hex` feeds
 // the SVG marks + the HTML-string crosshair tooltip (neither can resolve a
 // Tailwind/CSS-var class); `.dot` (the SOLID identity colour, vs. `.bg`'s
@@ -61,37 +60,35 @@ const margin = { left: 0, right: 0, top: 4, bottom: 28 }
 function colorFor(index: number) {
   return series[index]?.isOther ? gscTopEntityColors.at(-1)! : (gscTopEntityColors[index] ?? gscTopEntityColors.at(-1)!)
 }
-const resolvedColors = computed(() => series.map((_, i) => colorFor(i).hex))
+const resolvedColors = computed(() => series.map((s, i) => s.isOther
+  ? 'color-mix(in oklab, var(--ui-primary) 22%, transparent)'
+  : colorFor(i).hex))
 const resolvedDotClasses = computed(() => series.map((_, i) => colorFor(i).dot))
 
-const rows = computed<StackRow[]>(() => buckets.map((_, i) => ({
-  i,
-  values: series.map(s => s.values[i] ?? 0),
-})))
+const rows = computed(() => topEntityStackRows({ buckets, series }))
+const y = computed(() => series.map((_, si) => (d: TopEntityStackRow) => d.shares[si] ?? 0))
+const yDomain: [number, number] = [0, 100]
+const percentFormat = new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 })
+function shareLabel(share: number): string {
+  return percentFormat.format(share / 100)
+}
 
-const y = computed(() => series.map((_, si) => (d: StackRow) => d.values[si] ?? 0))
+const x = (_d: TopEntityStackRow, i: number) => i
 
-const yDomain = computed<[number, number]>(() => {
-  const max = Math.max(...rows.value.map(r => r.values.reduce((sum, v) => sum + v, 0)), 1)
-  return [0, max * 1.1]
-})
-
-const x = (_d: StackRow, i: number) => i
+// The plot box is `overflow-hidden` at a fixed height, and the crosshair
+// tooltip lists one row per series plus a header. Rendered inside the plot it
+// was clipped to the bars, so the caller saw a fragment of the figures. Mount it
+// on `document.body` instead (Unovis switches to fixed positioning and
+// constrains to the viewport). Client-only: the chart renders inside ClientOnly.
+// Outside the container it no longer inherits the dark chart vars, and Unovis
+// gives the element only generated class names. `TOOLTIP_CLASS` is the hook the
+// dark `.unovis-tooltip` rule in global.css matches.
+const tooltipContainer = import.meta.client ? document.body : undefined
+const TOOLTIP_CLASS = 'unovis-tooltip'
 const chartKey = computed(() => `${buckets.length}-${series.length}`)
 
-// --- Gapless geometry -------------------------------------------------------
-// `barPadding: 0` is NOT enough to make the buckets touch. Unovis sizes a bar as
-// `plotWidth / (dataSize + 1)` — it always reserves one extra slot for "possible
-// additional domain space" (`stacked-bar/index.js`, `_getBarWidth`) — and then
-// insets its range by half a bar at each end, leaving a ~10% gap no padding
-// prop can close. Forcing the width to `plotWidth / bucketCount` makes adjacent
-// bars meet exactly and puts the outer edges flush with the plot edges.
-//
-// The interactive overlay then needs the SAME step or the crosshair would sit
-// off-centre from the bar it describes: its own line-based scale spreads points
-// over `plotWidth / (n - 1)`, which drifts by half a bar by the last bucket.
-// A `[-0.5, n - 0.5]` domain gives it step `plotWidth / n` with point `i` at
-// `(i + 0.5) * step` — the bar centres.
+// Both layers share bucket centres. Adjacent normalized buckets form one
+// continuous field, with no gaps between dates or segments.
 const plotEl = useTemplateRef<HTMLElement>('plotEl')
 const { width: plotWidth } = useElementSize(plotEl)
 const barWidth = computed(() => {
@@ -102,7 +99,7 @@ const barWidth = computed(() => {
 })
 const interactiveXDomain = computed<[number, number]>(() => [-0.5, Math.max(buckets.length - 1, 0) + 0.5])
 
-const defaultDateFmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
+const defaultDateFmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })
 function bucketLabel(bucket: TopEntityStackBucket): string {
   if (xFormat)
     return xFormat(bucket)
@@ -110,23 +107,44 @@ function bucketLabel(bucket: TopEntityStackBucket): string {
   return Number.isNaN(d.getTime()) ? bucket.start : defaultDateFmt.format(d)
 }
 
-function tickFormat(idx: number): string {
-  const bucket = buckets[Math.round(idx)]
-  return bucket ? bucketLabel(bucket) : ''
+const timeline = computed(() => topEntityStackTimeline(buckets))
+const { tickPlan, tickFormat: calendarTickFormat } = useChartTickPlan({ dates: () => timeline.value.dates })
+const tickValues = computed(() => {
+  const values = tickPlan.value.indices.map(i => timeline.value.positions[i] ?? 0)
+  const pixelsPerBucket = plotWidth.value / Math.max(buckets.length, 1)
+  const last = values.at(-1) ?? 0
+  return values.reduce<number[]>((kept, value, i) => {
+    if (i === 0 || i === values.length - 1
+      || ((value - kept.at(-1)!) * pixelsPerBucket >= 56 && (last - value) * pixelsPerBucket >= 56)) {
+      kept.push(value)
+    }
+    return kept
+  }, [])
+})
+function tickFormat(position: number): string {
+  const index = timeline.value.positions.indexOf(position)
+  return index < 0 ? '' : calendarTickFormat(index)
+}
+function tickTextAlign(position: number): TextAlign {
+  if (position === -0.5)
+    return TextAlign.Left
+  if (position === buckets.length - 0.5)
+    return TextAlign.Right
+  return TextAlign.Center
 }
 
-function crosshairTemplate(d: StackRow): string {
+function crosshairTemplate(d: TopEntityStackRow): string {
   const bucket = buckets[d.i]
   if (!bucket)
     return ''
-  const total = d.values.reduce((sum, v) => sum + v, 0)
+  const total = d.total
   const rowsHtml = series
-    .map((s, i) => ({ label: s.label, value: d.values[i] ?? 0, color: resolvedColors.value[i] }))
+    .map((s, i) => ({ label: s.label, value: d.values[i] ?? 0, share: d.shares[i] ?? 0, color: resolvedColors.value[i] }))
     .filter(r => r.value > 0)
     .map(r => `<div style="display:flex;align-items:center;gap:6px">
       <span style="width:8px;height:8px;border-radius:9999px;background:${r.color};flex-shrink:0"></span>
-      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;color:var(--ui-text-muted)">${r.label}</span>
-      <span style="font-variant-numeric:tabular-nums;color:var(--ui-text-highlighted);margin-left:auto">${format(r.value)}</span>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px;color:var(--ui-text-muted)">${r.label}</span>
+      <span style="font-variant-numeric:tabular-nums;color:var(--ui-text-highlighted);margin-left:auto">${format(r.value)} <span style="color:var(--ui-text-muted)">(${shareLabel(r.share)})</span></span>
     </div>`)
     .join('')
   return `<div style="display:flex;flex-direction:column;gap:4px;min-width:180px;padding:2px">
@@ -145,7 +163,7 @@ const anchoredAnnotations = computed(() =>
 const annotationXDomain = computed<[number, number] | undefined>(() =>
   buckets.length > 1 ? [0, buckets.length - 1] : undefined)
 
-const ariaLabel = computed(() => `Stacked bar chart of ${series.map(s => s.label).join(', ')} over time`)
+const ariaLabel = computed(() => `100% stacked bar chart of ${series.map(s => s.label).join(', ')} over time`)
 </script>
 
 <template>
@@ -186,13 +204,11 @@ const ariaLabel = computed(() => `Stacked bar chart of ${series.map(s => s.label
           :margin="margin"
           :auto-margin="false"
           :y-domain="yDomain"
+          :x-domain="interactiveXDomain"
           aria-hidden="true"
-          class="chart-layer"
+          class="chart-layer chart-layer--bars"
         >
-          <!-- Gapless on both axes: buckets butt up against each other and
-               segments carry no stroke, so the stack reads as one continuous
-               coloured field over time rather than a row of separate bars. -->
-          <VisStackedBar :x="x" :y="y" :color="resolvedColors" :bar-padding="0" :bar-width="barWidth" :rounded-corners="0" />
+          <VisStackedBar :attributes="{ [StackedBar.selectors.bar]: { 'shape-rendering': 'crispEdges' } }" :x="x" :y="y" :color="resolvedColors" :bar-padding="0" :bar-width="barWidth" :rounded-corners="0" />
         </VisXYContainer>
 
         <VisXYContainer
@@ -205,19 +221,19 @@ const ariaLabel = computed(() => `Stacked bar chart of ${series.map(s => s.label
           :x-domain="interactiveXDomain"
           class="chart-layer chart-layer--interactive"
         >
-          <VisLine :x="x" :y="(d: StackRow) => d.values.reduce((s, v) => s + v, 0)" color="transparent" :line-width="0" />
+          <VisLine :x="x" :y="(d: TopEntityStackRow) => d.total > 0 ? 100 : 0" color="transparent" :line-width="0" />
           <VisAxis
             type="x"
             :tick-line="false"
             :grid-line="false"
             :domain-line="false"
-            :num-ticks="Math.min(6, buckets.length)"
+            :tick-values="tickValues"
             :tick-format="tickFormat"
-            :tick-text-align="TextAlign.Left"
+            :tick-text-align="tickTextAlign"
             tick-text-font-size="11px"
             tick-text-color="var(--ui-text-dimmed)"
           />
-          <VisTooltip :follow-cursor="false" horizontal-placement="right" />
+          <VisTooltip :container="tooltipContainer" :class-name="TOOLTIP_CLASS" :follow-cursor="false" horizontal-placement="right" />
           <VisCrosshair color="none" :template="crosshairTemplate" />
         </VisXYContainer>
 
@@ -249,7 +265,7 @@ const ariaLabel = computed(() => `Stacked bar chart of ${series.map(s => s.label
       :aria-label="`Legend: ${series.map(s => s.label).join(', ')}`"
     >
       <li v-for="(s, i) in series" :key="s.key" class="flex items-center gap-1.5 min-w-0 max-w-full">
-        <span class="size-2 rounded-full shrink-0" :class="resolvedDotClasses[i]" aria-hidden="true" />
+        <span class="size-2 rounded-full shrink-0" :class="s.isOther ? 'bg-primary/25' : resolvedDotClasses[i]" aria-hidden="true" />
         <span class="text-mini text-muted truncate">{{ s.label }}</span>
       </li>
     </ul>
@@ -273,8 +289,8 @@ const ariaLabel = computed(() => `Stacked bar chart of ${series.map(s => s.label
             <th scope="row">
               {{ bucketLabel(b) }}
             </th>
-            <td v-for="s in series" :key="s.key">
-              {{ format(s.values[i] ?? 0) }}
+            <td v-for="(s, si) in series" :key="s.key">
+              {{ format(s.values[i] ?? 0) }} ({{ shareLabel(rows[i]?.shares[si] ?? 0) }})
             </td>
           </tr>
         </tbody>
@@ -288,9 +304,7 @@ const ariaLabel = computed(() => `Stacked bar chart of ${series.map(s => s.label
   display: grid;
   grid-template-columns: 1fr;
   position: relative;
-  /* No segment stroke: the stack is meant to read as one continuous coloured
-     field, and a surface-coloured 2px gap between every band broke it into
-     stripes. Bands stay distinguishable by hue + the legend. */
+  /* Shared edges preserve one continuous 100% field across dates. */
   --vis-stacked-bar-stroke-width: 0;
 }
 
@@ -303,6 +317,10 @@ const ariaLabel = computed(() => `Stacked bar chart of ${series.map(s => s.label
 
 .ui-top-entity-stack-chart__plot .chart-layer {
   pointer-events: none;
+}
+
+.ui-top-entity-stack-chart__plot .chart-layer--bars {
+  clip-path: inset(4px 0 28px round calc(var(--ui-radius) * 2));
 }
 
 .ui-top-entity-stack-chart__plot .chart-layer--interactive {

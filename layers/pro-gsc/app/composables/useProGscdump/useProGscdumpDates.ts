@@ -1,20 +1,10 @@
-import type { Column } from 'gscdump/query'
-import type { BuilderState } from '../../../shared/gscdump-api'
+import type { GscSearchType } from '@gscdump/contracts'
+import type { DailyReportInput, DailySeriesFilter } from '../../../shared/analytics-requests'
 import type { CompareMode, Period } from '../useGscPeriod'
-import type { GscdumpQueryOptions } from './_internal'
-import { country, device, eq, page, query, queryCanonical } from 'gscdump/query'
-import { andFilter, dateFilter } from '../../../shared/utils/filter-wire'
+import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdumpDataDetail } from './useProGscdumpDataDetail'
 
-export interface DailySeriesFilter { column: 'page' | 'query' | 'queryCanonical' | 'country' | 'device', value: string }
-
-const DAILY_SERIES_COLUMNS = {
-  country,
-  device,
-  page,
-  query,
-  queryCanonical,
-} satisfies Record<DailySeriesFilter['column'], Column<DailySeriesFilter['column']>>
+export type { DailySeriesFilter }
 
 /**
  * Fetch daily series for a period with optional comparison overlay.
@@ -34,9 +24,11 @@ export function useProGscdumpDates(
     stableData?: MaybeRefOrGetter<boolean>
     compareMode?: MaybeRefOrGetter<CompareMode>
     filter?: MaybeRefOrGetter<DailySeriesFilter | undefined>
+    /** Search type slice. Defaults to the control bar's picker. */
+    searchType?: MaybeRefOrGetter<GscSearchType | undefined>
     /** Fetch prev-period daily series for chart overlay. Defaults to `true` for site-wide, `false` when `filter` is set. */
     withPrevSeries?: boolean
-  } & GscdumpQueryOptions,
+  },
 ) {
   const _siteId = computed(() => toValue(siteId) ?? '')
   const _period = computed(() => toValue(period))
@@ -44,46 +36,31 @@ export function useProGscdumpDates(
   const _compareMode = computed(() => toValue(opts?.compareMode) ?? 'previous')
   const _filter = computed(() => toValue(opts?.filter))
   const withPrevSeries = opts?.withPrevSeries ?? (opts?.filter === undefined)
+  const filters = useProGscFilters()
+  const _searchType = computed(() => toValue(opts?.searchType) ?? filters.searchType.value)
 
   const range = computed(() => periodToDateRange(_period.value, _stableData.value))
   const cmp = computed(() => compareRange(range.value, _compareMode.value))
 
-  function rangeFilter(r: { start: string, end: string }) {
-    const exact = _filter.value
-    return exact
-      ? andFilter(dateFilter(r), eq(DAILY_SERIES_COLUMNS[exact.column], exact.value))
-      : dateFilter(r)
-  }
-
-  const currentState = computed<BuilderState>(() => ({
-    dimensions: ['date'],
-    filter: rangeFilter(range.value),
-    orderBy: { column: 'date', dir: 'asc' },
+  const currentRequest = computed<DailyReportInput>(() => ({
+    searchType: _searchType.value,
+    range: range.value,
+    comparisonRange: cmp.value,
+    pin: _filter.value,
   }))
 
-  const comparisonState = computed<BuilderState | undefined>(() => {
-    const c = cmp.value
-    if (!c)
-      return undefined
-    return { dimensions: ['date'], filter: rangeFilter(c) }
-  })
+  // The previous window's own daily series, for the chart overlay. With no
+  // comparison it repeats the current read, and its result is not shown.
+  const prevRequest = computed<DailyReportInput>(() => ({
+    searchType: _searchType.value,
+    range: cmp.value ?? range.value,
+    comparisonRange: null,
+    pin: _filter.value,
+  }))
 
-  const prevState = computed<BuilderState | undefined>(() => {
-    if (!withPrevSeries)
-      return undefined
-    const c = cmp.value
-    if (!c)
-      return undefined
-    return {
-      dimensions: ['date'],
-      filter: rangeFilter(c),
-      orderBy: { column: 'date', dir: 'asc' },
-    }
-  })
-
-  const current = useProGscdumpDataDetail(_siteId, currentState, { comparison: comparisonState })
+  const current = useProGscdumpDataDetail(_siteId, currentRequest)
   const prev = withPrevSeries
-    ? useProGscdumpDataDetail(_siteId, computed(() => prevState.value ?? currentState.value), {})
+    ? useProGscdumpDataDetail(_siteId, prevRequest)
     : null
 
   const data = computed(() => {

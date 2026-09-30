@@ -23,6 +23,12 @@ export const ONBOARDING_ROUTE = '/pro/dashboard/onboarding'
 export const DASHBOARD_ROUTE = '/pro/dashboard'
 
 /**
+ * Where a finished user connects a Site. The wizard is closed to them, so this
+ * page renders the same form, and a Google grant started here returns here.
+ */
+export const CONNECT_SITE_ROUTE = '/pro/dashboard/sites/connect'
+
+/**
  * Paths a user may reach while onboarding is unfinished. Without the account
  * pages here, a half-onboarded user cannot sign out or delete their account.
  */
@@ -128,6 +134,27 @@ export function canAdvanceOnboardingStep(step: OnboardingStep, signals: Onboardi
   return step === 'sites' ? signals.hasSites : true
 }
 
+export interface SitesSkipInput {
+  hasSites: boolean
+  /**
+   * A connect attempt failed on this step, or the Free allowance is full so
+   * no attempt can start.
+   */
+  connectBlocked: boolean
+}
+
+/**
+ * Whether the sites step offers "Skip and connect it later".
+ *
+ * nuxtseo.com's rule: the step needs a Site, but a Site that cannot connect
+ * must never trap the user. A gscdump outage or a full Free allowance would.
+ * The skip shows only after connecting is blocked, so it never reads as the
+ * first choice.
+ */
+export function canSkipOnboardingSites(input: SitesSkipInput): boolean {
+  return !input.hasSites && input.connectBlocked
+}
+
 /**
  * Where the OAuth callback sends a user whose grant has no Search Console
  * scope. `returnTo` is already parsed by `safeAuthRedirect`.
@@ -195,20 +222,24 @@ export interface OnboardingCompletionInput {
   completedAt: Date | string | null | undefined
   /** The caller's current team owns at least one site. */
   hasSites: boolean
+  /** The user chose "Skip and connect it later" on the sites step. */
+  skipSites: boolean
   now: Date
 }
 
 export type OnboardingCompletion
   = | { _tag: 'AlreadyComplete', completedAt: string }
     | { _tag: 'Blocked', reason: 'no_sites', message: string }
-    | { _tag: 'Complete', completedAt: string }
+    | { _tag: 'Complete', completedAt: string, sites: 'connected' | 'skipped' }
 
 /**
  * Whether the completion endpoint may stamp `users.onboarding_completed_at`.
  *
- * Finishing with no site is the one state the wizard must not reach: the flag
- * closes the gate forever, so the user would land on a dashboard with nothing
- * in it and no route back to setup.
+ * The flag closes the wizard for good. With no Site, the user must say so
+ * with the skip. The dashboard then offers Connect a Site on
+ * `CONNECT_SITE_ROUTE`, which works after onboarding. Without the skip,
+ * finishing with no Site is refused, so a stray click on the last step does
+ * not leave an empty dashboard.
  */
 export function resolveOnboardingCompletion(input: OnboardingCompletionInput): OnboardingCompletion {
   if (input.completedAt) {
@@ -218,7 +249,7 @@ export function resolveOnboardingCompletion(input: OnboardingCompletionInput): O
     return { _tag: 'AlreadyComplete', completedAt }
   }
 
-  if (!input.hasSites) {
+  if (!input.hasSites && !input.skipSites) {
     return {
       _tag: 'Blocked',
       reason: 'no_sites',
@@ -226,7 +257,11 @@ export function resolveOnboardingCompletion(input: OnboardingCompletionInput): O
     }
   }
 
-  return { _tag: 'Complete', completedAt: input.now.toISOString() }
+  return {
+    _tag: 'Complete',
+    completedAt: input.now.toISOString(),
+    sites: input.hasSites ? 'connected' : 'skipped',
+  }
 }
 
 /**

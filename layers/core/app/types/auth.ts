@@ -39,10 +39,11 @@ export interface OAuthPoolToken {
 export interface UserSession {
   sub: string
   user: UserSelect
-  // used when redirecting to Web Indexing API OAuth
+  // used when redirecting to Indexing API OAuth
   googleIndexingAuth?: {
     indexingOAuthId: string
-    referrer: string
+    /** Same-origin dashboard path, parsed by `safeAuthRedirect`. */
+    returnTo: string
     state: string
   }
 }
@@ -51,7 +52,7 @@ declare module '#auth-utils' {
   interface UserSession {
     googleIndexingAuth?: {
       indexingOAuthId: string
-      referrer: string
+      returnTo: string
       state: string
     }
   }

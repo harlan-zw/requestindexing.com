@@ -1,14 +1,17 @@
 import type { H3Event } from 'h3'
 import type { z } from 'zod'
+import type { MirrorCtx } from '#layers/pro-gsc/server/utils/gscdump-teams-client'
 import type { invitationCreateSchema } from '../../shared/validators/invitations'
 import type { teamCreateSchema, teamMemberRoleUpdateSchema, teamUpdateSchema } from '../../shared/validators/teams'
 import type { CurrentTeamContext } from '../utils/require-current-team'
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
+import { isError } from 'h3'
 import { logWarn } from '~~/shared/logging'
 import { dispatchEvent } from '#domain-events/server'
 import { findIdentityByProviderEmail } from '#layers/pro-saas-auth/server/utils/auth/identity'
 import { ProError } from '../../shared/errors'
 import {
+  sites,
   teamInvitations,
   teamMemberships,
   teams,
@@ -85,9 +88,67 @@ export async function updateTeamName(event: H3Event, ctx: CurrentTeamContext, in
   }
 }
 
-export async function deleteTeam(event: H3Event, ctx: CurrentTeamContext) {
+// The gscdump calls a Team delete makes. Passed in so a test can drive them.
+export interface TeamDeleteGscdump {
+  deleteSite: (gscdumpSiteId: string) => Promise<unknown>
+  deleteTeam: (gscdumpTeamId: string, mirror: MirrorCtx) => Promise<unknown>
+}
+
+function teamDeleteGscdump(event: H3Event): TeamDeleteGscdump {
+  return {
+    deleteSite: gscdumpSiteId => useGscdumpClient().deleteSite(gscdumpSiteId),
+    deleteTeam: (gscdumpTeamId, mirror) => useGscdumpTeamsClient(event).deleteTeam(gscdumpTeamId, mirror),
+  }
+}
+
+// gscdump deletes only an empty Team. A Site the Team still holds there
+// outlives the local row, with nothing here to show or remove it, and a
+// metered partner counts it against the owner's Free allowance. A gscdump
+// Site that a site on another team still points at stays: `autoLinkGsc`
+// reuses a registered Site.
+async function deleteTeamSitesFromGscdump(db: DB, teamId: number, deleteSite: TeamDeleteGscdump['deleteSite']) {
+  const owned = await db.selectDistinct({ gscdumpSiteId: sites.gscdumpSiteId })
+    .from(sites)
+    .where(and(eq(sites.teamId, teamId), isNotNull(sites.gscdumpSiteId)))
+    .all()
+  const ids = owned.flatMap(row => row.gscdumpSiteId ? [row.gscdumpSiteId] : [])
+  if (!ids.length)
+    return
+
+  const shared = await db.selectDistinct({ gscdumpSiteId: sites.gscdumpSiteId })
+    .from(sites)
+    .where(and(inArray(sites.gscdumpSiteId, ids), ne(sites.teamId, teamId)))
+    .all()
+  const keep = new Set(shared.map(row => row.gscdumpSiteId))
+
+  for (const gscdumpSiteId of ids.filter(id => !keep.has(id))) {
+    await deleteSite(gscdumpSiteId).catch((err: unknown) => {
+      // 404: gscdump no longer has the Site, which is the state this wants.
+      if (isError(err) && err.statusCode === 404)
+        return
+      // The handler drops `cause` from the response, so the upstream reason
+      // is logged here before the user-facing error replaces it.
+      logWarn('gscdump.teams.client_failed', err, { stage: 'deleteTeam.deleteSite', gscdumpSiteId, teamId })
+      throw new ProError('internal_error', {
+        statusCode: 502,
+        message: 'We could not delete the Search Console data for one of this team\'s sites. We kept the team so you can try again.',
+        cause: err,
+      })
+    })
+  }
+}
+
+export async function deleteTeam(
+  event: H3Event,
+  ctx: CurrentTeamContext,
+  gscdump: TeamDeleteGscdump = teamDeleteGscdump(event),
+) {
   if (ctx.team.personalTeam)
     throw new ProError('validation_failed', { message: 'Cannot delete personal team' })
+
+  // Before any local write, so a failure leaves the team and its sites in
+  // place and a retry finds the same gscdump Sites. One already gone is a 404.
+  await deleteTeamSitesFromGscdump(ctx.db, ctx.team.teamId, gscdump.deleteSite)
 
   await ctx.db.update(users)
     .set({
@@ -103,8 +164,7 @@ export async function deleteTeam(event: H3Event, ctx: CurrentTeamContext) {
   await ctx.db.delete(teams).where(eq(teams.teamId, ctx.team.teamId))
 
   if (ctx.team.gscdumpTeamId) {
-    const teamsClient = useGscdumpTeamsClient(event)
-    await teamsClient.deleteTeam(
+    await gscdump.deleteTeam(
       ctx.team.gscdumpTeamId,
       { actorUserId: ctx.caller.user.id, proTeamId: ctx.team.teamId },
     )
@@ -114,9 +174,14 @@ export async function deleteTeam(event: H3Event, ctx: CurrentTeamContext) {
 export async function inviteTeamMember(event: H3Event, ctx: CurrentTeamContext, input: InviteTeamMemberInput) {
   const { email, role } = input
 
+  // Only a verified identity proves an account owns this email. An unverified
+  // match would let any account block an invitation to someone else's address.
   const githubMatch = await findIdentityByProviderEmail(ctx.db, 'github', email)
-  const googleMatch = githubMatch ? null : await findIdentityByProviderEmail(ctx.db, 'google', email)
-  const existingUser = (githubMatch ?? googleMatch) ? { id: (githubMatch ?? googleMatch)!.userId } : null
+  const verifiedGithubMatch = githubMatch?.identity.emailVerified ? githubMatch : null
+  const googleMatch = verifiedGithubMatch ? null : await findIdentityByProviderEmail(ctx.db, 'google', email)
+  const verifiedGoogleMatch = googleMatch?.identity.emailVerified ? googleMatch : null
+  const existingIdentity = verifiedGithubMatch ?? verifiedGoogleMatch
+  const existingUser = existingIdentity ? { id: existingIdentity.userId } : null
 
   if (existingUser) {
     if (existingUser.id === ctx.team.ownerId)
@@ -266,6 +331,15 @@ export async function removeTeamMember(event: H3Event, ctx: CurrentTeamContext, 
     eq(teamMemberships.teamId, ctx.team.teamId),
     eq(teamMemberships.userId, targetUserId),
   ))
+
+  // Background work reads `users.current_team_id` without a session, so a
+  // removed member must not keep pointing at this team. Same reset as deleteTeam.
+  await ctx.db.update(users)
+    .set({
+      currentTeamId: sql`(SELECT team_id FROM teams WHERE owner_id = users.user_id AND personal_team = 1 LIMIT 1)`,
+      updatedAt: Date.now(),
+    })
+    .where(and(eq(users.userId, targetUserId), eq(users.currentTeamId, ctx.team.teamId)))
 
   await ctx.team.audit({
     actorUserId: ctx.caller.user.id,

@@ -99,20 +99,20 @@ async function removeSite() {
     </div>
 
     <div>
-      <CardTitle>Remove site</CardTitle>
+      <CardTitle>Remove Site</CardTitle>
       <UCard :ui="{ root: 'ring-error/30' }">
         <p class="mb-4 text-sm text-muted">
-          Removing a site deletes its archived Search Console data and its indexing history. You can connect it again later, but the archive does not come back.
+          Removing a Site deletes its archived Search Console data and its indexing history. You can connect it again later, but the archive does not come back.
         </p>
         <UButton color="error" variant="soft" @click="confirmOpen = true">
-          Remove site
+          Remove Site
         </UButton>
       </UCard>
     </div>
 
     <UModal
       v-model:open="confirmOpen"
-      title="Remove this site?"
+      title="Remove this Site?"
       :description="`${siteName} and everything archived for it will be deleted.`"
     >
       <template #footer="{ close }">
@@ -121,7 +121,7 @@ async function removeSite() {
             Cancel
           </UButton>
           <UButton color="error" :loading="removing" @click="removeSite()">
-            Remove site
+            Remove Site
           </UButton>
         </div>
       </template>

@@ -12,6 +12,8 @@ export default defineCheck<IntegrationState>({
       return unavailable('Integration configuration is unavailable.')
     if (!event.gscdump.apiKey || !event.gscdump.webhookSecret)
       return unavailable('gscdump credentials are incomplete.')
-    return pass({ configured: true, notificationsEnabled: event.notificationsEnabled, dailySyncPaused: !event.notificationsEnabled })
+    // NUXT_NOTIFICATIONS_ENABLED=false pauses exactly these two. The Free
+    // allowance email sends either way, so the evidence names what it pauses.
+    return pass({ configured: true, welcomeEmailPaused: !event.notificationsEnabled, dailySyncPaused: !event.notificationsEnabled })
   },
 })

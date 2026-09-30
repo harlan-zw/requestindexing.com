@@ -25,10 +25,7 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryReport },
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryReportDetail },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteAnalysis },
-  // `useGscdumpSiteSummary` (useGscdump.ts) calls both of these for every site
-  // card on `/dashboard`. They were missing from the allowlist, so the proxy
-  // resolved no operation and answered 404, and four of five site cards on the
-  // product's landing page rendered "Site data could not load".
+  // Query and page counts over a window, with the comparison window.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getQueryTrend },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getPageTrend },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexing },
@@ -39,27 +36,13 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteSitemapChanges },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.createSitemapAction },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.recoverSitePermission },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getTopAssociation },
-  // The tables resolve one sparkline per visible row in a single call, and the
-  // entity trend panels read the site's own daily query and page counts.
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.queryKeywordSparklines },
-  // `analytics.rows.query` answers a raw grouped read; the page and country
-  // sparklines use it where no purpose-built operation exists.
+  // `analytics.rows.query` answers a raw grouped read. Every sparkline reads
+  // its `(dimension, date)` series here, because a list report rejects `date`.
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryRows },
-  // Entity detail pages read the preset bundle rather than one request per
-  // preset.
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteAnalysisBundle },
   // Indexing coverage history and the sitemap URL views.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexingTransitions },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSitemapUrls },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listAvailableSites },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getCanonicalMismatches },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getContentVelocity },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getCtrCurve },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getDarkTraffic },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getDeviceGap },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getKeywordBreadth },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getPositionDistribution },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexNowConnection },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.configureSiteIndexNowConnection },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.verifySiteIndexNowConnection },
@@ -88,16 +71,6 @@ export const gscdumpV1BrowserOperationIds = Object.freeze(
 )
 
 export type GscdumpV1ProxyOperation = ResolvedHttpV1Operation<BrowserOperationEntry>
-
-/**
- * The one operation whose path parameter is a gscdump *user* id rather than a
- * site id (`partner.users.sites.available.list`). The browser client sends an
- * opaque, syntactically-valid placeholder (see `GSCDUMP_SESSION_USER_ID` in
- * `useGscdump.ts`); the route handler always substitutes the caller's real
- * stored gscdump user id when building the upstream request, so the value the
- * browser sends is never trusted or forwarded.
- */
-export const GSCDUMP_V1_USER_SCOPED_OPERATION_ID = 'partner.users.sites.available.list'
 
 /**
  * Resolve a browser request against the closed allowlist. Returns `null` for

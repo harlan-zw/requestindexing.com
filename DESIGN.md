@@ -113,7 +113,7 @@ components:
 | Mono | system monospace | No custom mono font registered. Used only for URL paths in dashboard cards (the existing hero mock URLs). Default `ui-monospace` keeps install cost down. |
 
 - **Type system**: Fixed `rem` scale. The product is half marketing, half dashboard — fluid type would over-amplify hero text on mobile and under-scale dashboard data. Use Tailwind's `text-sm`/`text-base`/`text-xl`/etc.
-- **OpenType features**: `font-feature-settings: "tnum"` on data tables and dashboard numerics for column alignment. Not enabled globally because tabular nums look stiff in body copy.
+- **OpenType features**: `.dashboard-theme` sets tabular figures on all dashboard text, so columns and KPIs align. Marketing keeps proportional figures because tabular nums look stiff in body copy; add `tabular-nums` only to a marketing numeric column.
 - **Heading conventions**: hero display is `text-5xl sm:text-6xl lg:text-7xl font-title font-bold tracking-[-0.03em]`. Section titles are `text-3xl md:text-4xl font-title font-semibold`. Body copy never uses `font-title`.
 
 ## Icons
@@ -185,7 +185,7 @@ writing a label, heading, empty state or error.
 | `font-title` | Poppins display family via Tailwind utility | Hero text, section titles, marketing headings — never body copy |
 | `.bg-verdant` | Two emerald radial blooms over `bg-muted` (light) / `bg-default` (dark). Signature hero/banner wash | Any large branded background — replaces multi-hue gradients |
 | `.divider-tilt` | `::after` pseudo-element with a -2deg tilted bar, 70px below the parent. Keeps the existing "growing into next section" motif | Bottom of hero or any band that should bleed into the following section |
-| `.dashboard-container` | Centres dashboard content at 1280px with responsive inline padding | Shared dashboard page headers and bodies |
+| `.pro-container` | Centres dashboard content at 1280px with responsive inline padding. Shared with nuxtseo.com | Dashboard page headers and bodies |
 
 ## Design Decisions
 

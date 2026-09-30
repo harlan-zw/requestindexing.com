@@ -16,7 +16,11 @@ const { text, tooltip, tooltipTitle } = defineProps<{
 
 <template>
   <UiTooltip :title="tooltipTitle || text" :description="tooltip" trigger-as="button">
-    <span class="inline-flex items-center gap-1">
+    <!-- The trigger is a button, which centres its text; a label that wraps
+         must stay start-aligned like the heading it sits in. `mx-0.5` cancels
+         the button's `-m-0.5` hit-area bleed, so the label starts on the same
+         edge as a plain heading beside it. -->
+    <span class="mx-0.5 inline-flex items-center gap-1 text-left">
       {{ text }}
       <UiIcon name="help" class="size-3 opacity-50 shrink-0" aria-hidden="true" />
     </span>

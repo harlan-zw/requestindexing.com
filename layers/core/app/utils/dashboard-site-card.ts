@@ -1,17 +1,3 @@
-export interface DashboardSiteSummarySource {
-  getQueryTotal: () => Promise<number>
-  getPageTotal: () => Promise<number>
-}
-
-export async function loadDashboardSiteSummary(source: DashboardSiteSummarySource) {
-  const [queries, pages] = await Promise.all([
-    source.getQueryTotal(),
-    source.getPageTotal(),
-  ])
-
-  return { queries, pages }
-}
-
 export function resolveMetricDomain(values: number[]): [number, number] {
   const finiteValues = values.filter(Number.isFinite)
   if (!finiteValues.length)
