@@ -196,8 +196,9 @@ function onPageError(error: unknown) {
         </UButton>
       </UiEmptyState>
       <!-- A page that throws while it renders keeps the sidebar and the
-           header: the boundary swaps only the page for this notice. -->
-      <NuxtErrorBoundary v-else @error="onPageError">
+           header: the boundary swaps only the page for this notice, until the
+           next navigation. -->
+      <ProPageErrorBoundary v-else @error="onPageError">
         <slot />
         <template #error="{ error, clearError }">
           <UiAlert
@@ -218,7 +219,7 @@ function onPageError(error: unknown) {
             </template>
           </UiAlert>
         </template>
-      </NuxtErrorBoundary>
+      </ProPageErrorBoundary>
     </div>
   </UiAppShell>
 </template>
