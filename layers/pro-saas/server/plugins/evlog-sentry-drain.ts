@@ -37,12 +37,14 @@ export default defineNitroPlugin(() => {
       if (entry.ctx)
         scope.setContext('ctx', entry.ctx)
       scope.setFingerprint([entry.name])
+      const level = entry.level === 'warn' ? 'warning' : 'error'
+      scope.setLevel(level)
 
       if (entry.error) {
         captureException(toSentryException(entry.error))
       }
       else {
-        captureMessage(entry.description, entry.level === 'warn' ? 'warning' : 'error')
+        captureMessage(entry.description, level)
       }
     })
   })
