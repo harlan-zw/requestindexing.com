@@ -74,6 +74,18 @@ describe('resolveGscdumpV1ProxyOperation', () => {
     expect(resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/indexing/bing/evidence', { bing: true })).toBeNull()
   })
 
+  it.each([
+    ['GET', 'connection', 'partner.sites.indexing.indexnow.connection.get'],
+    ['POST', 'connection', 'partner.sites.indexing.indexnow.connection.configure'],
+    ['POST', 'connection/verify', 'partner.sites.indexing.indexnow.connection.verify'],
+    ['POST', 'submissions', 'partner.sites.indexing.indexnow.submissions.create'],
+    ['GET', 'submissions', 'partner.sites.indexing.indexnow.submissions.list'],
+  ])('routes IndexNow %s %s through site ownership checks', (method, path, id) => {
+    const operation = resolveGscdumpV1ProxyOperation(method, 'partner', `sites/s_site-1/indexing/indexnow/${path}`)
+    expect(operation?.operation.id).toBe(id)
+    expect(operation && getGscdumpV1ProxySiteId(operation)).toBe('s_site-1')
+  })
+
   it('rejects a path with no matching operation', () => {
     expect(resolveGscdumpV1ProxyOperation('GET', 'partner', 'users/u_1')).toBeNull()
   })

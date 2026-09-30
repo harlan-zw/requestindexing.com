@@ -60,6 +60,11 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getDeviceGap },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getKeywordBreadth },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getPositionDistribution },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexNowConnection },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.configureSiteIndexNowConnection },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.verifySiteIndexNowConnection },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.submitSiteIndexNow },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexNowSubmissionReceipts },
   { surface: protocol.surfaces.realtime, operation: protocol.surfaces.realtime.operations.createTicket },
 ] as const
 

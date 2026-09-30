@@ -165,7 +165,47 @@ export function useProGscdump() {
     return runV1<T>(() => createV1Client().verifySiteBingConnection(input), silent)
   }
 
+  function getSiteIndexNowConnection(input: GscdumpV1OperationInput<'partner.sites.indexing.indexnow.connection.get'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.connection.get'>['data']>(
+      () => createV1Client().getSiteIndexNowConnection(input),
+      silent,
+    )
+  }
+
+  function configureSiteIndexNowConnection(input: GscdumpV1OperationInput<'partner.sites.indexing.indexnow.connection.configure'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.connection.configure'>['data']>(
+      () => createV1Client().configureSiteIndexNowConnection(input),
+      silent,
+    )
+  }
+
+  function verifySiteIndexNowConnection(input: GscdumpV1OperationInput<'partner.sites.indexing.indexnow.connection.verify'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.connection.verify'>['data']>(
+      () => createV1Client().verifySiteIndexNowConnection(input),
+      silent,
+    )
+  }
+
+  function submitSiteIndexNow(input: GscdumpV1OperationInput<'partner.sites.indexing.indexnow.submissions.create'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.submissions.create'>['data']>(
+      () => createV1Client().submitSiteIndexNow(input),
+      silent,
+    )
+  }
+
+  function listSiteIndexNowSubmissionReceipts(input: GscdumpV1OperationInput<'partner.sites.indexing.indexnow.submissions.list'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.submissions.list'>['data']>(
+      () => createV1Client().listSiteIndexNowSubmissionReceipts(input),
+      silent,
+    )
+  }
+
   return {
+    getSiteIndexNowConnection,
+    configureSiteIndexNowConnection,
+    verifySiteIndexNowConnection,
+    submitSiteIndexNow,
+    listSiteIndexNowSubmissionReceipts,
     createSitemapAction,
     getCanonicalMismatches,
     getContentVelocity,

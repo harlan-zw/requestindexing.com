@@ -68,6 +68,37 @@ protocol, not by building them here. The plumbing exists (`getSiteBingData`,
 `getSiteBingConnection`) and the marketing site says nothing about either, which is correct
 today. Do not put multi-engine submission on a marketing page before the protocol ships it.
 
+## IndexNow dashboard assets
+
+These assets apply to the IndexNow setup, submission, and receipt history.
+Engine contracts own IndexNow and Submission Receipt terms.
+
+| Asset | String |
+| --- | --- |
+| Page heading | IndexNow |
+| Setup heading | Verify your IndexNow key |
+| Setup instruction | Publish a UTF-8 text file containing only your key at the key location. |
+| Key label | IndexNow key |
+| Key location label | Key location |
+| Save action | Save key |
+| Verify action | Verify key |
+| Submission action | Submit URLs |
+| URL label | URLs, one per line |
+| Receipt heading | Submission receipts |
+| Receipt explanation | A receipt records the notification outcome. Search engines decide whether to index each URL. |
+| Empty receipts | No submission receipts yet |
+| Empty receipts detail | Verify your key, then submit your new or changed URLs. |
+| Verification required | Verify your key before submitting URLs. |
+| Missing site | Connect this Site before setting up IndexNow. |
+| Read failure | IndexNow setup could not load. Retry to read the engine state. |
+| Receipt failure | Submission receipts could not load. Retry to read the latest outcomes. |
+| Retry action | Retry loading |
+| Read-only role | Your Team role allows viewing only. |
+| Accepted outcome | IndexNow accepted the notification. Search engines decide whether to index each URL. |
+
+IndexNow reason codes use the corrective-action strings in the IndexNow page.
+Each string names the failed step and the next action.
+
 ## Banned language
 
 Harlan's global writing rules already apply and are not repeated here: no em dashes, never the
