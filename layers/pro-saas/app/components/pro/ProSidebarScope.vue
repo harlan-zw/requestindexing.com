@@ -12,7 +12,7 @@ const emit = defineEmits<{ navigate: [] }>()
 
 <template>
   <div class="flex min-h-full min-w-0 flex-col gap-3">
-    <nav v-if="showBack" aria-label="Workspace navigation" class="-mt-1">
+    <nav v-if="showBack" aria-label="Team navigation" class="-mt-1">
       <NuxtLink
         to="/pro/dashboard"
         class="inline-flex min-h-11 items-center gap-2 rounded-sm px-1 text-sm font-medium text-muted transition-colors hover:text-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:min-h-8"
