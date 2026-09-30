@@ -256,7 +256,9 @@ export default defineNuxtConfig({
       wrangler: {
         logpush: true,
         triggers: {
-          crons: ['0 0 * * *'], // Daily at midnight UTC
+          // Every cron in `scheduledTasks` below must be listed here too, or
+          // Cloudflare never fires it.
+          crons: ['0 0 * * *', '30 * * * *'],
         },
         vars: {
           NUXT_PUBLIC_BASE_URL: 'https://requestindexing.com',
@@ -302,7 +304,12 @@ export default defineNuxtConfig({
       tasks: true,
     },
     scheduledTasks: {
+      // Daily at midnight UTC.
       '0 0 * * *': ['sync.daily'],
+      // Hourly, off the hour so it never shares a tick with the daily sync.
+      // Links sites whose property was verified, or whose grant was repaired
+      // in gscdump, after the user last connected Google.
+      '30 * * * *': ['reconcile-gscdump-onboarding'],
     },
     imports: {
       // See the root `imports` block: the design-system layer turns auto-imports
