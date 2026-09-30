@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import type { SiteHoldReason } from '@gscdump/contracts'
 import type { DropdownMenuItem } from '@nuxt/ui'
-import type { SiteFleetRow } from '~~/layers/core/app/types'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
-import { HELD_LABEL, holdMessage, SITE_LINK_REFUSED, SITE_NOT_LINKED_LABEL } from '#layers/pro-gsc/shared/entitlement-copy'
+import { HELD_LABEL, holdMessage, SITE_LINK_REFUSED } from '#layers/pro-gsc/shared/entitlement-copy'
 import ProAbilityGate from '#layers/pro-saas/app/components/pro/team/ProAbilityGate.vue'
+import { SITE_SYNC_LABELS } from '#layers/pro-saas/shared/site-sync'
 
 // The Site roster, ported from nuxtseo.com's `sites/index.vue` and cut to what
 // this app offers: no groups, no pause, no crawl or analytics columns. Each row
@@ -33,21 +33,12 @@ interface SiteRow {
   to: string
 }
 
-const SYNC_LABELS: Record<SiteFleetRow['syncStatus'], string> = {
-  idle: 'Waiting to sync',
-  pending: 'Waiting to sync',
-  syncing: 'Syncing',
-  synced: 'Synced',
-  error: 'Sync failed',
-  refused: SITE_NOT_LINKED_LABEL,
-}
-
 const rows = computed<SiteRow[]>(() => (data.value?.sites ?? []).map(site => ({
   siteId: site.siteId,
   label: siteLabel(site),
   url: siteLabel(site),
   property: site.property,
-  syncLabel: SYNC_LABELS[site.syncStatus],
+  syncLabel: SITE_SYNC_LABELS[site.syncStatus],
   refused: site.syncStatus === 'refused',
   hold: site.hold,
   to: `/pro/dashboard/sites/${site.siteId}`,
