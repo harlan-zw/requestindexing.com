@@ -69,6 +69,9 @@ const cappedAllowance = computed(() => {
   return allowance?._tag === 'Capped' ? allowance : null
 })
 const atLimit = computed(() => !!cappedAllowance.value && cappedAllowance.value.used >= cappedAllowance.value.allowance)
+// One notice for a full allowance, above both ways to connect. Every Connect
+// control is disabled under it, so no click can fail with the same message.
+const allowanceFullNotice = computed(() => atLimit.value && cappedAllowance.value ? siteAllowanceReached(cappedAllowance.value.allowance) : null)
 
 watch(connectedSites, sites => emit('changed', sites.length), { immediate: true })
 
@@ -107,8 +110,16 @@ const typedError = computed(() => {
   return parsed._tag === 'Err' ? parsed.message : ''
 })
 
+// A refusal that raced the page says what the notice above already says once
+// the re-read lands; show it in one place only.
+const fieldError = computed(() => {
+  if (inlineError.value && inlineError.value !== allowanceFullNotice.value)
+    return inlineError.value
+  return typedError.value || undefined
+})
+
 async function connect(value: string) {
-  if (submitting.value)
+  if (submitting.value || atLimit.value)
     return
   inlineError.value = ''
 
@@ -158,8 +169,10 @@ async function connect(value: string) {
       </ul>
     </div>
 
+    <ProAlert v-if="allowanceFullNotice" color="warning" :title="allowanceFullNotice" />
+
     <form class="space-y-2" @submit.prevent="connect(url)">
-      <UFormField label="Site address" :error="inlineError || typedError || undefined">
+      <UFormField label="Site address" :error="fieldError">
         <div class="flex flex-col gap-2 sm:flex-row">
           <UInput
             v-model="url"
@@ -180,8 +193,8 @@ async function connect(value: string) {
           />
         </div>
       </UFormField>
-      <p v-if="cappedAllowance && !inlineError" class="text-xs text-muted">
-        {{ atLimit ? siteAllowanceReached(cappedAllowance.allowance) : siteAllowanceSummary(cappedAllowance.used, cappedAllowance.allowance) }}
+      <p v-if="cappedAllowance && !atLimit && !fieldError" class="text-xs text-muted">
+        {{ siteAllowanceSummary(cappedAllowance.used, cappedAllowance.allowance) }}
       </p>
     </form>
 
