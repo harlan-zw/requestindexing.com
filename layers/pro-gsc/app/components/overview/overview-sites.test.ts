@@ -14,7 +14,7 @@ function site(overrides: Partial<OverviewSite> & { siteId: string }): OverviewSi
 }
 
 function entry(overrides: Partial<OverviewSite> & { siteId: string }, clicks: number | null = null): OverviewSiteEntry {
-  return { site: site(overrides), metrics: clicks == null ? null : { clicks, clicksSpark: [] } }
+  return { site: site(overrides), clicks: clicks == null ? { _tag: 'Unread' } : { _tag: 'Read', clicks, clicksSpark: [] } }
 }
 
 describe('overviewSiteStatus', () => {

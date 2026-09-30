@@ -3,7 +3,7 @@ import type { OverviewSiteEntry } from '#layers/pro-gsc/app/components/overview/
 import type { OverviewSnapshotSite } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
 import { useJobListener } from '~~/layers/core/app/composables/events'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
-import { overviewSiteLabel, soleSiteLandingPath } from '#layers/pro-gsc/app/components/overview/overview-sites'
+import { isOverviewReadTarget, overviewSiteLabel, soleSiteLandingPath } from '#layers/pro-gsc/app/components/overview/overview-sites'
 import { overviewReadRange, overviewSiteClicks, overviewSnapshotCards } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
 import ProLiveJobProgress from '#layers/pro-gsc/app/components/overview/ProLiveJobProgress.vue'
 import ProOverviewOnboardingCard from '#layers/pro-gsc/app/components/overview/ProOverviewOnboardingCard.vue'
@@ -47,9 +47,13 @@ const range = overviewReadRange()
 // A redirecting page reads nothing: the Site page owns that Site's reads.
 const { reads, loading: readsLoading, refresh: refreshReads } = useProOverviewReads(() => landing ? [] : sites.value, range)
 
-const entries = computed<OverviewSiteEntry[]>(() => sites.value.map((site) => {
+const entries = computed<OverviewSiteEntry[]>(() => sites.value.map((site): OverviewSiteEntry => {
   const daily = reads.value[site.siteId]?.daily
-  return { site, metrics: daily?._tag === 'Ok' ? overviewSiteClicks(daily.value, range) : null }
+  if (daily?._tag === 'Ok')
+    return { site, clicks: { _tag: 'Read', ...overviewSiteClicks(daily.value, range) } }
+  if (!daily && readsLoading.value && isOverviewReadTarget(site))
+    return { site, clicks: { _tag: 'Reading' } }
+  return { site, clicks: { _tag: 'Unread' } }
 }))
 
 const snapshotSites = computed<OverviewSnapshotSite[]>(() => sites.value.flatMap((site) => {
@@ -94,7 +98,7 @@ useJobListener('sites/sync-finished', async () => {
     <template v-else>
       <ProOverviewOnboardingCard v-if="gscNotConnected" step="connect-search-console" />
       <ProLiveJobProgress :sites="sites" />
-      <ProOverviewSitesColumn :entries="entries" :loading="readsLoading" />
+      <ProOverviewSitesColumn :entries="entries" />
       <ProOverviewSnapshot :cards="cards" :loading="readsLoading" :failed-sites="failedSites" @retry="refreshReads()" />
     </template>
   </div>

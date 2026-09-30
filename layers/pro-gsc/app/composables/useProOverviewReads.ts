@@ -2,7 +2,7 @@ import type { SiteFleetRow } from '~~/layers/core/app/types'
 import type { OverviewDay, OverviewIndexing, OverviewReadRange } from '../components/overview/overview-snapshot'
 import { toPartnerError } from '@gscdump/sdk/partner-errors'
 import { dateFilter } from '../../shared/utils/filter-wire'
-import { isSiteSynced } from '../components/overview/overview-sites'
+import { isOverviewReadTarget } from '../components/overview/overview-sites'
 import { useGscInvalidationMap } from '../internal/composables/useGscInvalidation'
 import { useProGscdump } from './useProGscdump'
 
@@ -29,7 +29,7 @@ export function useProOverviewReads(sites: MaybeRefOrGetter<readonly SiteFleetRo
   const invalidation = useGscInvalidationMap()
 
   const targets = computed(() => toValue(sites)
-    .filter((site): site is SiteFleetRow & { gscdumpSiteId: string } => !!site.gscdumpSiteId && isSiteSynced(site))
+    .filter(isOverviewReadTarget)
     .map(site => ({ siteId: site.siteId, gscdumpSiteId: site.gscdumpSiteId })))
 
   function readDaily(gscdumpSiteId: string): Promise<OverviewResult<OverviewDay[]>> {

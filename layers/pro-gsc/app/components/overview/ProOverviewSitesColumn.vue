@@ -20,10 +20,8 @@ import {
 // The status is the gscdump lifecycle, not upstream's triage verdict (see
 // `overview-sites.ts`). Only a state the owner must act on spends colour, so
 // a calm roster paints once.
-const { entries, loading = false } = defineProps<{
+const { entries } = defineProps<{
   entries: OverviewSiteEntry[]
-  /** The Search Console reads are in flight. Rows render; their runs wait. */
-  loading?: boolean
 }>()
 
 const page = ref(0)
@@ -65,16 +63,16 @@ const rows = computed(() => pager.value.rows.map(entry => ({
              it, because nothing else on the row says "clicks". Below sm the
              name needs the width, so the run hides. -->
         <span class="hidden shrink-0 sm:block">
-          <UiSkeleton v-if="loading && !row.entry.metrics" type="text" :base="72" :range="24" class="!h-3" aria-hidden="true" />
+          <UiSkeleton v-if="row.entry.clicks._tag === 'Reading'" type="text" :base="72" :range="24" class="!h-3" aria-hidden="true" />
           <UiTooltip
-            v-else-if="row.entry.metrics"
+            v-else-if="row.entry.clicks._tag === 'Read'"
             title="Clicks, last 90 days"
             description="Daily Search Console clicks, oldest on the left."
             side="top"
             size="sm"
           >
             <UiSparkColumns
-              :data="row.entry.metrics.clicksSpark"
+              :data="row.entry.clicks.clicksSpark"
               size="sm"
               :tone="row.status.urgent ? row.status.tone : 'neutral'"
               :aria-label="`${row.label}: clicks over the last 90 days`"

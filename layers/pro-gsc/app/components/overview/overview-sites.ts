@@ -37,19 +37,27 @@ export const TONE_BAR: Record<Tone, string> = {
  */
 export const OVERVIEW_COLUMN_ROW_LIMIT = 7
 
-/** The Search Console numbers a row carries beside its status. */
-export interface OverviewSiteMetrics {
-  /** Clicks over the band's window, the attention rank's tiebreak. */
-  clicks: number
-  /** Daily clicks over the last 90 days, oldest first. */
-  clicksSpark: number[]
-}
+/**
+ * The Search Console numbers a row carries beside its status.
+ *
+ * `Unread` covers a Site the home never reads (no first sync yet) and a read
+ * that failed; the band reports the failure, and the row simply has no run.
+ */
+export type OverviewSiteClicks
+  = | { _tag: 'Reading' }
+    | { _tag: 'Unread' }
+    | {
+      _tag: 'Read'
+      /** Clicks over the band's window, the attention rank's tiebreak. */
+      clicks: number
+      /** Daily clicks over the last 90 days, oldest first. */
+      clicksSpark: number[]
+    }
 
 /** One overview row: the Site joined to its Search Console read. */
 export interface OverviewSiteEntry {
   site: OverviewSite
-  /** Null while the read is in flight, when it failed, or before the first sync. */
-  metrics: OverviewSiteMetrics | null
+  clicks: OverviewSiteClicks
 }
 
 export interface OverviewSiteStatus {
@@ -71,6 +79,11 @@ export function siteRoute(site: Pick<OverviewSite, 'siteId'>): string {
 /** True when gscdump holds at least one reporting day for the Site. */
 export function isSiteSynced(site: Pick<OverviewSite, 'syncStatus' | 'syncedRange'>): boolean {
   return site.syncStatus === 'synced' || !!site.syncedRange.newest
+}
+
+/** True when the home reads the Site's Search Console data: it has an engine id and history. */
+export function isOverviewReadTarget<T extends Pick<SiteFleetRow, 'gscdumpSiteId' | 'syncStatus' | 'syncedRange'>>(site: T): site is T & { gscdumpSiteId: string } {
+  return !!site.gscdumpSiteId && isSiteSynced(site)
 }
 
 /** True when the Site needs its owner before it can collect again. */
@@ -127,8 +140,8 @@ export function compareAttention(a: OverviewSiteEntry, b: OverviewSiteEntry): nu
   const pendingB = isSiteSynced(b.site) ? 0 : 1
   if (pendingA !== pendingB)
     return pendingA - pendingB
-  const clicksA = a.metrics?.clicks ?? 0
-  const clicksB = b.metrics?.clicks ?? 0
+  const clicksA = a.clicks._tag === 'Read' ? a.clicks.clicks : 0
+  const clicksB = b.clicks._tag === 'Read' ? b.clicks.clicks : 0
   if (clicksA !== clicksB)
     return clicksB - clicksA
   return overviewSiteLabel(a.site).localeCompare(overviewSiteLabel(b.site))
