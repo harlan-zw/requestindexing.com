@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Fleet Search Indexing: how is index coverage trending across my Sites?
+// Fleet Indexing: how is index coverage trending across my Sites?
 // Ported from nuxtseo.com's `layers/pro/gsc/app/pages/pro/dashboard/indexing.vue`.
 // Upstream renders one Site group at a time; this app has no groups, so the
 // body is one flat list of the Team's Sites. URL-level tables stay on
@@ -20,12 +20,12 @@ import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 
 definePageMeta({
   layout: 'pro-dashboard',
-  title: 'Search Indexing',
+  title: 'Indexing',
   icon: 'i-ph-list-checks-duotone',
-  description: 'Index coverage across every connected Site.',
+  description: 'See the indexing status of every connected site.',
 })
 
-useSeoMeta({ title: 'Search Indexing' })
+useSeoMeta({ title: 'Indexing' })
 
 const CONNECT_SITE_PATH = '/pro/dashboard/sites/connect'
 
@@ -101,7 +101,7 @@ const { gridLayout, gridExpanded } = useFleetSiteListLayout(() => sites.value.le
     </UiEmptyState>
 
     <div v-else-if="sitesLoading || hasSites" class="flex flex-col gap-3">
-      <div class="flex items-center gap-2 sm:gap-3 flex-wrap" role="toolbar" aria-label="Search indexing filters">
+      <div class="flex items-center gap-2 sm:gap-3 flex-wrap" role="toolbar" aria-label="Indexing filters">
         <ClientOnly>
           <ProDateRangePicker
             v-model:period="period"

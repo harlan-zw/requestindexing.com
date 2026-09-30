@@ -1,4 +1,4 @@
-// The effectful shell of the fleet Search Indexing page: one gscdump
+// The effectful shell of the fleet Indexing page: one gscdump
 // `partner.sites.indexing.get` read per connected Site, through the session
 // proxy's allowlist, in the browser only (nuxtseo.com's fleet fetch is
 // client-side too). Everything the page shows is derived from these reads by

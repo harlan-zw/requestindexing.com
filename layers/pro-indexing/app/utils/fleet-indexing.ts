@@ -1,4 +1,4 @@
-// The pure core of the fleet Search Indexing page: one gscdump
+// The pure core of the fleet Indexing page: one gscdump
 // `partner.sites.indexing.get` read per Site in, the per-Site and all-sites
 // figures out. Ported from the derivations inside nuxtseo.com's
 // `ProSiteGroupIndexing.vue` and the ingestion step in its

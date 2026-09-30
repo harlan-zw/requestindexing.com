@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// The per-Site body of the fleet Search Indexing page. Ported from
+// The per-Site body of the fleet Indexing page. Ported from
 // nuxtseo.com's `ProSiteGroupIndexing.vue`, rendered as one flat list because
 // this app has no Site groups.
 //
