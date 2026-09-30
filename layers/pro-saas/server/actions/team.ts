@@ -114,9 +114,14 @@ export async function deleteTeam(event: H3Event, ctx: CurrentTeamContext) {
 export async function inviteTeamMember(event: H3Event, ctx: CurrentTeamContext, input: InviteTeamMemberInput) {
   const { email, role } = input
 
+  // Only a verified identity proves an account owns this email. An unverified
+  // match would let any account block an invitation to someone else's address.
   const githubMatch = await findIdentityByProviderEmail(ctx.db, 'github', email)
-  const googleMatch = githubMatch ? null : await findIdentityByProviderEmail(ctx.db, 'google', email)
-  const existingUser = (githubMatch ?? googleMatch) ? { id: (githubMatch ?? googleMatch)!.userId } : null
+  const verifiedGithubMatch = githubMatch?.identity.emailVerified ? githubMatch : null
+  const googleMatch = verifiedGithubMatch ? null : await findIdentityByProviderEmail(ctx.db, 'google', email)
+  const verifiedGoogleMatch = googleMatch?.identity.emailVerified ? googleMatch : null
+  const existingIdentity = verifiedGithubMatch ?? verifiedGoogleMatch
+  const existingUser = existingIdentity ? { id: existingIdentity.userId } : null
 
   if (existingUser) {
     if (existingUser.id === ctx.team.ownerId)
