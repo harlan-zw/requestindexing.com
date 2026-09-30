@@ -2,6 +2,7 @@ import type { GscConnection } from './onboarding'
 import { describe, expect, it } from 'vitest'
 import {
   canAdvanceOnboardingStep,
+  canSkipOnboardingSites,
   gscScopeMissingRedirect,
   ONBOARDING_ROUTE,
   onboardingStepIndex,
@@ -102,6 +103,21 @@ describe('canAdvanceOnboardingStep', () => {
   })
 })
 
+describe('canSkipOnboardingSites', () => {
+  it('offers the skip once connecting is blocked and no site exists', () => {
+    // A gscdump outage or a full Free allowance must not trap the user here.
+    expect(canSkipOnboardingSites({ hasSites: false, connectBlocked: true })).toBe(true)
+  })
+
+  it('keeps the skip hidden until a connect attempt fails', () => {
+    expect(canSkipOnboardingSites({ hasSites: false, connectBlocked: false })).toBe(false)
+  })
+
+  it('hides the skip once a site exists, because Continue works', () => {
+    expect(canSkipOnboardingSites({ hasSites: true, connectBlocked: true })).toBe(false)
+  })
+})
+
 describe('parseOnboardingStep', () => {
   it('accepts every declared step', () => {
     expect(parseOnboardingStep('connect')).toBe('connect')
@@ -189,8 +205,8 @@ describe('resolveOnboardingGate', () => {
 describe('resolveOnboardingCompletion', () => {
   const now = new Date('2026-09-15T10:00:00.000Z')
 
-  it('refuses to finish onboarding with no site connected', () => {
-    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, now })).toEqual({
+  it('refuses to finish onboarding with no site and no skip', () => {
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: false, now })).toEqual({
       _tag: 'Blocked',
       reason: 'no_sites',
       message: 'Connect at least one site before you finish setup.',
@@ -198,9 +214,27 @@ describe('resolveOnboardingCompletion', () => {
   })
 
   it('stamps the clock when a site is connected', () => {
-    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, now })).toEqual({
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: false, now })).toEqual({
       _tag: 'Complete',
       completedAt: '2026-09-15T10:00:00.000Z',
+      sites: 'connected',
+    })
+  })
+
+  it('finishes with no site when the user skipped the sites step', () => {
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: true, now })).toEqual({
+      _tag: 'Complete',
+      completedAt: '2026-09-15T10:00:00.000Z',
+      sites: 'skipped',
+    })
+  })
+
+  it('counts a site that landed before the skip as connected', () => {
+    // The connect request can succeed after the form showed a failure.
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: true, now })).toEqual({
+      _tag: 'Complete',
+      completedAt: '2026-09-15T10:00:00.000Z',
+      sites: 'connected',
     })
   })
 
@@ -208,6 +242,7 @@ describe('resolveOnboardingCompletion', () => {
     expect(resolveOnboardingCompletion({
       completedAt: new Date('2026-09-01T00:00:00.000Z'),
       hasSites: false,
+      skipSites: false,
       now,
     })).toEqual({
       _tag: 'AlreadyComplete',
