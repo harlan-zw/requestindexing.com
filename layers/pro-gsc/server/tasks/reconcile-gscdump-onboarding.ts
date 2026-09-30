@@ -1,7 +1,9 @@
-import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, eq, isNotNull, isNull, or, sql } from 'drizzle-orm'
 import { logger } from '~~/shared/server/logger'
 import { sites, users } from '#layers/pro-saas/server/database'
+import { unreportedGscdumpLink } from '../utils/gscdump-site-access'
 import { reconcileGscdumpOnboardingForUser } from '../utils/reconcile-gscdump-onboarding'
+import { notRefused } from '../utils/site-registration-refusal'
 
 /**
  * Users reconciled per run. Each one costs a lifecycle read, a team sync, an
@@ -19,24 +21,29 @@ const USERS_PER_RUN = 10
 export default defineTask({
   meta: {
     name: 'reconcile-gscdump-onboarding',
-    description: 'Link unlinked team sites for users whose gscdump grant may now allow it.',
+    description: 'Link unlinked team sites, and relink sites whose gscdump Site this partner cannot read.',
   },
   async run(): Promise<{ result: { usersProcessed: number, usersFailed: number, attemptedSites: number, linkedSites: number } }> {
     const db = useDrizzle()
-    // Only users with an unlinked site on their current team. A user with
-    // every site linked has nothing to reconcile, and a `scope_missing` user
-    // with no site is read by the session when it matters. Random order, so a
-    // user whose property never verifies cannot starve the rest of the batch.
+    // Only users with an unlinked site on their current team, or a linked
+    // site gscdump has not reported on: it may point at a gscdump Site this
+    // partner cannot read. A user whose sites all report has nothing to
+    // reconcile, and a `scope_missing` user with no site is read by the
+    // session when it matters. Random order, so a user whose property never
+    // verifies cannot starve the rest of the batch.
     const rows = await db.selectDistinct({
       userId: users.userId,
       gscdumpUserId: users.gscdumpUserId,
-      currentTeamId: users.currentTeamId,
     })
       .from(users)
       .innerJoin(sites, eq(sites.teamId, users.currentTeamId))
       .where(and(
         isNotNull(users.gscdumpUserId),
-        isNull(sites.gscdumpSiteId),
+        or(
+          // A refused Site waits for its user, so it alone never selects them.
+          and(isNull(sites.gscdumpSiteId), notRefused()),
+          unreportedGscdumpLink(),
+        ),
       ))
       .orderBy(sql`random()`)
       .limit(USERS_PER_RUN)
@@ -53,7 +60,6 @@ export default defineTask({
       const result = await reconcileGscdumpOnboardingForUser({
         userId: row.userId,
         gscdumpUserId: row.gscdumpUserId,
-        currentTeamId: row.currentTeamId,
         waitForReady: false,
       }).catch((error: unknown) => {
         // One user's failure (a 429, an engine error) must not stop the batch.

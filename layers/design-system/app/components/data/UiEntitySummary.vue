@@ -53,6 +53,8 @@ const {
   suffix?: string
   /** Period / context line under the metric (e.g. "Last 12 months"). */
   caption?: string
+  /** Full caption shown on hover when the visible caption is shortened. */
+  captionTitle?: string
   trend?: number | null
   trendSuffix?: string
   invertTrend?: boolean
@@ -141,7 +143,7 @@ const cardHovered = useElementHover(cardEl)
             :status="status"
             trend-colored
           />
-          <p v-if="caption" class="text-sm text-muted">
+          <p v-if="caption" class="text-sm text-muted" :title="captionTitle">
             {{ caption }}
           </p>
           <ClientOnly v-if="sparkline?.length">

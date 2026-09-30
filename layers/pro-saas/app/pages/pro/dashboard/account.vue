@@ -6,6 +6,7 @@
 //
 // The layer that owns `ProConnectedAccounts` opts out of auto-import, so the
 // component is imported by path.
+import type { IndexingGrant } from '#layers/pro-indexing/shared/contracts/indexing-grant'
 import ProConnectedAccounts from '#layers/pro-saas-auth/app/components/auth/ProConnectedAccounts.vue'
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 
@@ -16,8 +17,11 @@ definePageMeta({
   description: 'Manage your profile, connected accounts and account data.',
 })
 
-const { session, fetch } = useUserSession()
-const indexingAuth = computed(() => session.value?.googleIndexingAuth)
+const { session } = useUserSession()
+// The stored grant the submit route sends with. `session.googleIndexingAuth`
+// is the in-flight OAuth state instead: set before Google asks for consent,
+// gone after the next sign-in, and kept after a revoke.
+const { data: indexingGrant, error: indexingGrantError, refresh: refreshIndexingGrant } = useFetch<IndexingGrant>('/api/indexing/auth', { key: 'indexing-grant' })
 const logout = createLogoutHandler()
 const toast = useToast()
 const route = useRoute()
@@ -27,12 +31,6 @@ const displayName = computed(() => user.value?.name || user.value?.email || 'You
 const avatarUrl = computed(() => user.value?.avatarUrl || undefined)
 const providerLabel = computed(() => user.value?.authProvider === 'google' ? 'Google' : 'GitHub')
 
-// Search Console lives on `google_accounts`, not on an identity row. The
-// session already carries the grant state, so the row below is a read of
-// `gscConnected` / `gscEmail` rather than a second request.
-const gscConnected = computed(() => !!session.value?.gscConnected)
-const gscEmail = computed(() => session.value?.gscEmail ?? null)
-const gscConnectHref = `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent('/pro/dashboard/account')}`
 // This page renders through `user-dashboard`, not the shell that reports a
 // scope-missing grant, so it reports its own.
 const gscScopeMissing = computed(() => resolveGscConnection({
@@ -94,10 +92,10 @@ async function revokeIndexingAuth() {
     })
     toast.add({
       title: 'Google token revoked',
-      description: 'You removed access to the Web Indexing API.',
+      description: 'You removed access to the Indexing API.',
       color: 'success',
     })
-    await fetch()
+    await refreshIndexingGrant()
   }
   catch {
     toast.add({
@@ -169,57 +167,39 @@ async function deleteAccount() {
 
     <ProConnectedAccounts />
 
-    <section>
-      <ProSectionHeader title="Search Console" icon="chart" />
-      <ProCard variant="default">
-        <div class="flex min-w-0 items-start gap-3">
-          <ProNavIcon icon="google" :variant="gscConnected ? 'success' : 'default'" />
-          <div class="min-w-0 flex-1">
-            <div class="flex items-baseline gap-2">
-              <p class="text-base font-medium text-highlighted">
-                Google Search Console
-              </p>
-              <UBadge
-                size="xs"
-                :color="gscConnected ? 'success' : 'neutral'"
-                variant="subtle"
-              >
-                {{ gscConnected ? 'Connected' : 'Not connected' }}
-              </UBadge>
-            </div>
-            <p v-if="gscConnected" class="text-sm break-words text-muted">
-              <template v-if="gscEmail">
-                {{ gscEmail }} grants access to your properties.
-              </template>
-              <template v-else>
-                Request Indexing reads your Search Console data and can submit your sitemaps.
-              </template>
-            </p>
-            <p v-else class="text-sm text-muted">
-              Connect Search Console to load your search data.
-            </p>
-          </div>
-          <UButton
-            v-if="!gscConnected"
-            color="primary"
-            variant="subtle"
-            size="sm"
-            :to="gscConnectHref"
-            external
-            class="shrink-0"
-          >
-            Connect
-          </UButton>
-        </div>
-      </ProCard>
-    </section>
+    <p class="text-sm">
+      <NuxtLink to="/pro/dashboard/integrations" class="text-primary hover:underline">
+        Manage Google Search Console and Bing on Integrations
+      </NuxtLink>
+    </p>
 
     <section>
-      <ProSectionHeader title="Web Indexing API" icon="lock" />
+      <ProSectionHeader title="Indexing API" icon="lock" />
       <ProCard variant="default">
-        <template v-if="indexingAuth?.indexingOAuthId">
+        <template v-if="indexingGrantError">
           <p class="mb-3 text-sm text-muted">
-            You gave this app access to the Web Indexing API. You can revoke access at any time.
+            Indexing API access could not load. Retry to read the stored grant.
+          </p>
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            class="self-start"
+            @click="refreshIndexingGrant()"
+          >
+            Retry loading
+          </UButton>
+        </template>
+        <USkeleton v-else-if="!indexingGrant" class="h-5 w-2/3" />
+        <template v-else-if="indexingGrant._tag === 'Granted'">
+          <p class="mb-3 text-sm break-words text-muted">
+            <template v-if="indexingGrant.googleEmail">
+              {{ indexingGrant.googleEmail }} gave this app access to the Indexing API.
+            </template>
+            <template v-else>
+              You gave this app access to the Indexing API.
+            </template>
+            You can revoke access at any time.
           </p>
           <UButton
             color="error"
@@ -233,7 +213,7 @@ async function deleteAccount() {
           </UButton>
         </template>
         <p v-else class="text-sm text-muted">
-          This app has no access to the Web Indexing API. Grant access when you request indexing.
+          This app has no access to the Indexing API. To grant access, open the Submit tab of a Site.
         </p>
       </ProCard>
     </section>

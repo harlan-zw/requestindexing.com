@@ -12,8 +12,8 @@
 // stay in each layer's `app/plugins/pro-feature.ts`.
 
 import type { UiIcon } from '#layers/design-system/shared/icons'
+import type { IntegrationReadiness } from '#layers/pro-saas/shared/policies/integration-readiness'
 import type { ProNavGroupId } from './nav-groups'
-import type { IntegrationReadiness } from './policies/integration-readiness'
 
 /**
  * Names a runtime flag that must be on before the row exists.
@@ -195,8 +195,8 @@ export function expandProSiteRoute(route: string, siteId: string): string {
 }
 
 /**
- * Which flagged rows are on. Absent means off, which is also the production
- * state for every flag declared here.
+ * Which flagged rows are on. Absent means off. The defaults live in
+ * `runtimeConfig.public.features` in nuxt.config.ts.
  */
 export type ProFeatureFlags = Partial<Record<ProFeatureFlag, boolean>>
 

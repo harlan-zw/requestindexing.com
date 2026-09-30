@@ -1,11 +1,15 @@
 import type { BingConnectionV1, BingDataV1 } from '@gscdump/contracts/v1/http'
+import { createGscdumpV1Protocol } from '@gscdump/contracts/v1/http'
 import { describe, expect, it } from 'vitest'
 import {
   bingConnectionSetupState,
+  bingCrawlDetailsPageCount,
   bingRequestErrorState,
   bingTrafficTotals,
   formatBingCtr,
+  parseBingCrawlDetailsPage,
   toBingConnectionView,
+  toBingCrawlDetailViews,
 } from './bing-view'
 
 type TrafficRows = Extract<BingDataV1, { dataset: 'traffic' }>['rows']
@@ -91,5 +95,54 @@ describe('bingRequestErrorState', () => {
 
   it('falls back to a retry for an unclassified failure', () => {
     expect(bingRequestErrorState(new Error('boom')).title).toBe('Bing data failed to load')
+  })
+})
+
+describe('toBingCrawlDetailViews', () => {
+  // Parsed through the 4.8.0 response schema, so the rows are ones gscdump can send.
+  const evidence = createGscdumpV1Protocol().schemas.bingIndexingEvidenceResponse.client.parse({
+    data: {
+      searchEngine: 'bing',
+      siteUrl: 'https://example.com/',
+      indexingEvidence: [
+        { _tag: 'observed', searchEngine: 'bing', url: 'https://example.com/a', observedAt: '2026-09-30T08:00:00.000Z', providerEvidenceAt: '2026-09-30T08:00:00.000Z', freshness: 'stale', discoveryTime: '2026-09-01T08:00:00.000Z', lastCrawlTime: '2026-09-20T08:00:00.000Z', originHttpStatus: 200, documentSize: 1000, anchorCount: 3, totalChildUrlCount: 0, uncertaintyReason: 'indexed-verdict-unavailable' },
+        { _tag: 'unknown', searchEngine: 'bing', url: 'https://example.com/b', observedAt: '2026-09-30T08:00:00.000Z', reason: 'not-discovered' },
+        { _tag: 'unavailable', searchEngine: 'bing', url: 'https://example.com/c', observedAt: '2026-09-30T08:00:00.000Z', reason: 'permission-denied', retryAt: null },
+      ],
+      pagination: { total: 3, limit: 25, offset: 0, hasMore: false },
+    },
+    meta: { requestId: 'req_01', surface: 'partner', version: '1.0' },
+  }).data.indexingEvidence
+
+  it('badges each row by what Bing observed, never by an indexed verdict', () => {
+    expect(toBingCrawlDetailViews(evidence).map(row => [row.url, row.badge.label, row.detail])).toEqual([
+      ['https://example.com/a', 'Stale', null],
+      ['https://example.com/b', 'Unknown', 'No discovery time returned'],
+      ['https://example.com/c', 'Unavailable', 'Bing permission missing'],
+    ])
+  })
+
+  it('marks a lost permission as an error rather than a delay', () => {
+    expect(toBingCrawlDetailViews(evidence)[2]?.badge).toEqual({ label: 'Unavailable', status: 'error' })
+  })
+})
+
+describe('parseBingCrawlDetailsPage', () => {
+  it.each([
+    [undefined, 1],
+    ['', 1],
+    ['0', 1],
+    ['-2', 1],
+    ['1.5', 1],
+    ['abc', 1],
+    ['3', 3],
+    [4, 4],
+  ])('reads %j as page %i', (value, page) => {
+    expect(parseBingCrawlDetailsPage(value)).toBe(page)
+  })
+
+  it('counts at least one page, even with no rows', () => {
+    expect(bingCrawlDetailsPageCount(0)).toBe(1)
+    expect(bingCrawlDetailsPageCount(26)).toBe(2)
   })
 })

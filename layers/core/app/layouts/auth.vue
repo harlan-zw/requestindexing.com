@@ -1,5 +1,10 @@
 <script setup lang="ts">
+// Sign-in and sign-up are the dashboard's front door, so they take its theme,
+// as nuxtseo.com's `pro-auth` layout does.
 useHead({
+  htmlAttrs: {
+    class: 'dashboard-theme',
+  },
   bodyAttrs: {
     class: 'dark:bg-gray-950',
   },

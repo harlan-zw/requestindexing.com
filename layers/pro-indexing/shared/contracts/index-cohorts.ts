@@ -44,7 +44,9 @@ export const indexCohortsResponseSchema = z.discriminatedUnion('_tag', [
     _tag: z.literal('no-evidence'),
     crawlSettingsId: z.number().nullable(),
     asOf: z.string().nullable(),
-    reason: z.enum(['no-inspection-join', 'no-completed-crawl']),
+    reason: z.enum(['no-inspection-join', 'no-completed-crawl', 'sampled-index-state']),
+    /** Set only for `sampled-index-state`: the enumerated and reported not-indexed counts. */
+    sample: z.object({ enumerated: z.number(), reported: z.number() }).nullable(),
   }),
   z.object({
     _tag: z.literal('uniform'),

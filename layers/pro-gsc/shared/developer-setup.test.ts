@@ -1,6 +1,6 @@
 import type { SetupMethod, SetupStep } from './developer-setup'
 import { describe, expect, it } from 'vitest'
-import { buildSetupSteps } from './developer-setup'
+import { buildAgentSetupPrompt, buildSetupSteps } from './developer-setup'
 
 const RAW_KEY = 'gsd_user_0123456789abcdef0123456789abcdef'
 const METHODS: SetupMethod[] = ['cli', 'mcp', 'api']
@@ -19,9 +19,9 @@ describe('buildSetupSteps', () => {
     expect(copied).toContain(RAW_KEY)
   })
 
-  it('uses the placeholder in the copied CLI sign-in before a key exists', () => {
+  it('signs the CLI in to Hosted mode with the placeholder before a key exists', () => {
     const signIn = commands(buildSetupSteps('cli', null, null)).find(command => command.copy.includes('auth login'))
-    expect(signIn?.copy).toBe('GSCDUMP_API_KEY=$GSCDUMP_API_KEY gscdump auth login --mode cloud')
+    expect(signIn?.copy).toBe('GSCDUMP_API_KEY=$GSCDUMP_API_KEY gscdump auth login --mode hosted')
   })
 
   it('writes a Cursor config that parses and reads the key from the environment before a key exists', () => {
@@ -37,5 +37,34 @@ describe('buildSetupSteps', () => {
     const [withoutSite] = commands(buildSetupSteps('api', null, null))
     expect(withSite?.copy).toContain('https://gscdump.com/api/analytics/v1/sites/s_abc/reports')
     expect(withoutSite?.copy).toContain('https://gscdump.com/api/analytics/v1/sites/s_your_site/reports')
+  })
+})
+
+describe('buildAgentSetupPrompt', () => {
+  const site = { gscdumpSiteId: 's_abc', host: 'example.com' }
+
+  // Claude Code and Codex start a new shell for each command, so an `export`
+  // is gone by the next step. The CLI saves the key only through a login.
+  it('saves the raw key with a Hosted mode login, from the environment and never as an argument', () => {
+    const prompt = buildAgentSetupPrompt(RAW_KEY, site)
+    const linesWithKey = prompt.split('\n').filter(line => line.includes(RAW_KEY))
+    expect(linesWithKey).toEqual([`   GSCDUMP_API_KEY='${RAW_KEY}' gscdump auth login --mode hosted`])
+  })
+
+  it('tells the agent that the counts are stored URL Inspection verdicts', () => {
+    const prompt = buildAgentSetupPrompt(RAW_KEY, site)
+    expect(prompt).toContain('stored URL Inspection verdicts')
+  })
+
+  it('ends on the indexing summary of the Site, addressed by its engine ID', () => {
+    const prompt = buildAgentSetupPrompt(RAW_KEY, site)
+    expect(prompt).toContain('what the indexing record shows for example.com')
+    expect(prompt).toContain('gscdump indexing summary --site s_abc --json')
+  })
+
+  it('asks the agent to pick a Site when none is connected', () => {
+    const prompt = buildAgentSetupPrompt(RAW_KEY, null)
+    expect(prompt).toContain('gscdump indexing summary --json')
+    expect(prompt).not.toContain('--site s_')
   })
 })

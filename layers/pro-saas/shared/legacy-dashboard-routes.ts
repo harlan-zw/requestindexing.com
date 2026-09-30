@@ -23,6 +23,14 @@ const SEARCH_CONSOLE_PAGES = new Set([
   'data',
 ])
 
+/**
+ * Legacy team-level pages that moved to a new name. Mapped here so the old
+ * link lands in one hop, not through the route rule for the renamed page.
+ */
+const RENAMED_TEAM_PAGES: Record<string, string> = {
+  'web-indexing': 'indexing',
+}
+
 /** Legacy per-site pages that kept a page of their own, under a new parent. */
 const RELOCATED_PAGES: Record<string, string> = {
   'sitemaps': 'indexing/sitemaps',
@@ -56,8 +64,10 @@ export function mapLegacyDashboardRoute(pathname: string): LegacyDashboardRoute 
   if (!segments.length)
     return { _tag: 'Redirect', path: '/pro/dashboard' }
 
-  if (segments[0] !== 'site')
-    return { _tag: 'Redirect', path: `/pro/dashboard/${segments.join('/')}` }
+  if (segments[0] !== 'site') {
+    const renamed = segments.length === 1 ? RENAMED_TEAM_PAGES[segments[0]!] : undefined
+    return { _tag: 'Redirect', path: `/pro/dashboard/${renamed ?? segments.join('/')}` }
+  }
 
   const slug = segments[1]
   if (!slug)

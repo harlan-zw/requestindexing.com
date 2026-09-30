@@ -5,6 +5,7 @@ import { logger } from '~~/shared/server/logger'
 import { lookupUser } from '~~/shared/server/user-lookup'
 import { readGscdumpAccountStatus } from '#layers/pro-gsc/server/utils/gscdump-account-status'
 import * as schema from '#layers/pro-saas/server/database'
+import { readCurrentTeam } from '../utils/current-team'
 import { buildGscSessionFields } from '../utils/gsc-session-fields'
 import { hasAuthenticatedSession } from '../utils/session-auth-state'
 
@@ -14,39 +15,6 @@ export default defineNitroPlugin(() => {
       return
 
     const db = useDrizzle(event)
-
-    // Admin impersonation: swap session user if cookie is set
-    const impersonateUserId = getCookie(event, 'nuxt-seo-impersonate')
-    if (impersonateUserId && isAdminEmail(session.user?.email ?? null)) {
-      const impersonated = await lookupUser(() => db.query.users.findFirst({
-        where: eq(schema.users.userId, impersonateUserId),
-      }))
-      if (impersonated._tag === 'Unavailable')
-        logger.error('[session] impersonation target lookup failed:', impersonated.cause)
-      if (impersonated._tag === 'Found') {
-        const impersonatedUser = impersonated.user
-        const primary = await db.query.userIdentities.findFirst({
-          where: eq(schema.userIdentities.userId, impersonatedUser.id),
-          orderBy: [desc(schema.userIdentities.lastUsedAt)],
-        }).catch((error: unknown) => {
-          logger.error('[session] impersonation identity lookup failed:', error)
-          return null
-        })
-        session.impersonating = {
-          adminEmail: session.user.email ?? '',
-          targetUserId: impersonatedUser.id,
-          targetDisplayName: primary?.displayName ?? null,
-        }
-        session.user = {
-          id: impersonatedUser.id,
-          email: primary?.email ?? impersonatedUser.email ?? null,
-          name: primary?.displayName ?? null,
-          avatarUrl: primary?.avatarUrl ?? null,
-          authProvider: (primary?.provider ?? 'github') as AuthProviderId,
-          currentTeamId: impersonatedUser.currentTeamId ?? null,
-        }
-      }
-    }
 
     const lookup = await lookupUser(() => db.query.users.findFirst({
       where: eq(schema.users.userId, session.user!.id),
@@ -66,6 +34,12 @@ export default defineNitroPlugin(() => {
     }
 
     const user = lookup.user
+    // Checked against membership: a stale `current_team_id` must not publish
+    // a team's name or Sites to someone who left it.
+    const currentTeam = await readCurrentTeam(db, user.userId).catch((error: unknown) => {
+      logger.error('[session] team lookup failed:', error)
+      return null
+    })
 
     // Remap session.user from the primary identity row. Provider-agnostic
     // shape (id/name/avatarUrl/authProvider) on every authenticated request.
@@ -87,17 +61,14 @@ export default defineNitroPlugin(() => {
         name: primaryIdentity.displayName ?? null,
         avatarUrl: primaryIdentity.avatarUrl ?? null,
         authProvider: primaryIdentity.provider as AuthProviderId,
-        currentTeamId: user.currentTeamId ?? null,
+        currentTeamId: currentTeam?.teamId ?? null,
       }
     }
+    else {
+      session.user.currentTeamId = currentTeam?.teamId ?? null
+    }
 
-    // The dashboard chrome reads `session.team` for the workspace label.
-    const currentTeam = user.currentTeamId
-      ? await db.query.teams.findFirst({ where: eq(schema.teams.teamId, user.currentTeamId) }).catch((error: unknown) => {
-          logger.error('[session] team lookup failed:', error)
-          return null
-        })
-      : null
+    // The dashboard chrome reads `session.team` for the Team label.
     session.team = currentTeam
       ? {
           teamId: currentTeam.teamId,
@@ -112,8 +83,8 @@ export default defineNitroPlugin(() => {
     // These three used to read `user.gscConnected` / `user.gscEmail` /
     // `user.googleScopes`, which the live `users` table has never had: the
     // reads were always `undefined`, so `gscConnected` was permanently false
-    // for every user and `pro-gate.global.ts` plus both integration-readiness
-    // policies gated on a constant. Derived here the same way
+    // for every user and `pro-gate.global.ts` plus the integration-readiness
+    // policy gated on a constant. Derived here the same way
     // `/api/pro/gsc-properties` derives it.
     const googleAccount = await db.select()
       .from(googleAccounts)
@@ -159,10 +130,10 @@ export default defineNitroPlugin(() => {
     session.onboardingCompletedAt = toIso(user.onboardingCompletedAt)
 
     // `sites.team_id` is the ownership axis, so the roster is one read.
-    session.hasSites = user.currentTeamId
+    session.hasSites = currentTeam
       ? await db.select({ siteId: schema.sites.id })
           .from(schema.sites)
-          .where(eq(schema.sites.teamId, user.currentTeamId))
+          .where(eq(schema.sites.teamId, currentTeam.teamId))
           .limit(1)
           .then(rows => rows.length > 0)
           .catch((error: unknown) => {

@@ -9,9 +9,7 @@
  * condition without also offering the fix.
  *
  * `returnTo` defaults to the current page, which sends the reader back to the
- * surface that asked. `ConnectSearchConsoleCard` is the full dashed-card
- * variant for the dashboard front door; this one is the bare control a card or
- * an empty state places itself.
+ * surface that asked. A card or an empty state places this control itself.
  */
 const { returnTo, label = 'Connect Search Console' } = defineProps<{
   /** Where Google returns the reader. Defaults to the current page. */

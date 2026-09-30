@@ -39,6 +39,10 @@ const {
   tableSize = 'md',
   sortable = false,
   hasCachedData,
+  // Vue casts an absent boolean prop to `false`, which reads as "the previous
+  // period has no data". A table with no comparison (the indexing URLs) never
+  // passes it, so absent must stay `undefined` and the notice stays hidden.
+  hasPrevData = undefined,
   dimension,
   tableLabel,
   sort,
@@ -247,8 +251,10 @@ function onApplySaved(id: string) {
     :aria-busy="isLoading || isLoadingMore || undefined"
   >
     <!-- Header: always-visible search + consolidated Filter popover -->
-    <div v-if="searchable || filters.length || facets" class="flex items-center justify-between gap-2">
-      <div v-if="searchable" class="flex-1 sm:flex-none sm:w-64">
+    <!-- Wraps on a phone, so toolbar chips (an active issue filter) move below
+         the search instead of pushing the Filter button off screen. -->
+    <div v-if="searchable || filters.length || facets" class="flex flex-wrap items-center justify-between gap-2">
+      <div v-if="searchable" class="min-w-48 flex-1 sm:flex-none sm:w-64">
         <UiInput
           v-model="localQ"
           :placeholder="searchPlaceholder"
@@ -273,7 +279,7 @@ function onApplySaved(id: string) {
           </template>
         </UiInput>
       </div>
-      <div class="flex items-center gap-1">
+      <div class="flex flex-wrap items-center justify-end gap-1">
         <slot name="toolbar" />
         <UiFilterMenu
           :searchable="false"
@@ -444,8 +450,9 @@ function onApplySaved(id: string) {
     </UiButton>
   </div>
 
-  <!-- Pagination (non-load-more consumers) -->
-  <div v-else-if="pagination !== false && total > pageSize" class="flex items-center justify-between gap-4 pt-2">
+  <!-- Pagination (non-load-more consumers). Wraps on a phone: seven 44px
+       targets and the total do not fit one 358px row. -->
+  <div v-else-if="pagination !== false && total > pageSize" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-2">
     <p class="text-sm text-muted">
       <span class="font-medium text-default">{{ useProHumanFriendlyNumber(total) }}</span> {{ itemLabel }} total
     </p>

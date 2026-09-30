@@ -21,6 +21,15 @@ export interface UseChartTickPlanOptions {
   dates: MaybeRefOrGetter<string[]>
   /** Cap on tick count for long spans (default 14 — thins to ~12 if exceeded). */
   maxTicks?: number
+  /**
+   * Reactive plot-area width in px (wire `useElementSize` on the chart wrap).
+   * The span heuristics assume a desktop-width plot; when a width is known,
+   * ticks whose estimated labels would collide are dropped. First and last
+   * always stay, so the consumers' inward-anchored edge labels keep marking
+   * the window ends. Unknown (0/undefined, e.g. SSR before measurement)
+   * keeps the pure span plan.
+   */
+  width?: MaybeRefOrGetter<number | undefined>
 }
 
 // Ticks label reporting-day buckets ("YYYY-MM-DD"), not instants — force UTC so
@@ -30,12 +39,47 @@ const monthDayFmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'n
 const monthFmt = new Intl.DateTimeFormat(undefined, { month: 'short', timeZone: 'UTC' })
 const monthYearFmt = new Intl.DateTimeFormat(undefined, { month: 'short', year: '2-digit', timeZone: 'UTC' })
 
+// Axis labels render at 11px; ~6.5px per glyph over-estimates the real advance
+// slightly, so thinning leaves visible air instead of touching labels.
+const LABEL_GLYPH_PX = 6.5
+const MIN_LABEL_GAP_PX = 8
+
+/**
+ * Greedy left-to-right thinning: a tick survives only when its label clears the
+ * previously kept one. Every consumer anchors the first tick inward (start) and
+ * the last (end), so those labels claim their full width on the inner side;
+ * middle labels claim half a width each side. The final tick always renders;
+ * middle ticks yield to it when the two would collide.
+ */
+function fitTickIndices(
+  indices: number[],
+  labelWidth: (index: number) => number,
+  posOf: (index: number) => number,
+): number[] {
+  if (indices.length <= 2)
+    return indices.slice()
+  const fits = (a: number, b: number, aIsFirst: boolean, bIsLast: boolean): boolean => {
+    const aRight = posOf(a) + labelWidth(a) / (aIsFirst ? 1 : 2)
+    const bLeft = posOf(b) - labelWidth(b) / (bIsLast ? 1 : 2)
+    return bLeft - aRight >= MIN_LABEL_GAP_PX
+  }
+  const kept: number[] = [indices[0]!]
+  for (let k = 1; k < indices.length - 1; k++) {
+    const idx = indices[k]!
+    if (fits(kept.at(-1)!, idx, kept.length === 1, false))
+      kept.push(idx)
+  }
+  const last = indices.at(-1)!
+  while (kept.length > 1 && !fits(kept.at(-1)!, last, kept.length === 1, true))
+    kept.pop()
+  kept.push(last)
+  return kept
+}
+
 export function useChartTickPlan(opts: UseChartTickPlanOptions) {
   const maxTicks = opts.maxTicks ?? 14
 
-  const tickPlan = computed<ChartTickPlan>(() => {
-    const dates = toValue(opts.dates)
-    const len = dates.length
+  function spanPlan(dates: string[], len: number): ChartTickPlan {
     if (len <= 1)
       return { indices: [0], format: d => monthDayFmt.format(d) }
     if (len <= 10)
@@ -91,6 +135,30 @@ export function useChartTickPlan(opts: UseChartTickPlanOptions) {
         ? monthYearFmt.format(d)
         : monthFmt.format(d),
     }
+  }
+
+  const tickPlan = computed<ChartTickPlan>(() => {
+    const dates = toValue(opts.dates)
+    const len = dates.length
+    const base = spanPlan(dates, len)
+
+    const width = toValue(opts.width)
+    if (!width || width <= 0 || len < 3 || base.indices.length <= 2)
+      return base
+
+    // Estimate each label's pixel width from the plan's own formatting so the
+    // pass tracks whichever branch ran. `i`/`firstYear` only steer the
+    // month-vs-monthYear choice. The pass estimates label widths and never renders them.
+    const firstYear = Number(dates[base.indices[0]!]?.slice(0, 4) ?? 0)
+    const labelWidth = (idx: number): number => {
+      const date = dates[idx]
+      if (!date)
+        return 0
+      const label = base.format(parseReportingDay(date), base.indices.indexOf(idx), firstYear)
+      return label.length * LABEL_GLYPH_PX
+    }
+    const posOf = (idx: number): number => idx / (len - 1) * width
+    return { indices: fitTickIndices(base.indices, labelWidth, posOf), format: base.format }
   })
 
   const firstTickYear = computed(() => {

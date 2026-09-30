@@ -6,6 +6,8 @@ import { createError, defineEventHandler, getQuery, getRouterParams } from 'h3'
 import { incrementUsage } from '~~/layers/core/server/app/services/usage'
 import { authenticateUser } from '~~/layers/core/server/app/utils/auth'
 import { googleAccounts, googleOAuthClients, indexingJobs, sites, teamMemberships, teams } from '~~/layers/core/server/db/schema'
+import { usableIndexingAccount } from '~~/layers/pro-indexing/server/utils/indexing-account'
+import { INDEXING_GRANT_INVALID_REASON, INDEXING_GRANT_MISSING_REASON } from '~~/layers/pro-indexing/shared/contracts/indexing-grant'
 import { checkProToolRateLimit } from '~~/layers/pro-saas/server/utils/rate-limit'
 import { normalizeSiteRef } from '~~/layers/pro-saas/shared/site-access'
 import { logWarn } from '~~/shared/logging'
@@ -14,7 +16,7 @@ type IndexingTokens = GoogleAccountsSelect['tokens']
 
 type SubmitOutcome
   = | { _tag: 'Ok', status: 'submitted' | 'already-submitted', metadata: IndexingMetadata | IndexingResult }
-    | { _tag: 'Err', reason: 'quota_exceeded' | 'unverified_property' | 'invalid_grant' | 'google_error', statusCode: number, message: string }
+    | { _tag: 'Err', reason: 'quota_exceeded' | 'unverified_property' | typeof INDEXING_GRANT_INVALID_REASON | 'google_error', statusCode: number, message: string }
 
 function parseGscError(error: unknown): GscApiErrorInfo | null {
   if (!error || typeof error !== 'object')
@@ -59,9 +61,9 @@ function mapGscError(error: unknown): (SubmitOutcome & { _tag: 'Err' }) | null {
   if (status === 401 || parsed.reason === 'invalid_grant' || parsed.reason === 'invalid_token') {
     return {
       _tag: 'Err',
-      reason: 'invalid_grant',
+      reason: INDEXING_GRANT_INVALID_REASON,
       statusCode: 401,
-      message: 'The Google indexing grant is no longer valid. Please reconnect your account.',
+      message: 'Google no longer accepts this account\'s Indexing API access. Grant access again on the Submit page.',
     }
   }
   return null
@@ -89,9 +91,9 @@ async function submitUrlToGoogle(opts: SubmitOpts): Promise<SubmitOutcome> {
   if (!refreshToken) {
     return {
       _tag: 'Err',
-      reason: 'invalid_grant',
+      reason: INDEXING_GRANT_INVALID_REASON,
       statusCode: 401,
-      message: 'The Google indexing grant is missing a refresh token. Please reconnect your account.',
+      message: 'Google returned no refresh token for Indexing API access. Grant access again on the Submit page.',
     }
   }
 
@@ -166,13 +168,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'You do not have access to this site' })
   }
 
-  const account = await db.query.googleAccounts.findFirst({
+  const account = usableIndexingAccount(await db.query.googleAccounts.findFirst({
     where: and(eq(googleAccounts.userId, user.userId), eq(googleAccounts.type, 'indexing')),
-  })
+  }))
+  // Only `/auth/google-indexing` writes this row, and a row without the
+  // Indexing API scope is no grant. The reason code lets the Submit page swap
+  // in its grant action without matching this prose.
   if (!account) {
     throw createError({
       statusCode: 401,
-      statusMessage: 'No Google indexing account connected. Please connect your account.',
+      statusMessage: 'This account has no Indexing API access. Grant access on the Submit page, then submit the URL again.',
+      data: { reason: INDEXING_GRANT_MISSING_REASON },
     })
   }
 

@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import type { CreatedDeveloperApiKey, DeveloperApiKey, DeveloperApiKeysState } from '#layers/pro-gsc/shared/developer-api-keys'
-import type { SetupMethod } from '#layers/pro-gsc/shared/developer-setup'
+import type { AgentPromptSite, SetupMethod } from '#layers/pro-gsc/shared/developer-setup'
 import { useClipboard } from '@vueuse/core'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { DEVELOPER_API_KEY_LABEL_MAX } from '#layers/pro-gsc/shared/developer-api-keys'
-import { buildSetupSteps, presentApiKey } from '#layers/pro-gsc/shared/developer-setup'
+import { buildAgentSetupPrompt, buildSetupSteps, presentApiKey } from '#layers/pro-gsc/shared/developer-setup'
 
 // Ported from nuxtseo.com's `developers/index.vue` and `DevApiTokenCreate.vue`.
 // This app has no API of its own: its data plane is gscdump (VISION.md), so
@@ -90,12 +90,25 @@ const { data: keysState, status: keysStatus, error: keysError, refresh: refreshK
 const { data: sitesData } = await fetchSites()
 
 const keys = computed<DeveloperApiKey[]>(() => keysState.value?._tag === 'Ready' ? keysState.value.keys : [])
-const firstSiteId = computed(() => sitesData.value?.sites.find(site => site.gscdumpSiteId)?.gscdumpSiteId ?? null)
+const firstSite = computed(() => sitesData.value?.sites.find(site => site.gscdumpSiteId) ?? null)
+const firstSiteId = computed(() => firstSite.value?.gscdumpSiteId ?? null)
+const agentPromptSite = computed<AgentPromptSite | null>(() => {
+  const site = firstSite.value
+  return site?.gscdumpSiteId ? { gscdumpSiteId: site.gscdumpSiteId, host: site.domain ?? site.property } : null
+})
 
 // The raw key from the last create. It lives only in this ref.
 const createdKey = ref<CreatedDeveloperApiKey | null>(null)
 const createdKeyPresentation = computed(() => presentApiKey(createdKey.value?.apiKey ?? null))
 const steps = computed(() => buildSetupSteps(setupMethod.value, createdKey.value?.apiKey ?? null, firstSiteId.value))
+
+// One-click agent setup, ported from gscdump.com's `AppOverviewAgentSetup`.
+// The first click creates an API key named "Agent setup". Later clicks on this
+// visit reuse it, so repeated copies do not fill the key limit. Like any new
+// key, the raw value lives only in this ref.
+const AGENT_SETUP_KEY_LABEL = 'Agent setup'
+const agentKey = ref<CreatedDeveloperApiKey | null>(null)
+const preparingPrompt = ref(false)
 
 // A Pro API error carries its reader-facing message in the envelope.
 function apiErrorMessage(error: unknown, fallback: string): string {
@@ -163,6 +176,8 @@ async function revokeKey() {
   keyToRevoke.value = null
   if (createdKey.value?.keyId === key.keyId)
     createdKey.value = null
+  if (agentKey.value?.keyId === key.keyId)
+    agentKey.value = null
   toast.add({ title: 'API key revoked', description: `${key.label} no longer works.`, color: 'success' })
   await refreshKeys()
 }
@@ -172,6 +187,47 @@ const copiedValue = ref<string | null>(null)
 function copyValue(value: string) {
   copiedValue.value = value
   void copy(value)
+}
+
+async function copyAgentSetupPrompt() {
+  if (preparingPrompt.value)
+    return
+  preparingPrompt.value = true
+  const reused = agentKey.value
+  // Safari allows a clipboard write only during the click, and the key request
+  // ends after it. So the clipboard gets the prompt as a promise now, and the
+  // promise resolves when the key exists. Create the promise once: if the
+  // clipboard falls back to its legacy copy, it reads the same promise again.
+  const prompt = (reused
+    ? Promise.resolve(reused)
+    : proFetch<CreatedDeveloperApiKey>('/api/pro/developer/api-keys', { method: 'POST', body: { label: AGENT_SETUP_KEY_LABEL } })
+  ).then((key) => {
+    agentKey.value = key
+    return buildAgentSetupPrompt(key.apiKey, agentPromptSite.value)
+  })
+  copiedValue.value = null
+  const result = await copy(() => prompt)
+    .then(() => ({ _tag: 'Ok' as const }))
+    .catch((error: unknown) => ({ _tag: 'Err' as const, error }))
+  preparingPrompt.value = false
+
+  if (result._tag === 'Err') {
+    toast.add({
+      title: 'The setup prompt could not be copied',
+      description: agentKey.value
+        ? 'The browser did not allow the copy. Try again, or use the manual setup below.'
+        : apiErrorMessage(result.error, 'The API key for the prompt could not be created. Try again, or use the manual setup below.'),
+      color: 'error',
+    })
+    return
+  }
+  toast.add({
+    title: 'Setup prompt copied',
+    description: 'Paste it into Claude Code, Codex, or Cursor.',
+    color: 'success',
+  })
+  if (!reused)
+    await refreshKeys()
 }
 </script>
 
@@ -330,7 +386,7 @@ function copyValue(value: string) {
           role="tab"
           :aria-selected="setupMethod === method.id"
           aria-controls="setup-quick-start"
-          class="min-h-24 min-w-44 flex-1 cursor-pointer rounded-xl border p-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary"
+          class="relative min-h-24 min-w-44 flex-1 cursor-pointer rounded-xl border p-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary"
           :class="setupMethod === method.id ? 'border-accented bg-elevated text-highlighted' : 'border-default bg-default text-muted hover:border-accented hover:text-default'"
           @click="selectSetupMethod(method.id)"
         >
@@ -364,7 +420,33 @@ function copyValue(value: string) {
         {{ quickStartDescription }}
       </p>
 
-      <ol class="mt-5 flex flex-col gap-6">
+      <div v-if="setupMethod === 'cli'" role="group" aria-labelledby="agent-setup-heading" class="mt-5">
+        <h3 id="agent-setup-heading" class="text-sm font-medium text-highlighted">
+          Agent setup
+        </h3>
+        <p class="mt-0.5 text-sm text-muted">
+          Paste one prompt into Claude Code, Codex, or Cursor. The agent installs the CLI and the skill, then summarises the stored URL Inspection verdicts for your pages.
+          The first copy creates an API key named {{ AGENT_SETUP_KEY_LABEL }}.
+        </p>
+        <UiButton
+          v-if="keysState?._tag === 'Ready'"
+          purpose="secondary"
+          icon="copy"
+          class="mt-3 min-h-11"
+          :loading="preparingPrompt"
+          @click="copyAgentSetupPrompt()"
+        >
+          Copy agent setup prompt
+        </UiButton>
+        <UiSkeleton v-else-if="keysStatus === 'pending' && !keysState" class="mt-3 h-11 w-60 rounded-lg" />
+        <a v-else href="#api-keys" class="mt-2 inline-flex min-h-11 items-center text-sm text-primary hover:underline">Go to API keys</a>
+      </div>
+
+      <h3 v-if="setupMethod === 'cli'" class="mt-8 text-sm font-medium text-highlighted">
+        Manual setup
+      </h3>
+
+      <ol class="flex flex-col gap-6" :class="setupMethod === 'cli' ? 'mt-4' : 'mt-5'">
         <li v-for="(step, i) in steps" :key="step.title" class="flex gap-3">
           <span class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-default bg-elevated font-mono text-xs text-muted">
             {{ i + 1 }}
@@ -377,20 +459,29 @@ function copyValue(value: string) {
               {{ step.body }}
             </p>
 
-            <div
-              v-if="step._tag === 'command'"
-              class="mt-2.5 flex min-h-11 items-center gap-2 rounded-lg border border-default bg-muted px-3 py-2"
-            >
-              <code tabindex="0" class="min-w-0 flex-1 overflow-x-auto whitespace-pre text-xs text-default">{{ step.command.display }}</code>
-              <UiButton
-                :icon="copied && copiedValue === step.command.copy ? 'check' : 'copy'"
-                purpose="quiet"
-                size="xs"
-                class="min-h-11 min-w-11 shrink-0"
-                :aria-label="copied && copiedValue === step.command.copy ? `Copied: ${step.title}` : `Copy: ${step.title}`"
-                @click="copyValue(step.command.copy)"
-              />
-            </div>
+            <template v-if="step._tag === 'command'">
+              <div class="mt-2.5 flex min-h-11 items-center gap-2 rounded-lg border border-default bg-muted px-3 py-2">
+                <code tabindex="0" class="min-w-0 flex-1 overflow-x-auto whitespace-pre text-xs text-default">{{ step.command.display }}</code>
+                <UiButton
+                  :icon="copied && copiedValue === step.command.copy ? 'check' : 'copy'"
+                  purpose="quiet"
+                  size="xs"
+                  class="min-h-11 min-w-11 shrink-0"
+                  :aria-label="copied && copiedValue === step.command.copy ? `Copied: ${step.title}` : `Copy: ${step.title}`"
+                  @click="copyValue(step.command.copy)"
+                />
+              </div>
+              <NuxtLink
+                v-if="step.link"
+                :to="step.link.to"
+                external
+                target="_blank"
+                class="mt-1 inline-flex min-h-11 items-center gap-1 text-sm text-primary hover:underline"
+              >
+                {{ step.link.label }}
+                <UiIcon name="external" class="size-3.5" aria-hidden="true" />
+              </NuxtLink>
+            </template>
 
             <p v-else-if="step._tag === 'api-key'" class="mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm">
               <template v-if="createdKey">

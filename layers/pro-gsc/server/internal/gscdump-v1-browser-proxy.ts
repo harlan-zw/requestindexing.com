@@ -14,7 +14,7 @@ import type { Caller } from '#layers/pro-saas/shared/caller'
 // The Bing operations are a second, conditional list. They resolve only while
 // `NUXT_PUBLIC_FEATURES_BING` is on, which is the same flag the sidebar reads
 // for the two Bing rows. With the flag off the pages do not exist, so the
-// relay must not carry their reads either.
+// relay must not carry their calls either.
 import type { ProFeatureFlags } from '#layers/pro-shell/shared/manifest'
 import { createGscdumpV1Protocol, resolveHttpOperation } from '@gscdump/contracts/v1/http'
 import { callerCan } from '#layers/pro-saas/shared/policies/team-policy'
@@ -25,10 +25,7 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryReport },
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryReportDetail },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteAnalysis },
-  // `useGscdumpSiteSummary` (useGscdump.ts) calls both of these for every site
-  // card on `/dashboard`. They were missing from the allowlist, so the proxy
-  // resolved no operation and answered 404, and four of five site cards on the
-  // product's landing page rendered "Site data could not load".
+  // Query and page counts over a window, with the comparison window.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getQueryTrend },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getPageTrend },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexing },
@@ -39,27 +36,13 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteSitemapChanges },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.createSitemapAction },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.recoverSitePermission },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getTopAssociation },
-  // The tables resolve one sparkline per visible row in a single call, and the
-  // entity trend panels read the site's own daily query and page counts.
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.queryKeywordSparklines },
-  // `analytics.rows.query` answers a raw grouped read; the page and country
-  // sparklines use it where no purpose-built operation exists.
+  // `analytics.rows.query` answers a raw grouped read. Every sparkline reads
+  // its `(dimension, date)` series here, because a list report rejects `date`.
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryRows },
-  // Entity detail pages read the preset bundle rather than one request per
-  // preset.
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteAnalysisBundle },
   // Indexing coverage history and the sitemap URL views.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexingTransitions },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSitemapUrls },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listAvailableSites },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getCanonicalMismatches },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getContentVelocity },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getCtrCurve },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getDarkTraffic },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getDeviceGap },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getKeywordBreadth },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getPositionDistribution },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexNowConnection },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.configureSiteIndexNowConnection },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.verifySiteIndexNowConnection },
@@ -69,17 +52,27 @@ const baseOperationEntries = [
 ] as const
 
 /**
- * Bing search performance, plus the connection read and its verify action.
- * Gated on the `bing` feature flag, never on the caller.
+ * Every Bing operation the pages call. Gated on the `bing` feature flag, never
+ * on the caller.
  *
- * The evidence operation (`partner.sites.indexing.bing.evidence.list`) stays
- * off: the crawl view reads the `crawl` dataset of `bing.data.get`, so nothing
- * here needs per-URL rows and the relay stays as narrow as the pages.
+ * - Site reads: search performance, the connection, and per-URL crawl evidence.
+ * - Site actions: verify the CNAME, link from the owner's grant, start the
+ *   Microsoft authorization, and submit a Sitemap. Each needs write access.
+ * - The fleet read `partner.users.indexing.bing.sites.list`, which names a
+ *   gscdump user. The route always sends the caller's own id.
+ *
+ * `partner.sites.sitemaps.submission.*` (Google Sitemap submission) is absent
+ * on purpose: the Sitemaps page owns it and does not call it yet.
  */
 const bingOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteBingData },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteBingConnection },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.verifySiteBingConnection },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteBingIndexingEvidence },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.linkSiteBing },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.createSiteBingAuthorization },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.submitSiteBingSitemap },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listUserBingSites },
 ] as const
 
 type BrowserOperationEntry = typeof baseOperationEntries[number] | typeof bingOperationEntries[number]
@@ -90,14 +83,23 @@ export const gscdumpV1BrowserOperationIds = Object.freeze(
 export type GscdumpV1ProxyOperation = ResolvedHttpV1Operation<BrowserOperationEntry>
 
 /**
- * The one operation whose path parameter is a gscdump *user* id rather than a
- * site id (`partner.users.sites.available.list`). The browser client sends an
- * opaque, syntactically-valid placeholder (see `GSCDUMP_SESSION_USER_ID` in
- * `useGscdump.ts`); the route handler always substitutes the caller's real
- * stored gscdump user id when building the upstream request, so the value the
+ * Operations whose path parameter is a gscdump *user* id rather than a Site
+ * id. The browser client sends an opaque, syntactically valid placeholder (see
+ * `GSCDUMP_SESSION_USER_ID` in `useProGscdumpBing.ts`). The upstream path
+ * always names the caller's own stored gscdump user id, so the value the
  * browser sends is never trusted or forwarded.
  */
-export const GSCDUMP_V1_USER_SCOPED_OPERATION_ID = 'partner.users.sites.available.list'
+const USER_SCOPED_OPERATION_IDS: ReadonlySet<string> = new Set([
+  protocol.surfaces.partner.operations.listUserBingSites.id,
+])
+
+/**
+ * Where Microsoft returns the browser after a Bing authorization. gscdump
+ * accepts only its own paths and a closed list of partner origins, and this
+ * app's only accepted origin is production. A local or preview origin is
+ * refused upstream, so every environment returns to production Integrations.
+ */
+export const BING_AUTHORIZATION_RETURN_URL = 'https://requestindexing.com/pro/dashboard/integrations'
 
 /**
  * Resolve a browser request against the closed allowlist. Returns `null` for
@@ -120,10 +122,61 @@ export function resolveGscdumpV1ProxyOperation(
   return resolveHttpOperation(entries, { method, path, surface: surfaceName })
 }
 
-/** Extracts the `siteId` path parameter when the resolved operation has one. */
-export function getGscdumpV1ProxySiteId(operation: GscdumpV1ProxyOperation): string | null {
+/**
+ * What the route must check before it forwards an operation, and the upstream
+ * path it forwards to.
+ *
+ * - `site`: the caller needs access to the Site; `requiresWrite` for a mutation.
+ * - `self`: the operation names a gscdump user. `path` names the caller's own.
+ * - `self-missing`: the operation names a gscdump user, and the caller has none.
+ * - `caller`: no Site or user in the path, such as a realtime ticket.
+ */
+export type GscdumpV1ProxyTarget
+  = | { _tag: 'site', siteId: string, requiresWrite: boolean, path: string }
+    | { _tag: 'self', path: string }
+    | { _tag: 'self-missing' }
+    | { _tag: 'caller', path: string }
+
+export function selectGscdumpV1ProxyTarget(
+  operation: GscdumpV1ProxyOperation,
+  callerGscdumpUserId: string | null,
+): GscdumpV1ProxyTarget {
+  const descriptor = operation.operation
+  if (USER_SCOPED_OPERATION_IDS.has(descriptor.id)) {
+    if (!callerGscdumpUserId)
+      return { _tag: 'self-missing' }
+    return {
+      _tag: 'self',
+      path: operation.path.replace(/^users\/[^/]+/, `users/${encodeURIComponent(callerGscdumpUserId)}`),
+    }
+  }
   const siteId = (operation.params as Record<string, unknown>).siteId
-  return typeof siteId === 'string' ? siteId : null
+  if (typeof siteId === 'string')
+    return { _tag: 'site', siteId, requiresWrite: descriptor.semantics.kind === 'mutation', path: operation.path }
+  return { _tag: 'caller', path: operation.path }
+}
+
+/**
+ * The body candidate the route validates against the operation schema. The
+ * host sets two fields: a realtime ticket's origin, and where a Bing
+ * authorization returns the browser. For those two operations the browser may
+ * send an empty body only. Every other body passes through to the schema.
+ */
+export function selectGscdumpV1ProxyBody(
+  operation: GscdumpV1ProxyOperation,
+  raw: unknown,
+  context: { origin: string },
+): { _tag: 'Ok', body: unknown } | { _tag: 'Err' } {
+  const empty = raw === undefined || raw === null
+    || (typeof raw === 'object' && !Array.isArray(raw) && Object.keys(raw).length === 0)
+  switch (operation.operation.id) {
+    case protocol.surfaces.realtime.operations.createTicket.id:
+      return empty ? { _tag: 'Ok', body: { origin: context.origin } } : { _tag: 'Err' }
+    case protocol.surfaces.partner.operations.createSiteBingAuthorization.id:
+      return empty ? { _tag: 'Ok', body: { returnUrl: BING_AUTHORIZATION_RETURN_URL } } : { _tag: 'Err' }
+    default:
+      return { _tag: 'Ok', body: raw }
+  }
 }
 
 export interface GscdumpV1SiteAccessCandidate {
