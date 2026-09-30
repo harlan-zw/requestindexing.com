@@ -18,6 +18,7 @@ import IndexingCohortList from '#layers/pro-indexing/app/internal/components/ind
 import IndexingCoverageTrend from '#layers/pro-indexing/app/internal/components/indexing/IndexingCoverageTrend.vue'
 import IndexingDiagnosisPanel from '#layers/pro-indexing/app/internal/components/indexing/IndexingDiagnosisPanel.vue'
 import { buildIndexingCoverageTrend } from '#layers/pro-indexing/app/utils/indexing-coverage-trend'
+import { formatIndexingFreshness, resolveIndexingFreshness } from '#layers/pro-indexing/app/utils/indexing-freshness'
 import {
   buildIndexingOverviewModel,
   buildIndexingPipelineEvidence,
@@ -468,20 +469,11 @@ const sitemapFacts = computed<FactItem[]>(() => [
   { label: 'Snapshots', value: sitemapHistory.value.length.toLocaleString() },
 ])
 
-function cacheAge(timestamp: number | undefined): string | null {
-  if (!timestamp)
-    return null
-  const milliseconds = timestamp > 10_000_000_000 ? timestamp : timestamp * 1000
-  const minutes = Math.max(0, Math.floor((Date.now() - milliseconds) / 60_000))
-  if (minutes < 1)
-    return 'updated just now'
-  if (minutes < 60)
-    return `updated ${minutes}m ago`
-  return `updated ${Math.floor(minutes / 60)}h ago`
-}
-
 const diagnosisFreshness = computed(() => {
-  const age = cacheAge(diagnosticsData.value?.meta.rollupBuiltAt)
+  const age = formatIndexingFreshness(
+    resolveIndexingFreshness({ diagnostics: diagnosticsData.value, indexing: indexingData.value }),
+    Date.now(),
+  )
   if (overviewRefreshing.value)
     return age ? `refreshing · ${age}` : 'refreshing'
   return age
