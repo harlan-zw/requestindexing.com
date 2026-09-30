@@ -94,7 +94,10 @@ describe('deliverAllowanceNotice', () => {
       { userId: 'u_ada', meter: 'sites', threshold: 100, used: 3, allowance: 3, period: '2026-10' },
       {
         findRecipient: async gscdumpUserId => gscdumpUserId === 'u_ada' ? { email: 'ada@example.test' } : null,
-        send: async (message) => { sent.push(message) },
+        send: async (message) => {
+          sent.push(message)
+          return { _tag: 'Sent' }
+        },
         manageSitesUrl: 'https://requestindexing.com/pro/dashboard/sites',
       },
     )
@@ -112,10 +115,30 @@ describe('deliverAllowanceNotice', () => {
 
     const outcome = await deliverAllowanceNotice(
       { userId: 'u_stranger', meter: 'url_inspections', threshold: 80, used: 4_000, allowance: 5_000, period: '2026-10' },
-      { findRecipient: async () => null, send: async (message) => { sent.push(message) }, manageSitesUrl: 'https://requestindexing.com/pro/dashboard/sites' },
+      {
+        findRecipient: async () => null,
+        send: async (message) => {
+          sent.push(message)
+          return { _tag: 'Sent' }
+        },
+        manageSitesUrl: 'https://requestindexing.com/pro/dashboard/sites',
+      },
     )
 
     expect(outcome).toEqual({ _tag: 'UnknownUser' })
     expect(sent).toEqual([])
+  })
+
+  it('reports a send the mailer skipped as skipped, never as sent', async () => {
+    const outcome = await deliverAllowanceNotice(
+      { userId: 'u_ada', meter: 'sites', threshold: 100, used: 3, allowance: 3, period: '2026-10' },
+      {
+        findRecipient: async () => ({ email: 'ada@example.test' }),
+        send: async () => ({ _tag: 'Skipped', reason: 'dev' }),
+        manageSitesUrl: 'https://requestindexing.com/pro/dashboard/sites',
+      },
+    )
+
+    expect(outcome).toEqual({ _tag: 'Skipped', reason: 'dev' })
   })
 })

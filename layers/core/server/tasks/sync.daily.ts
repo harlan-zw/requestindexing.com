@@ -10,8 +10,9 @@ export default defineTask({
   },
   async run({ context }) {
     // The team_sites backfill took this fan-out from 30 sites to over 1300.
-    // The same kill switch that silences outbound email holds the bulk sync
-    // back until the legacy migration is settled.
+    // Kill switch: NUXT_NOTIFICATIONS_ENABLED=false holds this bulk sync back
+    // until the legacy migration is settled. The same switch holds the welcome
+    // email back. It does not stop the Free allowance email.
     if (!useRuntimeConfig().notificationsEnabled)
       return { result: [], skipped: 'notifications disabled' }
 
