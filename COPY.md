@@ -62,7 +62,7 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | Google keeps 16 months of Search Console data | Google's documented retention window |
 | Google's Indexing API publish quota is 200 per day | Google's documented quota; the app tracks it for the user |
 | Free and open source, MIT | `LICENSE`, and the repository is public |
-| We read Search Console properties and never write | the OAuth scope is `webmasters.readonly` |
+| We read your Search Console data, and the one change we make there is a sitemap submission | the connect flow asks for `webmasters` (read and write) and `indexing`. A sitemap submission comes from Submit sitemap on the Sitemaps tab, or from gscdump's daily sync when it finds a live sitemap |
 | The Free allowance numbers | gscdump returns them from `partner.users.entitlements.get`; copy reads them at runtime and never hardcodes one |
 
 **Not claimed until it ships.** Bing and IndexNow submission arrive by upgrading the gscdump

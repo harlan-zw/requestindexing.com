@@ -226,6 +226,7 @@ export async function probeSitemap(
     statusCode: entry.statusCode,
     durationMs: entry.durationMs,
     checkedAt: entry.checkedAt,
+    url: entry.url,
   }
   if (entry.status !== 'reachable' || !entry.body)
     return base
