@@ -12,6 +12,9 @@ export const FREE_ALLOWANCE_HEADING = 'Free allowance'
 export const HELD_LABEL = 'Held'
 export const HELD_TITLE = 'This Site is held'
 export const FREE_ALLOWANCE_READ_FAILURE = 'Your Free allowance could not load. Retry to read it again.'
+export const SITE_NOT_LINKED_LABEL = 'Not linked'
+/** A Site gscdump refused to register. The stored state keeps no reason, so this covers both. */
+export const SITE_LINK_REFUSED = 'Request Indexing could not link Search Console for this Site. Your Free allowance was full, or its property is already connected as another Site. Remove a Site or reconnect Google to try again.'
 
 const SITES_FULL = 'Remove a Site to connect another.'
 

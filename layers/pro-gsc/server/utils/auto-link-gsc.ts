@@ -7,6 +7,7 @@ import { sites } from '#layers/pro-saas/server/database'
 import { useGscdumpClient } from './gscdump-client'
 import { getGscdumpWebhookUrl } from './gscdump-origin'
 import { updateOnboardingState } from './onboarding'
+import { markSiteRefused } from './site-registration-refusal'
 
 /**
  * The outcome of one auto-link attempt.
@@ -97,8 +98,12 @@ export async function autoLinkGsc(opts: {
       return null
     })
 
-    if (result?._tag === 'Refused')
+    // Record the refusal on the Site, so the hourly reconcile stops asking
+    // until the user acts. Asking again cannot change the answer.
+    if (result?._tag === 'Refused') {
+      await markSiteRefused(db, siteId)
       return { _tag: 'Refused', refusal: result.refusal }
+    }
     if (result?._tag === 'Registered') {
       gscdumpSiteId = result.registration.siteId
       gscdumpSiteUrl = simpleDomain
@@ -106,8 +111,9 @@ export async function autoLinkGsc(opts: {
   }
 
   if (gscdumpSiteId) {
+    // `pending` also clears a `refused` mark left by an earlier attempt.
     await db.update(sites)
-      .set({ gscdumpSiteId, gscdumpSiteUrl })
+      .set({ gscdumpSiteId, gscdumpSiteUrl, gscdumpSyncStatus: 'pending' })
       .where(eq(sites.id, siteId))
 
     // Update onboarding state to reflect GSC connection

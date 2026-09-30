@@ -8,6 +8,7 @@ import { autoLinkGsc } from './auto-link-gsc'
 import { rememberGscdumpAccountStatus } from './gscdump-account-status'
 import { useGscdumpClient } from './gscdump-client'
 import { updateOnboardingState } from './onboarding'
+import { notRefused } from './site-registration-refusal'
 import { syncUserGscdumpTeams } from './sync-user-gscdump-teams'
 
 export interface ReconcileGscdumpOnboardingOptions {
@@ -104,13 +105,16 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
   }
 
   // Reconcile every unlinked site on the user's current team, not just the
-  // ones they created: the grant being reconciled belongs to the team.
+  // ones they created: the grant being reconciled belongs to the team. A Site
+  // gscdump refused waits for the user, so the hourly run cannot spend the
+  // shared registration budget asking the same question again.
   const unlinkedSites = await db
     .select({ id: sites.id, url: sites.property })
     .from(sites)
     .where(and(
       currentTeamId ? eq(sites.teamId, currentTeamId) : eq(sites.ownerId, userId),
       isNull(sites.gscdumpSiteId),
+      notRefused(),
     ))
 
   if (!unlinkedSites.length) {

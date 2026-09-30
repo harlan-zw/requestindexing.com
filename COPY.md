@@ -116,6 +116,8 @@ These assets apply to Site connection, held Sites, URL Inspection refusals, the 
 | Duplicate property | This Search Console property is already connected as {siteUrl}. You can connect each property once. |
 | Held badge | Held |
 | Held notice title | This Site is held |
+| Site list, registration refused | Not linked |
+| Registration refused, detail | Request Indexing could not link Search Console for this Site. Your Free allowance was full, or its property is already connected as another Site. Remove a Site or reconnect Google to try again. |
 | Held, size limit | This Site adds more Search Console rows each day than the Free allowance accepts. Its Search Console data is not imported. |
 | Held, sitemap limit | The sitemaps of this Site list more URLs than the Free allowance accepts. Its Search Console data is not imported. |
 | Held, size unknown | Request Indexing could not measure the size of this Site, so its Search Console data is not imported. Remove the Site and connect it again to retry. |
