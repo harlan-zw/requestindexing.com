@@ -43,10 +43,17 @@ describe('buildSetupSteps', () => {
 describe('buildAgentSetupPrompt', () => {
   const site = { gscdumpSiteId: 's_abc', host: 'example.com' }
 
-  it('puts the raw key in the export line only', () => {
+  // Claude Code and Codex start a new shell for each command, so an `export`
+  // is gone by the next step. The CLI saves the key only through a login.
+  it('saves the raw key with a Hosted mode login, from the environment and never as an argument', () => {
     const prompt = buildAgentSetupPrompt(RAW_KEY, site)
     const linesWithKey = prompt.split('\n').filter(line => line.includes(RAW_KEY))
-    expect(linesWithKey).toEqual([`   export GSCDUMP_API_KEY='${RAW_KEY}'`])
+    expect(linesWithKey).toEqual([`   GSCDUMP_API_KEY='${RAW_KEY}' gscdump auth login --mode hosted`])
+  })
+
+  it('tells the agent that the counts are stored URL Inspection verdicts', () => {
+    const prompt = buildAgentSetupPrompt(RAW_KEY, site)
+    expect(prompt).toContain('stored URL Inspection verdicts')
   })
 
   it('ends on the indexing summary of the Site, addressed by its engine ID', () => {
