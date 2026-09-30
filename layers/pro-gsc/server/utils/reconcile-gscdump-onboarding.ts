@@ -5,6 +5,7 @@ import { logger } from '~~/shared/server/logger'
 import { dispatchEvent } from '#domain-events/server'
 import { sites } from '#layers/pro-saas/server/database'
 import { autoLinkGsc } from './auto-link-gsc'
+import { rememberGscdumpAccountStatus } from './gscdump-account-status'
 import { useGscdumpClient } from './gscdump-client'
 import { updateOnboardingState } from './onboarding'
 import { syncUserGscdumpTeams } from './sync-user-gscdump-teams'
@@ -31,6 +32,10 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
   const gscdump = useGscdumpClient()
 
   const lifecycle = await gscdump.getUserLifecycle(gscdumpUserId)
+  // The session reads this status to decide whether the grant is usable. This
+  // read is as fresh as any, so it spares the next session a call of its own.
+  await rememberGscdumpAccountStatus(gscdumpUserId, lifecycle.account.status)
+    .catch((e: unknown) => logger.error('[gscdump reconcile] account status not cached:', e))
   if (['refresh_missing', 'scope_missing', 'reauth_required'].includes(lifecycle.account.status)) {
     await updateOnboardingState(userId, {
       gscdumpLifecycle: {

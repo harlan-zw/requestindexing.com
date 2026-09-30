@@ -3,6 +3,7 @@ import { desc, eq } from 'drizzle-orm'
 import { googleAccounts } from '~~/layers/core/server/db/schema'
 import { logger } from '~~/shared/server/logger'
 import { lookupUser } from '~~/shared/server/user-lookup'
+import { readGscdumpAccountStatus } from '#layers/pro-gsc/server/utils/gscdump-account-status'
 import * as schema from '#layers/pro-saas/server/database'
 import { buildGscSessionFields } from '../utils/gsc-session-fields'
 import { hasAuthenticatedSession } from '../utils/session-auth-state'
@@ -134,6 +135,17 @@ export default defineNitroPlugin(() => {
     // prompt while every panel failed with `gscdump_api_key_missing`. This is
     // the same predicate `/api/pro/gscdump-integration` reports.
     session.gscdumpConnected = !!(user.gscdumpUserId && user.gscdumpApiKey)
+    // A stored key does not prove the grant still works. A user who unticked
+    // Search Console keeps the key from an earlier grant, and only gscdump's
+    // lifecycle knows the grant is `scope_missing`. Read it here, where the
+    // wizard and the shell decide what to show, rather than mirroring it onto
+    // a column that a missed webhook would leave wrong. Cached per user.
+    session.gscdumpAccountStatus = session.gscdumpConnected && user.gscdumpUserId
+      ? await readGscdumpAccountStatus(user.gscdumpUserId).catch((error: unknown) => {
+          logger.error('[session] gscdump account status unavailable, stored credential decides:', error)
+          return null
+        })
+      : null
     // Discord, GitHub-org and monthly-report fields used to be published here
     // from `users` columns that do not exist in this database. Every one
     // resolved to undefined, and nothing outside the session plugin read them.

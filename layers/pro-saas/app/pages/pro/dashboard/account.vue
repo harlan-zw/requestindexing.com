@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
 // The sidebar calls this page "Profile", so it opens with the signed-in
 // person: avatar, name, email and sign-in method. Every field below comes from
 // the session the `pro-saas` session plugin already publishes. No endpoint and
@@ -8,6 +7,7 @@ import { isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
 // The layer that owns `ProConnectedAccounts` opts out of auto-import, so the
 // component is imported by path.
 import ProConnectedAccounts from '#layers/pro-saas-auth/app/components/auth/ProConnectedAccounts.vue'
+import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 
 definePageMeta({
   layout: 'user-dashboard',
@@ -34,8 +34,12 @@ const gscConnected = computed(() => !!session.value?.gscConnected)
 const gscEmail = computed(() => session.value?.gscEmail ?? null)
 const gscConnectHref = `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent('/pro/dashboard/account')}`
 // This page renders through `user-dashboard`, not the shell that reports a
-// scope-missing return, so it reports its own.
-const gscScopeMissing = computed(() => isGscScopeMissingError(route.query.error))
+// scope-missing grant, so it reports its own.
+const gscScopeMissing = computed(() => resolveGscConnection({
+  gscdumpConnected: !!session.value?.gscdumpConnected,
+  accountStatus: session.value?.gscdumpAccountStatus ?? null,
+  error: route.query.error,
+})._tag === 'ScopeMissing')
 
 // Identity linking bounces back here with `?notice=` / `?error=` from
 // `attachIdentityToCurrentSession`. Without feedback the round trip through

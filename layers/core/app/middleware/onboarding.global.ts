@@ -13,7 +13,11 @@ export default defineNuxtRouteMiddleware((to) => {
     path: to.path,
     loggedIn: loggedIn.value,
     onboardingCompletedAt: session.value?.onboardingCompletedAt ?? null,
-    gsc: resolveGscConnection({ gscdumpConnected: !!session.value?.gscdumpConnected, error: to.query.error }),
+    gsc: resolveGscConnection({
+      gscdumpConnected: !!session.value?.gscdumpConnected,
+      accountStatus: session.value?.gscdumpAccountStatus ?? null,
+      error: to.query.error,
+    }),
     hasSites: !!session.value?.hasSites,
   })
 

@@ -1,3 +1,4 @@
+import type { AccountStatus } from '@gscdump/contracts'
 import type { H3Event } from 'h3'
 import type { User } from '~~/layers/core/server/db/schema'
 import type { AuthProviderId } from '#layers/pro-saas-auth/shared/types/auth'
@@ -30,6 +31,12 @@ module '#auth-utils' {
      * keys off this, not off `gscdumpUserId`.
      */
     gscdumpConnected?: boolean
+    /**
+     * gscdump's lifecycle account status, read by the session hook while
+     * `gscdumpConnected` is true. Null when not read or when gscdump could not
+     * answer. `resolveGscConnection` turns `scope_missing` into ScopeMissing.
+     */
+    gscdumpAccountStatus?: AccountStatus | null
     /** True when the current team owns at least one site. */
     hasSites?: boolean
     /**
