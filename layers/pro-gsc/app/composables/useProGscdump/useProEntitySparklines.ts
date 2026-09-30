@@ -1,12 +1,10 @@
 import type { GscSearchType } from '@gscdump/contracts'
-import type { NormalizedFilterV1 } from '@gscdump/contracts/v1/browser'
 import type { Metric } from 'gscdump/query'
 import type { MaybeRefOrGetter, Ref } from 'vue'
+import type { SeriesDimension } from '../../../shared/analytics-requests'
 import type { GscFacet } from '../../../shared/utils/gsc-facets'
-import { country as countryColumn, inArray, page as pageColumn, queryCanonical, query as queryColumn } from 'gscdump/query'
 import { computed, onScopeDispose, ref, toValue, watch } from 'vue'
-import { andFilter, dateFilter } from '../../../shared/utils/filter-wire'
-import { facetsToFilters } from '../../../shared/utils/gsc-facets'
+import { entityDailySeriesRequest } from '../../../shared/analytics-requests'
 import { entitySeriesFromRows, sparklineDateAxis } from '../../../shared/utils/gsc-series'
 import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdump } from './useProGscdump'
@@ -25,7 +23,7 @@ export { sparklineDateAxis }
 export interface UseProEntitySparklinesOptions {
   gscdumpSiteId: MaybeRefOrGetter<string | null | undefined>
   range: MaybeRefOrGetter<{ start: string, end: string }>
-  dimension: 'query' | 'page' | 'queryCanonical' | 'country'
+  dimension: SeriesDimension
   /** Visible row keys: queries, page URLs or country codes. */
   keys: MaybeRefOrGetter<readonly string[]>
   /** Metric the sparkline plots. Defaults to `clicks`. */
@@ -33,13 +31,6 @@ export interface UseProEntitySparklinesOptions {
   searchType?: MaybeRefOrGetter<GscSearchType>
   facets?: MaybeRefOrGetter<readonly GscFacet[] | undefined>
 }
-
-const DIMENSION_COLUMNS = {
-  country: countryColumn,
-  page: pageColumn,
-  query: queryColumn,
-  queryCanonical,
-} as const
 
 export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
   map: Ref<Map<string, number[]>>
@@ -81,22 +72,9 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
     facets: readonly GscFacet[] | undefined,
   ): Promise<Map<string, number[]>> {
     const axis = sparklineDateAxis(range.start, range.end)
-    const filter = andFilter(
-      dateFilter(range),
-      inArray(DIMENSION_COLUMNS[opts.dimension], keys),
-      ...facetsToFilters(facets),
-    )
     const response = await gscdump.queryAnalyticsRows({
       params: { siteId },
-      body: {
-        dimensions: [opts.dimension, 'date'],
-        metrics: [selectedMetric],
-        // `gscdump/query` emits the normalized filter the rows contract reads.
-        filter: filter as NormalizedFilterV1,
-        // One row per key per day, plus headroom for a partial day bucket.
-        rowLimit: Math.min(25_000, keys.length * (axis.length + 1)),
-        searchType: slice,
-      },
+      body: entityDailySeriesRequest({ searchType: slice, dimension: opts.dimension, keys, range, metric: selectedMetric, facets }),
     }, true)
     return entitySeriesFromRows(response?.rows ?? [], { key: opts.dimension, metric: selectedMetric, axis })
   }
