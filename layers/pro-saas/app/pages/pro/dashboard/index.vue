@@ -71,11 +71,11 @@ const failedSites = computed(() => Object.values(reads.value)
   .filter(read => read.daily._tag === 'Err' || read.indexing._tag === 'Err')
   .length)
 
-// A finished sync changes both the lifecycle on the Sites list and the rows
-// behind every number, so one event refetches both.
-useJobListener('sites/sync-finished', async () => {
+// A finished sync changes the lifecycle on the Sites list and that Site's
+// rows, so the event refetches the list and that one Site's reads.
+useJobListener('sites/sync-finished', async ({ siteId }) => {
   await refresh()
-  await refreshReads()
+  await refreshReads([siteId])
 })
 </script>
 

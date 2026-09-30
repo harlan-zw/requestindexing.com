@@ -109,8 +109,8 @@ export const OVERVIEW_SNAPSHOT_META: Record<OverviewSnapshotKey, OverviewSnapsho
   'impressions': { label: 'Impressions', hint: 'Times a page appeared in Google results over the last 28 days.', to: null },
   'ctr': { label: 'CTR', hint: 'Clicks per impression over the last 28 days.', to: null },
   'position': { label: 'Avg position', hint: 'Impressions-weighted average rank over the last 28 days.', to: null },
-  'indexed': { label: 'Indexed', hint: 'Share of known pages Google has indexed, averaged across Sites.', to: '/pro/dashboard/web-indexing' },
-  'not-indexed': { label: 'Not indexed', hint: 'Known URLs Google has not indexed. Excludes URLs still pending a decision.', to: '/pro/dashboard/web-indexing' },
+  'indexed': { label: 'Indexed', hint: 'Share of known pages Google has indexed, averaged across Sites.', to: '/pro/dashboard/indexing' },
+  'not-indexed': { label: 'Not indexed', hint: 'Known URLs Google has not indexed. Excludes URLs still pending a decision.', to: '/pro/dashboard/indexing' },
 }
 
 /** Signed percentage change between two window totals, rounded, or null. */

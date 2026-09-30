@@ -1,8 +1,8 @@
 import type { SiteFleetRow } from '~~/layers/core/app/types'
 import type { OverviewDay, OverviewIndexing, OverviewReadRange } from '../components/overview/overview-snapshot'
 import { toPartnerError } from '@gscdump/sdk/partner-errors'
-import { dateFilter } from '../../shared/utils/filter-wire'
-import { isOverviewReadTarget } from '../components/overview/overview-sites'
+import { dailyReportRequest } from '../../shared/analytics-requests'
+import { invalidatedTargets, isOverviewReadTarget } from '../components/overview/overview-sites'
 import { useGscInvalidationMap } from '../internal/composables/useGscInvalidation'
 import { useProGscdump } from './useProGscdump'
 
@@ -22,7 +22,7 @@ export interface OverviewSiteRead {
  *
  * A Site that has never synced gets no request, so it is absent from the map
  * rather than pending. One Site's failure lands on that Site's entry and never
- * blanks the others. A realtime sync event for any Site refetches the set.
+ * blanks the others. A realtime sync event refetches only the Site it names.
  */
 export function useProOverviewReads(sites: MaybeRefOrGetter<readonly SiteFleetRow[]>, range: OverviewReadRange) {
   const gscdump = useProGscdump()
@@ -35,13 +35,8 @@ export function useProOverviewReads(sites: MaybeRefOrGetter<readonly SiteFleetRo
   function readDaily(gscdumpSiteId: string): Promise<OverviewResult<OverviewDay[]>> {
     return gscdump.queryAnalyticsReportDetail({
       params: { siteId: gscdumpSiteId },
-      body: {
-        state: {
-          dimensions: ['date'],
-          filter: dateFilter({ start: range.start, end: range.end }),
-          orderBy: { column: 'date', dir: 'asc' },
-        },
-      },
+      // The home has no search type picker, so the band reads Web search.
+      body: dailyReportRequest({ searchType: 'web', range: { start: range.start, end: range.end }, comparisonRange: null }),
     }, true)
       .then(result => ({ _tag: 'Ok' as const, value: result.daily }))
       .catch((error: unknown) => ({ _tag: 'Err' as const, error }))
@@ -60,20 +55,43 @@ export function useProOverviewReads(sites: MaybeRefOrGetter<readonly SiteFleetRo
         : { _tag: 'Err' as const, error })
   }
 
-  const { data, refresh } = useAsyncData(
-    () => `pro-overview:reads:${range.end}:${targets.value.map(target => target.gscdumpSiteId).join(',')}`,
-    async () => {
-      const entries = await Promise.all(targets.value.map(async (target) => {
-        const [daily, indexing] = await Promise.all([readDaily(target.gscdumpSiteId), readIndexing(target.gscdumpSiteId)])
-        return [target.siteId, { daily, indexing }] as const
-      }))
-      return Object.fromEntries(entries) as Record<string, OverviewSiteRead>
-    },
-    { server: false, watch: [invalidation] },
-  )
+  const loaded = ref<Record<string, OverviewSiteRead>>({})
+  const settled = ref(false)
 
-  const reads = computed<Record<string, OverviewSiteRead>>(() => data.value ?? {})
-  const loading = computed(() => targets.value.length > 0 && !data.value)
+  async function load(list: readonly { siteId: string, gscdumpSiteId: string }[]): Promise<void> {
+    if (!list.length)
+      return
+    const entries = await Promise.all(list.map(async (target) => {
+      const [daily, indexing] = await Promise.all([readDaily(target.gscdumpSiteId), readIndexing(target.gscdumpSiteId)])
+      return [target.siteId, { daily, indexing }] as const
+    }))
+    loaded.value = { ...loaded.value, ...Object.fromEntries(entries) }
+  }
+
+  /** Refetch the given Sites by app id, or every Site when none are named. */
+  function refresh(siteIds?: readonly string[]): Promise<void> {
+    return load(siteIds ? targets.value.filter(target => siteIds.includes(target.siteId)) : targets.value)
+  }
+
+  // Client only, as before: the first load, then each Site that becomes
+  // readable (a first sync finishing) loads once.
+  onMounted(() => {
+    void load(targets.value).finally(() => {
+      settled.value = true
+    })
+    watch(() => targets.value.map(target => target.siteId).join(','), () => {
+      void load(targets.value.filter(target => !(target.siteId in loaded.value)))
+    })
+    // A realtime event names one Site, so only that Site refetches.
+    watch(invalidation, (next, prev) => {
+      void load(invalidatedTargets(targets.value, next, prev))
+    })
+  })
+
+  const reads = computed<Record<string, OverviewSiteRead>>(() => Object.fromEntries(
+    targets.value.flatMap(target => target.siteId in loaded.value ? [[target.siteId, loaded.value[target.siteId]!]] : []),
+  ))
+  const loading = computed(() => targets.value.length > 0 && !settled.value)
 
   return { reads, loading, refresh }
 }

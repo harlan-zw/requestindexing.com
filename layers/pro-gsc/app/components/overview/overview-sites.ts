@@ -1,6 +1,6 @@
 import type { SiteFleetRow } from '~~/layers/core/app/types'
 import { siteLabel } from '~~/layers/design-system/app/composables/formatting'
-import { SITE_LINK_REFUSED, SITE_NOT_LINKED_LABEL } from '../../../shared/entitlement-copy'
+import { HELD_LABEL, holdMessage, SITE_LINK_REFUSED, SITE_NOT_LINKED_LABEL } from '../../../shared/entitlement-copy'
 import { inactiveSiteStatus } from '../../../shared/site-status'
 
 // Shared projection for the dashboard home's Sites column. One place decides
@@ -12,7 +12,7 @@ import { inactiveSiteStatus } from '../../../shared/site-status'
 // needs a fleet roll-up the partner protocol does not expose, so the status
 // here is the gscdump lifecycle this app already reads for every Site.
 
-export type OverviewSite = Pick<SiteFleetRow, 'siteId' | 'domain' | 'property' | 'syncStatus' | 'permissionLost' | 'syncedRange'>
+export type OverviewSite = Pick<SiteFleetRow, 'siteId' | 'domain' | 'property' | 'syncStatus' | 'permissionLost' | 'syncedRange' | 'hold'>
 
 export type Tone = 'success' | 'info' | 'warning' | 'error' | 'neutral'
 
@@ -87,6 +87,18 @@ export function isOverviewReadTarget<T extends Pick<SiteFleetRow, 'gscdumpSiteId
   return !!site.gscdumpSiteId && isSiteSynced(site)
 }
 
+/**
+ * The Sites whose realtime token moved between two invalidation maps. The home
+ * refetches only these, so one Site's sync event costs one Site's reads.
+ */
+export function invalidatedTargets<T extends { gscdumpSiteId: string }>(
+  targets: readonly T[],
+  next: Readonly<Record<string, number>>,
+  prev: Readonly<Record<string, number>> | undefined,
+): T[] {
+  return targets.filter(target => (next[target.gscdumpSiteId] ?? 0) !== (prev?.[target.gscdumpSiteId] ?? 0))
+}
+
 /** True when the Site needs its owner before it can collect again. */
 export function isSiteBroken(site: Pick<OverviewSite, 'syncStatus' | 'permissionLost'>): boolean {
   return site.permissionLost || site.syncStatus === 'error' || site.syncStatus === 'refused'
@@ -107,6 +119,10 @@ export function overviewSiteStatus(site: OverviewSite): OverviewSiteStatus {
       action: 'Open the Site to restore access.',
     }
   }
+  // A hold is gscdump's decision, not a sync still to start, so it outranks
+  // the sync words. Manage Sites labels it the same way.
+  if (site.hold)
+    return { label: HELD_LABEL, tone: 'warning', urgent: true, summary: holdMessage(site.hold), action: null }
   switch (site.syncStatus) {
     case 'refused':
       return { label: SITE_NOT_LINKED_LABEL, tone: 'error', urgent: true, summary: SITE_LINK_REFUSED, action: null }

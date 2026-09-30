@@ -1,6 +1,6 @@
 import type { OverviewSite, OverviewSiteEntry } from './overview-sites'
 import { describe, expect, it } from 'vitest'
-import { isSiteBroken, overviewColumnPage, overviewSiteStatus, soleSiteLandingPath } from './overview-sites'
+import { invalidatedTargets, isSiteBroken, overviewColumnPage, overviewSiteStatus, soleSiteLandingPath } from './overview-sites'
 
 function site(overrides: Partial<OverviewSite> & { siteId: string }): OverviewSite {
   return {
@@ -9,6 +9,7 @@ function site(overrides: Partial<OverviewSite> & { siteId: string }): OverviewSi
     syncStatus: 'synced',
     permissionLost: false,
     syncedRange: { oldest: '2026-01-01', newest: '2026-09-26' },
+    hold: null,
     ...overrides,
   }
 }
@@ -32,6 +33,29 @@ describe('overviewSiteStatus', () => {
     ['refused', 'Not linked', true],
   ] as const)('reads %s as %s', (syncStatus, label, urgent) => {
     expect(overviewSiteStatus(site({ siteId: 'a', syncStatus }))).toMatchObject({ label, urgent })
+  })
+})
+
+describe('overviewSiteStatus holds', () => {
+  it('reads a held Site as Held, never as waiting for its first sync', () => {
+    const status = overviewSiteStatus(site({ siteId: 'a', syncStatus: 'pending', hold: 'size_limit', syncedRange: { oldest: null, newest: null } }))
+    expect(status).toMatchObject({ label: 'Held', urgent: true })
+  })
+
+  it('still reads lost access first, because a held Site cannot resume without it', () => {
+    expect(overviewSiteStatus(site({ siteId: 'a', permissionLost: true, hold: 'size_limit' })).label).toBe('No access')
+  })
+})
+
+describe('invalidatedTargets', () => {
+  const targets = [{ siteId: 'a', gscdumpSiteId: 'g-a' }, { siteId: 'b', gscdumpSiteId: 'g-b' }]
+
+  it('returns only the Sites whose realtime token moved', () => {
+    expect(invalidatedTargets(targets, { 'g-a': 1, 'g-b': 3 }, { 'g-a': 1, 'g-b': 2 })).toEqual([targets[1]])
+  })
+
+  it('treats a first token as a move', () => {
+    expect(invalidatedTargets(targets, { 'g-a': 1 }, {})).toEqual([targets[0]])
   })
 })
 
