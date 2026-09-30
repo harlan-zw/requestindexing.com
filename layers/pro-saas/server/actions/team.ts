@@ -272,6 +272,15 @@ export async function removeTeamMember(event: H3Event, ctx: CurrentTeamContext, 
     eq(teamMemberships.userId, targetUserId),
   ))
 
+  // Background work reads `users.current_team_id` without a session, so a
+  // removed member must not keep pointing at this team. Same reset as deleteTeam.
+  await ctx.db.update(users)
+    .set({
+      currentTeamId: sql`(SELECT team_id FROM teams WHERE owner_id = users.user_id AND personal_team = 1 LIMIT 1)`,
+      updatedAt: Date.now(),
+    })
+    .where(and(eq(users.userId, targetUserId), eq(users.currentTeamId, ctx.team.teamId)))
+
   await ctx.team.audit({
     actorUserId: ctx.caller.user.id,
     kind: isSelfLeave ? 'member.left' : 'member.removed',

@@ -55,3 +55,10 @@ export function teamAbilityContext(caller: Caller | null, teamId: number): Abili
 export function callerCan(caller: Caller | null, teamId: number, ability: Ability): boolean {
   return can(teamAbilityContext(caller, teamId), ability)
 }
+
+/** Every team the caller belongs to where they hold `ability`. */
+export function teamsCallerCan(caller: Caller, ability: Ability): number[] {
+  return caller.memberships
+    .filter(membership => callerCan(caller, membership.teamId, ability))
+    .map(membership => membership.teamId)
+}
