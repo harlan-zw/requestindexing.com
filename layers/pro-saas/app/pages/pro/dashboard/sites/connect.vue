@@ -22,9 +22,6 @@ const pending = ref(true)
 const isSynced = ref(false)
 const sitesSynced = ref(0)
 const totalSites = ref(0)
-// The picker limit is owned by the API so page copy, counter, and save guard
-// cannot drift apart. `0` means "not loaded yet" and hides the limit copy.
-const maxSites = ref(0)
 
 const onSessionExpired = createSessionExpiredHandler()
 
@@ -53,7 +50,6 @@ async function refresh() {
     })),
   }))
   isSynced.value = response.jobStatus === 'ready'
-  maxSites.value = response.maxSites
 
   key.value++
 }
@@ -65,17 +61,17 @@ const toast = useToast()
 const isSubmitting = ref(false)
 
 const isSyncing = computed(() => !isSynced.value || sitesSynced.value < totalSites.value)
-const isOverLimit = computed(() => maxSites.value > 0 && selectedSites.value.length > maxSites.value)
-const canSave = computed(() => !pending.value && selectedSites.value.length > 0 && !isOverLimit.value)
+// Selecting moves Sites the caller already has onto this Team. It creates no
+// Site, so no cap applies here: gscdump's Free allowance counts Sites when
+// they register.
+const canSave = computed(() => !pending.value && selectedSites.value.length > 0)
 
 const saveHint = computed(() => {
   if (pending.value)
     return ''
   if (!selectedSites.value.length)
     return 'Select at least one site.'
-  if (isOverLimit.value)
-    return `Too many sites selected. Deselect ${selectedSites.value.length - maxSites.value} to save.`
-  return `${selectedSites.value.length} of ${maxSites.value} sites selected. Search Console data is archived for each.`
+  return `${selectedSites.value.length} ${selectedSites.value.length === 1 ? 'site' : 'sites'} selected. Search Console data is archived for each.`
 })
 
 async function onSubmit() {
@@ -142,9 +138,6 @@ onBeforeUnmount(() => ws?.close())
           <li class="flex items-center gap-1">
             <UIcon name="i-heroicons-check" class="w-5 h-5" /> Sites are shown with domain property splitting.
           </li>
-          <li v-if="maxSites" class="flex items-center gap-1">
-            <UIcon name="i-heroicons-check" class="w-5 h-5" /> Connect up to {{ maxSites }} sites, update them at any time.
-          </li>
         </ul>
         <div v-if="pending" class="mb-5 text-sm font-semibold flex items-center gap-1" role="status" aria-live="polite">
           <UIcon name="i-heroicons-arrow-path" class="animate-spin w-5 h-5" />
@@ -169,7 +162,7 @@ onBeforeUnmount(() => ws?.close())
           <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-primary" />
           All sites synced.
         </h2>
-        <TeamSiteSelector v-if="data?.length" :key="key" :sites="data" :max="maxSites" :model-value="selectedSites" @update:model-value="e => selectedSites = e" />
+        <TeamSiteSelector v-if="data?.length" :key="key" :sites="data" :model-value="selectedSites" @update:model-value="e => selectedSites = e" />
       </div>
     </div>
     <div>
@@ -177,7 +170,7 @@ onBeforeUnmount(() => ws?.close())
         <UButton :loading="isSubmitting" type="submit" size="lg" :disabled="!canSave">
           Save
         </UButton>
-        <div v-if="saveHint" class="text-sm" :class="isOverLimit ? 'text-error' : 'text-gray-600 dark:text-gray-300'">
+        <div v-if="saveHint" class="text-sm text-gray-600 dark:text-gray-300">
           {{ saveHint }}
         </div>
       </div>

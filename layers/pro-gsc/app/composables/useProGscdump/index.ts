@@ -21,6 +21,7 @@ export { useProGscdumpData } from './useProGscdumpData'
 export { useProGscdumpDataDetail } from './useProGscdumpDataDetail'
 export { useProGscdumpDates } from './useProGscdumpDates'
 export {
+  type GscdumpInspectRefused,
   useProGscdumpIndexing,
   useProGscdumpIndexingDiagnostics,
   useProGscdumpIndexingUrls,

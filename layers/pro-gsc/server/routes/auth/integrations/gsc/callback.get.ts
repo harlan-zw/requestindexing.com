@@ -4,6 +4,7 @@ import { logger } from '~~/shared/server/logger'
 import { forgetGscdumpAccountStatus } from '#layers/pro-gsc/server/utils/gscdump-account-status'
 import { probeGscdumpUserKey, shouldRepairGscdumpKey } from '#layers/pro-gsc/server/utils/gscdump-key-repair'
 import { scheduleGscdumpOnboardingReconcile } from '#layers/pro-gsc/server/utils/reconcile-gscdump-onboarding'
+import { releaseRefusedSites } from '#layers/pro-gsc/server/utils/site-registration-refusal'
 import { resolveGscGrant } from '#layers/pro-gsc/shared/gsc-grant'
 import { safeAuthRedirect } from '#layers/pro-saas-auth/shared/utils/auth-redirect'
 import { gscScopeMissingRedirect } from '#layers/pro-saas/shared/onboarding'
@@ -257,6 +258,12 @@ export default defineEventHandler(async (event) => {
     // lifecycle read may say what the new grant is.
     await forgetGscdumpAccountStatus(gscdumpUserId)
       .catch((error: unknown) => logger.error('[google auth] cached gscdump account status not cleared:', errorDetails(error).message))
+    // A reconnect is the user acting on a refused Site, so the reconcile below
+    // may ask gscdump about it once more.
+    await releaseRefusedSites(db, {
+      teamIds: session.user.currentTeamId ? [session.user.currentTeamId] : [],
+      ownerId: session.user.id,
+    }).catch((error: unknown) => logger.error('[google auth] refused Sites not released:', errorDetails(error).message))
     scheduleGscdumpOnboardingReconcile(event, {
       userId: session.user.id,
       gscdumpUserId,

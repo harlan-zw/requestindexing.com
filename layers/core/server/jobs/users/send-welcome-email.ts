@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { users } from '~~/layers/core/server/db/schema'
+import { sendEmail } from '~~/layers/core/server/utils/email'
 import { defineJob } from '../_types'
 
 const WelcomeEmail = `Thanks for trying out Request Indexing.
@@ -19,14 +20,6 @@ export default defineJob({
   async handle(payload, ctx) {
     const { userId } = payload
 
-    if (import.meta.dev)
-      return
-
-    // Kill switch: NUXT_NOTIFICATIONS_ENABLED=false silences every outbound
-    // send while legacy data is being migrated.
-    if (!useRuntimeConfig().notificationsEnabled)
-      return
-
     const user = await ctx.db.query.users.findFirst({
       where: eq(users.userId, userId),
     })
@@ -34,14 +27,11 @@ export default defineJob({
     if (!user)
       return
 
-    const { ServerClient } = await import('postmark')
-    const client = new ServerClient(useRuntimeConfig().postmark.apiKey)
-    await client.sendEmail({
-      From: 'harlan@harlanzw.com',
-      Bcc: 'harlan@harlanzw.com',
-      To: user.email,
-      Subject: 'Welcome to Request Indexing',
-      TextBody: WelcomeEmail,
+    await sendEmail({
+      to: user.email,
+      bcc: 'harlan@harlanzw.com',
+      subject: 'Welcome to Request Indexing',
+      textBody: WelcomeEmail,
     })
   },
 })
