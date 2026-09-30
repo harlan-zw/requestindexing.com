@@ -43,23 +43,14 @@ const baseOperationEntries = [
   // The tables resolve one sparkline per visible row in a single call, and the
   // entity trend panels read the site's own daily query and page counts.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.queryKeywordSparklines },
-  // `analytics.rows.query` answers a raw grouped read; the page and country
-  // sparklines use it where no purpose-built operation exists.
+  // `analytics.rows.query` answers a raw grouped read. nuxtseo.com's browser
+  // allowlist carries it for archetype reads and live daily series, so a port
+  // of those pages resolves here too.
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryRows },
-  // Entity detail pages read the preset bundle rather than one request per
-  // preset.
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteAnalysisBundle },
   // Indexing coverage history and the sitemap URL views.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexingTransitions },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSitemapUrls },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listAvailableSites },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getCanonicalMismatches },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getContentVelocity },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getCtrCurve },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getDarkTraffic },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getDeviceGap },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getKeywordBreadth },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getPositionDistribution },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexNowConnection },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.configureSiteIndexNowConnection },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.verifySiteIndexNowConnection },
@@ -88,16 +79,6 @@ export const gscdumpV1BrowserOperationIds = Object.freeze(
 )
 
 export type GscdumpV1ProxyOperation = ResolvedHttpV1Operation<BrowserOperationEntry>
-
-/**
- * The one operation whose path parameter is a gscdump *user* id rather than a
- * site id (`partner.users.sites.available.list`). The browser client sends an
- * opaque, syntactically-valid placeholder (see `GSCDUMP_SESSION_USER_ID` in
- * `useGscdump.ts`); the route handler always substitutes the caller's real
- * stored gscdump user id when building the upstream request, so the value the
- * browser sends is never trusted or forwarded.
- */
-export const GSCDUMP_V1_USER_SCOPED_OPERATION_ID = 'partner.users.sites.available.list'
 
 /**
  * Resolve a browser request against the closed allowlist. Returns `null` for

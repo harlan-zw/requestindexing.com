@@ -13,7 +13,6 @@ import { createError, getQuery, getRequestHeader, getRequestURL, getRouterParam,
 import { teamSites } from '~~/layers/core/server/db/schema'
 import {
   getGscdumpV1ProxySiteId,
-  GSCDUMP_V1_USER_SCOPED_OPERATION_ID,
   resolveGscdumpV1ProxyOperation,
   selectGscdumpV1SiteAccess,
 } from '#layers/pro-gsc/server/internal/gscdump-v1-browser-proxy'
@@ -129,11 +128,9 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
 
   const credentialRow = await db.select({
     apiKey: users.gscdumpApiKey,
-    userId: users.gscdumpUserId,
   }).from(users).where(eq(users.userId, caller.user.id)).get()
 
   const upstreamSiteId = getGscdumpV1ProxySiteId(operation)
-  let upstreamUserId: string | undefined
   if (upstreamSiteId) {
     const rows = await db.select({
       owningTeamId: sites.teamId,
@@ -159,14 +156,6 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
     if (access._tag === 'forbidden')
       throw createError({ statusCode: 403, statusMessage: 'forbidden' })
   }
-  else if (descriptor.id === GSCDUMP_V1_USER_SCOPED_OPERATION_ID) {
-    // The browser sends an opaque placeholder for `{userId}` (it never learns
-    // its own gscdump user id). Substitute the caller's real, stored id when
-    // building the upstream path: the placeholder is discarded entirely.
-    if (!credentialRow?.userId)
-      throw createError({ statusCode: 401, statusMessage: 'gscdump_api_key_missing' })
-    upstreamUserId = credentialRow.userId
-  }
 
   const apiKey = credentialRow?.apiKey ?? null
   if (!apiKey)
@@ -175,11 +164,7 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
   if (descriptor.method !== 'GET')
     assertGscdumpBrowserUnsafeMethodOrigin(event)
 
-  const upstreamPath = upstreamUserId
-    ? operation.path.replace(/^users\/[^/]+/, `users/${encodeURIComponent(upstreamUserId)}`)
-    : operation.path
-
-  const upstream = new URL(`${getGscdumpApiUrl(event)}/${operation.surface.name}/v1/${upstreamPath}`)
+  const upstream = new URL(`${getGscdumpApiUrl(event)}/${operation.surface.name}/v1/${operation.path}`)
   upstream.search = proxyQuery(event, descriptor).toString()
 
   const body = await proxyBody(event, operation, descriptor)

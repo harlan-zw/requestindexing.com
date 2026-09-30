@@ -44,7 +44,7 @@ describe('resolveGscdumpV1ProxyOperation', () => {
     expect(resolved?.params).toEqual({ siteId: 's_site-1' })
   })
 
-  it('resolves the grouped analytics rows read the page and country sparklines use', () => {
+  it('resolves the grouped analytics rows read', () => {
     const resolved = resolveGscdumpV1ProxyOperation('POST', 'analytics', 'sites/s_site-1/rows')
     expect(resolved?.operation.id).toBe('analytics.rows.query')
   })
