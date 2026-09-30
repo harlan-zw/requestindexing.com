@@ -12,10 +12,13 @@ export { useProGscdumpAnalysis } from './useProGscdumpAnalysis'
 export {
   type BingDataset,
   type BingSiteId,
+  useProBingAuthorize,
   useProBingIntegration,
+  useProBingSiteSitemap,
   useProGscdumpBingConnection,
   useProGscdumpBingData,
   type UseProGscdumpBingDataOptions,
+  useProGscdumpBingEvidence,
   useProGscdumpBingVerify,
 } from './useProGscdumpBing'
 export { useProGscdumpData } from './useProGscdumpData'

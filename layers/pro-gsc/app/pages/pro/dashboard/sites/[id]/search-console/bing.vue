@@ -10,6 +10,7 @@ import { useProGscdumpBingConnection, useProGscdumpBingData } from '#layers/pro-
 import ProBingSearchPerformance from '#layers/pro-gsc/app/internal/components/bing/ProBingSearchPerformance.vue'
 import { bingConnectionSetupState, bingRequestErrorState, toBingConnectionView } from '#layers/pro-gsc/app/utils/bing-view'
 import { BING_REPORTING_WINDOW_DAYS, bingReportingWindow } from '#layers/pro-gsc/shared/bing-reporting-window'
+import { INTEGRATIONS_ROUTE } from '#layers/pro-shell/app/utils/integrations-pending'
 
 definePageMeta({
   proTab: { feature: 'search-console', label: 'Bing', icon: 'i-lucide-search-check', order: 40 },
@@ -40,6 +41,11 @@ const trafficQuery = useProGscdumpBingData(gscdumpSiteId, {
 const traffic = computed(() => trafficQuery.data.value?.dataset === 'traffic' ? trafficQuery.data.value : null)
 
 const indexingBingPath = computed(() => `/pro/dashboard/sites/${encodeURIComponent(siteId.value)}/indexing/bing`)
+// The CNAME step lives on Bing indexing. Linking and reconnecting live on
+// Integrations, where one Bing grant serves every Site.
+const setupAction = computed(() => connection.value?._tag === 'verification-required'
+  ? { to: indexingBingPath.value, label: 'Open Bing indexing' }
+  : { to: `${INTEGRATIONS_ROUTE}#bing`, label: 'Open Integrations' })
 
 // Search Console links the Site to gscdump, and Bing reads through the same
 // link. Say so rather than render an empty page while it is still pending.
@@ -85,8 +91,8 @@ const linked = computed(() => !!gscdumpSiteId.value)
         heading-tag="h2"
         :animated="false"
       >
-        <UiButton :to="indexingBingPath" purpose="cta">
-          Open Bing indexing
+        <UiButton :to="setupAction.to" purpose="cta">
+          {{ setupAction.label }}
         </UiButton>
       </UiEmptyState>
 

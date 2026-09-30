@@ -1,8 +1,9 @@
 import type { Caller } from '#layers/pro-saas/shared/caller'
 import { describe, expect, it } from 'vitest'
 import {
-  getGscdumpV1ProxySiteId,
   resolveGscdumpV1ProxyOperation,
+  selectGscdumpV1ProxyBody,
+  selectGscdumpV1ProxyTarget,
   selectGscdumpV1SiteAccess,
 } from './gscdump-v1-browser-proxy'
 
@@ -40,29 +41,40 @@ describe('resolveGscdumpV1ProxyOperation', () => {
     expect(resolved?.operation.id).toBe('analytics.rows.query')
   })
 
-  // The two Bing pages are behind `NUXT_PUBLIC_FEATURES_BING`. With the flag
-  // off they do not exist, so the relay must not carry their reads either.
-  it('rejects every Bing operation while the flag is off', () => {
-    expect(resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/bing/data')).toBeNull()
-    expect(resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/indexing/bing/connection')).toBeNull()
-    expect(resolveGscdumpV1ProxyOperation('POST', 'partner', 'sites/s_site-1/indexing/bing/connection/verify')).toBeNull()
-    expect(resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/bing/data', { bing: false })).toBeNull()
+  // Every Bing surface is behind `NUXT_PUBLIC_FEATURES_BING`. With the flag
+  // off the pages do not exist, so the relay must not carry their calls either.
+  it.each([
+    ['GET', 'sites/s_site-1/bing/data'],
+    ['GET', 'sites/s_site-1/indexing/bing/connection'],
+    ['POST', 'sites/s_site-1/indexing/bing/connection/verify'],
+    ['GET', 'sites/s_site-1/indexing/bing/evidence'],
+    ['POST', 'sites/s_site-1/indexing/bing/link'],
+    ['POST', 'sites/s_site-1/indexing/bing/authorization'],
+    ['POST', 'sites/s_site-1/indexing/bing/sitemaps'],
+    ['GET', 'users/u_1/indexing/bing/sites'],
+  ])('rejects Bing %s %s while the flag is off', (method, path) => {
+    expect(resolveGscdumpV1ProxyOperation(method, 'partner', path)).toBeNull()
+    expect(resolveGscdumpV1ProxyOperation(method, 'partner', path, { bing: false })).toBeNull()
   })
 
-  it('resolves the three Bing operations while the flag is on', () => {
-    const flags = { bing: true }
-    expect(resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/bing/data', flags)?.operation.id)
-      .toBe('partner.sites.bing.data.get')
-    expect(resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/indexing/bing/connection', flags)?.operation.id)
-      .toBe('partner.sites.indexing.bing.connection.get')
-    expect(resolveGscdumpV1ProxyOperation('POST', 'partner', 'sites/s_site-1/indexing/bing/connection/verify', flags)?.operation.id)
-      .toBe('partner.sites.indexing.bing.connection.verify')
+  it.each([
+    ['GET', 'sites/s_site-1/bing/data', 'partner.sites.bing.data.get'],
+    ['GET', 'sites/s_site-1/indexing/bing/connection', 'partner.sites.indexing.bing.connection.get'],
+    ['POST', 'sites/s_site-1/indexing/bing/connection/verify', 'partner.sites.indexing.bing.connection.verify'],
+    ['GET', 'sites/s_site-1/indexing/bing/evidence', 'partner.sites.indexing.bing.evidence.list'],
+    ['POST', 'sites/s_site-1/indexing/bing/link', 'partner.sites.indexing.bing.link.create'],
+    ['POST', 'sites/s_site-1/indexing/bing/authorization', 'partner.sites.indexing.bing.authorization.create'],
+    ['POST', 'sites/s_site-1/indexing/bing/sitemaps', 'partner.sites.indexing.bing.sitemaps.submit'],
+    ['GET', 'users/u_1/indexing/bing/sites', 'partner.users.indexing.bing.sites.list'],
+  ])('resolves Bing %s %s while the flag is on', (method, path, id) => {
+    expect(resolveGscdumpV1ProxyOperation(method, 'partner', path, { bing: true })?.operation.id).toBe(id)
   })
 
-  // The crawl view reads the `crawl` dataset of `bing.data.get`, so nothing
-  // needs per-URL evidence rows and the relay stays as narrow as the pages.
-  it('rejects the Bing evidence operation even while the flag is on', () => {
-    expect(resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/indexing/bing/evidence', { bing: true })).toBeNull()
+  // Google Sitemap submission belongs to the Sitemaps page, which does not
+  // call these yet. The Bing flag must not open them as a side effect.
+  it('rejects Google Sitemap submission even while the Bing flag is on', () => {
+    expect(resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/sitemaps/submission', { bing: true })).toBeNull()
+    expect(resolveGscdumpV1ProxyOperation('POST', 'partner', 'sites/s_site-1/sitemaps/submission', { bing: true })).toBeNull()
   })
 
   it.each([
@@ -74,7 +86,7 @@ describe('resolveGscdumpV1ProxyOperation', () => {
   ])('routes IndexNow %s %s through site ownership checks', (method, path, id) => {
     const operation = resolveGscdumpV1ProxyOperation(method, 'partner', `sites/s_site-1/indexing/indexnow/${path}`)
     expect(operation?.operation.id).toBe(id)
-    expect(operation && getGscdumpV1ProxySiteId(operation)).toBe('s_site-1')
+    expect(operation && selectGscdumpV1ProxyTarget(operation, 'u_me')).toMatchObject({ _tag: 'site', siteId: 's_site-1' })
   })
 
   it('rejects a path with no matching operation', () => {
@@ -96,15 +108,88 @@ describe('resolveGscdumpV1ProxyOperation', () => {
   })
 })
 
-describe('getGscdumpV1ProxySiteId', () => {
-  it('extracts the siteId path parameter', () => {
-    const resolved = resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/indexing')!
-    expect(getGscdumpV1ProxySiteId(resolved)).toBe('s_site-1')
+describe('selectGscdumpV1ProxyTarget', () => {
+  const flags = { bing: true }
+
+  it('checks a Site read against the Site, with no write needed', () => {
+    const operation = resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/indexing/bing/evidence', flags)!
+    expect(selectGscdumpV1ProxyTarget(operation, 'u_me')).toEqual({
+      _tag: 'site',
+      siteId: 's_site-1',
+      requiresWrite: false,
+      path: 'sites/s_site-1/indexing/bing/evidence',
+    })
   })
 
-  it('returns null for an operation with no siteId parameter', () => {
-    const resolved = resolveGscdumpV1ProxyOperation('POST', 'realtime', 'tickets')!
-    expect(getGscdumpV1ProxySiteId(resolved)).toBeNull()
+  // Linking, authorizing, verifying, and submitting change Bing state for the
+  // Site, so a Team viewer must be refused before gscdump is asked.
+  it.each([
+    'sites/s_site-1/indexing/bing/link',
+    'sites/s_site-1/indexing/bing/authorization',
+    'sites/s_site-1/indexing/bing/sitemaps',
+    'sites/s_site-1/indexing/bing/connection/verify',
+  ])('needs write access on the Site for POST %s', (path) => {
+    const operation = resolveGscdumpV1ProxyOperation('POST', 'partner', path, flags)!
+    expect(selectGscdumpV1ProxyTarget(operation, 'u_me')).toEqual({ _tag: 'site', siteId: 's_site-1', requiresWrite: true, path })
+  })
+
+  it('refuses a Team viewer who tries to link Bing for a Team Site', () => {
+    const operation = resolveGscdumpV1ProxyOperation('POST', 'partner', 'sites/s_site-1/indexing/bing/link', flags)!
+    const target = selectGscdumpV1ProxyTarget(operation, 'u_me')
+    const viewer = makeCaller({
+      memberships: [{ teamId: 7, teamName: 'Team', role: 'viewer', isOwner: false, isPersonal: false, firstVisitDismissedAt: null }],
+    })
+    expect(target._tag === 'site' && selectGscdumpV1SiteAccess(viewer, { teamIds: [7] }, target.requiresWrite))
+      .toEqual({ _tag: 'forbidden' })
+  })
+
+  // The browser never learns its gscdump user id. Whatever id it sends, the
+  // upstream path names the caller's own stored id.
+  it('sends the Bing fleet read upstream as the caller\'s own gscdump user', () => {
+    const operation = resolveGscdumpV1ProxyOperation('GET', 'partner', 'users/u_someone-else/indexing/bing/sites', flags)!
+    expect(selectGscdumpV1ProxyTarget(operation, 'u_me')).toEqual({ _tag: 'self', path: 'users/u_me/indexing/bing/sites' })
+  })
+
+  it('refuses a user operation when the caller has no gscdump user', () => {
+    const operation = resolveGscdumpV1ProxyOperation('GET', 'partner', 'users/u_someone-else/indexing/bing/sites', flags)!
+    expect(selectGscdumpV1ProxyTarget(operation, null)).toEqual({ _tag: 'self-missing' })
+  })
+
+  it('forwards an operation with no Site or user as it came', () => {
+    const operation = resolveGscdumpV1ProxyOperation('POST', 'realtime', 'tickets')!
+    expect(selectGscdumpV1ProxyTarget(operation, 'u_me')).toEqual({ _tag: 'caller', path: 'tickets' })
+  })
+})
+
+describe('selectGscdumpV1ProxyBody', () => {
+  const flags = { bing: true }
+  const context = { origin: 'https://requestindexing.com' }
+
+  // Where Microsoft returns the browser is host policy. The browser cannot
+  // choose it, so an open redirect through gscdump's allowlist is impossible.
+  it.each([undefined, null, {}])('sends the Integrations return URL for a Bing authorization body of %j', (raw) => {
+    const operation = resolveGscdumpV1ProxyOperation('POST', 'partner', 'sites/s_site-1/indexing/bing/authorization', flags)!
+    expect(selectGscdumpV1ProxyBody(operation, raw, context)).toEqual({
+      _tag: 'Ok',
+      body: { returnUrl: 'https://requestindexing.com/pro/dashboard/integrations' },
+    })
+  })
+
+  it('refuses a Bing authorization body that names its own return URL', () => {
+    const operation = resolveGscdumpV1ProxyOperation('POST', 'partner', 'sites/s_site-1/indexing/bing/authorization', flags)!
+    expect(selectGscdumpV1ProxyBody(operation, { returnUrl: 'https://nuxtseo.com/pro' }, context)).toEqual({ _tag: 'Err' })
+  })
+
+  it('sends the request origin for a realtime ticket and refuses a chosen one', () => {
+    const operation = resolveGscdumpV1ProxyOperation('POST', 'realtime', 'tickets')!
+    expect(selectGscdumpV1ProxyBody(operation, {}, context)).toEqual({ _tag: 'Ok', body: { origin: 'https://requestindexing.com' } })
+    expect(selectGscdumpV1ProxyBody(operation, { origin: 'https://attacker.example' }, context)).toEqual({ _tag: 'Err' })
+  })
+
+  it('passes any other body through for the schema to parse', () => {
+    const operation = resolveGscdumpV1ProxyOperation('POST', 'partner', 'sites/s_site-1/indexing/bing/sitemaps', flags)!
+    expect(selectGscdumpV1ProxyBody(operation, { url: 'https://example.com/sitemap.xml' }, context))
+      .toEqual({ _tag: 'Ok', body: { url: 'https://example.com/sitemap.xml' } })
   })
 })
 

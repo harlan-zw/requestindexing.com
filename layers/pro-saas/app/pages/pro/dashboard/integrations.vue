@@ -7,15 +7,15 @@
 // Search Console moved here from Account. Account keeps the sign-in identity
 // and the Indexing API grant.
 //
-// Bing is read-only. gscdump's partner v1 protocol reports each Site's Bing
-// connection, but it has no connect or reconnect operation, and this app never
-// calls gscdump's app surface. So the row counts what Bing reports and offers
-// no button.
+// Bing runs on gscdump's partner v1 operations only: the fleet read, link,
+// authorization, and sitemap submit. The whole row stays behind the `bing`
+// feature flag, and gscdump returns a Microsoft round trip to this page.
 import { useMounted } from '@vueuse/core'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { formatTimeAgo } from '#layers/design-system/app/composables/formatting'
 import { useProBingIntegration } from '#layers/pro-gsc/app/composables/useProGscdump'
-import { bingIntegrationStatusLine } from '#layers/pro-gsc/app/utils/bing-view'
+import ProBingIntegrationCard from '#layers/pro-gsc/app/internal/components/bing/ProBingIntegrationCard.vue'
+import { bingIntegrationStatusLine } from '#layers/pro-gsc/app/utils/bing-integration-view'
 import { projectGscIntegrationState } from '#layers/pro-gsc/shared/gsc-integration-state'
 import { INTEGRATIONS_ROUTE } from '#layers/pro-shell/app/utils/integrations-pending'
 
@@ -104,15 +104,44 @@ const gscFailure = computed(() => {
 })
 
 // ── Bing ────────────────────────────────────────────────────────────────
-// Bing reads each Site through its Search Console link, so the row counts
-// linked Sites. The layout already fetched the roster; this reuses it.
+// gscdump reports every Site's Bing state in one read. The layout already
+// fetched the Site roster; this reuses it as the denominator.
 const { data: siteData } = await fetchSites()
 const bing = useProBingIntegration(() => siteData.value?.sites ?? [])
 const bingState = computed(() => bing.state.value)
 const bingStatusLine = computed(() => bingIntegrationStatusLine(bingState.value))
-const bingNote = computed(() => bingState.value._tag === 'unavailable'
-  ? 'Request Indexing cannot connect Bing yet.'
-  : 'You cannot connect or reconnect Bing from Request Indexing yet. Open a Site\'s Indexing: Bing page to see its connection.')
+const bingSummary = computed(() => bingState.value._tag === 'ready' ? bingState.value.summary : null)
+
+// The header action is the one step that unlocks the most Sites: the
+// Microsoft round trip while no grant works, else linking every Site the grant
+// can reach, else the sitemaps Bing lists none for.
+const bingRowOpen = ref(false)
+const bingCard = useTemplateRef<InstanceType<typeof ProBingIntegrationCard>>('bingCard')
+const bingAction = computed(() => {
+  const summary = bingSummary.value
+  if (!summary)
+    return null
+  const grant = bing.grantTarget.value
+  if (grant)
+    return { _tag: 'grant', label: grant.reason === 'reauthorization-required' ? 'Reconnect Bing' : 'Connect Bing' } as const
+  if (summary.linkable)
+    return { _tag: 'link', label: summary.linkable === 1 ? 'Link 1 Site' : `Link ${summary.linkable} Sites` } as const
+  if (summary.sitemapsMissing)
+    return { _tag: 'sitemaps', label: summary.sitemapsMissing === 1 ? 'Submit 1 sitemap' : `Submit ${summary.sitemapsMissing} sitemaps` } as const
+  return null
+})
+function runBingAction() {
+  bingRowOpen.value = true
+  const action = bingAction.value
+  if (action?._tag === 'grant')
+    bingCard.value?.startGrant()
+  else if (action?._tag === 'link')
+    bingCard.value?.linkAll()
+  else if (action?._tag === 'sitemaps')
+    bingCard.value?.submitAll()
+}
+const bingActionLoading = computed(() => !!bingCard.value
+  && (bingCard.value.linkingAll || bingCard.value.submittingAll || bingCard.value.authorizingSiteId !== null))
 </script>
 
 <template>
@@ -193,29 +222,41 @@ const bingNote = computed(() => bingState.value._tag === 'unavailable'
 
         <IntegrationRow
           id="bing"
+          v-model:open="bingRowOpen"
           name="Bing Webmaster Tools"
           logo="i-logos-bing"
           :status="bingStatusLine"
-          :connected="bingState._tag === 'ready' && bingState.connected > 0 && !bingState.reconnect"
+          :connected="!!bingSummary && bingSummary.linked > 0 && !bingSummary.pending"
         >
+          <template v-if="bingAction" #action>
+            <!-- Below `sm` a bulk label squeezes the row name to one word, and
+                 each Site row below carries the same action. The grant stays,
+                 because one round trip unlocks every Site. -->
+            <UiButton
+              size="md"
+              purpose="secondary"
+              :label="bingAction.label"
+              :loading="bingActionLoading"
+              :disabled="bingCard?.busy && !bingActionLoading"
+              class="min-h-11 shrink-0"
+              :class="bingAction._tag === 'grant' ? '' : 'hidden sm:inline-flex'"
+              @click="runBingAction"
+            />
+          </template>
+
           <p class="text-sm text-muted">
             Bing's crawl activity and search performance for each Site. Use it when Google and Bing
             disagree about your pages.
           </p>
-          <p class="mt-2 text-sm text-muted">
-            {{ bingNote }}
+          <p v-if="bingState._tag === 'unavailable' || bingState._tag === 'not-offered'" class="mt-2 text-sm text-muted">
+            Request Indexing cannot link Bing for your account yet.
           </p>
-          <UiAlert
-            v-if="bingState._tag === 'read-failed'"
-            class="mt-3"
-            status="error"
-            title="Bing state could not be read"
-            description="No Site returned its Bing connection. Retry to read them again."
-          >
-            <template #action>
-              <UiButton purpose="secondary" size="xs" icon="refresh" label="Retry" class="min-h-11 sm:min-h-0" @click="bing.refresh()" />
-            </template>
-          </UiAlert>
+          <ProBingIntegrationCard
+            v-else
+            ref="bingCard"
+            :bing="bing"
+            @authorization-returned="bingRowOpen = true"
+          />
         </IntegrationRow>
       </div>
     </section>

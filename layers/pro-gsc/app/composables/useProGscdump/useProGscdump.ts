@@ -137,6 +137,29 @@ export function useProGscdump() {
     return runV1<T>(() => createV1Client().verifySiteBingConnection(input), silent)
   }
 
+  function listSiteBingIndexingEvidence<T = GscdumpV1OperationResponse<'partner.sites.indexing.bing.evidence.list'>['data']>(input: GscdumpV1OperationInput<'partner.sites.indexing.bing.evidence.list'>, silent = false) {
+    return runV1<T>(() => createV1Client().listSiteBingIndexingEvidence(input), silent)
+  }
+
+  // The fleet read names a gscdump user. The browser sends a placeholder id,
+  // and the proxy always substitutes the caller's own.
+  function listUserBingSites<T = GscdumpV1OperationResponse<'partner.users.indexing.bing.sites.list'>['data']>(input: GscdumpV1OperationInput<'partner.users.indexing.bing.sites.list'>, silent = false) {
+    return runV1<T>(() => createV1Client().listUserBingSites(input), silent)
+  }
+
+  function linkSiteBing<T = GscdumpV1OperationResponse<'partner.sites.indexing.bing.link.create'>['data']>(input: GscdumpV1OperationInput<'partner.sites.indexing.bing.link.create'>, silent = false) {
+    return runV1<T>(() => createV1Client().linkSiteBing(input), silent)
+  }
+
+  // The proxy sets `returnUrl`. The browser sends an empty body.
+  function createSiteBingAuthorization<T = GscdumpV1OperationResponse<'partner.sites.indexing.bing.authorization.create'>['data']>(input: GscdumpV1OperationInput<'partner.sites.indexing.bing.authorization.create'>, silent = false) {
+    return runV1<T>(() => createV1Client().createSiteBingAuthorization(input), silent)
+  }
+
+  function submitSiteBingSitemap<T = GscdumpV1OperationResponse<'partner.sites.indexing.bing.sitemaps.submit'>['data']>(input: GscdumpV1OperationInput<'partner.sites.indexing.bing.sitemaps.submit'>, silent = false) {
+    return runV1<T>(() => createV1Client().submitSiteBingSitemap(input), silent)
+  }
+
   function getSiteIndexNowConnection(input: GscdumpV1OperationInput<'partner.sites.indexing.indexnow.connection.get'>, silent = false) {
     return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.connection.get'>['data']>(
       () => createV1Client().getSiteIndexNowConnection(input),
@@ -181,8 +204,13 @@ export function useProGscdump() {
     createSitemapAction,
     getCanonicalMismatches,
     getSiteAnalysis,
+    createSiteBingAuthorization,
     getSiteBingConnection,
     getSiteBingData,
+    linkSiteBing,
+    listSiteBingIndexingEvidence,
+    listUserBingSites,
+    submitSiteBingSitemap,
     getSiteIndexing,
     getSiteIndexingDiagnostics,
     getSiteSitemapChanges,

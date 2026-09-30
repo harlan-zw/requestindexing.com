@@ -12,8 +12,9 @@ import { eq } from 'drizzle-orm'
 import { createError, getQuery, getRequestHeader, getRequestURL, getRouterParam, readBody } from 'h3'
 import { teamSites } from '~~/layers/core/server/db/schema'
 import {
-  getGscdumpV1ProxySiteId,
   resolveGscdumpV1ProxyOperation,
+  selectGscdumpV1ProxyBody,
+  selectGscdumpV1ProxyTarget,
   selectGscdumpV1SiteAccess,
 } from '#layers/pro-gsc/server/internal/gscdump-v1-browser-proxy'
 import { assertGscdumpBrowserUnsafeMethodOrigin } from '#layers/pro-gsc/server/utils/gscdump-browser-origin'
@@ -73,17 +74,12 @@ async function proxyBody(
   }
 
   const raw = await readBody<unknown>(event)
-  // A realtime ticket's origin is host policy, not client input. The browser
-  // may send `{}` but cannot choose or smuggle the upstream origin.
-  const candidate = operation.operation.id === 'realtime.tickets.create'
-    ? (() => {
-        if (raw !== undefined && raw !== null
-          && (typeof raw !== 'object' || Array.isArray(raw) || Object.keys(raw as object).length > 0)) {
-          throw createError({ statusCode: 400, statusMessage: 'invalid_request' })
-        }
-        return { origin: getRequestURL(event).origin }
-      })()
-    : raw
+  // The host sets a realtime ticket's origin and a Bing authorization's return
+  // URL. The browser may send `{}` for those, and cannot choose either value.
+  const policy = selectGscdumpV1ProxyBody(operation, raw, { origin: getRequestURL(event).origin })
+  if (policy._tag === 'Err')
+    throw createError({ statusCode: 400, statusMessage: 'invalid_request' })
+  const candidate = policy.body
 
   const schema = descriptor.request.body
   if (!schema) {
@@ -128,17 +124,20 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
 
   const credentialRow = await db.select({
     apiKey: users.gscdumpApiKey,
+    userId: users.gscdumpUserId,
   }).from(users).where(eq(users.userId, caller.user.id)).get()
 
-  const upstreamSiteId = getGscdumpV1ProxySiteId(operation)
-  if (upstreamSiteId) {
+  const target = selectGscdumpV1ProxyTarget(operation, credentialRow?.userId ?? null)
+  if (target._tag === 'self-missing')
+    throw createError({ statusCode: 401, statusMessage: 'gscdump_api_key_missing' })
+  if (target._tag === 'site') {
     const rows = await db.select({
       owningTeamId: sites.teamId,
       linkedTeamId: teamSites.teamId,
     })
       .from(sites)
       .leftJoin(teamSites, eq(teamSites.siteId, sites.id))
-      .where(eq(sites.gscdumpSiteId, upstreamSiteId))
+      .where(eq(sites.gscdumpSiteId, target.siteId))
       .all()
 
     const site = rows.length
@@ -150,7 +149,7 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
         }
       : null
 
-    const access = selectGscdumpV1SiteAccess(caller, site, descriptor.semantics.kind === 'mutation')
+    const access = selectGscdumpV1SiteAccess(caller, site, target.requiresWrite)
     if (access._tag === 'site_not_found')
       throw createError({ statusCode: 404, statusMessage: 'not_found' })
     if (access._tag === 'forbidden')
@@ -164,7 +163,9 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
   if (descriptor.method !== 'GET')
     assertGscdumpBrowserUnsafeMethodOrigin(event)
 
-  const upstream = new URL(`${getGscdumpApiUrl(event)}/${operation.surface.name}/v1/${operation.path}`)
+  // A user operation's path names the caller's own gscdump user, whatever id
+  // the browser sent (`selectGscdumpV1ProxyTarget`).
+  const upstream = new URL(`${getGscdumpApiUrl(event)}/${operation.surface.name}/v1/${target.path}`)
   upstream.search = proxyQuery(event, descriptor).toString()
 
   const body = await proxyBody(event, operation, descriptor)
