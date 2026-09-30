@@ -5,7 +5,6 @@ import type { Caller } from '../layers/pro-saas/shared/caller'
 import { createError, defineEventHandler } from 'h3'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { isAdminEmail } from '../apps/admin/server/utils/admin'
-import { checkTeamSiteSelection } from '../layers/pro-saas/server/utils/team-site-limit'
 import { migratedSqlite, proDatabase, seedMembership, seedSite, seedUser, siteRow } from './utils/pro-database'
 
 // Team is the one ownership axis for a Site. `sites.owner_id` records who
@@ -31,7 +30,6 @@ vi.stubGlobal('getRouterParam', () => undefined)
 vi.stubGlobal('getUserSession', async () => h.session)
 vi.stubGlobal('clearUserSession', vi.fn())
 vi.stubGlobal('isAdminEmail', isAdminEmail)
-vi.stubGlobal('checkTeamSiteSelection', checkTeamSiteSelection)
 
 let sqlite: DatabaseSync
 
