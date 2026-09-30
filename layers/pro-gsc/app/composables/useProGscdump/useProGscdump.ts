@@ -113,10 +113,6 @@ export function useProGscdump() {
     return runV1<T>(() => createV1Client().listSitemapUrls(input), silent)
   }
 
-  function getTopAssociation<T = GscdumpV1OperationResponse<'partner.sites.top.association.get'>['data']>(input: GscdumpV1OperationInput<'partner.sites.top.association.get'>, silent = false) {
-    return runV1<T>(() => createV1Client().getTopAssociation(input), silent)
-  }
-
   function getCanonicalMismatches<T = GscdumpV1OperationResponse<'partner.sites.canonical.mismatches.get'>['data']>(input: GscdumpV1OperationInput<'partner.sites.canonical.mismatches.get'>, silent = false) {
     return runV1<T>(() => createV1Client().getCanonicalMismatches(input), silent)
   }
@@ -189,7 +185,6 @@ export function useProGscdump() {
     getSiteSitemaps,
     getPageTrend,
     getQueryTrend,
-    getTopAssociation,
     listSiteIndexingTransitions,
     listSitemapUrls,
     queryKeywordSparklines,

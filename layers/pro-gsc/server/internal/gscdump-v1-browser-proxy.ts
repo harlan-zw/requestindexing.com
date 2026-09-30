@@ -39,7 +39,6 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteSitemapChanges },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.createSitemapAction },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.recoverSitePermission },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getTopAssociation },
   // The tables resolve one sparkline per visible row in a single call, and the
   // entity trend panels read the site's own daily query and page counts.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.queryKeywordSparklines },

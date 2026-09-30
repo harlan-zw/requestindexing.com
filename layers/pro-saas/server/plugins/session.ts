@@ -112,8 +112,8 @@ export default defineNitroPlugin(() => {
     // These three used to read `user.gscConnected` / `user.gscEmail` /
     // `user.googleScopes`, which the live `users` table has never had: the
     // reads were always `undefined`, so `gscConnected` was permanently false
-    // for every user and `pro-gate.global.ts` plus both integration-readiness
-    // policies gated on a constant. Derived here the same way
+    // for every user and `pro-gate.global.ts` plus the integration-readiness
+    // policy gated on a constant. Derived here the same way
     // `/api/pro/gsc-properties` derives it.
     const googleAccount = await db.select()
       .from(googleAccounts)
