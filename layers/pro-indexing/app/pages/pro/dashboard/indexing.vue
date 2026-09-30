@@ -58,7 +58,10 @@ const gscConnected = computed(() => resolveGscConnection({
 // The same shared Search Console period the Site pages read. Compare is
 // hidden: indexing draws no previous-period overlay.
 const { period, compareMode, stableData } = useProGscFilters()
-const days = computed(() => periodToDateRange(period.value, stableData.value).days)
+// `partner.sites.indexing.get` refuses `days` above 90, and a refused read
+// fails every Site at once, so longer periods read the latest 90 days.
+const INDEXING_MAX_DAYS = 90
+const days = computed(() => Math.min(INDEXING_MAX_DAYS, periodToDateRange(period.value, stableData.value).days))
 
 const { readOf, retry } = useFleetIndexing(sites, days)
 
