@@ -348,6 +348,14 @@ async function handleReinspect(url: GscdumpIndexingUrl) {
           icon: 'clock',
         })
         return
+      case 'Refused':
+        toast.add({
+          title: 'Re-check failed',
+          description: outcome.message,
+          color: 'warning',
+          icon: 'warning',
+        })
+        return
       case 'Checked':
         inspectQuota.value = { remaining: outcome.remaining, limit: outcome.limit }
         toast.add({

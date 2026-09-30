@@ -181,6 +181,15 @@ describe('readInspectOutcome', () => {
     })).toEqual({ _tag: 'RateLimited', retryAfterSeconds: 7200 })
   })
 
+  it('reports a Free allowance refusal with its own message, apart from the daily limit', () => {
+    const message = 'You used the 5,000 URL Inspections in this month\'s Free allowance. URL Inspection starts again on November 1.'
+    expect(readInspectOutcome({
+      error: 'refused',
+      refusal: { reason: 'inspection_allowance', limit: 5_000, resetsAt: '2026-11-01' },
+      message,
+    })).toEqual({ _tag: 'Refused', message })
+  })
+
   it('reports the new coverage state and the quota left', () => {
     expect(readInspectOutcome({ ...base, results: [result] }))
       .toEqual({ _tag: 'Checked', coverage: 'Submitted and indexed', remaining: 1799, limit: 1800 })

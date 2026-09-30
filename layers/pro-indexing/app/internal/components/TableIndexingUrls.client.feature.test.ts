@@ -274,6 +274,19 @@ it('stops re-checks once the daily URL Inspection limit is reached', async () =>
   expect(button(host, 'Re-check with Google')!.disabled).toBe(true)
 })
 
+it('explains a Free allowance refusal in its own words, never as the daily limit', async () => {
+  const message = 'You used the 5,000 URL Inspections in this month\'s Free allowance. URL Inspection starts again on November 1.'
+  fixture.inspect.mockResolvedValue({ error: 'refused', refusal: { reason: 'inspection_allowance', limit: 5_000, resetsAt: '2026-11-01' }, message })
+  const host = mount({})
+  button(host, 'Re-check with Google')!.click()
+  await flush()
+
+  expect(fixture.toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Re-check failed', description: message }))
+  expect(fixture.toastAdd).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Daily URL Inspection limit reached' }))
+  expect(fixture.refresh).not.toHaveBeenCalled()
+  expect(button(host, 'Re-check with Google')!.title).not.toContain('daily URL Inspection limit')
+})
+
 it('says why a failed re-check failed', async () => {
   fixture.inspect.mockRejectedValue(new Error('network down'))
   const host = mount({})

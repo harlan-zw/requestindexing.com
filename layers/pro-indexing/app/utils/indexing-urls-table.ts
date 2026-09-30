@@ -1,4 +1,5 @@
 import type { IssueSeverity } from '@gscdump/sdk/indexing-issues'
+import type { GscdumpInspectRefused } from '#layers/pro-gsc/app/composables/useProGscdump'
 import type {
   GscdumpIndexingDiagnosticsResponse,
   GscdumpIndexingUrl,
@@ -241,6 +242,7 @@ export function retryAfterLabel(seconds: number): string {
 
 export type InspectOutcome
   = | { _tag: 'RateLimited', retryAfterSeconds: number }
+    | { _tag: 'Refused', message: string }
     | { _tag: 'Checked', coverage: string, remaining: number, limit: number }
     | { _tag: 'Failed', reason: string, remaining: number, limit: number }
 
@@ -248,10 +250,16 @@ export type InspectOutcome
  * What one `inspect.create` call for one URL means for the reader. The engine
  * can answer with a result, an error, or a skip; a skip is a failed check too,
  * because the reader asked for a result and got none.
+ *
+ * A refusal (the monthly Free allowance, a held Site, URL Inspection off) is a
+ * different limit from the daily pool, so it keeps its own message.
  */
-export function readInspectOutcome(response: GscdumpInspectResponse | GscdumpInspectRateLimited): InspectOutcome {
-  if ('error' in response)
-    return { _tag: 'RateLimited', retryAfterSeconds: response.retryAfterSeconds }
+export function readInspectOutcome(response: GscdumpInspectResponse | GscdumpInspectRateLimited | GscdumpInspectRefused): InspectOutcome {
+  if ('error' in response) {
+    return response.error === 'refused'
+      ? { _tag: 'Refused', message: response.message }
+      : { _tag: 'RateLimited', retryAfterSeconds: response.retryAfterSeconds }
+  }
   const { remaining, limit } = response.rateLimit
   const result = response.results[0]
   if (result)
