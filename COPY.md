@@ -123,7 +123,7 @@ These assets apply to Site connection, held Sites, URL Inspection refusals, the 
 | Held, size unknown | Request Indexing could not measure the size of this Site, so its Search Console data is not imported. Remove the Site and connect it again to retry. |
 | Held, size pending | Request Indexing is measuring the size of this Site. The import of its Search Console data starts when the measurement succeeds. |
 | URL Inspection allowance reached | You used the {limit} URL Inspections in this month's Free allowance. URL Inspection starts again on {date}. |
-| URL Inspection off | URL Inspection is off for this Site, so its index status does not update. To turn it on, email harlan@harlanzw.com. |
+| URL Inspection off | URL Inspection is off for this Site. Request Indexing cannot inspect its URLs right now. |
 | Usage meter labels | Sites · Preserved rows · URL Inspections this month |
 | Usage, Sites left | {count} more Sites fit your Free allowance. (One: 1 more Site fits your Free allowance.) |
 | Usage, Sites full | Your Free allowance is full. Remove a Site to connect another. |
@@ -172,3 +172,6 @@ section above, then delete it from this list.
 2. **Three descriptions of the product ship.** The site description, the landing meta
    description, and the README second sentence describe Request Indexing three ways, and only
    the README mentions multi-engine. Decide which is canonical for a one-sentence slot.
+3. **No support channel is named here.** The dashboard links a personal email and GitHub issues,
+   but this file names neither as the product's support channel. Refusal and hold copy carries
+   no contact line until one is chosen and recorded as a canonical asset.

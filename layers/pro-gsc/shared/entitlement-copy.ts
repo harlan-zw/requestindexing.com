@@ -64,7 +64,7 @@ export function refusalMessage(refusal: EntitlementRefusal): string {
     case 'site_held':
       return holdMessage(refusal.hold)
     case 'inspection_off':
-      return 'URL Inspection is off for this Site, so its index status does not update. To turn it on, email harlan@harlanzw.com.'
+      return 'URL Inspection is off for this Site. Request Indexing cannot inspect its URLs right now.'
     case 'inspection_allowance':
       return `You used the ${count(refusal.limit)} URL Inspections in this month's Free allowance. URL Inspection starts again on ${formatAllowanceDate(refusal.resetsAt)}.`
   }

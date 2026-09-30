@@ -22,6 +22,7 @@ describe('refusalMessage', () => {
     [{ reason: 'site_allowance', limit: 3 }, 'You have connected all 3 Sites in your Free allowance. Remove a Site to connect another.'],
     [{ reason: 'duplicate_property', siteUrl: 'sc-domain:example.com' }, 'This Search Console property is already connected as sc-domain:example.com. You can connect each property once.'],
     [{ reason: 'inspection_allowance', limit: 5_000, resetsAt: '2026-11-01' }, 'You used the 5,000 URL Inspections in this month\'s Free allowance. URL Inspection starts again on November 1.'],
+    [{ reason: 'inspection_off' }, 'URL Inspection is off for this Site. Request Indexing cannot inspect its URLs right now.'],
   ] as const)('renders %o in Request Indexing copy', (refusal, message) => {
     expect(refusalMessage(refusal)).toBe(message)
   })
