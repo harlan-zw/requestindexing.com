@@ -2,6 +2,7 @@ import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 import { logger } from '~~/shared/server/logger'
 import { sites, users } from '#layers/pro-saas/server/database'
 import { reconcileGscdumpOnboardingForUser } from '../utils/reconcile-gscdump-onboarding'
+import { notRefused } from '../utils/site-registration-refusal'
 
 /**
  * Users reconciled per run. Each one costs a lifecycle read, a team sync, an
@@ -37,6 +38,8 @@ export default defineTask({
       .where(and(
         isNotNull(users.gscdumpUserId),
         isNull(sites.gscdumpSiteId),
+        // A refused Site waits for its user, so it alone never selects them.
+        notRefused(),
       ))
       .orderBy(sql`random()`)
       .limit(USERS_PER_RUN)

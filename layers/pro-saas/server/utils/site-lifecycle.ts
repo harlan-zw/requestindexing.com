@@ -6,7 +6,8 @@ import type { PartnerLifecycleResponse, PartnerLifecycleSite } from '#layers/pro
 import { getOldestGscDate } from 'gscdump'
 import { analyticsStatusToSyncStatus, findLifecycleSite } from '#layers/pro-gsc/server/utils/gscdump-client'
 
-export type SiteSyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
+/** `refused`: gscdump refused to register the Site; it waits for the user. */
+export type SiteSyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error' | 'refused'
 
 export function lifecycleSiteFor(lifecycle: PartnerLifecycleResponse | null, gscdumpSiteId: string | null): PartnerLifecycleSite | null {
   if (!lifecycle || !gscdumpSiteId)
