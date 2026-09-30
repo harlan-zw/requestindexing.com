@@ -14,7 +14,7 @@
 // Returns a per-table summary suitable for storing in an audit log.
 
 import type { H3Event } from 'h3'
-import { eq, inArray, or, sql } from 'drizzle-orm'
+import { and, eq, inArray, notInArray, or, sql } from 'drizzle-orm'
 import { dispatchEvent } from '#domain-events/server'
 import {
   adminEvents,
@@ -119,11 +119,13 @@ export async function deleteUserData(event: H3Event, opts: DeleteUserOptions): P
 
   // Sites belong to a team, so an owned team's sites go with it. `sites.team_id`
   // is ON DELETE RESTRICT, so missing one of these blocks the team delete
-  // rather than silently orphaning it. Sites the user created inside someone
-  // else's team stay with that team; only creator attribution is lost.
+  // rather than silently orphaning it. `sites.owner_id` is creator attribution
+  // and grants nothing: a Site the user created inside someone else's team
+  // stays with that team, and only the attribution is cleared below. Same
+  // scope as nuxtseo.com.
   const ownedSiteRows = ownedTeamIds.length
-    ? await db.select({ id: sites.id }).from(sites).where(or(eq(sites.ownerId, userId), inArray(sites.teamId, ownedTeamIds)))
-    : await db.select({ id: sites.id }).from(sites).where(eq(sites.ownerId, userId))
+    ? await db.select({ id: sites.id }).from(sites).where(inArray(sites.teamId, ownedTeamIds))
+    : []
   const siteIds = ownedSiteRows.map(s => s.id)
 
   const hasSites = () => siteIds.length > 0
@@ -255,6 +257,17 @@ export async function deleteUserData(event: H3Event, opts: DeleteUserOptions): P
       table: 'sites',
       count: () => hasSites() ? scalar(db, sql`select count(*) as c from sites where id in ${siteList()}`) : Promise.resolve(0),
       run: () => hasSites() ? db.delete(sites).where(inArray(sites.id, siteIds)) : Promise.resolve(),
+    },
+    {
+      // Sites the user created on a team they do not own. `sites.owner_id`
+      // references the user, so the attribution goes before the users row.
+      table: 'sites_creator_detached',
+      count: () => hasTeams()
+        ? scalar(db, sql`select count(*) as c from sites where owner_id = ${userId} and team_id not in ${teamList()}`)
+        : scalar(db, sql`select count(*) as c from sites where owner_id = ${userId}`),
+      run: () => db.update(sites).set({ ownerId: null }).where(hasTeams()
+        ? and(eq(sites.ownerId, userId), notInArray(sites.teamId, ownedTeamIds))
+        : eq(sites.ownerId, userId)),
     },
     // ── Owned-team scoped rows ───────────────────────────────────────────
     {

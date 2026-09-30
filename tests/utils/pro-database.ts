@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
+import { drizzle as d1Drizzle } from 'drizzle-orm/d1'
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import * as schema from '../../layers/core/server/db/schema'
 
@@ -38,6 +39,35 @@ export function proDatabase(sqlite: DatabaseSync): ProDatabase {
     // A `get` that matched nothing hands back no row, which the driver reads as undefined.
     return { rows: (method === 'get' ? rows[0] : rows) as unknown[] }
   }, { schema }) as unknown as ProDatabase
+}
+
+// The proxy above cannot tell a raw `db.all(sql)` from a select, so a raw read
+// comes back positional and `row.c` is undefined. Code that counts with raw SQL
+// needs the driver production runs: this is `drizzle-orm/d1` over a binding
+// that answers from the same in-memory SQLite.
+export function d1Database(sqlite: DatabaseSync): ProDatabase {
+  function prepare(sql: string) {
+    let params: never[] = []
+    const statement = {
+      bind: (...args: unknown[]) => {
+        params = args as never[]
+        return statement
+      },
+      all: async () => ({ results: sqlite.prepare(sql).all(...params), success: true, meta: {} }),
+      raw: async () => {
+        const prepared = sqlite.prepare(sql)
+        prepared.setReturnArrays(true)
+        return prepared.all(...params)
+      },
+      first: async () => sqlite.prepare(sql).get(...params) ?? null,
+      run: async () => {
+        const result = sqlite.prepare(sql).run(...params)
+        return { results: [], success: true, meta: { changes: Number(result.changes), last_row_id: Number(result.lastInsertRowid) } }
+      },
+    }
+    return statement
+  }
+  return d1Drizzle({ prepare } as never, { schema }) as unknown as ProDatabase
 }
 
 /** A user who owns a personal team with the same id. */
