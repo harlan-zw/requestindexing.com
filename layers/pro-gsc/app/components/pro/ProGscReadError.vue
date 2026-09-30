@@ -36,6 +36,7 @@ const READ_ACTION = {
   NOT_FOUND: 'none',
   PROVISIONING: 'none',
   RATE_LIMIT: 'none',
+  REFUSED: 'none',
   SERVER: 'none',
   NETWORK: 'none',
   VALIDATION: 'none',

@@ -1,5 +1,10 @@
+import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
+import { useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
+import { readOptionalUserEntitlements, refusalError } from '#layers/pro-gsc/server/utils/user-entitlements'
+import { siteAllowanceOf } from '#layers/pro-gsc/shared/free-allowance'
+import { users } from '#layers/pro-saas/server/database'
+import { defineProApiHandler, getProLogger } from '#layers/pro-saas/server/utils/handler'
 import { registerSite } from '#layers/pro-saas/server/utils/register-site'
 import { ProError } from '#layers/pro-saas/shared/errors'
 
@@ -11,17 +16,25 @@ const bodySchema = z.object({
 export default defineProApiHandler({
   team: { ability: 'manage-sites' },
   body: bodySchema,
-}, async ({ event, team: ctx, body }) => {
-  const result = await registerSite(event, ctx, { url: body.url })
+}, async ({ event, db, caller, team: ctx, body }) => {
+  const result = await registerSite(event, ctx, { url: body.url }, {
+    readSiteAllowance: async () => {
+      const user = await db.select({ gscdumpUserId: users.gscdumpUserId })
+        .from(users)
+        .where(eq(users.userId, caller.user.id))
+        .get()
+      const read = await readOptionalUserEntitlements(user?.gscdumpUserId, useGscdumpClient)
+      if (read._tag === 'Unavailable')
+        getProLogger(event).warn('[sites] gscdump entitlements unavailable:', read.reason)
+      return siteAllowanceOf(read)
+    },
+  })
 
   switch (result._tag) {
     case 'InvalidUrl':
       throw new ProError('validation_failed', { message: result.message })
-    case 'OverLimit':
-      throw new ProError('validation_failed', {
-        message: `Connect up to ${result.max} sites. You already have ${result.selected - 1}.`,
-        details: { reason: 'site_limit', max: result.max },
-      })
+    case 'Refused':
+      throw refusalError(result.refusal)
     case 'AlreadyConnected':
       throw new ProError('conflict', {
         message: 'That site is already connected.',

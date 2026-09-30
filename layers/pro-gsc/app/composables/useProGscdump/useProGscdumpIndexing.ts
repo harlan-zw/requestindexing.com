@@ -1,3 +1,4 @@
+import type { EntitlementRefusal } from '@gscdump/contracts'
 import type {
   GscdumpCanonicalMismatchesResponse,
   GscdumpIndexingDiagnosticsResponse,
@@ -9,6 +10,7 @@ import type {
 } from '../../../shared/gscdump-api'
 import type { GscdumpQueryOptions } from './_internal'
 import { isGscdumpV1Error } from '@gscdump/sdk/v1'
+import { inspectFailureOf } from '../../../shared/entitlement-refusal'
 import { useGscdumpQuery } from './_internal'
 import { useProGscdump } from './useProGscdump'
 
@@ -81,6 +83,19 @@ export function useProGscdumpCanonicalMismatches(siteId: MaybeRefOrGetter<string
 }
 
 /**
+ * A URL Inspection request the inspect UI can explain instead of throwing.
+ *
+ * `refused` is an entitlement refusal: the monthly Free allowance, a held
+ * Site, or URL Inspection switched off. It carries this app's copy, never
+ * gscdump's message. `rate_limited` stays the daily per-Site pool.
+ */
+export interface GscdumpInspectRefused {
+  error: 'refused'
+  refusal: EntitlementRefusal
+  message: string
+}
+
+/**
  * Imperative trigger: manually re-inspect 1..10 URLs against Google's URL
  * Inspection API. Consumes the site's daily 1800-request budget. Caller is
  * responsible for showing toasts; requested silent so the shared error toast
@@ -88,21 +103,24 @@ export function useProGscdumpCanonicalMismatches(siteId: MaybeRefOrGetter<string
  *
  * `partnerRoutes.sites.indexingInspect` was dropped in the 2.0.6 cutover; v1
  * exposes this as the typed `partner.sites.indexing.inspect.create` operation.
- * A full rate limit throws a `GscdumpV1Error` with `code: 'rate_limited'`
- * rather than returning it in the response body, so it is reshaped here into
- * the same `GscdumpInspectRateLimited` union member callers already handle.
+ * A refusal or a full rate limit throws a `GscdumpV1Error`, so both are
+ * reshaped here into union members the caller branches on. Two limits answer
+ * 429: the monthly Free allowance (with `details.reason`) and the daily pool
+ * (without). `inspectFailureOf` keeps them apart.
  */
 export function useProGscdumpInspectUrls() {
   const gscdump = useProGscdump()
-  return async (siteId: string, urls: string[]): Promise<GscdumpInspectResponse | GscdumpInspectRateLimited> => {
+  return async (siteId: string, urls: string[]): Promise<GscdumpInspectResponse | GscdumpInspectRateLimited | GscdumpInspectRefused> => {
     return gscdump.inspectSiteUrls({ params: { siteId }, body: { urls } }, true).catch((error) => {
-      if (isGscdumpV1Error(error) && error.code === 'rate_limited') {
-        const details = error.details as { rateLimit?: GscdumpInspectRateLimited['rateLimit'], retryAfterSeconds?: number }
+      const failure = inspectFailureOf(error)
+      if (failure?._tag === 'Refused')
+        return { error: 'refused', refusal: failure.refusal, message: failure.message } satisfies GscdumpInspectRefused
+      if (failure?._tag === 'DailyPool') {
         return {
           error: 'rate_limited',
-          message: error.message,
-          rateLimit: details.rateLimit ?? { reserved: 0, remaining: 0, limit: 0 },
-          retryAfterSeconds: details.retryAfterSeconds ?? 0,
+          message: isGscdumpV1Error(error) ? error.message : 'Rate limited',
+          rateLimit: failure.rateLimit,
+          retryAfterSeconds: failure.retryAfterSeconds,
         } satisfies GscdumpInspectRateLimited
       }
       throw error
