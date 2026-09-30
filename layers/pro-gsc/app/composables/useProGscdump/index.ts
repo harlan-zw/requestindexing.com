@@ -12,6 +12,7 @@ export { useProGscdumpAnalysis } from './useProGscdumpAnalysis'
 export {
   type BingDataset,
   type BingSiteId,
+  useProBingIntegration,
   useProGscdumpBingConnection,
   useProGscdumpBingData,
   type UseProGscdumpBingDataOptions,

@@ -23,6 +23,7 @@ Indexing API submissions this app still runs itself.
 | signup | users table, /pro/onboarding | Account creation for a person | signup |
 | onboarding | onboarding wizard, users.onboarding_completed_at | First-run setup an account completes once | setup |
 | connect | Connect site controls, registerSite | Attaching a Site to a Team | connect |
+| Integration | no table; `/pro/dashboard/integrations` | External service the app reads from: Google Search Console per account, Bing per Site | Integration |
 | funnel milestone | pro_events table | First-time record of one step toward an active account | (internal) |
 | Submission | indexing_jobs table | Site 1—N Submission, unique on (site, path, transport) | "Submit" |
 | Investigation | indexing_investigations table | Site 1—N Investigation, unique on (site, url, issue) | (not surfaced as a noun) |
@@ -79,6 +80,13 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 **Use for:** prose and labels about attaching a Site.
 **Never:** add, create, or register a Site in prose or in a label. Code keeps `registerSite` and the `site_added` value.
 **Casing:** Match the visible label when naming a control.
+
+### Integration
+**Is:** one external service Request Indexing reads from: Google Search Console and Bing Webmaster Tools. A cross-cutting concept with no table of its own. Search Console state lives on `google_accounts` and gscdump's account status; Bing state lives in gscdump, per Site.
+**Use for:** the Integrations page, its nav entry, and prose that covers more than one service at once.
+**Never:** connector, plugin, hookup, service (as a countable noun), third party.
+**Scope is part of the name.** Search Console authorises once per account. Bing authorises once per Site. A row that hides which one it is misreports coverage.
+**Casing:** `Integration` in prose and UI, `integration` in identifiers.
 
 ### Funnel milestone
 **Is:** one first-time row in `pro_events` marking a step toward an active account.
@@ -175,3 +183,7 @@ entry above, then delete it from this list.
    app's own nouns, but it has never been audited against every route segment and UI label.
    The Site, Team, and Connect entries say "match the visible product label", which is a
    deferral, not a decision. Settle each one against the shipped label.
+2. The Search Console grant control says Connect and Reconnect, on Integrations, in onboarding
+   ("Connect Google"), and in nuxtseo.com. The Connect entry reserves the verb for attaching a
+   Site. Recommended: keep Connect for both, and name the object every time ("Connect a Site",
+   "Connect Google"), because the grant label already ships in three places.

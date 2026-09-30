@@ -1,6 +1,6 @@
 // Ported from nuxtseo.com's `layers/saas/app/composables/useProUserMenu.ts`,
-// cut to what this app offers: no billing, API tokens, preferences,
-// integrations, support page, feedback drawer or workspace creation.
+// cut to what this app offers: no billing, API tokens, preferences, support
+// page, feedback drawer or workspace creation.
 //
 // Three groups, laid out as two columns plus a full-width footer row:
 // Team (switch team, team pages), Account (person pages), then Sign out.
@@ -71,6 +71,8 @@ export function useProUserMenu(options: { singleSite: MaybeRefOrGetter<boolean> 
       // nuxtseo.com's user menu carries "Billing & Usage". The Free allowance
       // is counted per account, so Usage sits with Account here.
       { label: 'Usage', icon: 'gauge', to: '/pro/dashboard/usage' },
+      // Always here. The rail carries Integrations only while one is pending.
+      { label: 'Integrations', icon: 'plug', to: '/pro/dashboard/integrations' },
       { label: 'Developers', icon: 'terminal', to: '/pro/dashboard/developers' },
     ]
 

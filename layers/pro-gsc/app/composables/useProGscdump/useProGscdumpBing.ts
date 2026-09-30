@@ -10,6 +10,9 @@
 
 import type { BingConnectionV1, BingDataQueryV1, BingDataV1 } from '@gscdump/contracts/v1/http'
 import type { BingReportingWindow } from '../../../shared/bing-reporting-window'
+import type { BingSiteRead } from '../../utils/bing-view'
+import { readProFeatureFlags } from '#layers/pro-shell/shared/manifest'
+import { projectBingIntegrationState, toBingConnectionView } from '../../utils/bing-view'
 import { useGscdumpQuery } from './_internal'
 import { useProGscdump } from './useProGscdump'
 
@@ -81,4 +84,43 @@ export function useProGscdumpBingData(
     },
     [dataset, window, limit, offset, enabled],
   )
+}
+
+/**
+ * Every linked Site's Bing connection, summarised for the Integrations row and
+ * the pending rail entry. The partner protocol has no fleet read, so this is
+ * one connection read per Site, and none at all while the `bing` flag is off.
+ * Both callers share the one keyed request set.
+ */
+export function useProBingIntegration(sites: MaybeRefOrGetter<readonly { gscdumpSiteId?: string | null }[]>) {
+  const enabled = computed(() => readProFeatureFlags(useRuntimeConfig().public).bing === true)
+  const siteIds = computed(() => toValue(sites)
+    .map(site => site.gscdumpSiteId)
+    .filter((id): id is string => !!id))
+  const gscdump = useProGscdump()
+
+  const reads = useAsyncData<BingSiteRead[] | null>(
+    () => `pro-gsc:bing-integration:${enabled.value ? siteIds.value.join(',') : 'off'}`,
+    async () => {
+      if (!enabled.value)
+        return []
+      return Promise.all(siteIds.value.map(siteId =>
+        gscdump.getSiteBingConnection<BingConnectionV1>({ params: { siteId } }, true)
+          .then((connection): BingSiteRead => ({ _tag: 'Read', connection: toBingConnectionView(connection) }))
+          // Not swallowed: a failed Site is counted, and the row says the
+          // state could not be read when no Site answered.
+          .catch((): BingSiteRead => ({ _tag: 'Failed' }))))
+    },
+    // `defer`: the nav and the page mount together, and the second caller
+    // must reuse the reads in flight rather than cancel and repeat them.
+    { server: false, lazy: true, default: () => null, dedupe: 'defer' },
+  )
+
+  const state = computed(() => projectBingIntegrationState({
+    enabled: enabled.value,
+    linkedSites: siteIds.value.length,
+    reads: reads.status.value === 'success' ? reads.data.value : null,
+  }))
+
+  return { state, refresh: reads.refresh }
 }

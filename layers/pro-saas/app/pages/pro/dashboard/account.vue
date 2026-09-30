@@ -31,12 +31,6 @@ const displayName = computed(() => user.value?.name || user.value?.email || 'You
 const avatarUrl = computed(() => user.value?.avatarUrl || undefined)
 const providerLabel = computed(() => user.value?.authProvider === 'google' ? 'Google' : 'GitHub')
 
-// Search Console lives on `google_accounts`, not on an identity row. The
-// session already carries the grant state, so the row below is a read of
-// `gscConnected` / `gscEmail` rather than a second request.
-const gscConnected = computed(() => !!session.value?.gscConnected)
-const gscEmail = computed(() => session.value?.gscEmail ?? null)
-const gscConnectHref = `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent('/pro/dashboard/account')}`
 // This page renders through `user-dashboard`, not the shell that reports a
 // scope-missing grant, so it reports its own.
 const gscScopeMissing = computed(() => resolveGscConnection({
@@ -173,50 +167,11 @@ async function deleteAccount() {
 
     <ProConnectedAccounts />
 
-    <section>
-      <ProSectionHeader title="Search Console" icon="chart" />
-      <ProCard variant="default">
-        <div class="flex min-w-0 items-start gap-3">
-          <ProNavIcon icon="google" :variant="gscConnected ? 'success' : 'default'" />
-          <div class="min-w-0 flex-1">
-            <div class="flex items-baseline gap-2">
-              <p class="text-base font-medium text-highlighted">
-                Google Search Console
-              </p>
-              <UBadge
-                size="xs"
-                :color="gscConnected ? 'success' : 'neutral'"
-                variant="subtle"
-              >
-                {{ gscConnected ? 'Connected' : 'Not connected' }}
-              </UBadge>
-            </div>
-            <p v-if="gscConnected" class="text-sm break-words text-muted">
-              <template v-if="gscEmail">
-                {{ gscEmail }} grants access to your properties.
-              </template>
-              <template v-else>
-                This app reads your Search Console properties.
-              </template>
-            </p>
-            <p v-else class="text-sm text-muted">
-              Connect Search Console to load your search data.
-            </p>
-          </div>
-          <UButton
-            v-if="!gscConnected"
-            color="primary"
-            variant="subtle"
-            size="sm"
-            :to="gscConnectHref"
-            external
-            class="shrink-0"
-          >
-            Connect
-          </UButton>
-        </div>
-      </ProCard>
-    </section>
+    <p class="text-sm">
+      <NuxtLink to="/pro/dashboard/integrations" class="text-primary hover:underline">
+        Manage Google Search Console and Bing on Integrations
+      </NuxtLink>
+    </p>
 
     <section>
       <ProSectionHeader title="Indexing API" icon="lock" />

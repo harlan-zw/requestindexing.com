@@ -43,6 +43,7 @@ const navItems = computed<SiteCommandPaletteItem[]>(() => {
     { id: 'team-settings', label: 'Team settings', icon: 'settings', to: '/pro/dashboard/team/settings', keywords: ['workspace'] },
     { id: 'members', label: 'Members', icon: 'users', to: '/pro/dashboard/team/members', keywords: ['invite', 'team'] },
     { id: 'account', label: 'Account', icon: 'user', to: '/pro/dashboard/account' },
+    { id: 'integrations', label: 'Integrations', icon: 'plug', to: '/pro/dashboard/integrations', keywords: ['search console', 'gsc', 'bing', 'reconnect'] },
     { id: 'developers', label: 'Developers', icon: 'terminal', to: '/pro/dashboard/developers', keywords: ['api', 'mcp', 'cli', 'gscdump'] },
   ]
 
