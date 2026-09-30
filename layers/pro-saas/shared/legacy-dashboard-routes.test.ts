@@ -11,7 +11,10 @@ describe('mapLegacyDashboardRoute', () => {
   it('moves the roster and the team pages across unchanged', () => {
     expect(mapLegacyDashboardRoute('/dashboard')).toEqual({ _tag: 'Redirect', path: '/pro/dashboard' })
     expect(mapLegacyDashboardRoute('/dashboard/team/members')).toEqual({ _tag: 'Redirect', path: '/pro/dashboard/team/members' })
-    expect(mapLegacyDashboardRoute('/dashboard/web-indexing')).toEqual({ _tag: 'Redirect', path: '/pro/dashboard/web-indexing' })
+  })
+
+  it('sends the all-sites indexing page to its new route in one hop', () => {
+    expect(mapLegacyDashboardRoute('/dashboard/web-indexing')).toEqual({ _tag: 'Redirect', path: '/pro/dashboard/indexing' })
   })
 
   it('hands a per-site page back as a slug to resolve, never as a finished path', () => {

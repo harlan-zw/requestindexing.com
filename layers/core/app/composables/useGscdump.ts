@@ -5,7 +5,6 @@ import type {
   GscdumpDataResponse,
   GscdumpDataRow,
   GscdumpIndexingDiagnosticsResponse,
-  GscdumpIndexingResponse,
   GscdumpIndexingUrlsResponse,
   GscdumpMeta,
   GscdumpPageTrendResponse,
@@ -205,10 +204,6 @@ export function useGscdump() {
     return runV1<GscdumpAnalysisResponse>(client => client.getSiteAnalysis(input), silent)
   }
 
-  function getSiteIndexing(input: GscdumpV1OperationInput<'partner.sites.indexing.get'>, silent = false) {
-    return runV1<GscdumpIndexingResponse>(client => client.getSiteIndexing(input), silent)
-  }
-
   function listSiteIndexingUrls(input: GscdumpV1OperationInput<'partner.sites.indexing.urls.list'>, silent = false) {
     return runV1<GscdumpIndexingUrlsResponse>(client => client.listSiteIndexingUrls(input), silent)
   }
@@ -228,7 +223,6 @@ export function useGscdump() {
   return {
     error,
     getSiteAnalysis,
-    getSiteIndexing,
     getSiteIndexingDiagnostics,
     getSiteSitemaps,
     getPageTrend,
@@ -375,31 +369,6 @@ export function useGscdumpSitemaps(
       server: false,
       immediate: options?.immediate ?? true,
       watch: (options?.watch ?? true) ? [_siteId] : undefined,
-    },
-  )
-}
-
-export function useGscdumpIndexing(
-  siteId: MaybeRefOrGetter<string>,
-  days?: MaybeRefOrGetter<number>,
-  options?: { immediate?: boolean, watch?: boolean },
-) {
-  const _siteId = computed(() => toValue(siteId))
-  const _days = computed(() => toValue(days) ?? 28)
-  const key = computed(() => `gscdump:indexing:${_siteId.value}:${_days.value}`)
-
-  return useAsyncData<GscdumpIndexingResponse>(
-    key,
-    async () => {
-      if (!_siteId.value)
-        return null as unknown as GscdumpIndexingResponse
-      const { getSiteIndexing } = useGscdump()
-      return getSiteIndexing({ params: { siteId: _siteId.value }, query: { days: _days.value } })
-    },
-    {
-      server: false,
-      immediate: options?.immediate ?? true,
-      watch: (options?.watch ?? true) ? [_siteId, _days] : undefined,
     },
   )
 }

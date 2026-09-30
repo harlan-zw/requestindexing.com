@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import type { DropdownMenuItem } from '@nuxt/ui'
-import type { SiteFleetRow } from '~~/layers/core/app/types'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import ProAbilityGate from '#layers/pro-saas/app/components/pro/team/ProAbilityGate.vue'
+import { SITE_SYNC_LABELS } from '#layers/pro-saas/shared/site-sync'
 
 // The Site roster, ported from nuxtseo.com's `sites/index.vue` and cut to what
 // this app offers: no groups, no pause, no crawl or analytics columns. Each row
@@ -28,20 +28,12 @@ interface SiteRow {
   to: string
 }
 
-const SYNC_LABELS: Record<SiteFleetRow['syncStatus'], string> = {
-  idle: 'Waiting to sync',
-  pending: 'Waiting to sync',
-  syncing: 'Syncing',
-  synced: 'Synced',
-  error: 'Sync failed',
-}
-
 const rows = computed<SiteRow[]>(() => (data.value?.sites ?? []).map(site => ({
   siteId: site.siteId,
   label: siteLabel(site),
   url: siteLabel(site),
   property: site.property,
-  syncLabel: SYNC_LABELS[site.syncStatus],
+  syncLabel: SITE_SYNC_LABELS[site.syncStatus],
   to: `/pro/dashboard/sites/${site.siteId}`,
 })))
 
