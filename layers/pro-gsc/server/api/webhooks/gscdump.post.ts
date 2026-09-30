@@ -160,7 +160,6 @@ export default defineEventHandler(async (event) => {
     scheduleGscdumpOnboardingReconcile(event, {
       userId: localUser.userId,
       gscdumpUserId: envelope.userId!,
-      currentTeamId: localUser.currentTeamId ?? null,
     })
   }
 

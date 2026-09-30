@@ -5,6 +5,7 @@ import { logger } from '~~/shared/server/logger'
 import { lookupUser } from '~~/shared/server/user-lookup'
 import { readGscdumpAccountStatus } from '#layers/pro-gsc/server/utils/gscdump-account-status'
 import * as schema from '#layers/pro-saas/server/database'
+import { readCurrentTeam } from '../utils/current-team'
 import { buildGscSessionFields } from '../utils/gsc-session-fields'
 import { hasAuthenticatedSession } from '../utils/session-auth-state'
 
@@ -66,6 +67,12 @@ export default defineNitroPlugin(() => {
     }
 
     const user = lookup.user
+    // Checked against membership: a stale `current_team_id` must not publish
+    // a team's name or Sites to someone who left it.
+    const currentTeam = await readCurrentTeam(db, user.userId).catch((error: unknown) => {
+      logger.error('[session] team lookup failed:', error)
+      return null
+    })
 
     // Remap session.user from the primary identity row. Provider-agnostic
     // shape (id/name/avatarUrl/authProvider) on every authenticated request.
@@ -87,17 +94,14 @@ export default defineNitroPlugin(() => {
         name: primaryIdentity.displayName ?? null,
         avatarUrl: primaryIdentity.avatarUrl ?? null,
         authProvider: primaryIdentity.provider as AuthProviderId,
-        currentTeamId: user.currentTeamId ?? null,
+        currentTeamId: currentTeam?.teamId ?? null,
       }
+    }
+    else {
+      session.user.currentTeamId = currentTeam?.teamId ?? null
     }
 
     // The dashboard chrome reads `session.team` for the Team label.
-    const currentTeam = user.currentTeamId
-      ? await db.query.teams.findFirst({ where: eq(schema.teams.teamId, user.currentTeamId) }).catch((error: unknown) => {
-          logger.error('[session] team lookup failed:', error)
-          return null
-        })
-      : null
     session.team = currentTeam
       ? {
           teamId: currentTeam.teamId,
@@ -159,10 +163,10 @@ export default defineNitroPlugin(() => {
     session.onboardingCompletedAt = toIso(user.onboardingCompletedAt)
 
     // `sites.team_id` is the ownership axis, so the roster is one read.
-    session.hasSites = user.currentTeamId
+    session.hasSites = currentTeam
       ? await db.select({ siteId: schema.sites.id })
           .from(schema.sites)
-          .where(eq(schema.sites.teamId, user.currentTeamId))
+          .where(eq(schema.sites.teamId, currentTeam.teamId))
           .limit(1)
           .then(rows => rows.length > 0)
           .catch((error: unknown) => {

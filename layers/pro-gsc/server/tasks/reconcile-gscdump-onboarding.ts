@@ -31,7 +31,6 @@ export default defineTask({
     const rows = await db.selectDistinct({
       userId: users.userId,
       gscdumpUserId: users.gscdumpUserId,
-      currentTeamId: users.currentTeamId,
     })
       .from(users)
       .innerJoin(sites, eq(sites.teamId, users.currentTeamId))
@@ -56,7 +55,6 @@ export default defineTask({
       const result = await reconcileGscdumpOnboardingForUser({
         userId: row.userId,
         gscdumpUserId: row.gscdumpUserId,
-        currentTeamId: row.currentTeamId,
         waitForReady: false,
       }).catch((error: unknown) => {
         // One user's failure (a 429, an engine error) must not stop the batch.
