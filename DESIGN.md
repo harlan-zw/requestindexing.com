@@ -185,7 +185,7 @@ writing a label, heading, empty state or error.
 | `font-title` | Poppins display family via Tailwind utility | Hero text, section titles, marketing headings — never body copy |
 | `.bg-verdant` | Two emerald radial blooms over `bg-muted` (light) / `bg-default` (dark). Signature hero/banner wash | Any large branded background — replaces multi-hue gradients |
 | `.divider-tilt` | `::after` pseudo-element with a -2deg tilted bar, 70px below the parent. Keeps the existing "growing into next section" motif | Bottom of hero or any band that should bleed into the following section |
-| `.dashboard-container` | Centres dashboard content at 1280px with responsive inline padding | Shared dashboard page headers and bodies |
+| `.pro-container` | Centres dashboard content at 1280px with responsive inline padding. Shared with nuxtseo.com | Dashboard page headers and bodies |
 
 ## Design Decisions
 

@@ -1350,19 +1350,6 @@ textarea {
   --ui-radius: 0.625rem;
 }
 
-.dashboard-container {
-  width: 100%;
-  max-width: 80rem;
-  margin-inline: auto;
-  padding-inline: 1rem;
-}
-
-@media (min-width: 40rem) {
-  .dashboard-container {
-    padding-inline: 1.5rem;
-  }
-}
-
 /* Verdant wash — organic emerald glow on a warm cream surface. Replaces the
    rainbow hero gradient. Two soft radial blooms keep energy in the corners
    without adding a non-brand hue. */
