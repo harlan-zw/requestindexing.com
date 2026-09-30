@@ -16,6 +16,12 @@ import { readSiteLookup, siteLookupKey } from '#layers/pro-saas/shared/site-look
 const route = useRoute()
 const router = useRouter()
 
+// Compact dashboard type, flat cards and tabular figures, as nuxtseo.com's
+// `ProDashboardShell` sets them. The class goes on `<html>` because the
+// palette keys on `.light.dashboard-theme` / `.dark.dashboard-theme`, and the
+// colour-mode class only ever lands there.
+useHead({ htmlAttrs: { class: 'dashboard-theme' } })
+
 // Every Search Console connect link returns to a dashboard page. When Google
 // gave no Search Console scope, the callback marks that page with
 // `?error=gsc_scope_missing`, so the shell is the one place that says so. A

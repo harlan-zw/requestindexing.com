@@ -113,7 +113,7 @@ components:
 | Mono | system monospace | No custom mono font registered. Used only for URL paths in dashboard cards (the existing hero mock URLs). Default `ui-monospace` keeps install cost down. |
 
 - **Type system**: Fixed `rem` scale. The product is half marketing, half dashboard — fluid type would over-amplify hero text on mobile and under-scale dashboard data. Use Tailwind's `text-sm`/`text-base`/`text-xl`/etc.
-- **OpenType features**: `font-feature-settings: "tnum"` on data tables and dashboard numerics for column alignment. Not enabled globally because tabular nums look stiff in body copy.
+- **OpenType features**: `.dashboard-theme` sets tabular figures on all dashboard text, so columns and KPIs align. Marketing keeps proportional figures because tabular nums look stiff in body copy; add `tabular-nums` only to a marketing numeric column.
 - **Heading conventions**: hero display is `text-5xl sm:text-6xl lg:text-7xl font-title font-bold tracking-[-0.03em]`. Section titles are `text-3xl md:text-4xl font-title font-semibold`. Body copy never uses `font-title`.
 
 ## Icons

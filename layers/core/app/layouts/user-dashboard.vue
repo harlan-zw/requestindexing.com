@@ -10,6 +10,10 @@ import type { UiNavLink } from '#layers/design-system/app/shared/nav'
 const route = useRoute()
 const { session } = useUserSession()
 
+// Account settings are dashboard pages, so they take the same compact theme
+// as `pro-dashboard.vue`. nuxtseo.com renders them inside its dashboard shell.
+useHead({ htmlAttrs: { class: 'dashboard-theme' } })
+
 // Onboarding is gated by `middleware/onboarding.global.ts`, which decides
 // before the page mounts. This layout no longer redirects.
 
@@ -92,7 +96,7 @@ const supportLinks: UiNavLink[] = [
 
     <header class="sticky top-0 z-20 border-b border-default bg-default/85 backdrop-blur-sm">
       <div class="dashboard-container flex min-h-16 items-center justify-between gap-4">
-        <h1 class="flex min-w-0 items-center gap-2 font-title text-xl font-semibold tracking-tight text-highlighted">
+        <h1 class="flex min-w-0 items-center gap-2 text-title text-highlighted">
           <UIcon v-if="pageIcon" :name="pageIcon" class="size-5 shrink-0 text-primary" aria-hidden="true" />
           <span class="truncate">{{ pageTitle }}</span>
         </h1>
