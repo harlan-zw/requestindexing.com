@@ -4,6 +4,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { logger } from '~~/shared/server/logger'
 import { dispatchEvent } from '#domain-events/server'
 import { sites } from '#layers/pro-saas/server/database'
+import { readCurrentTeam } from '#layers/pro-saas/server/utils/current-team'
 import { autoLinkGsc } from './auto-link-gsc'
 import { rememberGscdumpAccountStatus } from './gscdump-account-status'
 import { useGscdumpClient } from './gscdump-client'
@@ -15,7 +16,6 @@ export interface ReconcileGscdumpOnboardingOptions {
   event?: H3Event
   userId: number
   gscdumpUserId: string
-  currentTeamId?: number | null
   waitForReady?: boolean
 }
 
@@ -54,7 +54,7 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     return {
       userId,
       gscdumpUserId,
-      teamId: opts.currentTeamId ?? null,
+      teamId: null,
       linkedSites: 0,
       attemptedSites: 0,
     }
@@ -65,7 +65,7 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     return {
       userId,
       gscdumpUserId,
-      teamId: opts.currentTeamId ?? null,
+      teamId: null,
       linkedSites: 0,
       attemptedSites: 0,
     }
@@ -93,7 +93,11 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
   await syncUserGscdumpTeams(event, { userId, gscdumpUserId })
     .catch((e: unknown) => logger.error('[gscdump reconcile] syncUserGscdumpTeams failed:', e))
 
-  const currentTeamId = opts.currentTeamId ?? null
+  // The team comes from the database, checked against membership, never from
+  // the caller. A removed member's cookie still names the old team, and
+  // linking that team's Sites to this grant would block its members from
+  // linking their own.
+  const currentTeamId = (await readCurrentTeam(db, userId))?.teamId ?? null
   if (!currentTeamId) {
     return {
       userId,
@@ -112,7 +116,7 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     .select({ id: sites.id, url: sites.property })
     .from(sites)
     .where(and(
-      currentTeamId ? eq(sites.teamId, currentTeamId) : eq(sites.ownerId, userId),
+      eq(sites.teamId, currentTeamId),
       isNull(sites.gscdumpSiteId),
       notRefused(),
     ))

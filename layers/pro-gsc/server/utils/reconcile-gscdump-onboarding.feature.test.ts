@@ -69,7 +69,7 @@ describe('reconcileGscdumpOnboardingForUser and refused Sites', () => {
   })
 
   function reconcile() {
-    return reconcileGscdumpOnboardingForUser({ userId, gscdumpUserId: 'u_ada', currentTeamId: teamId, waitForReady: false })
+    return reconcileGscdumpOnboardingForUser({ userId, gscdumpUserId: 'u_ada', waitForReady: false })
   }
 
   it('records a refused registration on the Site and links the rest', async () => {
@@ -87,6 +87,25 @@ describe('reconcileGscdumpOnboardingForUser and refused Sites', () => {
     const again = await reconcile()
 
     expect(again).toMatchObject({ attemptedSites: 0, linkedSites: 0 })
+    expect(registeredUrls()).toEqual([])
+  })
+
+  // A removed member's cookie, and a `users.current_team_id` written before
+  // removal reset it, can still name the old team. Linking that team's Sites
+  // to this user's grant would block its members from linking their own.
+  it('links nothing on a team the user has left', async () => {
+    const bob = await createUserWithPersonalTeam(
+      db,
+      { name: 'Bob', email: 'bob@example.test', avatar: '', lastLogin: 1, sub: 'sub-bob' },
+      { provider: 'google', providerUserId: 'sub-bob', email: 'bob@example.test', emailVerified: true, displayName: 'Bob' },
+    )
+    sqlite.prepare('INSERT INTO sites (id, public_id, team_id, owner_id, property, domain, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, 0, 0)')
+      .run('site-bob', 's_bob', bob.team.teamId, userId, 'https://fits.example/', 'fits.example')
+    sqlite.prepare('UPDATE users SET current_team_id = ? WHERE user_id = ?').run(bob.team.teamId, userId)
+
+    const result = await reconcile()
+
+    expect(result).toMatchObject({ attemptedSites: 0, linkedSites: 0 })
     expect(registeredUrls()).toEqual([])
   })
 

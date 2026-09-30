@@ -7,10 +7,18 @@ import { users } from '~~/layers/core/server/db/schema'
 const unsubscribers = new Map<string, () => void>()
 
 export default defineWebSocketHandler({
-  // Refuse the upgrade without a session, as nuxt-auth-utils documents. crossws
-  // sets `context` before this hook runs, but its type still marks it optional.
+  // Refuse the upgrade without a signed-in user. `requireUserSession` cannot:
+  // an upgrade request is not an H3Event, so h3 refuses to start a session for
+  // it and throws a plain Error before nuxt-auth-utils reaches its 401. crossws
+  // ends the upgrade only on a Response, so that Error surfaced as a 500.
+  // crossws sets `context` before this hook runs, but its type marks it optional.
   async upgrade(request) {
-    await requireUserSession({ headers: request.headers, context: request.context ?? {} })
+    const session = await getUserSession({ headers: request.headers, context: request.context ?? {} })
+      // h3 throws only when it has no session to read: no cookie, or one that
+      // failed to unseal. Both mean nobody is signed in, which the 401 says.
+      .catch(() => null)
+    if (!session?.user)
+      return new Response('Unauthorized', { status: 401 })
   },
 
   async open(peer) {
