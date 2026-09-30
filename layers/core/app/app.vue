@@ -49,13 +49,23 @@ useSeoMeta({
 // route points social crawlers at an image the worker cannot produce.
 if (!isRuntimeOnlyRoute(useRoute().path))
   defineOgImage('Splash')
+
+// nuxtseo.com's toaster: a peek deck of three, bottom right, configured by
+// `appConfig.toaster`. Nuxt UI's own toaster is off (`:toaster="null"`), and
+// both render from the same `useToast()` queue.
+const appConfig = useAppConfig()
+const toasterConfig = computed(() => typeof appConfig.toaster === 'object' && appConfig.toaster !== null ? appConfig.toaster : {})
+
+// The root gutter already reserves scrollbar space. Turn off Reka's second
+// compensation, so opening a modal does not shift the page sideways.
+const scrollBody = { padding: 0, margin: 0 }
 </script>
 
 <template>
-  <ConfigProvider :use-id="useIdFunction">
+  <ConfigProvider :use-id="useIdFunction" :scroll-body="scrollBody">
     <LazyMotion :features="domAnimation">
       <MotionConfig reduced-motion="user">
-        <UApp :tooltip="{ delayDuration: 0 }">
+        <UApp :toaster="null" :tooltip="{ delayDuration: 0 }" :scroll-body="scrollBody">
           <NuxtLoadingIndicator />
 
           <NuxtLayout>
@@ -95,6 +105,7 @@ if (!isRuntimeOnlyRoute(useRoute().path))
             </Transition>
           </SkewNotification>
         </UApp>
+        <UiToaster v-bind="toasterConfig" />
       </MotionConfig>
     </LazyMotion>
   </ConfigProvider>

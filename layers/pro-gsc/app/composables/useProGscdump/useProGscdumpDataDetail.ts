@@ -1,45 +1,35 @@
+import type { DailyReportInput } from '../../../shared/analytics-requests'
 import type {
-  BuilderState,
   GscdumpDataDetailResponse,
   GscdumpMeta,
   GscdumpTotals,
 } from '../../../shared/gscdump-api'
-import type { GscdumpQueryOptions } from './_internal'
+import { dailyReportRequest } from '../../../shared/analytics-requests'
 import { useGscSiteInvalidation } from '../../internal/composables/useGscInvalidation'
 import { useTrackGscEngine } from '../useGscEngineStats'
 import { useGscQuery } from '../useGscQuery'
 import { useProGscdump } from './useProGscdump'
 
 /**
- * Fetch GSC data detail (daily breakdown).
+ * Fetch a daily series and its totals through the hosted detail report.
  *
- * Routes through the consumer-owned `useGscQuery`, which executes the explicit
- * hosted report operation. No hidden browser or legacy endpoint is selected.
+ * The request is built from `input` inside the read, so a body the contract
+ * rejects lands in `error` like any other failed read.
  */
 export function useProGscdumpDataDetail(
   siteId: MaybeRefOrGetter<string>,
-  state: MaybeRefOrGetter<BuilderState>,
-  options?: {
-    comparison?: MaybeRefOrGetter<BuilderState | undefined>
-  } & GscdumpQueryOptions,
+  input: MaybeRefOrGetter<DailyReportInput>,
 ) {
-  const _state = computed(() => toValue(state))
-  const _comparison = computed(() => toValue(options?.comparison))
+  const _input = computed(() => toValue(input))
   const _siteId = computed(() => toValue(siteId))
-
-  const params = computed(() => ({
-    type: 'data-detail' as const,
-    q: _state.value,
-    ...(_comparison.value ? { qc: _comparison.value } : {}),
-  }))
 
   const gscdump = useProGscdump()
 
   const result = useGscQuery<GscdumpDataDetailResponse>({
     site: _siteId,
-    params,
+    params: computed(() => ({ type: 'data-detail' as const, searchType: _input.value.searchType })),
     enabled: computed(() => !!_siteId.value),
-    watchSources: [useGscSiteInvalidation(_siteId)],
+    watchSources: [useGscSiteInvalidation(_siteId), _input],
     reshape: (raw) => {
       const meta = (raw.meta ?? {}) as Record<string, unknown>
       const out: GscdumpDataDetailResponse = {
@@ -51,15 +41,10 @@ export function useProGscdumpDataDetail(
         out.previousTotals = meta.previousTotals as GscdumpTotals
       return out
     },
-    serverFallback: async (id) => {
-      return gscdump.queryAnalyticsReportDetail({
-        params: { siteId: id },
-        body: {
-          state: _state.value,
-          ...(_comparison.value ? { comparison: _comparison.value } : {}),
-        },
-      })
-    },
+    serverFallback: async id => gscdump.queryAnalyticsReportDetail({
+      params: { siteId: id },
+      body: dailyReportRequest(_input.value),
+    }),
   })
   useTrackGscEngine(result)
   return result

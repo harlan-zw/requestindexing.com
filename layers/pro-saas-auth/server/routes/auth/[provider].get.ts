@@ -26,11 +26,19 @@ function buildHandler(providerId: string) {
 
   const sharedOnSuccess = async (event: H3Event, context: unknown) => {
     const identity = await provider.resolveIdentity(event, context)
-    // Google sign-in requires verified email — primary identifier is sub, but
-    // unverified emails are not trustworthy enough to allow account creation.
-    if (providerId === 'google' && !identity.emailVerified) {
-      logger.warn('[auth/google] refusing unverified email')
-      return sendRedirect(event, `/login?error=${encodeURIComponent('email_not_verified')}`)
+    const refusal = `&provider=${encodeURIComponent(providerId)}`
+    // The provider was unreachable, so verification is unknown. That is a
+    // retryable failure, not an unverified email.
+    if (identity.emailLookupFailed) {
+      logger.error(`[auth/${providerId}] refusing sign-in: email lookup failed`)
+      return sendRedirect(event, `/login?error=email_lookup_failed${refusal}`)
+    }
+    // Every provider needs a verified email, as on nuxtseo.com. Invitations
+    // and the admin gate trust the email, so an unverified one would let any
+    // account claim someone else's address.
+    if (!identity.emailVerified) {
+      logger.warn(`[auth/${providerId}] refusing unverified email`)
+      return sendRedirect(event, `/login?error=email_not_verified${refusal}`)
     }
     const intent = getAuthIntent(event)
     if (intent === 'link')

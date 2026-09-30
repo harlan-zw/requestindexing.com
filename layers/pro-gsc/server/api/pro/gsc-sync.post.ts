@@ -3,6 +3,7 @@ import { normalizeRegistrationTarget } from 'gscdump'
 import { z } from 'zod'
 import { useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
 import { getGscdumpWebhookUrl } from '#layers/pro-gsc/server/utils/gscdump-origin'
+import { refusalError } from '#layers/pro-gsc/server/utils/user-entitlements'
 import { sites, users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 import { resolveSiteAccess } from '#layers/pro-saas/shared/site-access'
@@ -47,7 +48,7 @@ export default defineProApiHandler({ body: bodySchema }, async ({ db, caller, bo
     throw createError({ statusCode: 400, message: 'Invalid Search Console property' })
   await gscdump.waitForUserReady(dbUser.gscdumpUserId)
 
-  const registration = await gscdump.registerSite({
+  const result = await gscdump.registerSite({
     userId: dbUser.gscdumpUserId,
     requestedUrl: site.property || simpleDomain,
     gscPropertyUrl: body.gscSiteUrl,
@@ -60,6 +61,13 @@ export default defineProApiHandler({ body: bodySchema }, async ({ db, caller, bo
       throw createError({ statusCode: 404, message: `Could not find a matching Google Search Console property for "${simpleDomain}". Make sure the site is verified in your Google Search Console account.` })
     throw createError({ statusCode, message })
   })
+
+  // A full Free allowance or a property the owner already has as a Site.
+  // gscdump's message points to Local mode, so the refusal renders in this
+  // app's copy instead.
+  if (result._tag === 'Refused')
+    throw refusalError(result.refusal)
+  const { registration } = result
 
   // Update site with gscdump info (store normalized domain for consistent lookups)
   await db.update(sites)

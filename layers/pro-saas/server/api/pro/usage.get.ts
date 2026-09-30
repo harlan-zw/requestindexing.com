@@ -1,20 +1,24 @@
+// The caller's Free allowance for the Usage page. gscdump owns every number:
+// this route reads `partner.users.entitlements.get` and passes the Meters
+// through. While the partner is exempt the view is `Hidden`, and the page
+// shows only the local Indexing API counter, as it did before metering.
+import type { FreeAllowanceView } from '#layers/pro-gsc/shared/free-allowance'
 import { eq } from 'drizzle-orm'
-import { FREE_SITES_LIMIT } from '../../../shared/caller-policy'
-import { sites } from '../../database'
-import { defineProApiHandler } from '../../utils/handler'
+import { useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
+import { readOptionalUserEntitlements } from '#layers/pro-gsc/server/utils/user-entitlements'
+import { freeAllowanceView } from '#layers/pro-gsc/shared/free-allowance'
+import { users } from '../../database'
+import { defineProApiHandler, getProLogger } from '../../utils/handler'
 
-// DataForSEO + lifetime-grant usage paths removed during V1 port; V1 pricing
-// replaces lifetime grants.
-export default defineProApiHandler({}, async ({ db, caller }) => {
-  // The cap counts the current team's sites, because the team owns them.
-  const siteRows = caller.currentTeamId
-    ? await db.select({ id: sites.id }).from(sites).where(eq(sites.teamId, caller.currentTeamId)).all()
-    : []
+export default defineProApiHandler({}, async ({ db, caller, event }): Promise<{ allowance: FreeAllowanceView }> => {
+  const user = await db.select({ gscdumpUserId: users.gscdumpUserId })
+    .from(users)
+    .where(eq(users.userId, caller.user.id))
+    .get()
 
-  return {
-    sites: {
-      used: siteRows.length,
-      limit: FREE_SITES_LIMIT,
-    },
-  }
+  const read = await readOptionalUserEntitlements(user?.gscdumpUserId, useGscdumpClient)
+  if (read._tag === 'Unavailable')
+    getProLogger(event).warn('[pro/usage] gscdump entitlements unavailable:', read.reason)
+
+  return { allowance: freeAllowanceView(read) }
 })

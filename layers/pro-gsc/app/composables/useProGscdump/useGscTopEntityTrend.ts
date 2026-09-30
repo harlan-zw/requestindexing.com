@@ -1,14 +1,11 @@
 import type { Metric } from 'gscdump/query'
 import type { MaybeRefOrGetter, Ref } from 'vue'
 import type { TopEntityDayRow, TopEntityStackResult } from '~~/layers/design-system/app/utils/topEntityStack'
-import type { BuilderState, GscdumpDataRow } from '../../../shared/gscdump-api'
 import type { GscFacet } from '../../../shared/utils/gsc-facets'
-import { country as countryColumn, inArray, page as pageColumn, queryCanonical } from 'gscdump/query'
 import { onScopeDispose, ref, shallowRef, toValue, watch } from 'vue'
 import { bucketTopEntities } from '~~/layers/design-system/app/utils/topEntityStack'
+import { breakdownRequest, entityDailySeriesRequest, siteDailySeriesRequest } from '../../../shared/analytics-requests'
 import { isSearchOperatorQuery } from '../../../shared/search-operator-queries'
-import { andFilter, dateFilter } from '../../../shared/utils/filter-wire'
-import { facetsToFilters } from '../../../shared/utils/gsc-facets'
 import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdump } from './useProGscdump'
 
@@ -36,17 +33,14 @@ const TREND_DIMENSION = {
   country: 'country',
 } as const
 
-const TREND_COLUMNS = {
-  query: queryCanonical,
-  page: pageColumn,
-  country: countryColumn,
-} as const
+type Row = Record<string, unknown>
 
 /**
  * Top N entities over time, feeding `UiTopEntityStackChart` through the shared
  * `bucketTopEntities` bucketing. Three reads: the ranked candidates, the site's
  * own daily total (the "Other" residual is total minus the named bands), and
- * the named entities' daily series.
+ * the named entities' daily series. A list report rejects the `date`
+ * dimension, so the two daily reads are rows reads.
  */
 export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
   result: Ref<TopEntityStackResult>
@@ -56,11 +50,15 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
 } {
   const gscdump = useProGscdump()
   const result = shallowRef<TopEntityStackResult>({ buckets: [], series: [] })
-  const pending = ref(false)
+  // The server never reads, so it must render the state the client starts in:
+  // loading whenever a read is due. Starting idle rendered the empty state on
+  // the server, and hydrating the chart over it mounted the plot at the wrong
+  // width.
+  const initialRange = toValue(opts.range)
+  const pending = ref(!!toValue(opts.gscdumpSiteId) && !!initialRange?.start && !!initialRange?.end)
   const error = ref<Error | null>(null)
   const filters = useProGscFilters()
   const dimension = TREND_DIMENSION[opts.dimension]
-  const column = TREND_COLUMNS[opts.dimension]
 
   let token = 0
   // A refetch that outlives its panel must stop at its next checkpoint rather
@@ -71,9 +69,10 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
     token++
   })
 
-  async function readRows(siteId: string, state: BuilderState): Promise<GscdumpDataRow[] | null> {
-    return gscdump.queryAnalyticsReport({ params: { siteId }, body: { state } }, true)
-      .then(response => (response?.rows ?? []) as GscdumpDataRow[])
+  // `read` is async, so a request the contract rejects fails here like a read.
+  async function readRows(read: () => Promise<{ rows?: readonly unknown[] } | null | undefined>): Promise<Row[] | null> {
+    return read()
+      .then(response => (response?.rows ?? []) as Row[])
       .catch((cause: unknown) => {
         error.value = cause instanceof Error ? cause : new Error('Search trend could not load.')
         return null
@@ -88,7 +87,8 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
     const range = toValue(opts.range)
     const topN = toValue(opts.topN) ?? 5
     const maxBuckets = opts.maxBuckets ?? 10
-    const facetFilters = facetsToFilters(toValue(opts.facets))
+    const facets = toValue(opts.facets)
+    const searchType = filters.searchType.value
     // Operator rows are dropped after the ranking, so over-fetch to keep the
     // named band count intact.
     const candidateLimit = Math.max(topN + 2, 7) + (opts.dimension === 'query' ? 10 : 0)
@@ -101,13 +101,18 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
     pending.value = true
     result.value = { buckets: [], series: [] }
 
-    const where = andFilter(dateFilter(range), ...facetFilters)
-    const candidates = await readRows(siteId, {
-      dimensions: [dimension],
-      filter: where,
-      orderBy: { column: metric, dir: metric === 'position' ? 'asc' : 'desc' },
-      rowLimit: candidateLimit,
-    })
+    const candidates = await readRows(async () => gscdump.queryAnalyticsReport({
+      params: { siteId },
+      body: breakdownRequest({
+        searchType,
+        dimension,
+        range,
+        comparisonRange: null,
+        facets,
+        orderBy: { column: metric, dir: metric === 'position' ? 'asc' : 'desc' },
+        rowLimit: candidateLimit,
+      }),
+    }, true))
     if (current !== token || !candidates) {
       pending.value = false
       return
@@ -115,10 +120,10 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
 
     const rankTotals = new Map<string, number>()
     for (const row of candidates) {
-      const key = String((row as unknown as Record<string, unknown>)[dimension] ?? '')
+      const key = String(row[dimension] ?? '')
       if (!key || (opts.dimension === 'query' && isSearchOperatorQuery(key)))
         continue
-      const value = Number((row as unknown as Record<string, unknown>)[metric] ?? 0) || 0
+      const value = Number(row[metric] ?? 0) || 0
       // The breakdown orders by the metric but never filters on it, so a site
       // with almost no clicks ranks zero-click queries as its top queries and
       // every named band is flat. A zero-valued candidate is not a top entity.
@@ -139,12 +144,14 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
     }
 
     const [totalRows, entityRows] = await Promise.all([
-      readRows(siteId, { dimensions: ['date'], filter: where, rowLimit: 25_000 }),
-      readRows(siteId, {
-        dimensions: [dimension, 'date'],
-        filter: andFilter(dateFilter(range), inArray(column, mergedKeys), ...facetFilters),
-        rowLimit: 25_000,
-      }),
+      readRows(async () => gscdump.queryAnalyticsRows({
+        params: { siteId },
+        body: siteDailySeriesRequest({ searchType, range, metric, facets }),
+      }, true)),
+      readRows(async () => gscdump.queryAnalyticsRows({
+        params: { siteId },
+        body: entityDailySeriesRequest({ searchType, dimension, keys: mergedKeys, range, metric, facets }),
+      }, true)),
     ])
     if (current !== token || !totalRows || !entityRows) {
       pending.value = false
@@ -153,15 +160,17 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
 
     const totalsByDate = new Map<string, number>()
     for (const row of totalRows) {
-      if (row.date)
-        totalsByDate.set(row.date, Number((row as unknown as Record<string, unknown>)[metric] ?? 0) || 0)
+      const day = String(row.date ?? '')
+      if (day)
+        totalsByDate.set(day, Number(row[metric] ?? 0) || 0)
     }
     const dayRows: TopEntityDayRow[] = []
     for (const row of entityRows) {
-      const key = String((row as unknown as Record<string, unknown>)[dimension] ?? '')
-      if (!key || !row.date || !mergedKeys.includes(key))
+      const key = String(row[dimension] ?? '')
+      const day = String(row.date ?? '')
+      if (!key || !day || !mergedKeys.includes(key))
         continue
-      dayRows.push({ date: row.date, key, label: key, value: Number((row as unknown as Record<string, unknown>)[metric] ?? 0) || 0 })
+      dayRows.push({ date: day, key, label: key, value: Number(row[metric] ?? 0) || 0 })
     }
 
     const dates = [...totalsByDate.keys()].sort()

@@ -34,10 +34,10 @@ function databaseEvent(db: unknown) {
   return { context: { cloudflare: { env: { DB: db } } } }
 }
 
-it('keeps an intentional notification and sync pause healthy', async () => {
+it('keeps an intentional welcome email and daily sync pause healthy', async () => {
   const report = await runChecks([integration], { event: { notificationsEnabled: false, gscdump: { apiKey: 'private', webhookSecret: 'private' } } })
   expect(report.coverage).toBe('complete')
-  expect(report.results[0]?.result).toEqual({ _tag: 'Pass', evidence: { configured: true, notificationsEnabled: false, dailySyncPaused: true } })
+  expect(report.results[0]?.result).toEqual({ _tag: 'Pass', evidence: { configured: true, welcomeEmailPaused: true, dailySyncPaused: true } })
   expect(JSON.stringify(report)).not.toContain('private')
 })
 

@@ -91,7 +91,7 @@ export default defineNitroPlugin(() => {
       }
     }
 
-    // The dashboard chrome reads `session.team` for the workspace label.
+    // The dashboard chrome reads `session.team` for the Team label.
     const currentTeam = user.currentTeamId
       ? await db.query.teams.findFirst({ where: eq(schema.teams.teamId, user.currentTeamId) }).catch((error: unknown) => {
           logger.error('[session] team lookup failed:', error)

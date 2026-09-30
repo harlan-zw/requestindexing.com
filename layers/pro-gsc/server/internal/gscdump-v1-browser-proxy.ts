@@ -39,12 +39,8 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteSitemapChanges },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.createSitemapAction },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.recoverSitePermission },
-  // The tables resolve one sparkline per visible row in a single call, and the
-  // entity trend panels read the site's own daily query and page counts.
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.queryKeywordSparklines },
-  // `analytics.rows.query` answers a raw grouped read. nuxtseo.com's browser
-  // allowlist carries it for archetype reads and live daily series, so a port
-  // of those pages resolves here too.
+  // `analytics.rows.query` answers a raw grouped read. Every sparkline reads
+  // its `(dimension, date)` series here, because a list report rejects `date`.
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryRows },
   // Indexing coverage history and the sitemap URL views.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexingTransitions },

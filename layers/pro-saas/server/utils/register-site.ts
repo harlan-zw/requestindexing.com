@@ -1,23 +1,34 @@
 import type { H3Event } from 'h3'
 import type { SiteSelect } from '~~/layers/core/server/db/schema'
+import type { SiteAllowance, SiteAllowanceRefusal } from '#layers/pro-gsc/shared/free-allowance'
 import type { CurrentTeamContext } from './require-current-team'
 import { and, eq } from 'drizzle-orm'
 import { dispatchEvent } from '#domain-events/server'
+import { decideSiteConnect } from '#layers/pro-gsc/shared/free-allowance'
 import { sites } from '#layers/pro-saas/server/database'
 import { parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
 import { emitFirstProEvent } from './pro-events'
-import { checkTeamSiteSelection } from './team-site-limit'
 
 export interface RegisterSiteInput {
   /** What the user typed, or the Search Console property the picker handed over. */
   url: string
 }
 
+export interface RegisterSiteDeps {
+  /**
+   * The caller's Site allowance, read from gscdump. gscdump owns the number
+   * and counts every Team the Billing owner owns, so this app keeps no cap of
+   * its own. A local per-Team cap used to stand here, and any user could get
+   * past it by creating another Team.
+   */
+  readSiteAllowance: () => Promise<SiteAllowance>
+}
+
 export type RegisterSiteResult
   = | { _tag: 'Ok', site: SiteSelect, isNew: boolean }
     | { _tag: 'InvalidUrl', message: string }
     | { _tag: 'AlreadyConnected', site: SiteSelect }
-    | { _tag: 'OverLimit', selected: number, max: number }
+    | { _tag: 'Refused', refusal: SiteAllowanceRefusal }
 
 /**
  * Register a Site from its address, then let Google Search Console catch up.
@@ -33,6 +44,7 @@ export async function registerSite(
   event: H3Event,
   ctx: CurrentTeamContext,
   input: RegisterSiteInput,
+  deps: RegisterSiteDeps,
 ): Promise<RegisterSiteResult> {
   const { db, caller, team } = ctx
 
@@ -47,14 +59,13 @@ export async function registerSite(
   if (existing)
     return { _tag: 'AlreadyConnected', site: existing }
 
-  const owned = await db.select({ id: sites.id })
-    .from(sites)
-    .where(eq(sites.teamId, team.teamId))
-    .all()
-
-  const limit = checkTeamSiteSelection(owned.length + 1)
-  if (limit._tag === 'OverLimit')
-    return { _tag: 'OverLimit', selected: limit.selected, max: limit.max }
+  // nuxtseo.com checks its site cap before the insert, and so does this. A
+  // full Free allowance refuses here, before a local row exists that gscdump
+  // would refuse to link. gscdump refuses again at registration, so an
+  // allowance this read cannot see never blocks a Site.
+  const decision = decideSiteConnect(await deps.readSiteAllowance())
+  if (decision._tag === 'Refuse')
+    return { _tag: 'Refused', refusal: decision.refusal }
 
   // `onConflictDoNothing` rather than a bare insert: the read above and the
   // insert are two statements, so a double submit could land both and answer

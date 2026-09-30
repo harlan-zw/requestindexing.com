@@ -12,6 +12,13 @@
 
 import { errorStatusCode } from '#shared/sentry'
 
+/**
+ * Where a Site page escapes to when its Site is gone: the Sites list, as
+ * nuxtseo.com's `MISSING_SITE_PATH`. Nothing redirects away from it, so a
+ * stale Site cannot start a redirect loop.
+ */
+export const MISSING_SITE_PATH = '/pro/dashboard/sites'
+
 /** The `/api/pro/sites/:id` projection the dashboard pages read. */
 export interface SiteResource {
   id?: string
