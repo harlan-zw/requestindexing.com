@@ -12,6 +12,7 @@ export { useProGscdumpAnalysis } from './useProGscdumpAnalysis'
 export {
   type BingDataset,
   type BingSiteId,
+  useProBingIntegration,
   useProGscdumpBingConnection,
   useProGscdumpBingData,
   type UseProGscdumpBingDataOptions,
@@ -22,6 +23,8 @@ export { useProGscdumpDataDetail } from './useProGscdumpDataDetail'
 export { useProGscdumpDates } from './useProGscdumpDates'
 export {
   type GscdumpInspectRefused,
+  indexingUrlsQueryKey,
+  useProGscdumpCanonicalMismatches,
   useProGscdumpIndexing,
   useProGscdumpIndexingDiagnostics,
   useProGscdumpIndexingUrls,

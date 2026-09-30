@@ -4,6 +4,20 @@ import * as schema from '#layers/pro-saas/server/database'
 
 const { users, userIdentities } = schema
 
+/**
+ * The lowercased emails a person has proven they own. An OAuth provider's
+ * unverified profile email proves nothing, so it never authorizes access.
+ */
+export function verifiedIdentityEmails(
+  identities: ReadonlyArray<Pick<AuthIdentityRow, 'email' | 'emailVerified'>>,
+): string[] {
+  return Array.from(new Set(
+    identities
+      .filter(identity => identity.emailVerified && identity.email)
+      .map(identity => identity.email!.toLowerCase()),
+  ))
+}
+
 function rowToIdentity(row: typeof userIdentities.$inferSelect): AuthIdentityRow {
   return {
     userId: row.userId,

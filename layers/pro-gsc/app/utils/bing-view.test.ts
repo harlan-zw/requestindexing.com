@@ -2,9 +2,11 @@ import type { BingConnectionV1, BingDataV1 } from '@gscdump/contracts/v1/http'
 import { describe, expect, it } from 'vitest'
 import {
   bingConnectionSetupState,
+  bingIntegrationStatusLine,
   bingRequestErrorState,
   bingTrafficTotals,
   formatBingCtr,
+  projectBingIntegrationState,
   toBingConnectionView,
 } from './bing-view'
 
@@ -91,5 +93,61 @@ describe('bingRequestErrorState', () => {
 
   it('falls back to a retry for an unclassified failure', () => {
     expect(bingRequestErrorState(new Error('boom')).title).toBe('Bing data failed to load')
+  })
+})
+
+describe('projectBingIntegrationState', () => {
+  const read = (tag: 'ready' | 'disconnected' | 'reauth') => ({ _tag: 'Read', connection: { _tag: tag } }) as const
+
+  it('reads as unavailable while the Bing flag is off, whatever the Sites report', () => {
+    expect(projectBingIntegrationState({ enabled: false, linkedSites: 2, reads: [read('ready'), read('ready')] }))
+      .toEqual({ _tag: 'unavailable' })
+  })
+
+  it('waits on Search Console when no Site is linked yet', () => {
+    expect(projectBingIntegrationState({ enabled: true, linkedSites: 0, reads: [] }))
+      .toEqual({ _tag: 'awaiting-search-console' })
+  })
+
+  it('checks while the per-Site reads are in flight', () => {
+    expect(projectBingIntegrationState({ enabled: true, linkedSites: 2, reads: null }))
+      .toEqual({ _tag: 'checking' })
+  })
+
+  it('reports a failed read when no Site answered', () => {
+    expect(projectBingIntegrationState({ enabled: true, linkedSites: 2, reads: [{ _tag: 'Failed' }, { _tag: 'Failed' }] }))
+      .toEqual({ _tag: 'read-failed' })
+  })
+
+  it('tallies each Site by the state Bing reported', () => {
+    const state = projectBingIntegrationState({
+      enabled: true,
+      linkedSites: 5,
+      reads: [
+        read('ready'),
+        read('reauth'),
+        read('disconnected'),
+        { _tag: 'Read', connection: { _tag: 'verification-required', remoteSiteUrl: 'https://example.com', verification: { _tag: 'cname', name: 'a.example.com', value: 'verify.bing.com' } } },
+        { _tag: 'Failed' },
+      ],
+    })
+    expect(state).toEqual({ _tag: 'ready', total: 5, connected: 1, verification: 1, reconnect: 1, failed: 1 })
+  })
+})
+
+describe('bingIntegrationStatusLine', () => {
+  const ready = { _tag: 'ready', total: 3, connected: 2, verification: 0, reconnect: 0, failed: 0 } as const
+
+  it('states coverage as Sites connected out of Sites linked', () => {
+    expect(bingIntegrationStatusLine(ready)).toBe('2 of 3 Sites connected')
+  })
+
+  it('leads with the reconnect when a Site needs one', () => {
+    expect(bingIntegrationStatusLine({ ...ready, reconnect: 1 })).toBe('Reconnect needed for 1 Site. 2 of 3 Sites connected')
+    expect(bingIntegrationStatusLine({ ...ready, reconnect: 2 })).toBe('Reconnect needed for 2 Sites. 2 of 3 Sites connected')
+  })
+
+  it('says the Integration is not available yet while the flag is off', () => {
+    expect(bingIntegrationStatusLine({ _tag: 'unavailable' })).toBe('Not available yet')
   })
 })

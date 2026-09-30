@@ -6,14 +6,14 @@ import ProGscSurfaceBar from '#layers/pro-gsc/app/components/pro/ProGscSurfaceBa
 import { useProGscdumpDates } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { useProGscFilters } from '#layers/pro-gsc/app/composables/useProGscFilters'
 import ProTableKeywords from '#layers/pro-gsc/app/internal/components/pro/ProTableKeywords.vue'
+import { pageDetailHeader } from '#layers/pro-gsc/app/utils/detail-header'
 import { decodeRouteParam } from '#layers/pro-gsc/shared/route-params'
 
 // Page detail, ported from nuxtseo.com's `pages/[...page].vue`: the page's own
 // daily trend, then the keywords that rank for it.
 
-// The heading lives under the breadcrumb below, beside the Visit Page action,
-// so the shell does not add a second one.
-definePageMeta({ proHideHeader: true })
+// The page path and a crumb back to Pages live in the shared page header.
+definePageMeta({ proHeader: pageDetailHeader })
 
 const { siteId, site, siteStatus, isReady, isNotConnected, gscdumpSiteId } = useSite()
 
@@ -72,17 +72,7 @@ const pagesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-co
   </UiAlert>
 
   <div v-else data-testid="search-console-page-detail" class="flex flex-col gap-5">
-    <div class="flex items-start justify-between gap-4">
-      <div class="min-w-0">
-        <nav aria-label="Breadcrumb" class="text-xs text-muted">
-          <NuxtLink :to="pagesHref" class="hover:text-default transition-colors">
-            Pages
-          </NuxtLink>
-        </nav>
-        <h1 class="mt-1 text-sm font-semibold text-highlighted truncate" :title="pageFullUrl">
-          {{ pagePath }}
-        </h1>
-      </div>
+    <div class="flex items-center justify-end">
       <UiButton
         :href="pageFullUrl"
         target="_blank"

@@ -60,10 +60,12 @@ const { crumbs = [], title, icon, flush = false, border = true, stackActionsOnMo
                the page's name always carries its scope. The crumb component
                owns its trailing slash (it may render nothing, e.g. while the
                site list resolves, and a dangling separator reads broken).
-               Kept outside the h1 so the heading text stays clean. -->
+               Kept outside the h1 so the heading text stays clean. When the
+               row overflows (narrow viewports), the title yields twice as
+               fast as the crumb: scope identity outranks the page name. -->
           <div class="flex min-w-0 items-center gap-2 overflow-hidden">
             <slot name="crumb" />
-            <h1 class="text-title text-default flex items-center gap-2 min-w-0">
+            <h1 class="text-title text-default flex items-center gap-2 min-w-0 shrink-2">
               <slot name="icon">
                 <UiIcon v-if="icon" :name="icon" class="size-4 text-dimmed shrink-0" aria-hidden="true" />
               </slot>

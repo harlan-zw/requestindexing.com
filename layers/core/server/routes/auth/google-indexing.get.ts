@@ -5,7 +5,6 @@ import { GSC_INDEXING_SCOPE } from 'gscdump'
 import {
   createError,
   defineEventHandler,
-  getHeader,
   getQuery,
   getRequestURL,
   sendRedirect,
@@ -15,10 +14,12 @@ import { randomUUID } from 'uncrypto'
 import { createOAuthPool } from '~~/layers/core/server/app/services/oauthPool'
 import { authenticateUser } from '~~/layers/core/server/app/utils/auth'
 import { googleAccounts, users } from '~~/layers/core/server/db/schema'
+import { safeAuthRedirect } from '#layers/pro-saas-auth/shared/utils/auth-redirect'
 
 const AUTHORIZATION_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
 const TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
+const DEFAULT_RETURN_TO = '/pro/dashboard'
 
 // openid+email+profile fill the `google_accounts.payload` row (Google user
 // profile); auth/indexing is the actual grant this flow exists for.
@@ -89,7 +90,7 @@ export default defineEventHandler(async (event) => {
 
   if (error) {
     const session = await getUserSession(event) as unknown as UserSession
-    return sendRedirect(event, session.googleIndexingAuth?.referrer || '/pro/dashboard')
+    return sendRedirect(event, session.googleIndexingAuth?.returnTo || DEFAULT_RETURN_TO)
   }
 
   if (!code) {
@@ -101,12 +102,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const referrer = getHeader(event, 'referer') || '/pro/dashboard'
+    // Parsed once, here: both exits below redirect to whatever the session
+    // holds. The Referer used to fill it, so a link from any other site sent
+    // the user back there after the Google round trip.
+    const returnTo = safeAuthRedirect(query.returnTo) ?? DEFAULT_RETURN_TO
     const oauthState = randomUUID()
     await setUserSession(event, {
       googleIndexingAuth: {
         indexingOAuthId: String(client.googleOAuthClientId),
-        referrer,
+        returnTo,
         state: oauthState,
       },
     })
@@ -224,5 +228,5 @@ export default defineEventHandler(async (event) => {
     .set({ lastIndexingOAuthId: String(client.googleOAuthClientId) })
     .where(eq(users.userId, user.userId))
 
-  return sendRedirect(event, authPayload.referrer || '/pro/dashboard')
+  return sendRedirect(event, authPayload.returnTo || DEFAULT_RETURN_TO)
 })

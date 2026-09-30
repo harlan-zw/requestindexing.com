@@ -4,6 +4,7 @@ import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 import { relinkTeamSites } from '#layers/pro-saas/server/utils/site-rows'
 import { resolveSiteSelection } from '#layers/pro-saas/server/utils/site-selection'
 import { ProError } from '#layers/pro-saas/shared/errors'
+import { teamsCallerCan } from '#layers/pro-saas/shared/policies/team-policy'
 import { teamSitesUpdateSchema } from '#layers/pro-saas/shared/validators/teams'
 
 // Persist the team's selected Search Console sites + backup preference.
@@ -20,12 +21,17 @@ export default defineProApiHandler({
   const { backupsEnabled, selectedSites } = body
 
   // Sites are team scoped, so the picker may only name a site this team
-  // already owns or one the caller created. Selecting a site the caller
-  // created elsewhere moves it onto this team, which is what picking it means.
+  // already owns or one the caller created on another team they manage.
+  // Selecting such a site moves it onto this team, which is what picking it
+  // means. `owner_id` alone grants nothing: a member removed from a team
+  // could otherwise move its Sites away.
   const found = selectedSites.length
     ? await db.select({ id: sites.id, publicId: sites.publicId })
         .from(sites)
-        .where(and(inArray(sites.publicId, selectedSites), or(eq(sites.teamId, ctx.team.teamId), eq(sites.ownerId, caller.user.id))))
+        .where(and(inArray(sites.publicId, selectedSites), or(
+          eq(sites.teamId, ctx.team.teamId),
+          and(eq(sites.ownerId, caller.user.id), inArray(sites.teamId, teamsCallerCan(caller, 'manage-sites'))),
+        )))
         .all()
     : []
   // A selection naming a site this caller cannot pick is a bad request, not

@@ -23,12 +23,15 @@ Indexing API submissions this app still runs itself.
 | signup | users table, /pro/onboarding | Account creation for a person | signup |
 | onboarding | onboarding wizard, users.onboarding_completed_at | First-run setup an account completes once | setup |
 | connect | Connect site controls, registerSite | Attaching a Site to a Team | connect |
+| Integration | no table; `/pro/dashboard/integrations` | External service the app reads from: Google Search Console per account, Bing per Site | Integration |
 | funnel milestone | pro_events table | First-time record of one step toward an active account | (internal) |
 | Submission | indexing_jobs table | Site 1—N Submission, unique on (site, path, transport) | "Submit" |
 | Investigation | indexing_investigations table | Site 1—N Investigation, unique on (site, url, issue) | (not surfaced as a noun) |
 | Quota | usages table | Site 1—N daily counter, unique on (site, date, key) | "limit" |
 | Free allowance | gscdump `partner.users.entitlements.get` | Billing owner 1—1 per usage pool; gscdump sets and enforces it | Free allowance |
 | Held | gscdump lifecycle site `hold` | Site 0—1 hold reason, before its first import | Held |
+| API key | gscdump `partner.users.api_keys.*`, Developers page | User 1—N, at most 10; gscdump stores them, this app stores none | API key |
+| Hosted mode | gscdump CLI `--mode hosted` | CLI access mode that reads the gscdump.com record; the other mode is Local | Hosted mode |
 
 Collisions: the product's submission history and Google's indexing state are different evidence. Never imply one proves the other.
 
@@ -45,7 +48,7 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 ### Site and Team
 **Is:** existing dashboard concepts backed by sites and teams.
 **Use for:** the corresponding product objects, with ordinary lowercase site/team in generic discussion.
-**Never:** project as a substitute for a product Site. Google Cloud project remains its own term.
+**Never:** project as a substitute for a product Site. Google Cloud project remains its own term. Never Workspace for a Team. Code keeps `useCurrentWorkspace` and `ProWorkspace`, which mirror nuxtseo.com. The command palette keeps `workspace` as a search keyword, because a keyword is matched and never shown.
 **Casing:** Match the visible product label when naming a control.
 
 ### Indexing API notification
@@ -77,6 +80,13 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 **Use for:** prose and labels about attaching a Site.
 **Never:** add, create, or register a Site in prose or in a label. Code keeps `registerSite` and the `site_added` value.
 **Casing:** Match the visible label when naming a control.
+
+### Integration
+**Is:** one external service Request Indexing reads from: Google Search Console and Bing Webmaster Tools. A cross-cutting concept with no table of its own. Search Console state lives on `google_accounts` and gscdump's account status; Bing state lives in gscdump, per Site.
+**Use for:** the Integrations page, its nav entry, and prose that covers more than one service at once.
+**Never:** connector, plugin, hookup, service (as a countable noun), third party.
+**Scope is part of the name.** Search Console authorises once per account. Bing authorises once per Site. A row that hides which one it is misreports coverage.
+**Casing:** `Integration` in prose and UI, `integration` in identifiers.
 
 ### Funnel milestone
 **Is:** one first-time row in `pro_events` marking a step toward an active account.
@@ -134,12 +144,33 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 
 **Casing:** Held as a badge, held in prose. Stored reason values stay snake_case.
 
+### API key
+
+**Is:** a revocable gscdump user credential, prefix `gsd_user_`, that signs in the gscdump CLI, MCP clients, and the API as one person. This app creates, lists, and revokes keys through gscdump's `partner.users.api_keys.*` operations and never stores a raw key. Borrowed from the gscdump glossary, which owns the term.
+
+**Use for:** the keys on the Developers page, including the key named Agent setup that the agent setup prompt carries.
+
+**Never:** token, secret, or personal access token as a name for the key. "Bearer token" stays, because it names the HTTP scheme. Never use the term for the partner credential in `users.gscdumpApiKey`; no reader sees that credential.
+
+**Casing:** `API key` in prose, `API keys` as a heading.
+
+### Hosted mode
+
+**Is:** the gscdump CLI access mode that reads the record gscdump.com keeps for the account. It does not call Google. The other mode is Local. Borrowed from the gscdump glossary, which owns the term.
+
+**Use for:** CLI setup steps and the agent setup prompt.
+
+**Never:** Cloud, cloud mode, the cloud. Since `@gscdump/cli` 4.3.0 the CLI rejects `--mode cloud`.
+
+**Casing:** `Hosted mode` in prose, `--mode hosted` as the flag.
+
 ## Banned
 
 | Never | Use instead | Why |
 | --- | --- | --- |
 | indexed successfully for an accepted notification | notification accepted | Receipt does not establish indexing. |
 | guaranteed indexing | exact observed or documented outcome | No reviewed source establishes a guarantee. |
+| cloud mode, `--mode cloud` | Hosted mode, `--mode hosted` | The gscdump CLI rejects `cloud` since 4.3.0. |
 
 These restrictions apply to prose meanings, not stored enum values or existing route segments.
 
@@ -152,3 +183,7 @@ entry above, then delete it from this list.
    app's own nouns, but it has never been audited against every route segment and UI label.
    The Site, Team, and Connect entries say "match the visible product label", which is a
    deferral, not a decision. Settle each one against the shipped label.
+2. The Search Console grant control says Connect and Reconnect, on Integrations, in onboarding
+   ("Connect Google"), and in nuxtseo.com. The Connect entry reserves the verb for attaching a
+   Site. Recommended: keep Connect for both, and name the object every time ("Connect a Site",
+   "Connect Google"), because the grant label already ships in three places.

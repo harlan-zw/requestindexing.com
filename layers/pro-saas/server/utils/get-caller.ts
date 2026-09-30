@@ -131,7 +131,9 @@ function buildCaller(
       createdAt: user.createdAt ? new Date(user.createdAt as unknown as number).toISOString() : null,
     },
     memberships,
-    currentTeamId: user.currentTeamId ?? null,
+    // `users.current_team_id` is a remembered selection, and it can outlive a
+    // membership. A team the user has left never reaches a route as current.
+    currentTeamId: memberships.some(m => m.teamId === user.currentTeamId) ? user.currentTeamId : null,
     isAdmin,
   }
 }
