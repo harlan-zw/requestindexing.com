@@ -9,7 +9,9 @@ const bodySchema = z.object({
   gscSiteUrl: z.string().min(1),
 })
 
-export default defineProApiHandler({ body: bodySchema, site: true }, async ({ event, body, site: access }) => {
+// Linking changes the Site for the whole team, so a viewer may not run it.
+// Same ability as nuxtseo.com.
+export default defineProApiHandler({ body: bodySchema, site: { ability: 'write-data' } }, async ({ event, body, site: access }) => {
   const { db, siteId, caller } = access
   const { gscSiteUrl } = body
   const registrationTarget = normalizeRegistrationTarget(gscSiteUrl)
