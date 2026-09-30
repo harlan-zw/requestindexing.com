@@ -28,7 +28,7 @@ describe('useProSiteNav', () => {
 
     expect(sections.value.map(section => section.label)).toEqual(['Search Performance', 'Indexing'])
     expect(labelsOf(sections.value[0]!)).toEqual(['Overview', 'Queries', 'Pages', 'Countries'])
-    expect(labelsOf(sections.value[1]!)).toEqual(['Overview', 'Recovery', 'Sitemaps', 'URLs', 'Submit'])
+    expect(labelsOf(sections.value[1]!)).toEqual(['Overview', 'Recovery', 'Sitemaps', 'URLs', 'Submit', 'IndexNow'])
     expect(footerLinks.value.map(link => link.label)).toEqual(['Site settings'])
   })
 
@@ -52,6 +52,13 @@ describe('useProSiteNav', () => {
     expect(overview!.active!(queriesPath)).toBe(false)
     expect(queries!.active!(queriesPath)).toBe(true)
     expect(overview!.active!(`/pro/dashboard/sites/${SITE}/search-console`)).toBe(true)
+  })
+
+  it('routes IndexNow at the app Site id and activates its own navigation row', () => {
+    const row = nav().sections.value[1]!.links.find(link => link.label === 'IndexNow')!
+    expect(row.to).toBe(`/pro/dashboard/sites/${SITE}/indexing/indexnow`)
+    expect(row.active!(`/pro/dashboard/sites/${SITE}/indexing/indexnow`)).toBe(true)
+    expect(row.active!(`/pro/dashboard/sites/${SITE}/indexing/submit`)).toBe(false)
   })
 
   it('still matches deeper paths under a leaf row', () => {
