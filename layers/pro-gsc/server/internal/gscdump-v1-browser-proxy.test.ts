@@ -39,13 +39,7 @@ describe('resolveGscdumpV1ProxyOperation', () => {
     expect(resolved?.params).toEqual({ siteId: 's_site-1' })
   })
 
-  it('resolves the keyword-sparklines operation the tables batch their rows through', () => {
-    const resolved = resolveGscdumpV1ProxyOperation('POST', 'partner', 'sites/s_site-1/keyword-sparklines')
-    expect(resolved?.operation.id).toBe('partner.sites.keyword.sparklines.query')
-    expect(resolved?.params).toEqual({ siteId: 's_site-1' })
-  })
-
-  it('resolves the grouped analytics rows read the page and country sparklines use', () => {
+  it('resolves the grouped analytics rows read every sparkline uses', () => {
     const resolved = resolveGscdumpV1ProxyOperation('POST', 'analytics', 'sites/s_site-1/rows')
     expect(resolved?.operation.id).toBe('analytics.rows.query')
   })

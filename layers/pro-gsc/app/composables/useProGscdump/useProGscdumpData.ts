@@ -1,46 +1,35 @@
+import type { BreakdownInput } from '../../../shared/analytics-requests'
 import type {
-  BuilderState,
-  GscComparisonFilter,
   GscdumpDataResponse,
   GscdumpMeta,
   GscdumpTotals,
 } from '../../../shared/gscdump-api'
-import type { GscdumpQueryOptions } from './_internal'
+import { breakdownRequest } from '../../../shared/analytics-requests'
 import { useGscSiteInvalidation } from '../../internal/composables/useGscInvalidation'
 import { useTrackGscEngine } from '../useGscEngineStats'
 import { useGscQuery } from '../useGscQuery'
 import { useProGscdump } from './useProGscdump'
 
 /**
- * Fetch GSC data with useAsyncData caching
+ * Fetch one ranked breakdown through the hosted list report.
+ *
+ * The request is built from `input` inside the read, so a body the contract
+ * rejects lands in `error` like any other failed read.
  */
 export function useProGscdumpData(
   siteId: MaybeRefOrGetter<string>,
-  state: MaybeRefOrGetter<BuilderState>,
-  options?: {
-    comparison?: MaybeRefOrGetter<BuilderState | undefined>
-    filter?: MaybeRefOrGetter<GscComparisonFilter | undefined>
-  } & GscdumpQueryOptions,
+  input: MaybeRefOrGetter<BreakdownInput>,
 ) {
-  const _state = computed(() => toValue(state))
-  const _comparison = computed(() => toValue(options?.comparison))
-  const _filter = computed(() => toValue(options?.filter))
+  const _input = computed(() => toValue(input))
   const _siteId = computed(() => toValue(siteId))
-
-  const params = computed(() => ({
-    type: 'data-query' as const,
-    q: _state.value,
-    ...(_comparison.value ? { qc: _comparison.value } : {}),
-    ...(_filter.value ? { comparisonFilter: _filter.value } : {}),
-  }))
 
   const gscdump = useProGscdump()
 
   const result = useGscQuery<GscdumpDataResponse>({
     site: _siteId,
-    params,
+    params: computed(() => ({ type: 'data-query' as const, searchType: _input.value.searchType })),
     enabled: computed(() => !!_siteId.value),
-    watchSources: [useGscSiteInvalidation(_siteId)],
+    watchSources: [useGscSiteInvalidation(_siteId), _input],
     reshape: (raw) => {
       const meta = (raw.meta ?? {}) as Record<string, unknown>
       return {
@@ -50,16 +39,10 @@ export function useProGscdumpData(
         meta: meta as unknown as GscdumpMeta,
       }
     },
-    serverFallback: async (id) => {
-      return gscdump.queryAnalyticsReport({
-        params: { siteId: id },
-        body: {
-          state: _state.value,
-          ...(_comparison.value ? { comparison: _comparison.value } : {}),
-          ...(_filter.value ? { filter: _filter.value } : {}),
-        },
-      })
-    },
+    serverFallback: async id => gscdump.queryAnalyticsReport({
+      params: { siteId: id },
+      body: breakdownRequest(_input.value),
+    }),
   })
   useTrackGscEngine(result)
   return result

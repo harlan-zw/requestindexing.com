@@ -3,6 +3,7 @@
 // (`server/api/webhooks/gscdump.post.ts`) supplies storage, the database, and
 // the mailer.
 import type { CanonicalWebhookEnvelope, UserAllowanceNoticeData } from '@gscdump/contracts'
+import type { EmailSendResult } from '~~/layers/core/server/utils/email'
 import { parseWebhookPayload, verifyWebhookSignature } from '@gscdump/sdk/webhook'
 import { allowanceNoticeEmail } from '../../shared/entitlement-copy'
 
@@ -55,12 +56,13 @@ export interface EmailMessage {
 export interface AllowanceNoticeDeps {
   /** The local account linked to a gscdump user, or null when there is none. */
   findRecipient: (gscdumpUserId: string) => Promise<{ email: string } | null>
-  send: (message: EmailMessage) => Promise<void>
+  send: (message: EmailMessage) => Promise<EmailSendResult>
   manageSitesUrl: string
 }
 
+/** What happened to the email. `Sent` only when the mailer says it sent one. */
 export type AllowanceNoticeOutcome
-  = | { _tag: 'Sent' }
+  = | EmailSendResult
     | { _tag: 'UnknownUser' }
 
 /**
@@ -74,6 +76,5 @@ export async function deliverAllowanceNotice(notice: UserAllowanceNoticeData, de
     return { _tag: 'UnknownUser' }
 
   const email = allowanceNoticeEmail(notice, { manageSitesUrl: deps.manageSitesUrl })
-  await deps.send({ to: recipient.email, subject: email.subject, textBody: email.textBody })
-  return { _tag: 'Sent' }
+  return deps.send({ to: recipient.email, subject: email.subject, textBody: email.textBody })
 }

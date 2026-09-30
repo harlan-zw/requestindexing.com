@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// The fleet sidebar body: workspace destinations, then the Site roster.
+// The fleet sidebar body: Team destinations, then the Site roster.
 // Adapted from nuxtseo.com's `ProDashboardSidebarNav.vue`, minus the group
 // switcher, the monitoring rail and the Reports/Alerts/Chat rows. Account lives
 // in the user menu, as upstream; the rail keeps Manage Sites.
@@ -66,7 +66,7 @@ const siteLinks = computed<FleetSiteLink[]>(() => sites.map((site) => {
     <UiNavList
       variant="sidebar"
       tone="default"
-      label="Workspace"
+      label="Team"
       :links="primaryLinks"
       @click="emit('navigate')"
     />

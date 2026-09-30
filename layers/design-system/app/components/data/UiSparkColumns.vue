@@ -78,8 +78,10 @@ const buckets = computed<number[]>(() => {
     return []
   const per = Math.max(1, Math.ceil(values.length / (columns ?? preset.value.columns)))
   const out: number[] = []
-  for (let start = values.length % per; start < values.length; start += per) {
-    const slice = values.slice(start, start + per)
+  // Retain the leading partial bucket instead of dropping early activity.
+  const remainder = values.length % per
+  for (let end = remainder || per; end <= values.length; end += per) {
+    const slice = values.slice(Math.max(0, end - per), end)
     const sum = slice.reduce((acc, v) => acc + v, 0)
     out.push(inverted ? sum / slice.length : sum)
   }

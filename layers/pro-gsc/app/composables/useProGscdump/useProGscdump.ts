@@ -9,6 +9,7 @@
 // through the proxy's closed allowlist. There is no generic path escape
 // hatch: one was removed with the credential (see `gscdump-v1-browser-proxy.ts`).
 import type { GscdumpV1OperationInput, GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
+import type { DetailReportRequest, ListReportRequest, RowsRequest } from '../../../shared/analytics-requests'
 import type {
   GscdumpAnalysisResponse,
   GscdumpDataDetailResponse,
@@ -50,11 +51,18 @@ export function useProGscdump() {
       })
   }
 
-  function queryAnalyticsReport(input: GscdumpV1OperationInput<'analytics.reports.query'>, silent = false) {
+  // The analytics reads take only a body from `shared/analytics-requests`, so
+  // every one carries the search type and has passed the contract parse.
+  function queryAnalyticsReport(input: { params: { siteId: string }, body: ListReportRequest }, silent = false) {
     return runV1<GscdumpDataResponse>(() => createV1Client().queryAnalyticsReport(input), silent)
   }
 
-  function queryAnalyticsReportDetail(input: GscdumpV1OperationInput<'analytics.reports.detail.query'>, silent = false) {
+  /** Raw grouped rows. Unlike a list report, it accepts `date` as a dimension. */
+  function queryAnalyticsRows(input: { params: { siteId: string }, body: RowsRequest }, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'analytics.rows.query'>['data']>(() => createV1Client().queryAnalyticsRows(input), silent)
+  }
+
+  function queryAnalyticsReportDetail(input: { params: { siteId: string }, body: DetailReportRequest }, silent = false) {
     return runV1<GscdumpDataDetailResponse>(() => createV1Client().queryAnalyticsReportDetail(input), silent)
   }
 
@@ -91,10 +99,6 @@ export function useProGscdump() {
       () => createV1Client().recoverSitePermission(input),
       silent,
     )
-  }
-
-  function queryKeywordSparklines<T = GscdumpV1OperationResponse<'partner.sites.keyword.sparklines.query'>['data']>(input: GscdumpV1OperationInput<'partner.sites.keyword.sparklines.query'>, silent = false) {
-    return runV1<T>(() => createV1Client().queryKeywordSparklines(input), silent)
   }
 
   function getQueryTrend<T = GscdumpV1OperationResponse<'partner.sites.query.trend.get'>['data']>(input: GscdumpV1OperationInput<'partner.sites.query.trend.get'>, silent = false) {
@@ -255,11 +259,11 @@ export function useProGscdump() {
     getTopAssociation,
     listSiteIndexingTransitions,
     listSitemapUrls,
-    queryKeywordSparklines,
     inspectSiteUrls,
     listSiteIndexingUrls,
     queryAnalyticsReport,
     queryAnalyticsReportDetail,
+    queryAnalyticsRows,
     recoverSitePermission,
     verifySiteBingConnection,
   }

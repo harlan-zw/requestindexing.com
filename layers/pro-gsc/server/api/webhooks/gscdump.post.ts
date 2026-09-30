@@ -97,12 +97,9 @@ export default defineEventHandler(async (event) => {
         columns: { email: true },
         where: eq(users.gscdumpUserId, gscdumpUserId),
       }).then(user => user ?? null),
-      send: async (message) => {
-        const sent = await sendEmail(message)
-        // dev observability: a local run and the kill switch send nothing
-        if (sent._tag === 'Skipped')
-          console.warn(`[webhooks/gscdump] allowance email not sent (${sent.reason}): ${message.subject}`)
-      },
+      // No NUXT_NOTIFICATIONS_ENABLED check: the kill switch holds back the
+      // welcome email and the daily sync, never a Free allowance email.
+      send: sendEmail,
       manageSitesUrl: `${getRequestURL(event).origin}/pro/dashboard/sites`,
     }).catch(async (error: unknown) => {
       await claims.release(envelope.deliveryId)
@@ -114,7 +111,10 @@ export default defineEventHandler(async (event) => {
         meter: envelope.data.meter,
       })
     }
-    return { ok: true, notice: outcome._tag }
+    // Dev observability: a local run sends nothing.
+    if (outcome._tag === 'Skipped')
+      console.warn(`[webhooks/gscdump] allowance email not sent (${outcome.reason})`)
+    return { ok: true, notice: outcome }
   }
 
   const localSite = envelope.siteId
