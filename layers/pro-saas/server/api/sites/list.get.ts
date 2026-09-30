@@ -47,6 +47,10 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx, event }) 
         // row is a cache, and a hold changes without a webhook for every step.
         hold: lifecycleSite?.hold ?? null,
         lastSynced: site.lastSynced,
+        // Read live from the lifecycle, never mirrored onto `sites`. With no
+        // lifecycle they report no signal rather than a guess.
+        permissionLost: lifecycleSite?.latestError?.code === 'permission_lost',
+        syncedRange: lifecycleSite?.analytics.syncedRange ?? { oldest: null, newest: null },
       }
     }),
   }

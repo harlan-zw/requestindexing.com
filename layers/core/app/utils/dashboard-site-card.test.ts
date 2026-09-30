@@ -1,9 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
-import {
-  loadDashboardSiteSummary,
-  resolveMetricDomain,
-  resolvePlotRange,
-} from './dashboard-site-card'
+import { describe, expect, it } from 'vitest'
+import { resolveMetricDomain, resolvePlotRange } from './dashboard-site-card'
 
 describe('dashboard site card', () => {
   it('keeps a non-zero trend away from the chart edges', () => {
@@ -28,16 +24,5 @@ describe('dashboard site card', () => {
   it('uses the requested chart height and keeps better positions higher', () => {
     expect(resolvePlotRange(140, false)).toEqual([116, 8])
     expect(resolvePlotRange(140, true)).toEqual([8, 116])
-  })
-
-  it('loads query and page totals from their supported endpoints', async () => {
-    const getQueryTotal = vi.fn().mockResolvedValue(173)
-    const getPageTotal = vi.fn().mockResolvedValue(28)
-
-    await expect(loadDashboardSiteSummary({ getQueryTotal, getPageTotal }))
-      .resolves
-      .toEqual({ queries: 173, pages: 28 })
-    expect(getQueryTotal).toHaveBeenCalledOnce()
-    expect(getPageTotal).toHaveBeenCalledOnce()
   })
 })
