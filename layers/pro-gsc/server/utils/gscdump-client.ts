@@ -6,6 +6,7 @@
 
 import type {
   BuilderStateWire,
+  CanonicalWebhookEventType,
   DataDetailOptions,
   DataQueryOptions,
   EntitlementRefusal,
@@ -34,12 +35,22 @@ import {
   lifecycleSiteToSyncStatus as lifecycleSdkSiteToSyncStatus,
 } from '@gscdump/sdk/lifecycle'
 import { isGscdumpV1Error } from '@gscdump/sdk/v1'
-import { CANONICAL_WEBHOOK_EVENTS } from '@gscdump/sdk/webhook'
 import { refusalMessage } from '../../shared/entitlement-copy'
 import { createGscdumpPublicV1Client } from './gscdump-origin'
 
 export { analyticsStatusToSyncStatus }
 export type { GscdumpAvailableSite }
+
+// gscdump rejects an event its deployed contracts do not know, so a newer SDK pin must not widen this list.
+// A Billing-owner notice such as `user.allowance.notice` is not a Site event.
+const SITE_WEBHOOK_EVENTS = [
+  'user.lifecycle.changed',
+  'site.lifecycle.changed',
+  'site.analytics.ready',
+  'site.indexing.ready',
+  'site.auth.failed',
+  'job.failed',
+] as const satisfies readonly CanonicalWebhookEventType[]
 
 /**
  * The outcome of `partner.users.sites.create`. An entitlement refusal is an
@@ -223,7 +234,7 @@ export function useGscdumpClient() {
           ...(params.requestedUrl && { requestedUrl: params.requestedUrl }),
           ...(params.gscPropertyUrl && { gscPropertyUrl: params.gscPropertyUrl }),
           ...(params.webhookUrl && { webhookUrl: params.webhookUrl }),
-          webhookEvents: [...CANONICAL_WEBHOOK_EVENTS],
+          webhookEvents: [...SITE_WEBHOOK_EVENTS],
         },
       }).then((response): SiteRegistrationResult => ({ _tag: 'Registered', registration: response.data })).catch((err: unknown) => {
         const refusal = isGscdumpV1Error(err) ? parseEntitlementRefusal(err.details) : null
