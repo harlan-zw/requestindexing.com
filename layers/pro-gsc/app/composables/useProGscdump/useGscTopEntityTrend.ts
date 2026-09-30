@@ -50,7 +50,12 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
 } {
   const gscdump = useProGscdump()
   const result = shallowRef<TopEntityStackResult>({ buckets: [], series: [] })
-  const pending = ref(false)
+  // The server never reads, so it must render the state the client starts in:
+  // loading whenever a read is due. Starting idle rendered the empty state on
+  // the server, and hydrating the chart over it mounted the plot at the wrong
+  // width.
+  const initialRange = toValue(opts.range)
+  const pending = ref(!!toValue(opts.gscdumpSiteId) && !!initialRange?.start && !!initialRange?.end)
   const error = ref<Error | null>(null)
   const filters = useProGscFilters()
   const dimension = TREND_DIMENSION[opts.dimension]
