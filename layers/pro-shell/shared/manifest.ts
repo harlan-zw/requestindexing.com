@@ -133,6 +133,13 @@ export const proSiteFeatureManifest = {
     order: 38,
     route: `${SITE_ROOT}/indexing/submit`,
   },
+  'indexing.indexnow': {
+    label: 'IndexNow',
+    icon: 'send',
+    group: 'indexing',
+    order: 39,
+    route: `${SITE_ROOT}/indexing/indexnow`,
+  },
   'indexing.bing': {
     label: 'Bing',
     icon: 'search-check',
