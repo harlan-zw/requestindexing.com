@@ -7,7 +7,7 @@
 // authorization concept left per ADR-0025 is:
 //   - integration (IntegrationReadiness) — render directive, not enforced
 
-import { checkIntegration } from '../../shared/policies/integration-readiness'
+import { checkIntegration } from '#layers/pro-saas/shared/policies/integration-readiness'
 import { useProFeatureRegistry } from '../composables/useProFeatureRegistry'
 import { useProGateState } from '../composables/useProGateState'
 

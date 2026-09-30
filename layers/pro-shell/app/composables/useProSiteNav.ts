@@ -13,9 +13,9 @@
 
 import type { ComputedRef, MaybeRefOrGetter } from 'vue'
 import type { UiIcon } from '#layers/design-system/shared/icons'
+import type { IntegrationReadiness } from '#layers/pro-saas/shared/policies/integration-readiness'
 import type { ProFeatureFlags, ProSiteFeatureId } from '../../shared/manifest'
 import type { ProNavGroupDef } from '../../shared/nav-groups'
-import type { IntegrationReadiness } from '../../shared/policies/integration-readiness'
 import { computed, toValue } from 'vue'
 import {
   expandProSiteRoute,

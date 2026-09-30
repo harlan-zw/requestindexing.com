@@ -26,13 +26,6 @@ export function createSessionExpiredHandler() {
   }
 }
 
-export function createSessionReloader() {
-  const { session } = useUserSession()
-  return async () => {
-    session.value = await $fetch('/api/_auth/session')
-  }
-}
-
 // work around nuxt-auth-utils async context bug
 export function createLogoutHandler() {
   const { session } = useUserSession()
