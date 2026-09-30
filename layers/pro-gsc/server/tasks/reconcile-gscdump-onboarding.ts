@@ -1,6 +1,7 @@
-import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, eq, isNotNull, isNull, or, sql } from 'drizzle-orm'
 import { logger } from '~~/shared/server/logger'
 import { sites, users } from '#layers/pro-saas/server/database'
+import { unreportedGscdumpLink } from '../utils/gscdump-site-access'
 import { reconcileGscdumpOnboardingForUser } from '../utils/reconcile-gscdump-onboarding'
 import { notRefused } from '../utils/site-registration-refusal'
 
@@ -20,14 +21,16 @@ const USERS_PER_RUN = 10
 export default defineTask({
   meta: {
     name: 'reconcile-gscdump-onboarding',
-    description: 'Link unlinked team sites for users whose gscdump grant may now allow it.',
+    description: 'Link unlinked team sites, and relink sites whose gscdump Site this partner cannot read.',
   },
   async run(): Promise<{ result: { usersProcessed: number, usersFailed: number, attemptedSites: number, linkedSites: number } }> {
     const db = useDrizzle()
-    // Only users with an unlinked site on their current team. A user with
-    // every site linked has nothing to reconcile, and a `scope_missing` user
-    // with no site is read by the session when it matters. Random order, so a
-    // user whose property never verifies cannot starve the rest of the batch.
+    // Only users with an unlinked site on their current team, or a linked
+    // site gscdump has not reported on: it may point at a gscdump Site this
+    // partner cannot read. A user whose sites all report has nothing to
+    // reconcile, and a `scope_missing` user with no site is read by the
+    // session when it matters. Random order, so a user whose property never
+    // verifies cannot starve the rest of the batch.
     const rows = await db.selectDistinct({
       userId: users.userId,
       gscdumpUserId: users.gscdumpUserId,
@@ -37,9 +40,11 @@ export default defineTask({
       .innerJoin(sites, eq(sites.teamId, users.currentTeamId))
       .where(and(
         isNotNull(users.gscdumpUserId),
-        isNull(sites.gscdumpSiteId),
-        // A refused Site waits for its user, so it alone never selects them.
-        notRefused(),
+        or(
+          // A refused Site waits for its user, so it alone never selects them.
+          and(isNull(sites.gscdumpSiteId), notRefused()),
+          unreportedGscdumpLink(),
+        ),
       ))
       .orderBy(sql`random()`)
       .limit(USERS_PER_RUN)

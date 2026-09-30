@@ -7,6 +7,7 @@ import { sites } from '#layers/pro-saas/server/database'
 import { autoLinkGsc } from './auto-link-gsc'
 import { rememberGscdumpAccountStatus } from './gscdump-account-status'
 import { useGscdumpClient } from './gscdump-client'
+import { unlinkUnreadableGscdumpSites } from './gscdump-site-access'
 import { updateOnboardingState } from './onboarding'
 import { notRefused } from './site-registration-refusal'
 import { syncUserGscdumpTeams } from './sync-user-gscdump-teams'
@@ -103,6 +104,15 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
       attemptedSites: 0,
     }
   }
+
+  // A Site linked to a gscdump Site this partner cannot read never gets data.
+  // Unlink it first, so the query below links it again in this partner's pool.
+  await unlinkUnreadableGscdumpSites({
+    db,
+    teamId: currentTeamId,
+    readableSiteIds: new Set(lifecycle.sites.map(site => site.siteId)),
+    readSiteAccess: gscdump.readSiteAccess,
+  })
 
   // Reconcile every unlinked site on the user's current team, not just the
   // ones they created: the grant being reconciled belongs to the team. A Site

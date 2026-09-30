@@ -6,7 +6,8 @@ import { reconcileGscdumpOnboardingForUser } from './reconcile-gscdump-onboardin
 import { releaseRefusedSites } from './site-registration-refusal'
 
 // gscdump is the one boundary this file fakes. The lifecycle is ready, every
-// property is verified, and `registerSite` answers from `registrations`.
+// property is verified, `registerSite` answers from `registrations`, and this
+// partner can read every Site it registered.
 const gscdump = vi.hoisted(() => ({
   registerSite: vi.fn(),
 }))
@@ -22,6 +23,7 @@ vi.mock('./gscdump-client', () => ({
       ],
     }),
     registerSite: gscdump.registerSite,
+    readSiteAccess: async () => ({ _tag: 'Readable' }),
   }),
 }))
 vi.mock('./gscdump-origin', () => ({ getGscdumpWebhookUrl: () => 'https://requestindexing.test/api/webhooks/gscdump' }))

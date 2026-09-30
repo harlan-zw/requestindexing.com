@@ -24,6 +24,8 @@ export const LOG_CATALOG = {
   'gscdump.engine.fallback': 'browser DuckDB-WASM path threw and fell back to cloud (paying user got slow path)',
   'gscdump.table_cell.unresolved': 'a table cell read (top association) failed; the cells degrade to a dash',
   'gscdump.registration.refused': 'gscdump refused a Site registration (Free allowance or duplicate property); the Site stays connected without Search Console',
+  'gscdump.registration.unreadable': 'gscdump answered a registration with a Site this partner cannot read; the Site stays unlinked and the reconcile asks again',
+  'gscdump.site_access.read_failed': 'a gscdump Site read failed while checking a stored link; the link stays until the next reconcile',
 
   // Storage / KV best-effort
   'kv.best_effort_write_failed': 'KV/storage write blip; counters/cache will self-heal',
