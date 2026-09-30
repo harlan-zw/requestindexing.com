@@ -1,23 +1,14 @@
+minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
   - '@harlan-zw/nuxt-checkin@0.3.0'
   - '@harlan-zw/nuxt-cloudflare@0.4.3'
-  - '@harlan-zw/nuxt-sentry@0.1.7'
-  - nuxt-ai-ready@1.7.9
-  - '@harlan-zw/comark-content@0.1.2'
-  - '@harlan-zw/nuxt-domain-events@0.1.1'
-  - '@harlan-zw/nuxt-dx@0.1.3'
-  - '@harlan-zw/nuxt-use-query@0.1.0'
-  - '@harlan-zw/nuxt-wide-events@0.1.0'
-  - nuxt-skew-protection@1.4.3
   - '@gscdump/contracts@4.5.0'
   - '@gscdump/engine@4.5.0'
   - '@gscdump/lakehouse@4.5.0'
   - '@gscdump/sdk@4.5.0'
   - gscdump@4.5.0
   - '@vitejs/plugin-vue@6.0.9'
-
-shellEmulator: true
-autoInstallPeers: false
+  - '@harlan-zw/nuxt-sentry@0.2.0'
 
 trustPolicy: no-downgrade
 trustPolicyExclude:
@@ -30,9 +21,29 @@ trustPolicyExclude:
   # covered by the no-downgrade policy.
   - undici@5.29.0
 
+autoInstallPeers: false
+shellEmulator: true
+
 packages:
   - apps/*
   - layers/*
+
+overrides:
+  oxc-parser: 'catalog:'
+  # Pin Rolldown so Nitro builds use a reproducible bundle.
+  rolldown: 1.2.11
+  sharp: 0.35.5
+  unplugin: 'catalog:'
+  # Vitest accepts this release, which has provenance. Version 3.2.2 does not.
+  vitest@5>why-is-node-running: 3.2.1
+
+  # SSR must use one Vue instance. A second peer context loses Nuxt's
+  # injection context during prerender.
+  vue: 3.5.43
+
+patchedDependencies:
+  '@nuxt/ui@4.11.2': patches/@nuxt__ui@4.11.2.patch
+  nuxt@4.5.2: patches/nuxt@4.5.2.patch
 
 allowBuilds:
   '@parcel/watcher': true
@@ -43,107 +54,95 @@ allowBuilds:
   sharp: true
   vue-demi: true
   workerd: true
-overrides:
-  oxc-parser: 'catalog:'
-  # Keep Nitro's Worker bundle reproducible on the version proven by
-  # nuxtseo.com instead of floating across Rolldown patch releases.
-  rolldown: 1.2.3
-  sharp: 0.35.3
-  unplugin: 'catalog:'
-  # SSR must use one Vue instance. A second peer context loses Nuxt's
-  # injection context during prerender.
-  vue: 3.5.41
-patchedDependencies:
-  '@nuxt/ui@4.11.1': patches/@nuxt__ui@4.11.1.patch
-  nuxt@4.5.2: patches/nuxt@4.5.2.patch
+
 catalog:
-  '@antfu/eslint-config': ^9.3.0
-  '@cloudflare/workers-types': ^5.20260816.1
+  '@antfu/eslint-config': ^9.5.1
+  '@cloudflare/workers-types': ^5.20260929.1
   '@gscdump/contracts': 4.5.0
   '@gscdump/engine': 4.5.0
   '@gscdump/sdk': 4.5.0
-  '@harlan-zw/comark-content': 0.1.2
+  '@harlan-zw/comark-content': 0.1.5
   '@harlan-zw/nuxt-checkin': 0.3.0
   '@harlan-zw/nuxt-cloudflare': 0.4.3
-  '@harlan-zw/nuxt-domain-events': 0.1.1
-  '@harlan-zw/nuxt-dx': 0.1.3
-  '@harlan-zw/nuxt-sentry': 0.1.7
-  '@harlan-zw/nuxt-use-query': 0.1.0
-  '@harlan-zw/nuxt-wide-events': 0.1.0
-  '@iconify-json/carbon': ^1.2.25
-  '@iconify-json/circle-flags': ^1.2.10
+  '@harlan-zw/nuxt-domain-events': 0.1.2
+  '@harlan-zw/nuxt-dx': 0.2.1
+  '@harlan-zw/nuxt-sentry': 0.2.0
+  '@harlan-zw/nuxt-use-query': 0.2.2
+  '@harlan-zw/nuxt-wide-events': 0.1.4
+  '@iconify-json/carbon': ^1.2.28
+  '@iconify-json/circle-flags': ^1.2.11
   '@iconify-json/heroicons': ^1.2.3
-  '@iconify-json/hugeicons': ^1.2.34
-  '@iconify-json/logos': ^1.2.13
-  '@iconify-json/lucide': ^1.2.68
-  '@iconify-json/noto': ^1.2.7
+  '@iconify-json/hugeicons': ^1.2.35
+  '@iconify-json/logos': ^1.2.15
+  '@iconify-json/lucide': ^1.2.137
+  '@iconify-json/noto': ^1.2.9
   '@iconify-json/ph': ^1.2.2
-  '@iconify-json/simple-icons': ^1.2.93
-  '@iconify-json/solar': ^1.2.10
+  '@iconify-json/simple-icons': ^1.2.98
+  '@iconify-json/solar': ^1.2.13
   '@iconify-json/svg-spinners': ^1.2.4
-  '@internationalized/date': ^3.12.3
+  '@internationalized/date': ^3.12.4
   '@nuxt/fonts': 0.14.0
   '@nuxt/image': ^2.1.0
-  '@nuxt/scripts': ^1.3.5
-  '@nuxt/test-utils': ^4.1.0
-  '@nuxt/ui': ^4.11.1
-  '@nuxtjs/robots': ^6.1.4
+  '@nuxt/scripts': ^1.3.10
+  '@nuxt/test-utils': ^4.3.2
+  '@nuxt/ui': ^4.11.2
+  '@nuxtjs/robots': ^6.2.3
   '@nuxtjs/seo': ^5.3.16
-  '@nuxtjs/sitemap': ^8.3.4
-  '@sentry/cloudflare': ^10.70.0
-  '@sentry/nuxt': ^10.70.0
-  '@takumi-rs/core': ^2.9.2
-  '@takumi-rs/wasm': ^2.9.2
+  '@nuxtjs/sitemap': ^8.5.1
+  '@sentry/cloudflare': ^11.1.0
+  '@sentry/nuxt': ^11.1.0
+  '@takumi-rs/core': ^2.14.0
+  '@takumi-rs/wasm': ^2.14.0
   '@tanstack/table-core': ^9.2.4
   '@tanstack/vue-table': ^9.2.4
   '@tanstack/vue-table-v8': npm:@tanstack/vue-table@8.21.3
-  '@unovis/ts': ^1.6.7
-  '@unovis/vue': ^1.6.7
+  '@unovis/ts': ^1.7.0
+  '@unovis/vue': ^1.7.0
   '@vitejs/plugin-vue': ^6.0.9
-  '@vueuse/core': ^14.4.0
-  '@vueuse/nuxt': ^14.4.0
-  bumpp: ^12.2.1
+  '@vueuse/core': ^15.0.0
+  '@vueuse/nuxt': ^15.0.0
+  bumpp: ^12.3.0
   cheerio: ^1.2.0
   consola: ^3.4.2
   date-fns: ^4.4.0
   date-fns-tz: ^3.2.0
-  devalue: ^5.9.0
-  drizzle-kit: ^0.31.10
-  drizzle-orm: ^0.45.2
-  eslint: ^10.8.1
-  globby: ^16.2.3
+  devalue: ^6.0.2
+  drizzle-kit: ^0.31.11
+  drizzle-orm: ^0.45.3
+  eslint: ^10.11.0
+  globby: ^16.2.4
   googlethis: ^1.8.0
   gscdump: 4.5.0
   h3: ^1.15.11
   happy-dom: ^20.0.0
-  hookable: ^6.1.1
+  hookable: ^6.1.2
   klona: ^2.0.6
   lightweight-charts: ^5.2.1
-  motion-v: 2.4.2
+  motion-v: 2.5.1
   nanoid: ^6.0.1
   nitro-cloudflare-dev: ^0.2.2
   node-fetch: ^3.3.2
   nuxt: ^4.5.2
-  nuxt-ai-ready: ^1.7.13
+  nuxt-ai-ready: ^2.4.0
   nuxt-auth-utils: ^0.5.30
-  nuxt-og-image: ^6.8.0
-  nuxt-schema-org: ^6.2.9
-  nuxt-skew-protection: ^1.5.0
+  nuxt-og-image: ^6.9.1
+  nuxt-schema-org: ^6.3.2
+  nuxt-skew-protection: ^1.5.4
   ohash: ^2.0.12
-  oxc-parser: 0.144.0
+  oxc-parser: 0.151.0
   postmark: ^5.1.0
-  reka-ui: ^2.10.4
+  reka-ui: ^2.10.5
   scule: ^1.3.0
   sitemapper: ^4.1.6
   tailwindcss: ^4.3.3
   typescript: 6.0.3
   ufo: ^1.6.4
   uncrypto: ^0.1.3
-  unplugin: ^3.3.0
+  unplugin: ^3.4.0
   v-calendar: ^3.1.2
-  vitest: ^4.1.10
-  vue: ^3.5.41
-  vue-router: ^5.2.0
-  vue-tsc: ^3.3.10
-  wrangler: ^4.123.0
-  zod: ^4.4.3
+  vitest: ^5.0.2
+  vue: ^3.5.43
+  vue-router: ^5.3.1
+  vue-tsc: ^3.3.11
+  wrangler: ^4.143.0
+  zod: ^4.6.5
