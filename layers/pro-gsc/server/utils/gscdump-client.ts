@@ -60,6 +60,15 @@ export type SiteRegistrationResult
   = | { _tag: 'Registered', registration: PartnerSiteRegistrationV1Response['data'] }
     | { _tag: 'Refused', refusal: EntitlementRefusal }
 
+/**
+ * Whether this app's partner key can read a gscdump Site. gscdump answers
+ * `site_not_found` for a Site that another partner or gscdump.com registered,
+ * and for a deleted Site.
+ */
+export type GscdumpSiteAccess
+  = | { _tag: 'Readable' }
+    | { _tag: 'NotFound' }
+
 export function findLifecycleSite(lifecycle: PartnerLifecycleResponse, siteIdOrPropertyUrl: string): PartnerLifecycleSite | null {
   return findSdkLifecycleSite(lifecycle as never, siteIdOrPropertyUrl) as PartnerLifecycleSite | null
 }
@@ -244,6 +253,16 @@ export function useGscdumpClient() {
       }),
     deleteSite: (siteId: string) =>
       client.deleteSite({ params: { siteId } }).then(response => response.data).catch(rethrowV1AsH3),
+    // The IndexNow connection read is the cheapest Site read on the partner
+    // surface. Its authorization is the answer; the body is not used.
+    readSiteAccess: (siteId: string): Promise<GscdumpSiteAccess> =>
+      client.getSiteIndexNowConnection({ params: { siteId } })
+        .then((): GscdumpSiteAccess => ({ _tag: 'Readable' }))
+        .catch((err: unknown) => {
+          if (isGscdumpV1Error(err) && err.code === 'site_not_found')
+            return { _tag: 'NotFound' } satisfies GscdumpSiteAccess
+          return rethrowV1AsH3(err)
+        }),
 
     // Analytics
     getData: (siteId: string, state: BuilderStateWire, queryOptions?: DataQueryOptions): Promise<GscdumpDataResponse> =>

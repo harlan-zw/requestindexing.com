@@ -1,5 +1,5 @@
 import type { EntitlementRefusal } from '@gscdump/contracts'
-import type { GscdumpAvailableSite } from './gscdump-client'
+import type { GscdumpAvailableSite, GscdumpSiteAccess } from './gscdump-client'
 import { eq } from 'drizzle-orm'
 import { isVerifiedGscPermission, matchGscSite, normalizeRegistrationTarget, pickBestGscProperty } from 'gscdump'
 import { logWarn } from '~~/shared/logging'
@@ -21,6 +21,27 @@ export type AutoLinkResult
   = | { _tag: 'Linked', gscdumpSiteId: string }
     | { _tag: 'NotLinked' }
     | { _tag: 'Refused', refusal: EntitlementRefusal }
+
+/**
+ * Whether to store the Site a registration answered with. A new Site is always
+ * this partner's. An existing one can be another pool's Site: gscdump.com
+ * returned that before it registered Sites per pool, and every read of it
+ * answers 404. See `gscdump-site-access.ts`.
+ */
+async function readableRegistration(
+  registration: { siteId: string, existing?: boolean },
+  readSiteAccess: (siteId: string) => Promise<GscdumpSiteAccess>,
+): Promise<boolean> {
+  if (!registration.existing)
+    return true
+  const access = await readSiteAccess(registration.siteId).catch((err: unknown) => {
+    logWarn('gscdump.site_access.read_failed', err, { gscdumpSiteId: registration.siteId })
+    return null
+  })
+  if (access?._tag === 'NotFound')
+    logWarn('gscdump.registration.unreadable', new Error('gscdump registration answered with a Site this partner cannot read'), { gscdumpSiteId: registration.siteId })
+  return access?._tag === 'Readable'
+}
 
 /**
  * Auto-link a site to its matching GSC property via gscdump.
@@ -104,7 +125,7 @@ export async function autoLinkGsc(opts: {
       await markSiteRefused(db, siteId)
       return { _tag: 'Refused', refusal: result.refusal }
     }
-    if (result?._tag === 'Registered') {
+    if (result?._tag === 'Registered' && await readableRegistration(result.registration, gscdump.readSiteAccess)) {
       gscdumpSiteId = result.registration.siteId
       gscdumpSiteUrl = simpleDomain
     }
