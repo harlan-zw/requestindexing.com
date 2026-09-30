@@ -411,12 +411,12 @@ export default defineNuxtConfig({
       indexing: {
         usageLimitPerUser: 15,
       },
-      // Nav rows that are declared but not shipped. `bing` covers both Bing
-      // surfaces: gscdump has not released the partner operations they read,
-      // so the rows stay out of the sidebar until NUXT_PUBLIC_FEATURES_BING
-      // is set. See layers/pro-shell/shared/manifest.ts.
+      // Nav rows a flag can switch off. `bing` covers both Bing surfaces and
+      // the Integrations card. gscdump 4.8.0 ships the partner operations they
+      // read, so it is on; set NUXT_PUBLIC_FEATURES_BING=false to hide them.
+      // See layers/pro-shell/shared/manifest.ts.
       features: {
-        bing: false,
+        bing: true,
       },
     },
     indexing: {
