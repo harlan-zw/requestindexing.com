@@ -53,7 +53,7 @@ The last row is the one live exception. Submission to Google's Indexing API runs
 | `@gscdump/contracts` | wire schemas, operation registry, canonical event names |
 | `gscdump` | query builder, indexing submission helpers, result types |
 
-Version pin is `^2.0.6` across the catalog. Upgrading the protocol is how new engine capability arrives.
+The `pnpm-workspace.yaml` catalog pins the version. Upgrading the protocol is how new engine capability arrives.
 
 ## Local tables
 
