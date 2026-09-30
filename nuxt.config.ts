@@ -380,8 +380,14 @@ export default defineNuxtConfig({
       rolldownOptions: { checks: { bundlerTimings: false } },
     },
     optimizeDeps: {
+      // Prebundle lazy route dependencies before the first browser request.
       include: [
+        '@gscdump/sdk/lifecycle',
         '@gscdump/sdk/v1',
+        '@unhead/schema-org/vue',
+        'date-fns',
+        'gscdump',
+        'gscdump/client',
         'motion-v',
         'reka-ui',
       ],
