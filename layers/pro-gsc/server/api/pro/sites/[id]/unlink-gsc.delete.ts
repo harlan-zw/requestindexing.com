@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { logWarn } from '~~/shared/logging'
+import { releaseGscdumpSite } from '#layers/pro-gsc/server/utils/release-gscdump-site'
 import { sites } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 
@@ -10,10 +11,10 @@ export default defineProApiHandler({ site: { ability: 'write-data' } }, async ({
 
   const unlinkedGscSiteUrl = site.gscdumpSiteUrl
 
-  // Call gscdump.com to delete site if we have a gscdump site ID
+  // Delete the gscdump Site, unless a Site on another team still links to it.
   if (site.gscdumpSiteId) {
     const gscdump = useGscdumpClient()
-    await gscdump.deleteSite(site.gscdumpSiteId).catch((err) => {
+    await releaseGscdumpSite(db, { siteId, gscdumpSiteId: site.gscdumpSiteId }, id => gscdump.deleteSite(id)).catch((err) => {
       // Best-effort: site may already be deleted on gscdump, or gscdump is
       // down. Local unlink still proceeds; reconciliation handles drift.
       logWarn('gscdump.unlink.remote_failed', err, { gscdumpSiteId: site.gscdumpSiteId, siteId })
