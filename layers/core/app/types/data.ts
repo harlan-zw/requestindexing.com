@@ -125,7 +125,7 @@ export type SitesPreview = SitePreview[]
 
 // The row shape `GET /api/sites/list` returns (see
 // `layers/pro-saas/server/api/sites/list.get.ts`), consumed by every
-// dashboard fleet view: `CardSite`, `Header`, `HeaderSitesMenu`,
+// dashboard fleet view: the dashboard home, `Header`, `HeaderSitesMenu`,
 // `web-indexing`, `sites/connect`. The public id is `siteId`, not `publicId`
 // (the raw `sites` table column) — a caller that reads `.publicId` off this
 // row gets `undefined` and silently links to `/sites/undefined/...`.
@@ -137,4 +137,8 @@ export interface SiteFleetRow {
   gscdumpSiteId: string | null
   syncStatus: 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
   lastSynced: number | null
+  /** Search Console revoked access to the property, per the gscdump lifecycle. */
+  permissionLost: boolean
+  /** The reporting days gscdump holds for the Site. Both null before the first import. */
+  syncedRange: { oldest: string | null, newest: string | null }
 }

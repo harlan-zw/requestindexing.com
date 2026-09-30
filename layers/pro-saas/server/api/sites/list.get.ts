@@ -44,6 +44,10 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx, event }) 
         gscdumpSiteId: site.gscdumpSiteId,
         syncStatus: syncStatusFor(lifecycleSite, site.gscdumpSyncStatus),
         lastSynced: site.lastSynced,
+        // Read live from the lifecycle, never mirrored onto `sites`. With no
+        // lifecycle they report no signal rather than a guess.
+        permissionLost: lifecycleSite?.latestError?.code === 'permission_lost',
+        syncedRange: lifecycleSite?.analytics.syncedRange ?? { oldest: null, newest: null },
       }
     }),
   }
