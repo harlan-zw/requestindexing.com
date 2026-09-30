@@ -2,6 +2,8 @@
 import type { OnboardingStep } from '#layers/pro-saas/shared/onboarding'
 import {
   canAdvanceOnboardingStep,
+  canSkipOnboardingSites,
+  DASHBOARD_ROUTE,
   ONBOARDING_STEP_LABELS,
   ONBOARDING_STEPS,
   onboardingStepIndex,
@@ -79,14 +81,17 @@ onMounted(async () => {
 
 const finishing = ref(false)
 
-async function finish() {
+async function finish(options: { skipSites?: boolean } = {}) {
   if (finishing.value)
     return
   finishing.value = true
   try {
-    await $fetch('/api/pro/onboarding/complete', { method: 'POST' })
+    await $fetch('/api/pro/onboarding/complete', {
+      method: 'POST',
+      body: options.skipSites ? { skipSites: true } : undefined,
+    })
     await refreshSession()
-    await navigateTo('/pro/dashboard')
+    await navigateTo(DASHBOARD_ROUTE)
   }
   catch (err: unknown) {
     const message = (err as { data?: { message?: string } })?.data?.message
@@ -110,6 +115,21 @@ const nextDisabled = computed(() => !canAdvanceOnboardingStep(step.value, {
   gsc: gsc.value,
   hasSites: hasSites.value,
 }))
+
+// nuxtseo.com's escape hatch. The sites step needs a Site, but a Site that
+// cannot connect must not trap the user: a gscdump outage or a full Free
+// allowance would. The form reports a failed attempt or a full allowance, and
+// only then does the step offer a skip. Skipping finishes setup with no Site,
+// and the dashboard's Connect a Site takes over.
+const sitesBlocked = ref(false)
+const canSkipSites = computed(() => canSkipOnboardingSites({
+  hasSites: hasSites.value,
+  connectBlocked: sitesBlocked.value,
+}))
+
+function skipSites() {
+  return finish({ skipSites: true })
+}
 
 // Search Console is an offer, so the skip has to be visible. Without it the
 // only wording on the step is "Connect", and a user who cannot connect reads a
@@ -190,7 +210,19 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         title="Connect your sites"
         description="Name the address you want tracked. We match it to a Search Console property for you."
       />
-      <ProSiteAddForm :gsc-return-to="returnToSites" @changed="siteCount = $event" />
+      <ProSiteAddForm :gsc-return-to="returnToSites" @changed="siteCount = $event" @blocked="sitesBlocked = true" />
+      <p v-if="canSkipSites" class="flex flex-wrap items-center gap-x-1 text-sm text-muted">
+        Can't connect your site right now?
+        <UButton
+          variant="link"
+          color="neutral"
+          class="min-h-11 px-0 underline"
+          label="Skip and connect it later"
+          :loading="finishing"
+          data-testid="skip-sites"
+          @click="skipSites"
+        />
+      </p>
     </section>
 
     <section v-else class="space-y-5">
