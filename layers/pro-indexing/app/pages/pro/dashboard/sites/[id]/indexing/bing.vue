@@ -5,9 +5,10 @@
 //
 // Ported from nuxtseo.com `indexing/bing.vue`. Two things upstream shows are
 // absent here: the OAuth connect round trip and the per-URL crawl-details
-// table. Both read Bing through a separate host that this app does not proxy;
-// the partner contract answers connection, verify and crawl, so the page says
-// where connecting happens rather than offering a button that leads nowhere.
+// table. gscdump's partner v1 protocol has no connect operation yet, so the
+// page says connecting is not available rather than offer a button that leads
+// nowhere. The table would read `partner.sites.indexing.bing.evidence.list`,
+// which the browser proxy does not allow yet.
 import type { BingConnectionV1 } from '@gscdump/contracts/v1/http'
 import { useProGscdumpBingConnection, useProGscdumpBingData } from '#layers/pro-gsc/app/composables/useProGscdump'
 import ProBingCrawlStats from '#layers/pro-gsc/app/internal/components/bing/ProBingCrawlStats.vue'

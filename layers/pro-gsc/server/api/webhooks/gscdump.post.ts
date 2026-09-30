@@ -1,8 +1,8 @@
 // Partner webhook receiver for gscdump.com.
 //
 // This is the URL we register with every site (`getGscdumpWebhookUrl`), so it
-// must accept the canonical envelope for all six events gscdump can deliver,
-// not just sync completion.
+// must accept the canonical envelope for every event gscdump can deliver, not
+// just sync completion.
 //
 // Auth is the HMAC in `X-GSCDump-Signature` over the exact request bytes, keyed
 // by the partner webhook secret. gscdump sends no API key on deliveries, so a
@@ -11,19 +11,24 @@
 // Deliveries are invalidation signals, not state: we dedupe by delivery id,
 // resolve the local rows, and re-read authoritative state from the partner API
 // (via the onboarding reconcile) rather than building state from the payload.
+// `user.allowance.notice` is the one exception: it is a message to a person,
+// and this app sends it as an email.
 
-import type { WebhookEnvelope } from '@gscdump/contracts'
-import { parseWebhookPayload, verifyWebhookSignature, WEBHOOK_SIGNATURE_HEADER } from '@gscdump/sdk/webhook'
+import type { CanonicalWebhookEnvelope } from '@gscdump/contracts'
+import type { DeliveryClaims } from '#layers/pro-gsc/server/utils/gscdump-webhook-receiver'
+import { WEBHOOK_SIGNATURE_HEADER } from '@gscdump/sdk/webhook'
 import { eq } from 'drizzle-orm'
+import { sendEmail } from '~~/layers/core/server/utils/email'
 import { logWarn } from '~~/shared/logging'
 import { dispatchEvent } from '#domain-events/server'
+import { deliverAllowanceNotice, receiveGscdumpDelivery } from '#layers/pro-gsc/server/utils/gscdump-webhook-receiver'
 import { scheduleGscdumpOnboardingReconcile } from '#layers/pro-gsc/server/utils/reconcile-gscdump-onboarding'
 import { syncStatusPatch } from '#layers/pro-gsc/shared/utils/gscdump-webhook'
 import { sites, users } from '#layers/pro-saas/server/database'
 
 // Events that mean "the account or property state moved"; re-read lifecycle so
 // onboarding converges without waiting for the reconcile cron.
-const RECONCILE_EVENTS = new Set<WebhookEnvelope['event']>([
+const RECONCILE_EVENTS = new Set<CanonicalWebhookEnvelope['event']>([
   'user.lifecycle.changed',
   'site.lifecycle.changed',
   'site.analytics.ready',
@@ -32,6 +37,19 @@ const RECONCILE_EVENTS = new Set<WebhookEnvelope['event']>([
 ])
 
 const DEDUPE_TTL_SECONDS = 60 * 60 * 24
+
+function cacheClaims(storage: ReturnType<typeof useStorage>): DeliveryClaims {
+  const key = (deliveryId: string) => `gscdump:webhook:${deliveryId}`
+  return {
+    claim: async (deliveryId, occurredAt) => {
+      if (await storage.hasItem(key(deliveryId)))
+        return false
+      await storage.setItem(key(deliveryId), occurredAt, { ttl: DEDUPE_TTL_SECONDS })
+      return true
+    },
+    release: deliveryId => storage.removeItem(key(deliveryId)),
+  }
+}
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
@@ -46,32 +64,58 @@ export default defineEventHandler(async (event) => {
   if (!raw)
     throw createError({ statusCode: 400, message: 'Empty webhook body' })
 
-  // Verify first, parse second, the way nuxtseo.com does. SDK 3.x dropped the
-  // `Result`-returning parser, and the throwing one raises the same exception
-  // for a bad signature as for a malformed envelope. Those need different status
-  // codes, so the HMAC check stays its own step and the parse runs with
-  // `validateSignature: false`.
-  //
-  // Pass the signature explicitly. `headers` on the SDK option bag is the parsed
-  // `PartnerWebhookHeaders` shape, not raw HTTP header names, so handing it h3's
-  // header record reads `signature` as undefined and fails every check.
-  const signature = getHeader(event, WEBHOOK_SIGNATURE_HEADER) ?? null
-  if (!await verifyWebhookSignature(raw, signature, secret)) {
-    logWarn('gscdump.proxy.failed', new Error('invalid gscdump webhook signature'), { stage: 'webhook_signature' })
-    throw createError({ statusCode: 401, message: 'Invalid webhook signature' })
+  // Verify, parse, then dedupe by delivery id (`receiveGscdumpDelivery`).
+  // Retries reuse the delivery id, so a second arrival of work we already did
+  // is a no-op rather than a duplicate reconcile or a second email.
+  const claims = cacheClaims(useStorage('cache'))
+  const receipt = await receiveGscdumpDelivery({
+    raw,
+    signature: getHeader(event, WEBHOOK_SIGNATURE_HEADER) ?? null,
+    secret,
+  }, claims)
+
+  switch (receipt._tag) {
+    case 'InvalidSignature':
+      logWarn('gscdump.proxy.failed', new Error('invalid gscdump webhook signature'), { stage: 'webhook_signature' })
+      throw createError({ statusCode: 401, message: 'Invalid webhook signature' })
+    case 'Malformed':
+      logWarn('gscdump.proxy.failed', new Error(receipt.reason), { stage: 'webhook_parse' })
+      throw createError({ statusCode: 400, message: 'Malformed webhook envelope' })
+    case 'Duplicate':
+      return { ok: true, deduped: true }
   }
 
-  const envelope = await parseWebhookPayload(raw, { validateSignature: false }) as WebhookEnvelope
-
-  // Retries reuse the delivery id, so a second arrival of work we already did
-  // is a no-op rather than a duplicate reconcile.
-  const dedupeKey = `gscdump:webhook:${envelope.deliveryId}`
-  const storage = useStorage('cache')
-  if (await storage.hasItem(dedupeKey))
-    return { ok: true, deduped: true }
-  await storage.setItem(dedupeKey, envelope.occurredAt, { ttl: DEDUPE_TTL_SECONDS })
-
+  const { envelope } = receipt
   const db = useDrizzle(event)
+
+  // gscdump sends no email to a metered partner's user. This delivery is the
+  // whole notice, so this app sends its own. A failed send gives the claim
+  // back, so gscdump's retry sends it again.
+  if (envelope.event === 'user.allowance.notice') {
+    const outcome = await deliverAllowanceNotice(envelope.data, {
+      findRecipient: gscdumpUserId => db.query.users.findFirst({
+        columns: { email: true },
+        where: eq(users.gscdumpUserId, gscdumpUserId),
+      }).then(user => user ?? null),
+      // No NUXT_NOTIFICATIONS_ENABLED check: the kill switch holds back the
+      // welcome email and the daily sync, never a Free allowance email.
+      send: sendEmail,
+      manageSitesUrl: `${getRequestURL(event).origin}/pro/dashboard/sites`,
+    }).catch(async (error: unknown) => {
+      await claims.release(envelope.deliveryId)
+      throw error
+    })
+    if (outcome._tag === 'UnknownUser') {
+      logWarn('webhook.allowance_notice_unknown_user', new Error('unknown gscdump user'), {
+        gscdumpUserId: envelope.data.userId,
+        meter: envelope.data.meter,
+      })
+    }
+    // Dev observability: a local run sends nothing.
+    if (outcome._tag === 'Skipped')
+      console.warn(`[webhooks/gscdump] allowance email not sent (${outcome.reason})`)
+    return { ok: true, notice: outcome }
+  }
 
   const localSite = envelope.siteId
     ? await db.query.sites.findFirst({

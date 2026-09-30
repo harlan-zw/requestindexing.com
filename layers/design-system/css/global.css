@@ -265,8 +265,12 @@
   --fx-accent: var(--ui-text);
 
   /* Focus ring — an interaction-state token, orthogonal to the elevation
-     ladder. Left standalone; not part of the --elevation-* family. */
-  --shadow-focus: 0 0 0 3px color-mix(in oklab, var(--ui-color-primary-500) 30%, transparent);
+     ladder. Left standalone; not part of the --elevation-* family. The colour
+     is its own token because the ring ships in two forms: a box-shadow halo
+     (--shadow-focus) and the outline every Nuxt UI control draws on
+     `:focus-visible` (see "One focus treatment" below). One tint, both forms. */
+  --focus-ring-color: color-mix(in oklab, var(--ui-color-primary-500) 30%, transparent);
+  --shadow-focus: 0 0 0 3px var(--focus-ring-color);
 }
 
 /* ═══ Greydients — the visibility arc ══════════════════════════════════════
@@ -359,16 +363,20 @@
   --size-subheading: 0.75rem;
 }
 
-/* Dashboard body stays on DM Sans; Poppins is display only (DESIGN.md: body
-   copy never uses the display family). Tabular figures everywhere so numeric
-   columns and KPIs align. */
+/* Tabular figures everywhere so numeric columns and KPIs align. */
 .dashboard-theme,
 .dashboard-theme :where(p, span, div, td, th, li, button, input, label, a) {
-  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
 }
 
+/* Dashboard body stays on DM Sans; Poppins is display only (DESIGN.md: body
+   copy never uses the display family). The family is set once here and
+   inherited. nuxtseo.com sets it on each element in the list above instead.
+   That is safe there, because its body and display faces are one font. Here
+   it would put the text span of a Poppins page title in DM Sans. It would
+   also beat the layered `font-title` and `font-mono` utilities. */
 .dashboard-theme {
+  font-family: var(--font-sans);
   font-weight: var(--wght-body);
   font-stretch: var(--wdth-body);
 }
@@ -587,6 +595,19 @@ html {
   accent-color: var(--ui-color-primary-500);
 }
 
+/* One focus treatment. Every Nuxt UI control focuses with `outline-primary/25`,
+   which reads the `--ui-primary` alias, while `--shadow-focus` reads the primary
+   scale. Colour the outline from the focus token too, so a focused control and
+   a focus halo share one emerald tint. It is 30% against Nuxt UI's 25%, so
+   keyboard focus gets more visible, never less.
+
+   Matched on the utility itself: only a control that took Nuxt UI's default
+   focus outline is repainted, and anything that sets its own outline colour on
+   purpose keeps it. Unlayered on purpose, so it beats the utility. */
+[class*="outline-primary/25"]:focus-visible {
+  outline-color: var(--focus-ring-color);
+}
+
 /* Autofill: the UA paints a hard yellow fill that ignores `background-color`.
    Override it via the inset box-shadow trick so autofilled fields read as our
    surface, keep token text colour, and don't fade back to yellow. */
@@ -765,8 +786,10 @@ textarea {
   transform: translateY(0.5rem);
 }
 
-/* Unovis chart theming — prevent blinding white grid lines in dark mode */
-.dark :is(.unovis-xy-container, .unovis-single-container) {
+/* Unovis chart theming: prevent blinding white grid lines in dark mode.
+   The tooltip vars repeat on the tooltip element itself because a tooltip
+   mounted on `document.body` (UiTopEntityStackChart) is outside the container. */
+.dark :is(.unovis-xy-container, .unovis-single-container, .unovis-tooltip, .vis-tooltip) {
   --vis-axis-grid-color: var(--ui-border);
   --vis-axis-tick-color: var(--ui-border);
   --vis-axis-tick-label-color: var(--ui-text-dimmed);
@@ -1325,19 +1348,6 @@ textarea {
 :root {
   /* Tighter than Nuxt UI's default 8px so buttons and badges carry more presence. */
   --ui-radius: 0.625rem;
-}
-
-.dashboard-container {
-  width: 100%;
-  max-width: 80rem;
-  margin-inline: auto;
-  padding-inline: 1rem;
-}
-
-@media (min-width: 40rem) {
-  .dashboard-container {
-    padding-inline: 1.5rem;
-  }
 }
 
 /* Verdant wash — organic emerald glow on a warm cream surface. Replaces the

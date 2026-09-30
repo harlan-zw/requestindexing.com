@@ -1,11 +1,12 @@
+import type { GscSearchType } from '@gscdump/contracts'
 import type { MaybeRefOrGetter, Ref } from 'vue'
-import type { BuilderState } from '../../../shared/gscdump-api'
-import { inArray, page as pageColumn, queryCanonical, query as queryColumn } from 'gscdump/query'
+import type { AssociationInput } from '../../../shared/analytics-requests'
 import { computed, onScopeDispose, ref, toValue, watch } from 'vue'
 import { logWarn } from '~~/shared/logging'
+import { associationRequest } from '../../../shared/analytics-requests'
 import { operatorFreeKeyword } from '../../../shared/search-operator-queries'
 import { selectTopAssociations } from '../../../shared/top-associations'
-import { andFilter, dateFilter } from '../../../shared/utils/filter-wire'
+import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdump } from './useProGscdump'
 
 /**
@@ -29,16 +30,9 @@ export interface UseProTopAssociationsOptions {
   group: 'query' | 'queryCanonical' | 'page'
   /** Visible row keys. */
   keys: MaybeRefOrGetter<readonly string[]>
+  /** Search type slice. Defaults to the control bar's picker. */
+  searchType?: MaybeRefOrGetter<GscSearchType | undefined>
 }
-
-const DIMENSION_COLUMNS = {
-  page: pageColumn,
-  query: queryColumn,
-  queryCanonical,
-} as const
-
-/** Counterparts one key may carry before the read stops being worth widening. */
-const COUNTERPARTS_PER_KEY = 50
 
 export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
   map: Ref<Map<string, string>>
@@ -47,6 +41,8 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
   const gscdump = useProGscdump()
   const map = ref<Map<string, string>>(new Map())
   const pending = ref(false)
+  const filters = useProGscFilters()
+  const searchType = computed(() => toValue(opts.searchType) ?? filters.searchType.value)
   // Grouping by a query dimension returns the top page, and the reverse.
   const topDimension = opts.group === 'page' ? 'query' : 'page'
   const cached = new Map<string, string | null>()
@@ -61,13 +57,19 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
     return [...seen]
   })
 
+  // Async, so a request the contract rejects becomes a rejection the caller
+  // logs, like a failed read.
+  async function readAssociations(siteId: string, input: AssociationInput) {
+    return gscdump.queryAnalyticsReport({ params: { siteId }, body: associationRequest(input) }, true)
+  }
+
   let token = 0
   onScopeDispose(() => token++)
   watch(
-    [() => toValue(opts.gscdumpSiteId), () => toValue(opts.range), _keys],
-    async ([siteId, range, keys]) => {
+    [() => toValue(opts.gscdumpSiteId), () => toValue(opts.range), _keys, searchType],
+    async ([siteId, range, keys, slice]) => {
       const current = ++token
-      const nextScope = siteId ? `${siteId}:${range?.start}:${range?.end}:${opts.group}` : ''
+      const nextScope = siteId ? `${siteId}:${slice}:${range?.start}:${range?.end}:${opts.group}` : ''
       if (nextScope !== cacheScope) {
         cached.clear()
         cacheScope = nextScope
@@ -80,16 +82,10 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
       const missing = keys.filter(k => !cached.has(k))
       if (missing.length) {
         pending.value = true
-        const state: BuilderState = {
-          dimensions: [opts.group, topDimension],
-          filter: andFilter(dateFilter(range), inArray(DIMENSION_COLUMNS[opts.group], missing)),
-          orderBy: { column: 'clicks', dir: 'desc' },
-          rowLimit: Math.min(25_000, missing.length * COUNTERPARTS_PER_KEY),
-        }
         // Silent: an unresolved association renders as a dash in its own cell,
         // which says more than a toast over the whole table. The failure is
         // logged rather than dropped.
-        const response = await gscdump.queryAnalyticsReport({ params: { siteId }, body: { state } }, true)
+        const response = await readAssociations(siteId, { searchType: slice, group: opts.group, keys: missing, range })
           .catch((cause: unknown) => {
             logWarn('gscdump.table_cell.unresolved', cause, { read: 'top-association', group: opts.group })
             return null

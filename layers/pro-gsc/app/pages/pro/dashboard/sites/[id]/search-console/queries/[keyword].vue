@@ -14,6 +14,7 @@ import {
 } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { useProGscFilters } from '#layers/pro-gsc/app/composables/useProGscFilters'
 import ProTablePages from '#layers/pro-gsc/app/internal/components/pro/ProTablePages.vue'
+import { queryDetailHeader } from '#layers/pro-gsc/app/utils/detail-header'
 import { deriveUrlBrandKeywords } from '#layers/pro-gsc/shared/brand-queries'
 import { isBrandTerm } from '#layers/pro-gsc/shared/query-display'
 
@@ -28,9 +29,8 @@ import { isBrandTerm } from '#layers/pro-gsc/shared/query-display'
 // Dropped against upstream: search volume, CPC and difficulty (those come from
 // DataForSEO, which this app does not carry) and the chat eject.
 
-// The heading lives inside the entity summary below, beside the variant count
-// and the SERP link, so the shell does not add a second one.
-definePageMeta({ proHideHeader: true })
+// The query and a crumb back to Queries live in the shared page header.
+definePageMeta({ proHeader: queryDetailHeader })
 
 const { siteId, site, siteStatus, isReady, isNotConnected, gscdumpSiteId } = useSite()
 
@@ -165,14 +165,6 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
   </UiAlert>
 
   <div v-else data-testid="search-console-keyword-page" class="flex flex-col gap-5">
-    <nav aria-label="Breadcrumb" class="text-xs text-muted">
-      <NuxtLink :to="queriesHref" class="hover:text-default transition-colors">
-        Queries
-      </NuxtLink>
-      <span class="mx-1.5 text-dimmed">/</span>
-      <span class="text-default">&ldquo;{{ keyword }}&rdquo;</span>
-    </nav>
-
     <ProGscSurfaceBar surface="detail" :site-id="siteId" />
 
     <!-- Identity header: hero search clicks plus the performance facts -->
@@ -190,9 +182,9 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
       >
         <template #heading>
           <div class="min-w-0 flex items-center gap-3">
-            <h1 class="text-sm font-semibold text-highlighted truncate">
+            <h2 class="text-sm font-semibold text-highlighted truncate">
               &ldquo;{{ keyword }}&rdquo;
-            </h1>
+            </h2>
             <UiIcon v-if="isBrand" name="success" title="Brand term" class="size-3.5 shrink-0" :class="vizTextColor.brand" />
             <UiChip v-if="groupVariantCount > 1" purpose="count">
               {{ groupVariantCount }} variants

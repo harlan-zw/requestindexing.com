@@ -93,9 +93,9 @@ export interface BingConnectionSetupState {
 /**
  * Copy for a connection that cannot be read yet, or `null` once it is ready.
  *
- * There is no Connect button here. Bing authorization is granted against the
- * gscdump account that owns the Site, not against this app, so a button would
- * lead nowhere it can act. The copy says where the work happens instead.
+ * There is no Connect button here. gscdump's partner v1 protocol has no Bing
+ * connect or reconnect operation yet, so this app cannot start either. The
+ * copy says so rather than point at a control that does not exist.
  */
 export function bingConnectionSetupState(connection: BingConnectionView): BingConnectionSetupState | null {
   switch (connection._tag) {
@@ -103,7 +103,7 @@ export function bingConnectionSetupState(connection: BingConnectionView): BingCo
       return {
         icon: 'search',
         title: 'Bing is not connected for this Site',
-        description: 'Connect Bing Webmaster Tools in Search Indexing. Collection starts with the next daily sync.',
+        description: 'Bing\'s crawl record for this Site shows here after Bing is connected. You cannot connect Bing from Request Indexing yet.',
       }
     case 'verification-required':
       return {
@@ -114,11 +114,89 @@ export function bingConnectionSetupState(connection: BingConnectionView): BingCo
     case 'reauth':
       return {
         icon: 'warning',
-        title: 'Reconnect Bing',
-        description: 'Bing authorization or Site permission is no longer available. Reconnect in Search Indexing.',
+        title: 'Bing stopped accepting this connection',
+        description: 'Bing authorization or Site permission is no longer available. You cannot reconnect Bing from Request Indexing yet.',
       }
     case 'ready':
       return null
+  }
+}
+
+/** One Site's Bing connection read, for the fleet summary on Integrations. */
+export type BingSiteRead
+  = | { _tag: 'Read', connection: BingConnectionView }
+    | { _tag: 'Failed' }
+
+export interface BingIntegrationInput {
+  /** The `bing` feature flag. Off means the proxy refuses every Bing read. */
+  enabled: boolean
+  /** Sites Search Console has linked to gscdump. Bing reads through that link. */
+  linkedSites: number
+  /** One read per linked Site, or null while they are in flight. */
+  reads: readonly BingSiteRead[] | null
+}
+
+/**
+ * The Bing row on Integrations. Read-only: the partner protocol reports Bing's
+ * state per Site but offers no connect, so the row counts what Bing reports.
+ */
+export type BingIntegrationState
+  = | { _tag: 'unavailable' }
+    | { _tag: 'awaiting-search-console' }
+    | { _tag: 'checking' }
+    | { _tag: 'read-failed' }
+    | {
+      _tag: 'ready'
+      total: number
+      connected: number
+      verification: number
+      reconnect: number
+      failed: number
+    }
+
+export function projectBingIntegrationState(input: BingIntegrationInput): BingIntegrationState {
+  if (!input.enabled)
+    return { _tag: 'unavailable' }
+  if (input.linkedSites === 0)
+    return { _tag: 'awaiting-search-console' }
+  if (!input.reads)
+    return { _tag: 'checking' }
+  if (input.reads.every(read => read._tag === 'Failed'))
+    return { _tag: 'read-failed' }
+
+  const tally = { total: input.reads.length, connected: 0, verification: 0, reconnect: 0, failed: 0 }
+  for (const read of input.reads) {
+    if (read._tag === 'Failed')
+      tally.failed++
+    else if (read.connection._tag === 'ready')
+      tally.connected++
+    else if (read.connection._tag === 'verification-required')
+      tally.verification++
+    else if (read.connection._tag === 'reauth')
+      tally.reconnect++
+  }
+  return { _tag: 'ready', ...tally }
+}
+
+function sites(count: number): string {
+  return count === 1 ? '1 Site' : `${count} Sites`
+}
+
+/** The row's one-line status. Coverage, never a bare "Connected". */
+export function bingIntegrationStatusLine(state: BingIntegrationState): string {
+  switch (state._tag) {
+    case 'unavailable':
+      return 'Not available yet'
+    case 'awaiting-search-console':
+      return 'Waiting for Search Console to link a Site'
+    case 'checking':
+      return 'Checking Sites'
+    case 'read-failed':
+      return 'Bing state could not be read'
+    case 'ready': {
+      const coverage = `${state.connected} of ${sites(state.total)} connected`
+      return state.reconnect ? `Reconnect needed for ${sites(state.reconnect)}. ${coverage}` : coverage
+    }
   }
 }
 

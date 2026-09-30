@@ -35,7 +35,11 @@ const slots = useSlots()
 <template>
   <div class="flex items-center justify-between gap-3 mb-3">
     <div class="flex items-center gap-2 min-w-0">
-      <UiNavIcon v-if="icon" :icon="icon" />
+      <!-- A section that reads through one Source passes its mark here, in
+           place of the decorative icon. -->
+      <slot name="mark">
+        <UiNavIcon v-if="icon" :icon="icon" />
+      </slot>
       <div class="min-w-0">
         <h2 class="text-heading text-default flex items-center gap-2">
           <slot name="title">

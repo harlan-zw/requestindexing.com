@@ -1,7 +1,11 @@
 <script lang="ts" setup>
 import TableIndexingUrls from '#layers/pro-indexing/app/internal/components/TableIndexingUrls.vue'
-import { issueDetails } from '#layers/pro-indexing/app/utils/indexing-issues'
-import { INDEXING_URLS_PAGE_SIZE } from '#layers/pro-indexing/app/utils/indexing-urls-first-page'
+import { useIndexingUrlsFirstPageSeed } from '#layers/pro-indexing/app/internal/composables/useIndexingUrlsFirstPageSeed'
+import {
+  INDEXING_URLS_PAGE_SIZE,
+  isFirstPageIndexingUrlsRouteQuery,
+  parseIndexingUrlsRouteQuery,
+} from '#layers/pro-indexing/app/utils/indexing-urls-first-page'
 
 definePageMeta({
   proTab: { feature: 'indexing', label: 'URLs', icon: 'i-lucide-link-2', order: 30 },
@@ -9,36 +13,34 @@ definePageMeta({
   icon: 'i-lucide-link-2',
 })
 
-const { gscdumpSiteId } = useSite('Indexing URLs')
+const { gscdumpSiteId, site } = useSite('Indexing URLs')
 const route = useRoute()
+const { isAdmin } = useCaller()
+const teamPolicy = useTeamPolicy(() => site.value?.teamId)
+// `inspect.create` is a write; the proxy refuses it for a view-only role.
+const canWrite = computed(() => isAdmin.value || teamPolicy.can('write-data'))
 
-const initialIssue = computed(() => {
-  const issue = route.query.issue
-  return typeof issue === 'string' && issueDetails[issue] ? issue : undefined
-})
-const initialSearch = computed(() =>
-  typeof route.query.search === 'string' ? route.query.search : undefined,
-)
-const initialFacet = computed(() => {
-  const facet = route.query.facet
-  return facet === 'canonical_mismatch' || facet === 'rich_results' ? facet : undefined
-})
-const initialStatus = computed<'indexed' | 'not_indexed' | 'pending' | undefined>(() => {
-  const status = route.query.status
-  return status === 'indexed' || status === 'not_indexed' || status === 'pending' ? status : undefined
-})
+const routeState = computed(() => parseIndexingUrlsRouteQuery(route.query))
+
+// The clean first page renders on the server with its rows. Filtered deep
+// links and client navigations fetch in the browser.
+const seedFirstPage = useIndexingUrlsFirstPageSeed()
+if (import.meta.server && gscdumpSiteId.value && isFirstPageIndexingUrlsRouteQuery(route.query))
+  await seedFirstPage(gscdumpSiteId.value, INDEXING_URLS_PAGE_SIZE)
 </script>
 
 <template>
   <ProPageStates>
     <TableIndexingUrls
-      :key="`urls-${initialIssue}-${initialFacet}`"
+      :key="`urls-${routeState.issue}-${routeState.facet}`"
       :gscdump-site-id="gscdumpSiteId"
       :page-size="INDEXING_URLS_PAGE_SIZE"
-      :initial-issue="initialIssue"
-      :initial-search="initialSearch"
-      :initial-facet="initialFacet"
-      :initial-status="initialStatus"
+      :initial-issue="routeState.issue"
+      :initial-search="routeState.search"
+      :initial-facet="routeState.facet"
+      :initial-status="routeState.status"
+      :initial-page="routeState.page"
+      :can-write="canWrite"
     />
   </ProPageStates>
 </template>

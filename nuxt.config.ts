@@ -269,9 +269,10 @@ export default defineNuxtConfig({
           // sign-in at all.
           NUXT_OAUTH_GOOGLE_CLIENT_ID: process.env.NUXT_OAUTH_GOOGLE_CLIENT_ID
             || '32479086022-b2upoo15sfpo0fpmgdgi95fh6oths219.apps.googleusercontent.com',
-          // Kill switch for outbound user-facing sends (welcome email) and the
-          // daily site-sync fan-out. Set to 'false' while migrating legacy data
-          // so no user is emailed and no bulk sync is queued.
+          // Kill switch for the welcome email and the daily site-sync fan-out.
+          // Set to 'false' while migrating legacy data, so no welcome email is
+          // sent and no bulk sync is queued. The Free allowance email ignores
+          // this switch and always sends.
           NUXT_NOTIFICATIONS_ENABLED: process.env.NUXT_NOTIFICATIONS_ENABLED || 'false',
         },
         durable_objects: {
@@ -374,8 +375,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     checkinToken: '',
-    // Gates every outbound user-facing send and the daily sync fan-out.
-    // Override with NUXT_NOTIFICATIONS_ENABLED.
+    // Gates the welcome email and the daily sync fan-out. The Free allowance
+    // email always sends. Override with NUXT_NOTIFICATIONS_ENABLED.
     notificationsEnabled: true,
     key: '', // .env NUXT_KEY
     session: {

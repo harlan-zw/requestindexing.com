@@ -17,7 +17,7 @@ import ProGscControlBar from './ProGscControlBar.vue'
 // The dimension dropdown stays off. The sidebar is the breakdown selector.
 
 const { surface } = defineProps<{
-  surface: 'queries' | 'pages' | 'countries' | 'detail'
+  surface: 'overview' | 'queries' | 'pages' | 'countries' | 'detail'
   siteId: string
 }>()
 
@@ -25,11 +25,12 @@ const { searchType, supportsQueries, supportsDimensions } = useProGscFilters()
 const route = useRoute()
 
 // Brand and Questions are query-text facets, so they only apply where a row is
-// a query. Country and Device facets stay off everywhere per-site: a breakdown
-// table is a single-dimension aggregate, so there is no page x country data to
+// a query: the Queries table, and the Overview, which leads with query lists.
+// Country and Device facets stay off everywhere per-site: a breakdown table is
+// a single-dimension aggregate, so there is no page x country data to
 // cross-filter. An entity detail page is already pinned to one term or one
 // page, so a query-text facet there would only ever hide the whole page.
-const barProps = computed(() => surface === 'queries'
+const barProps = computed(() => surface === 'queries' || surface === 'overview'
   ? { showMetrics: true, showBrand: true, showQuestions: true, showFilter: false }
   : { showMetrics: true, showFilter: false })
 

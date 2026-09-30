@@ -1,13 +1,11 @@
 import type { GscSearchType } from '@gscdump/contracts'
 import type { Metric } from 'gscdump/query'
 import type { MaybeRefOrGetter, Ref } from 'vue'
-import type { BuilderState, GscdumpDataRow } from '../../../shared/gscdump-api'
+import type { SeriesDimension } from '../../../shared/analytics-requests'
 import type { GscFacet } from '../../../shared/utils/gsc-facets'
-import { country as countryColumn, inArray, page as pageColumn, queryCanonical, query as queryColumn } from 'gscdump/query'
 import { computed, onScopeDispose, ref, toValue, watch } from 'vue'
-import { andFilter, dateFilter } from '../../../shared/utils/filter-wire'
-import { facetsToFilters } from '../../../shared/utils/gsc-facets'
-import { sparklineDateAxis } from '../../../shared/utils/gsc-series'
+import { entityDailySeriesRequest } from '../../../shared/analytics-requests'
+import { entitySeriesFromRows, sparklineDateAxis } from '../../../shared/utils/gsc-series'
 import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdump } from './useProGscdump'
 
@@ -16,41 +14,22 @@ export { sparklineDateAxis }
 /**
  * Resolve the daily sparkline series for a whole table page in one read.
  *
- * The per-row loader it replaces issued one request per visible row. Queries go
- * through the purpose-built `keyword-sparklines` operation, which answers up to
- * 20 keywords per call. Pages and countries have no such operation, so they run
- * one grouped `(dimension, date)` analytics report instead. Either way the
- * result is projected onto a shared day axis, so every series is the same
- * length and a missing day reads as zero rather than shortening the line.
+ * One grouped `(dimension, date)` rows read covers every visible row, for
+ * whichever metric the caller plots. Each row carries its date, so every
+ * series is projected onto a shared day axis: a missing day reads as zero
+ * rather than shifting later days earlier. This is the shape of nuxtseo.com's
+ * `entity-daily-sparkline` read.
  */
-
-/** Keywords one `keyword-sparklines` request accepts. */
-const SPARKLINE_KEYWORD_BATCH = 20
-
 export interface UseProEntitySparklinesOptions {
   gscdumpSiteId: MaybeRefOrGetter<string | null | undefined>
   range: MaybeRefOrGetter<{ start: string, end: string }>
-  dimension: 'query' | 'page' | 'queryCanonical' | 'country'
+  dimension: SeriesDimension
   /** Visible row keys: queries, page URLs or country codes. */
   keys: MaybeRefOrGetter<readonly string[]>
   /** Metric the sparkline plots. Defaults to `clicks`. */
   metric?: MaybeRefOrGetter<Metric>
   searchType?: MaybeRefOrGetter<GscSearchType>
   facets?: MaybeRefOrGetter<readonly GscFacet[] | undefined>
-}
-
-const DIMENSION_COLUMNS = {
-  country: countryColumn,
-  page: pageColumn,
-  query: queryColumn,
-  queryCanonical,
-} as const
-
-function chunk<T>(items: readonly T[], size: number): T[][] {
-  const out: T[][] = []
-  for (let i = 0; i < items.length; i += size)
-    out.push(items.slice(i, i + size))
-  return out
 }
 
 export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
@@ -71,8 +50,6 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
   const cached = new Map<string, number[] | null>()
   let cacheScope = ''
 
-  const isKeywordDimension = opts.dimension === 'query' || opts.dimension === 'queryCanonical'
-
   const _keys = computed(() => {
     const seen = new Set<string>()
     for (const k of toValue(opts.keys)) {
@@ -82,68 +59,24 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
     return [...seen]
   })
 
-  /** Keyword series straight from the purpose-built operation. */
-  async function readKeywordSeries(
+  /**
+   * Every visible entity's series from one grouped `(dimension, date)` read.
+   * A list report rejects the `date` dimension, so this is the raw rows read.
+   */
+  async function readSeries(
     siteId: string,
     range: { start: string, end: string },
     keys: string[],
+    selectedMetric: Metric,
     slice: GscSearchType,
-  ): Promise<Map<string, Map<string, number>>> {
-    const axis = sparklineDateAxis(range.start, range.end)
-    const out = new Map<string, Map<string, number>>()
-    const batches = await Promise.all(chunk(keys, SPARKLINE_KEYWORD_BATCH).map(batch =>
-      gscdump.queryKeywordSparklines<{ sparklines: Record<string, number[]> }>({
-        params: { siteId },
-        body: { keywords: batch, startDate: range.start, endDate: range.end, searchType: slice },
-      }, true),
-    ))
-    for (const batch of batches) {
-      for (const [key, series] of Object.entries(batch?.sparklines ?? {})) {
-        const byDate = new Map<string, number>()
-        series.forEach((value, index) => {
-          const day = axis[index]
-          if (day)
-            byDate.set(day, Number(value) || 0)
-        })
-        out.set(key, byDate)
-      }
-    }
-    return out
-  }
-
-  /** Page and country series from one grouped `(dimension, date)` report. */
-  async function readBreakdownSeries(
-    siteId: string,
-    range: { start: string, end: string },
-    keys: string[],
     facets: readonly GscFacet[] | undefined,
-  ): Promise<Map<string, Map<string, number>>> {
-    const column = DIMENSION_COLUMNS[opts.dimension]
-    const state: BuilderState = {
-      dimensions: [opts.dimension, 'date'],
-      filter: andFilter(
-        dateFilter(range),
-        inArray(column, keys),
-        ...facetsToFilters(facets),
-      ),
-      // One row per key per day, plus headroom for a partial day bucket.
-      rowLimit: Math.min(25_000, keys.length * (sparklineDateAxis(range.start, range.end).length + 1)),
-    }
-    const response = await gscdump.queryAnalyticsReport({ params: { siteId }, body: { state } }, true)
-    const out = new Map<string, Map<string, number>>()
-    for (const row of (response?.rows ?? []) as GscdumpDataRow[]) {
-      const key = String((row as unknown as Record<string, unknown>)[opts.dimension] ?? '')
-      const day = row.date
-      if (!key || !day)
-        continue
-      let series = out.get(key)
-      if (!series) {
-        series = new Map()
-        out.set(key, series)
-      }
-      series.set(day, Number((row as unknown as Record<string, unknown>)[metric.value] ?? 0) || 0)
-    }
-    return out
+  ): Promise<Map<string, number[]>> {
+    const axis = sparklineDateAxis(range.start, range.end)
+    const response = await gscdump.queryAnalyticsRows({
+      params: { siteId },
+      body: entityDailySeriesRequest({ searchType: slice, dimension: opts.dimension, keys, range, metric: selectedMetric, facets }),
+    }, true)
+    return entitySeriesFromRows(response?.rows ?? [], { key: opts.dimension, metric: selectedMetric, axis })
   }
 
   let token = 0
@@ -179,10 +112,7 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
       pending.value = true
       map.value = new Map(keys.filter(key => cached.has(key)).map(key => [key, cached.get(key) ?? []]))
 
-      const byEntity = await (isKeywordDimension
-        ? readKeywordSeries(siteId, range, missing, selectedSearchType)
-        : readBreakdownSeries(siteId, range, missing, facets)
-      ).catch((cause: unknown) => {
+      const series = await readSeries(siteId, range, missing, selectedMetric, selectedSearchType, facets).catch((cause: unknown) => {
         // A missing sparkline degrades to a dash in the cell, so the failure is
         // surfaced on the cell rather than as a toast over the whole table.
         if (current === token)
@@ -191,15 +121,13 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
       })
       if (current !== token)
         return
-      if (!byEntity) {
+      if (!series) {
         pending.value = false
         return
       }
 
       for (const key of missing)
-        cached.set(key, null)
-      for (const [key, series] of byEntity)
-        cached.set(key, axis.map(d => series.get(d) ?? 0))
+        cached.set(key, series.get(key) ?? null)
       const next = new Map<string, number[]>()
       for (const key of keys)
         next.set(key, cached.get(key) ?? [])

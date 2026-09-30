@@ -23,6 +23,7 @@ export const LOG_CATALOG = {
   'gscdump.integration.probe_failed': 'pro gscdump-integration probe failed on the client plugin',
   'gscdump.engine.fallback': 'browser DuckDB-WASM path threw and fell back to cloud (paying user got slow path)',
   'gscdump.table_cell.unresolved': 'a table cell read (top association) failed; the cells degrade to a dash',
+  'gscdump.registration.refused': 'gscdump refused a Site registration (Free allowance or duplicate property); the Site stays connected without Search Console',
 
   // Storage / KV best-effort
   'kv.best_effort_write_failed': 'KV/storage write blip; counters/cache will self-heal',
@@ -34,12 +35,14 @@ export const LOG_CATALOG = {
 
   // Webhooks
   'webhook.side_effect_failed': 'post-success side effect inside an already-acknowledged webhook',
+  'webhook.allowance_notice_unknown_user': 'a user.allowance.notice named a gscdump user with no local account; no email was sent',
 
   // Tasks
   'task.batch_item_failed': 'a single item in a cron-task batch raised',
 
   // Auth / probes
   'auth.optional_probe_failed': 'optional plugin/probe lookup failed (no provider, expired session)',
+  'auth.email_lookup_failed': 'the provider email lookup failed, so sign-in could not confirm a verified email and refused',
   'auth.account_create_failed': 'account creation during sign-in threw; the user saw "Failed to create account"',
   'auth.session_refresh_failed': 'session refresh after STATE_CHANGED 409 failed',
 
