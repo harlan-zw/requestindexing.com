@@ -21,6 +21,8 @@ export { useProGscdumpData } from './useProGscdumpData'
 export { useProGscdumpDataDetail } from './useProGscdumpDataDetail'
 export { useProGscdumpDates } from './useProGscdumpDates'
 export {
+  indexingUrlsQueryKey,
+  useProGscdumpCanonicalMismatches,
   useProGscdumpIndexing,
   useProGscdumpIndexingDiagnostics,
   useProGscdumpIndexingUrls,
