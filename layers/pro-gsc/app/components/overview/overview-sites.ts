@@ -1,5 +1,6 @@
 import type { SiteFleetRow } from '~~/layers/core/app/types'
 import { siteLabel } from '~~/layers/design-system/app/composables/formatting'
+import { SITE_LINK_REFUSED, SITE_NOT_LINKED_LABEL } from '../../../shared/entitlement-copy'
 import { inactiveSiteStatus } from '../../../shared/site-status'
 
 // Shared projection for the dashboard home's Sites column. One place decides
@@ -88,7 +89,7 @@ export function isOverviewReadTarget<T extends Pick<SiteFleetRow, 'gscdumpSiteId
 
 /** True when the Site needs its owner before it can collect again. */
 export function isSiteBroken(site: Pick<OverviewSite, 'syncStatus' | 'permissionLost'>): boolean {
-  return site.permissionLost || site.syncStatus === 'error'
+  return site.permissionLost || site.syncStatus === 'error' || site.syncStatus === 'refused'
 }
 
 /**
@@ -107,6 +108,8 @@ export function overviewSiteStatus(site: OverviewSite): OverviewSiteStatus {
     }
   }
   switch (site.syncStatus) {
+    case 'refused':
+      return { label: SITE_NOT_LINKED_LABEL, tone: 'error', urgent: true, summary: SITE_LINK_REFUSED, action: null }
     case 'error':
       return { label: 'Sync failed', tone: 'error', urgent: true, summary: 'The last Search Console sync failed.', action: 'Open the Site to see the error and retry.' }
     case 'syncing':

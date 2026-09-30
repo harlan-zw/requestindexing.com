@@ -1,6 +1,6 @@
 import type { OverviewSite, OverviewSiteEntry } from './overview-sites'
 import { describe, expect, it } from 'vitest'
-import { overviewColumnPage, overviewSiteStatus, soleSiteLandingPath } from './overview-sites'
+import { isSiteBroken, overviewColumnPage, overviewSiteStatus, soleSiteLandingPath } from './overview-sites'
 
 function site(overrides: Partial<OverviewSite> & { siteId: string }): OverviewSite {
   return {
@@ -29,8 +29,15 @@ describe('overviewSiteStatus', () => {
     ['pending', 'Waiting to sync', false],
     ['idle', 'Waiting to sync', false],
     ['synced', 'Synced', false],
+    ['refused', 'Not linked', true],
   ] as const)('reads %s as %s', (syncStatus, label, urgent) => {
     expect(overviewSiteStatus(site({ siteId: 'a', syncStatus }))).toMatchObject({ label, urgent })
+  })
+})
+
+describe('isSiteBroken', () => {
+  it('counts a Site gscdump refused to link, because it needs its owner before it can collect', () => {
+    expect(isSiteBroken({ syncStatus: 'refused', permissionLost: false })).toBe(true)
   })
 })
 
