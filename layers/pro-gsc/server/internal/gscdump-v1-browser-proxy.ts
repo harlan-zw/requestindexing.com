@@ -40,11 +40,8 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.createSitemapAction },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.recoverSitePermission },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getTopAssociation },
-  // The tables resolve one sparkline per visible row in a single call, and the
-  // entity trend panels read the site's own daily query and page counts.
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.queryKeywordSparklines },
-  // `analytics.rows.query` answers a raw grouped read; the page and country
-  // sparklines use it where no purpose-built operation exists.
+  // `analytics.rows.query` answers a raw grouped read. Every sparkline reads
+  // its `(dimension, date)` series here, because a list report rejects `date`.
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryRows },
   // Entity detail pages read the preset bundle rather than one request per
   // preset.
