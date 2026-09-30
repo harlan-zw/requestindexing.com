@@ -10,7 +10,7 @@ import type { SiteLookup, SiteResource } from '#layers/pro-saas/shared/site-look
 // exactly one Site, gets the Site nav; anything wider gets the fleet roster.
 import type { ProNavSite } from '#layers/pro-shell/app/composables/useProSingleSiteNav'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
-import { isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
+import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 import { readSiteLookup, siteLookupKey } from '#layers/pro-saas/shared/site-lookup'
 
 const route = useRoute()
@@ -18,9 +18,16 @@ const router = useRouter()
 
 // Every Search Console connect link returns to a dashboard page. When Google
 // gave no Search Console scope, the callback marks that page with
-// `?error=gsc_scope_missing`, so the shell is the one place that says so. The
-// retry returns to the same page without the marker.
-const gscScopeMissing = computed(() => isGscScopeMissingError(route.query.error))
+// `?error=gsc_scope_missing`, so the shell is the one place that says so. A
+// returning user carries no marker; gscdump's `scope_missing`, read into the
+// session, says it for them. The retry returns to the same page without the
+// marker.
+const { session } = useUserSession()
+const gscScopeMissing = computed(() => resolveGscConnection({
+  gscdumpConnected: !!session.value?.gscdumpConnected,
+  accountStatus: session.value?.gscdumpAccountStatus ?? null,
+  error: route.query.error,
+})._tag === 'ScopeMissing')
 const gscRetryTo = computed(() => {
   const { error: _error, ...query } = route.query
   return router.resolve({ path: route.path, query, hash: route.hash }).fullPath

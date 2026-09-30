@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { exchangeAuthCodeResult, introspectAccessTokenResult } from 'gscdump'
 import { logger } from '~~/shared/server/logger'
+import { forgetGscdumpAccountStatus } from '#layers/pro-gsc/server/utils/gscdump-account-status'
 import { probeGscdumpUserKey, shouldRepairGscdumpKey } from '#layers/pro-gsc/server/utils/gscdump-key-repair'
 import { scheduleGscdumpOnboardingReconcile } from '#layers/pro-gsc/server/utils/reconcile-gscdump-onboarding'
 import { resolveGscGrant } from '#layers/pro-gsc/shared/gsc-grant'
@@ -251,6 +252,11 @@ export default defineEventHandler(async (event) => {
   // provisioning can lag OAuth; this waits in the background and avoids turning
   // a healthy provisioning state into a callback warning.
   if (gscdumpUserId) {
+    // The grant just changed, so a cached `scope_missing` from the old one
+    // must not greet the user on the page they return to. Only a fresh
+    // lifecycle read may say what the new grant is.
+    await forgetGscdumpAccountStatus(gscdumpUserId)
+      .catch((error: unknown) => logger.error('[google auth] cached gscdump account status not cleared:', errorDetails(error).message))
     scheduleGscdumpOnboardingReconcile(event, {
       userId: session.user.id,
       gscdumpUserId,

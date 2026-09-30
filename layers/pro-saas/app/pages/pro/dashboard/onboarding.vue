@@ -27,10 +27,13 @@ const toast = useToast()
 const { session, fetch: refreshSession } = useUserSession()
 
 // The callback returns `?error=gsc_scope_missing` when the user unticked
-// Search Console on Google's consent screen. That outranks a gscdump key left
-// from an earlier grant, so the step shows the retry instead of "connected".
+// Search Console on Google's consent screen, and gscdump's lifecycle reports
+// `scope_missing` for a returning user who did it before the callback checked.
+// Either outranks a gscdump key left from an earlier grant, so the step shows
+// the retry instead of "connected".
 const gsc = computed(() => resolveGscConnection({
   gscdumpConnected: !!session.value?.gscdumpConnected,
+  accountStatus: session.value?.gscdumpAccountStatus ?? null,
   error: route.query.error,
 }))
 const gscConnected = computed(() => gsc.value._tag === 'Connected')

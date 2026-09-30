@@ -76,7 +76,11 @@ async function resolveSignedInLanding() {
     return
   }
   const step = resolveOnboardingResumeStep({
-    gsc: resolveGscConnection({ gscdumpConnected: !!session.value?.gscdumpConnected, error: route.query.error }),
+    gsc: resolveGscConnection({
+      gscdumpConnected: !!session.value?.gscdumpConnected,
+      accountStatus: session.value?.gscdumpAccountStatus ?? null,
+      error: route.query.error,
+    }),
     hasSites: !!session.value?.hasSites,
   })
   await navigateTo({ path: ONBOARDING_ROUTE, query: { step } }, { replace: true })

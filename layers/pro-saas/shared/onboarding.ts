@@ -7,6 +7,7 @@
 // are no invites, so `help`, `plan` and `invite` are gone and `integrations`
 // folds into `connect`.
 
+import type { AccountStatus } from '@gscdump/contracts'
 import { GSC_SCOPE_MISSING_ERROR, isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
 
 /** Where a signed-out visitor starts. Renders the provider buttons. */
@@ -67,16 +68,27 @@ export type GscConnection
 export interface GscConnectionInput {
   /** gscdump holds a user id and key for this account. */
   gscdumpConnected: boolean
+  /**
+   * gscdump's account status, as the session read it. Null when it was not
+   * read or the read failed; the stored credential then decides.
+   */
+  accountStatus: AccountStatus | null
   /** The untrusted `?error=` value the OAuth callback returned with. */
   error: unknown
 }
 
 /**
  * The callback's verdict outranks the stored credential. It is the only
- * evidence about the grant Google returned a moment ago.
+ * evidence about the grant Google returned a moment ago. Without it, gscdump's
+ * account status does: a user who unticked Search Console before the callback
+ * checked the grant still holds a key, and only gscdump knows it is unusable.
+ *
+ * Only `scope_missing` maps here. `reauth_required` and `refresh_missing` need
+ * a reconnect too, but the ScopeMissing alert tells the user to tick a box,
+ * which is the wrong instruction for them.
  */
 export function resolveGscConnection(input: GscConnectionInput): GscConnection {
-  if (isGscScopeMissingError(input.error))
+  if (isGscScopeMissingError(input.error) || input.accountStatus === 'scope_missing')
     return { _tag: 'ScopeMissing' }
   return input.gscdumpConnected ? { _tag: 'Connected' } : { _tag: 'NotConnected' }
 }

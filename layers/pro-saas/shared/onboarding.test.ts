@@ -19,19 +19,29 @@ const SCOPE_MISSING: GscConnection = { _tag: 'ScopeMissing' }
 
 describe('resolveGscConnection', () => {
   it('reads a gscdump credential as connected', () => {
-    expect(resolveGscConnection({ gscdumpConnected: true, error: undefined })).toEqual(CONNECTED)
-    expect(resolveGscConnection({ gscdumpConnected: false, error: undefined })).toEqual(NOT_CONNECTED)
+    expect(resolveGscConnection({ gscdumpConnected: true, accountStatus: null, error: undefined })).toEqual(CONNECTED)
+    expect(resolveGscConnection({ gscdumpConnected: false, accountStatus: null, error: undefined })).toEqual(NOT_CONNECTED)
   })
 
   it('lets a scope-missing callback outrank a stored credential', () => {
     // An account from an earlier grant keeps its gscdump key, but the grant
     // Google just returned has no Search Console scope.
-    expect(resolveGscConnection({ gscdumpConnected: true, error: 'gsc_scope_missing' })).toEqual(SCOPE_MISSING)
-    expect(resolveGscConnection({ gscdumpConnected: false, error: 'gsc_scope_missing' })).toEqual(SCOPE_MISSING)
+    expect(resolveGscConnection({ gscdumpConnected: true, accountStatus: null, error: 'gsc_scope_missing' })).toEqual(SCOPE_MISSING)
+    expect(resolveGscConnection({ gscdumpConnected: false, accountStatus: null, error: 'gsc_scope_missing' })).toEqual(SCOPE_MISSING)
+  })
+
+  it('reads gscdump\'s scope_missing as ScopeMissing for a returning user', () => {
+    // No callback marker: the user signed in again days later. The key from the
+    // earlier grant is still stored, but gscdump knows the grant is unusable.
+    expect(resolveGscConnection({ gscdumpConnected: true, accountStatus: 'scope_missing', error: undefined })).toEqual(SCOPE_MISSING)
+  })
+
+  it.each(['ready', 'db_provisioning', 'reauth_required'] as const)('keeps a stored credential connected when gscdump reports %s', (accountStatus) => {
+    expect(resolveGscConnection({ gscdumpConnected: true, accountStatus, error: undefined })).toEqual(CONNECTED)
   })
 
   it('ignores an unrelated error value', () => {
-    expect(resolveGscConnection({ gscdumpConnected: true, error: 'google_auth_failed' })).toEqual(CONNECTED)
+    expect(resolveGscConnection({ gscdumpConnected: true, accountStatus: null, error: 'google_auth_failed' })).toEqual(CONNECTED)
   })
 })
 
