@@ -26,6 +26,8 @@ export interface ProNavSite {
   name?: string | null
   domain?: string | null
   property?: string | null
+  /** `/api/sites/list` carries gscdump's hold reason for a held Site. */
+  hold?: string | null
 }
 
 function hostnameOf(value: string): string {

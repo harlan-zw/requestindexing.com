@@ -11,6 +11,7 @@ import type { UiNavLink } from '#layers/design-system/app/shared/nav'
 import type { ProNavSite } from '#layers/pro-shell/app/composables/useProSingleSiteNav'
 import { computed } from 'vue'
 import { NuxtLink, UiFavicon, UiIcon, UiNavList, UiSkeleton } from '#components'
+import { HELD_LABEL, HELD_TITLE } from '#layers/pro-gsc/shared/entitlement-copy'
 
 const { sites, loading = false } = defineProps<{
   sites: ProNavSite[]
@@ -44,6 +45,7 @@ const siteLinks = computed<FleetSiteLink[]>(() => sites.map((site) => {
     label: site.name || domain || 'Site',
     to,
     domain,
+    ...(site.hold ? { badge: HELD_LABEL, badgeColor: 'warning' as const, title: HELD_TITLE } : {}),
     active: (path: string) => path === to || path.startsWith(`${to}/`),
   }
 }))

@@ -1,8 +1,10 @@
+import { GscdumpV1Error } from '@gscdump/sdk/v1'
 import { describe, expect, it, vi } from 'vitest'
 import { useGscdumpClient } from './gscdump-client'
 
 const v1Client = vi.hoisted(() => ({
   getUserLifecycle: vi.fn(),
+  createSite: vi.fn(),
 }))
 
 vi.mock('./gscdump-origin', () => ({
@@ -63,5 +65,35 @@ describe('useGscdumpClient', () => {
       catalogSiteId: null,
       lifecycleRevision: 0,
     })
+  })
+
+  it('returns an entitlement refusal from Site registration as a value', async () => {
+    v1Client.createSite.mockRejectedValueOnce(new GscdumpV1Error({
+      code: 'invalid_request',
+      status: 409,
+      message: 'The free allowance covers 3 Sites. Disconnect a Site, or use Local mode for more Sites.',
+      retryable: false,
+      details: { reason: 'site_allowance', limit: 3 },
+    }))
+
+    const result = await useGscdumpClient().registerSite({ userId: 'u_1', requestedUrl: 'example.com' })
+
+    expect(result).toEqual({ _tag: 'Refused', refusal: { reason: 'site_allowance', limit: 3 } })
+  })
+
+  it('subscribes a Site only to the Site events a 4.6.0 gscdump server accepts', async () => {
+    v1Client.createSite.mockResolvedValueOnce({ data: { siteId: 's_1', status: 'pending' } })
+
+    await useGscdumpClient().registerSite({ userId: 'u_1', requestedUrl: 'example.com', webhookUrl: 'https://example.test/api/webhooks/gscdump' })
+
+    const events = v1Client.createSite.mock.lastCall?.[0].body.webhookEvents
+    expect([...events].sort()).toEqual([
+      'job.failed',
+      'site.analytics.ready',
+      'site.auth.failed',
+      'site.indexing.ready',
+      'site.lifecycle.changed',
+      'user.lifecycle.changed',
+    ])
   })
 })

@@ -1,5 +1,8 @@
+import type { EntitlementRefusal } from '@gscdump/contracts'
 import type { PartnerErrorKind } from '@gscdump/sdk/partner-errors'
 import { toPartnerError } from '@gscdump/sdk/partner-errors'
+import { refusalMessage } from '../../shared/entitlement-copy'
+import { refusalFromError } from '../../shared/entitlement-refusal'
 
 export type GscdumpErrorCode
   = | 'AUTH'
@@ -7,6 +10,7 @@ export type GscdumpErrorCode
     | 'NOT_FOUND'
     | 'PROVISIONING'
     | 'RATE_LIMIT'
+    | 'REFUSED'
     | 'SERVER'
     | 'NETWORK'
     | 'VALIDATION'
@@ -19,6 +23,7 @@ interface GscdumpErrorBase {
 
 export type GscdumpError
   = | (GscdumpErrorBase & { code: 'AUTH' | 'PERMISSION' | 'NOT_FOUND' | 'PROVISIONING' | 'VALIDATION', retry: false })
+    | (GscdumpErrorBase & { code: 'REFUSED', refusal: EntitlementRefusal, retry: false })
     | (GscdumpErrorBase & { code: 'RATE_LIMIT' | 'SERVER' | 'NETWORK' | 'UNKNOWN', retry: true })
 
 function messageFor(kind: PartnerErrorKind, message: string): string {
@@ -57,6 +62,8 @@ export function isGscdumpError(error: unknown): error is GscdumpError {
     case 'PROVISIONING':
     case 'VALIDATION':
       return value.retry === false
+    case 'REFUSED':
+      return value.retry === false && 'refusal' in value
     case 'RATE_LIMIT':
     case 'SERVER':
     case 'NETWORK':
@@ -70,6 +77,20 @@ export function isGscdumpError(error: unknown): error is GscdumpError {
 export function parseGscdumpError(error: unknown): GscdumpError {
   if (isGscdumpError(error))
     return error
+
+  // An entitlement refusal first. gscdump answers a full Free allowance or a
+  // held Site with 409, which the generic mapping reads as "still being
+  // prepared", and its message points to Local mode. Render the tag instead.
+  const refusal = refusalFromError(error)
+  if (refusal) {
+    return {
+      code: 'REFUSED',
+      refusal,
+      message: refusalMessage(refusal),
+      status: refusal.reason === 'inspection_allowance' ? 429 : 409,
+      retry: false,
+    }
+  }
 
   const partnerError = toPartnerError(error)
   const base = {

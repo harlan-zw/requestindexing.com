@@ -27,10 +27,14 @@ Indexing API submissions this app still runs itself.
 | Submission | indexing_jobs table | Site 1—N Submission, unique on (site, path, transport) | "Submit" |
 | Investigation | indexing_investigations table | Site 1—N Investigation, unique on (site, url, issue) | (not surfaced as a noun) |
 | Quota | usages table | Site 1—N daily counter, unique on (site, date, key) | "limit" |
+| Free allowance | gscdump `partner.users.entitlements.get` | Billing owner 1—1 per usage pool; gscdump sets and enforces it | Free allowance |
+| Held | gscdump lifecycle site `hold` | Site 0—1 hold reason, before its first import | Held |
 | API key | gscdump `partner.users.api_keys.*`, Developers page | User 1—N, at most 10; gscdump stores them, this app stores none | API key |
 | Hosted mode | gscdump CLI `--mode hosted` | CLI access mode that reads the gscdump.com record; the other mode is Local | Hosted mode |
 
 Collisions: the product's submission history and Google's indexing state are different evidence. Never imply one proves the other.
+
+Quota and Free allowance are different ceilings. Quota is a local daily counter on one Site. The Free allowance is gscdump's ceiling on one account's Sites, Preserved rows, and URL Inspections. Never use one word for the other.
 
 ## Terms
 
@@ -108,9 +112,29 @@ Collisions: the product's submission history and Google's indexing state are dif
 
 **Use for:** the daily Indexing API ceiling and any other per-Site counter.
 
-**Never:** credit, allowance, limit (bare), usage (as the customer word for the ceiling).
+**Never:** credit, Free allowance, limit (bare), usage (as the customer word for the ceiling).
 
 **Casing:** `Quota` in prose, `usages` in identifiers.
+
+### Free allowance
+
+**Is:** the most one account uses for free on each gscdump Meter: Sites, Preserved rows, and URL Inspections a month. gscdump sets the numbers and enforces them. This app reads them from `partner.users.entitlements.get` and never stores or copies them. Billing owner, Meter, and Preserved rows are gscdump terms.
+
+**Use for:** refusals when a Site or a URL Inspection does not fit, the Usage page, the connect flow, and the 80% and 100% emails.
+
+**Never:** plan, tier, credit, Quota, limit (bare). An exempt partner has no Free allowance, so never show one when gscdump answers `mode: 'exempt'`.
+
+**Casing:** Free allowance, capital F, in prose and labels.
+
+### Held
+
+**Is:** the state of a Site that gscdump holds before its first import. The lifecycle `hold` field names the reason: `size_limit`, `sitemap_limit`, `size_unknown`, or `size_pending`. The app reads it live from gscdump and never mirrors it onto `sites`.
+
+**Use for:** the badge in the site list and the site switcher, and the notice on the Site page.
+
+**Never:** paused, suspended, blocked, or an error. A Held Site waits; nothing is broken.
+
+**Casing:** Held as a badge, held in prose. Stored reason values stay snake_case.
 
 ### API key
 

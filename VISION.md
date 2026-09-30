@@ -38,7 +38,9 @@ That boundary is the main design constraint. When a capability could live in eit
 
 ## Pricing
 
-Free during beta, matching gscdump's posture. Billing is not built and the Stripe integration has been removed. Paid tiers are a question to revisit once the product shape holds, not a thing to design around now.
+Free, with a Free allowance on each account. gscdump sets the allowance and enforces it, the same numbers it gives its own Hosted accounts. This app shows the allowance and its refusals in its own words, and keeps no cap of its own.
+
+Paid usage past the Free allowance comes later. When it does, Request Indexing collects the payment with its own billing, under its own brand, and gscdump keeps the Meters. gscdump.com ADR-0014 records the split.
 
 ## Who it is for
 
