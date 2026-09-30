@@ -47,7 +47,7 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 ### Site and Team
 **Is:** existing dashboard concepts backed by sites and teams.
 **Use for:** the corresponding product objects, with ordinary lowercase site/team in generic discussion.
-**Never:** project as a substitute for a product Site. Google Cloud project remains its own term.
+**Never:** project as a substitute for a product Site. Google Cloud project remains its own term. Never Workspace for a Team. Code keeps `useCurrentWorkspace` and `ProWorkspace`, which mirror nuxtseo.com. The command palette keeps `workspace` as a search keyword, because a keyword is matched and never shown.
 **Casing:** Match the visible product label when naming a control.
 
 ### Indexing API notification

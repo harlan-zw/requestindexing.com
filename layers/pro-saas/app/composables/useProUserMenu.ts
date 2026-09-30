@@ -3,7 +3,7 @@
 // integrations, support page, feedback drawer or workspace creation.
 //
 // Three groups, laid out as two columns plus a full-width footer row:
-// Workspace (switch team, team pages), Account (person pages), then Sign out.
+// Team (switch team, team pages), Account (person pages), then Sign out.
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { ProWorkspace } from './useCurrentWorkspace'
 
@@ -35,13 +35,13 @@ export function useProUserMenu(options: { singleSite: MaybeRefOrGetter<boolean> 
     await switchTeam(teamId)
       .then(async () => { await navigateTo('/pro/dashboard', { external: true }) })
       .catch((err: unknown) => {
-        toast.add({ title: 'Switch failed', description: err instanceof Error ? err.message : 'Could not switch workspace', color: 'error' })
+        toast.add({ title: 'Switch failed', description: err instanceof Error ? err.message : 'Could not switch team', color: 'error' })
       })
   }
 
   const items = computed<ProUserMenuItem[][]>(() => {
     const workspace: ProUserMenuItem[] = [
-      { label: teams.value.length > 1 ? 'Workspaces' : 'Workspace', type: 'label' },
+      { label: teams.value.length > 1 ? 'Teams' : 'Team', type: 'label' },
       ...teams.value.map<ProUserMenuItem>((team) => {
         const active = team.id === currentTeam.value?.id
         return {
