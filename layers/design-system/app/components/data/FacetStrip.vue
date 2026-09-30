@@ -17,9 +17,10 @@ export interface FacetStripGroup<T extends string = string> {
   items: FacetStripItem<T>[]
 }
 
-const { groups, ariaLabel = 'Facets' } = defineProps<{
+const { groups, ariaLabel = 'Facets', wrapOnMobile = false } = defineProps<{
   groups: FacetStripGroup<T>[]
   ariaLabel?: string
+  wrapOnMobile?: boolean
 }>()
 
 const model = defineModel<T>({ required: true })
@@ -62,6 +63,7 @@ function magnitudeStyle(link: UiTabLink | UiTabItem<T>): Record<string, string> 
         <UiTabs
           v-model="model"
           class="w-full!"
+          :class="wrapOnMobile ? 'max-sm:flex-wrap! max-sm:overflow-visible!' : ''"
           kind="subnav"
           :items="group.items"
           :aria-label="`${group.label}, ${ariaLabel}`"

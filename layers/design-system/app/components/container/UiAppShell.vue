@@ -4,16 +4,23 @@
 // Used by admin (AdminLayoutShell), pro (ProDashboardShell), and the
 // design-system sandbox (brand-kit `kit` layout).
 import type { VNodeChild } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
 import { useMediaQuery } from '@vueuse/core'
-import { useRoute } from 'nuxt/app'
-import { ref, watch } from 'vue'
+import { useRoute, useRouter } from 'nuxt/app'
+import { provide, ref, watch } from 'vue'
 import { UDrawer, UiButton, UiIcon } from '#components'
+import { provideUiAppShellNav } from '../../composables/useAppShellNav'
+import { navDrawerCloseDecider, uiNavDrawerKey } from './ui-nav-drawer'
 
-const { sidebarWidth = 64, flushContent = false, contentClass } = defineProps<{
+const { sidebarWidth = 64, flushContent = false, contentClass, inlineMobileNav = false } = defineProps<{
   sidebarWidth?: 56 | 64
   flushContent?: boolean
   /** Override the content padding (non-flush only). */
   contentClass?: string
+  /** The page header draws the hamburger (+ switcher) inline with the page
+   *  title below `lg` (via `useUiAppShellNav`), so the shell draws no separate
+   *  mobile bar above the content. */
+  inlineMobileNav?: boolean
 }>()
 
 const slots = defineSlots<{
@@ -31,10 +38,28 @@ const slots = defineSlots<{
 
 const navOpen = ref(false)
 const route = useRoute()
+const router = useRouter()
 const isDesktop = useMediaQuery('(min-width: 1024px)')
 
-watch(() => route.path, () => {
-  navOpen.value = false
+// An in-drawer pane switch (the sidebar mode tabs) IS a route change, but it
+// must not close the drawer the way a page navigation does: the tab arms its
+// destination here, and the watcher keeps the drawer open when that exact
+// navigation lands. The watcher keys on fullPath, so every route change
+// consumes the arm: a query-only change (the tabs flip a chatNonce) must not
+// leave it armed for a later navigation. Only a path change closes.
+const drawerNav = navDrawerCloseDecider()
+function keepOpenFor(target: RouteLocationRaw) {
+  drawerNav.arm(router.resolve(target).fullPath)
+}
+provide(uiNavDrawerKey, { keepOpenFor })
+
+let watchedPath = route.path
+watch(() => route.fullPath, () => {
+  const pathChanged = route.path !== watchedPath
+  watchedPath = route.path
+  const close = drawerNav.shouldCloseOnRouteChange(route.fullPath)
+  if (pathChanged && close)
+    navOpen.value = false
 })
 
 if (import.meta.client) {
@@ -44,9 +69,15 @@ if (import.meta.client) {
   })
 }
 
+function openNav() {
+  navOpen.value = true
+}
+
 function closeNav() {
   navOpen.value = false
 }
+
+provideUiAppShellNav({ openNav })
 </script>
 
 <template>
@@ -79,8 +110,8 @@ function closeNav() {
     >
       <slot name="topBanners" />
 
-      <div class="lg:hidden flex items-center gap-1 px-4 pt-3">
-        <UiButton purpose="quiet" class="-ml-2 min-h-11 min-w-11 shrink-0" aria-label="Open navigation menu" @click="navOpen = true">
+      <div v-if="!inlineMobileNav" class="lg:hidden flex items-center gap-1 px-4 pt-3">
+        <UiButton purpose="quiet" class="-ml-2 min-h-11 min-w-11 shrink-0" aria-label="Open navigation menu" @click="openNav()">
           <UiIcon name="menu" class="size-5" aria-hidden="true" />
         </UiButton>
         <div v-if="slots.mobileNav" class="min-w-0 flex-1">
@@ -97,7 +128,7 @@ function closeNav() {
     </div>
 
     <!-- A left drawer sizes to its content by default, which squeezed the nav
-         to ~210px on a phone. Fixed width, capped so the scrim stays tappable.
+         to ~250px on a phone. Fixed width, capped so the scrim stays tappable.
          No handle: it is a swipe affordance for bottom sheets and overlapped
          the nav rows here. -->
     <UDrawer
@@ -109,7 +140,7 @@ function closeNav() {
       <template #content>
         <div class="flex flex-1 flex-col h-full min-w-0 overflow-x-hidden">
           <template v-if="slots.mobile">
-            <div class="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-3">
+            <div class="flex-1 min-h-0 overflow-y-auto px-5 pt-5 pb-3">
               <slot name="mobile" :close-nav="closeNav" />
             </div>
           </template>

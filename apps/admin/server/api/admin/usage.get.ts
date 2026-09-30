@@ -1,4 +1,5 @@
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (e) => {
+  await requireAdminAuth(e)
   const pool = createOAuthPool()
   return {
     // TODO(v1): re-wire metrics once the new metrics store is in place.

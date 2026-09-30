@@ -32,6 +32,8 @@ export interface FactItem {
   tooltip?: string
   /** Bold title in the help tooltip. Defaults to the label. */
   tooltipTitle?: string
+  /** Full value shown on hover when the visible value is shortened. */
+  title?: string
 }
 
 const { facts, columns = 3 } = defineProps<{
@@ -93,7 +95,7 @@ const { facts, columns = 3 } = defineProps<{
             fact.mono ? 'font-mono text-muted' : 'text-default',
             fact.to ? 'underline-offset-2 hover:text-default hover:underline' : '',
           ]"
-          :title="fact.value != null ? String(fact.value) : undefined"
+          :title="fact.title ?? (fact.value != null ? String(fact.value) : undefined)"
         >
           {{ fact.value ?? '—' }}
         </component>

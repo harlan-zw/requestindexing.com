@@ -3,7 +3,9 @@ import { logWarn } from '~~/shared/logging'
 import { sites } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 
-export default defineProApiHandler({ site: true }, async ({ site: access }) => {
+// Unlink deletes the gscdump property with the partner key, so a viewer may not
+// run it. Same ability as nuxtseo.com.
+export default defineProApiHandler({ site: { ability: 'write-data' } }, async ({ site: access }) => {
   const { db, site, siteId } = access
 
   const unlinkedGscSiteUrl = site.gscdumpSiteUrl

@@ -42,3 +42,32 @@ export function projectPositionSeries(series: readonly number[], axis: readonly 
   }
   return values.length > 1 ? { values, dates } : null
 }
+
+/**
+ * Group `(entity, date)` report rows into one daily series per entity, each
+ * projected onto `axis`.
+ *
+ * A day with no row reads as zero, so every series has the axis length and a
+ * gap cannot shift later days earlier. An entity with no rows is absent from
+ * the map, which the caller renders as "no data" rather than a flat line.
+ */
+export function entitySeriesFromRows(
+  rows: readonly Record<string, unknown>[],
+  opts: { key: string, metric: string, axis: readonly string[] },
+): Map<string, number[]> {
+  const dayIndex = new Map(opts.axis.map((day, index) => [day, index]))
+  const out = new Map<string, number[]>()
+  for (const row of rows) {
+    const key = String(row[opts.key] ?? '')
+    const index = dayIndex.get(String(row.date ?? ''))
+    if (!key || index === undefined)
+      continue
+    let series = out.get(key)
+    if (!series) {
+      series = opts.axis.map(() => 0)
+      out.set(key, series)
+    }
+    series[index] = Number(row[opts.metric] ?? 0) || 0
+  }
+  return out
+}

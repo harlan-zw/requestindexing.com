@@ -10,8 +10,8 @@ import { useProSiteInjection } from './useProSiteInjection'
  * GSC readiness flags ride along because they are the common check at site
  * scope; the full sync surface is still `useProGscStatus`.
  *
- * A route id that names no Site never reaches a page: the layout answers 404
- * for it first.
+ * A route id that names no Site never reaches a page: the layout sends the
+ * reader to the Sites list first.
  */
 export function useSite(pageTitle?: string) {
   const route = useRoute()

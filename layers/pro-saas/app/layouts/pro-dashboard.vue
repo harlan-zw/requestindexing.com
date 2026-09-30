@@ -11,10 +11,17 @@ import type { SiteLookup, SiteResource } from '#layers/pro-saas/shared/site-look
 import type { ProNavSite } from '#layers/pro-shell/app/composables/useProSingleSiteNav'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
-import { readSiteLookup, siteLookupKey } from '#layers/pro-saas/shared/site-lookup'
+import { MISSING_SITE_PATH, readSiteLookup, siteLookupKey } from '#layers/pro-saas/shared/site-lookup'
 
 const route = useRoute()
 const router = useRouter()
+const isDev = import.meta.dev
+
+// Compact dashboard type, flat cards and tabular figures, as nuxtseo.com's
+// `ProDashboardShell` sets them. The class goes on `<html>` because the
+// palette keys on `.light.dashboard-theme` / `.dark.dashboard-theme`, and the
+// colour-mode class only ever lands there.
+useHead({ htmlAttrs: { class: 'dashboard-theme' } })
 
 // Every Search Console connect link returns to a dashboard page. When Google
 // gave no Search Console scope, the callback marks that page with
@@ -36,6 +43,7 @@ const gscRetryTo = computed(() => {
 const { data: siteData, status: sitesStatus } = await fetchSites()
 const sites = computed<ProNavSite[]>(() => (siteData.value?.sites ?? []) as ProNavSite[])
 const sitesLoading = computed(() => sitesStatus.value === 'pending')
+const singleSite = computed(() => sites.value.length === 1)
 
 const routeSiteId = computed(() => typeof route.params.id === 'string' ? route.params.id : null)
 
@@ -51,8 +59,13 @@ const scopedSite = computed<ProNavSite | null>(() => {
   const id = routeSiteId.value
   if (id)
     return sites.value.find(site => (site.publicId ?? site.siteId ?? site.id) === id) ?? { publicId: id }
-  return sites.value.length === 1 ? sites.value[0]! : null
+  return singleSite.value ? sites.value[0]! : null
 })
+
+// nuxtseo.com's `showSiteBack`: on a Site's page, an account with more than
+// one Site gets a way back to all of them above the Site nav. An account with
+// one Site has nowhere wider to go, so it gets none.
+const showSiteBack = computed(() => !!routeSiteId.value && !singleSite.value)
 
 // Site scope, nuxtseo.com's `pro-site-dashboard` shape (ADR-0012): the layout
 // is the one place that derives the Site from the route. It reads it once,
@@ -68,115 +81,144 @@ const site = computed<SiteResource | null>(() => siteLookup.value?._tag === 'Fou
 const siteStatus = computed(() => {
   if (!routeSiteId.value)
     return 'idle'
-  if (siteLookup.value && siteLookup.value._tag !== 'Found')
+  // A missing Site is on its way to the Sites list, so its page waits.
+  if (siteLookup.value?._tag === 'NotFound')
+    return 'pending'
+  if (siteLookup.value?._tag === 'Unavailable')
     return 'error'
   return siteLookupStatus.value
 })
 // An id that names no Site used to fall through as "this Site is not connected
 // yet", which put the sample-data shell on screen for a Site that does not
-// exist. nuxtseo.com sends a vanished Site to its Sites roster
-// (`MISSING_SITE_PATH`); there is no roster page here, so the honest landing is
-// the 404 page.
-function siteNotFound() {
-  return createError({ statusCode: 404, statusMessage: 'Site not found', fatal: true })
-}
+// exist. As nuxtseo.com does, a vanished Site sends the reader to the Sites
+// list, which lists what the Team can still open.
 if (siteLookup.value?._tag === 'NotFound')
-  throw siteNotFound()
+  await navigateTo(MISSING_SITE_PATH, { replace: true })
 watch(siteLookup, (value) => {
   if (value?._tag === 'NotFound')
-    showError(siteNotFound())
+    void navigateTo(MISSING_SITE_PATH, { replace: true })
 })
 
 provide('site', site)
 provide('siteStatus', siteStatus)
 
 /**
- * The dashboard's one `h1`, drawn through the design system's `UiPageHeader`.
+ * The dashboard's one `h1`, drawn by `ProPageHeader`, as nuxtseo.com's
+ * `pro-dashboard` layout draws it.
  *
- * nuxtseo.com puts the same component behind `ProPage` / `ProSiteFeaturePage`,
- * which every one of its dashboard routes renders, so a route there always
- * names itself. This app's pages are flat (no parent feature route wrapping a
- * `<NuxtPage>`), so the shell is the shared place to mount the same header.
- * Titles come from `definePageMeta({ title })`, which the account shell layout
- * already read before this.
- *
- * `proHideHeader` is the page-meta twin of upstream's `hide-header` prop: the
- * query and page drill-ins fold their heading into a richer identity block, so
- * the shell steps aside and no route ships two `h1`s.
+ * This app's pages are flat (no parent feature route wrapping a
+ * `<NuxtPage>`), so the shell is the one place that mounts the header. Titles
+ * come from `definePageMeta({ title })`; a detail page overrides it with
+ * `definePageMeta({ proHeader })`. The error page renders inside this layout
+ * and names the error in its own heading, so the header steps aside for it.
  */
-const ownsHeading = computed(() => (route.meta as { proHideHeader?: boolean }).proHideHeader === true)
-const pageTitle = computed(() => {
-  if (ownsHeading.value)
+const { title: headerMetaTitle } = useProHeaderPageMeta()
+const nuxtError = useError()
+const headerTitle = computed(() => {
+  if (nuxtError.value)
     return null
-  const title = route.meta.subTitle ?? route.meta.title
+  const title = headerMetaTitle.value ?? route.meta.title
   return typeof title === 'string' && title ? title : null
 })
-const pageIcon = computed(() => typeof route.meta.icon === 'string' ? route.meta.icon : undefined)
+
+// Surface (do not swallow) a page render error the boundary caught, so it
+// still reaches the console and Sentry with the route that threw. The router's
+// route, not `route`: a page that throws on arrival never finishes, so the
+// Nuxt route still names the page before it.
+function onPageError(error: unknown) {
+  console.error(`[pro-dashboard] page render error on ${router.currentRoute.value.fullPath}:`, error)
+}
 </script>
 
 <template>
-  <UiAppShell content-class="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+  <UiAppShell inline-mobile-nav content-class="pt-2 pb-4 sm:py-6 lg:py-3">
     <template #brand>
       <ProSidebarHeader to="/pro/dashboard" />
     </template>
 
     <template #sidebar>
-      <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" />
-      <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" />
-    </template>
-
-    <template #mobileNav>
-      <NuxtLink to="/pro/dashboard" class="inline-flex min-h-11 items-center rounded-md text-default">
-        <OgBrand :size="22" wordmark semantic />
-      </NuxtLink>
+      <ProSidebarScope :show-back="showSiteBack">
+        <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" />
+        <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" />
+      </ProSidebarScope>
     </template>
 
     <template #mobile="{ closeNav }">
       <div class="flex min-h-full flex-col gap-3">
         <ProSidebarHeader to="/pro/dashboard" @navigate="closeNav" />
-        <!-- Flex column, so the nav body's `mt-auto` rail pins to the drawer bottom. -->
-        <div class="flex flex-1 flex-col *:flex-1">
-          <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" @navigate="closeNav" />
-          <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" @navigate="closeNav" />
-        </div>
-        <div class="border-t border-default pt-2">
-          <ProSidebarFooter :single-site="sites.length === 1" />
+        <div class="flex min-w-0 flex-1 flex-col">
+          <ProSidebarScope :show-back="showSiteBack" class="flex-1" @navigate="closeNav">
+            <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" @navigate="closeNav" />
+            <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" @navigate="closeNav" />
+          </ProSidebarScope>
+          <ProSidebarFooterMobile :single-site="singleSite" @navigate="closeNav" />
         </div>
       </div>
     </template>
 
     <template #footer>
-      <ProSidebarFooter :single-site="sites.length === 1" />
+      <ProSidebarFooter :single-site="singleSite" />
     </template>
 
     <template #extras>
       <ProCommandPalette :sites="sites" />
     </template>
 
-    <UiPageHeader
-      v-if="pageTitle"
-      flush
-      :border="false"
-      :title="pageTitle"
-      class="mb-6"
-    >
-      <template v-if="pageIcon" #icon>
-        <UIcon :name="pageIcon" class="size-5 shrink-0 text-primary" aria-hidden="true" />
+    <!-- Sticky, so the Site crumb survives scrolling. `v-show`, never `v-if`:
+         a page teleports header actions into `#pro-dashboard-header-actions`,
+         and the target must already be in the DOM when that page mounts. On a
+         client-side arrival from a route with no header, `v-if` would create
+         the target after the page, the teleport would resolve to null, and
+         the action would silently never render. -->
+    <ProPageHeader v-show="headerTitle" sticky :title="headerTitle ?? ''">
+      <template #crumb>
+        <ProSiteSwitcher v-if="routeSiteId" :sites="sites" :site="site" />
       </template>
-    </UiPageHeader>
+      <template #actions>
+        <div id="pro-dashboard-header-actions" class="contents" />
+      </template>
+    </ProPageHeader>
 
-    <ProGscScopeMissingAlert v-if="gscScopeMissing" :retry-to="gscRetryTo" class="mb-6" />
+    <div class="pro-container pt-4 pb-10 sm:pt-5">
+      <!-- With no header on screen, a phone has no other way to the drawer. -->
+      <ProMobileNavTrigger v-if="!headerTitle" class="mb-4" />
 
-    <UiEmptyState
-      v-if="siteStatus === 'error'"
-      icon="error"
-      title="This site could not be loaded"
-      description="The request for this site failed. Nothing here is out of date; the read did not come back."
-    >
-      <UButton color="primary" @click="$router.go(0)">
-        Try again
-      </UButton>
-    </UiEmptyState>
-    <slot v-else />
+      <ProGscScopeMissingAlert v-if="gscScopeMissing" :retry-to="gscRetryTo" class="mb-6" />
+
+      <UiEmptyState
+        v-if="siteStatus === 'error'"
+        icon="error"
+        title="This site could not be loaded"
+        description="The request for this site failed. Nothing here is out of date; the read did not come back."
+      >
+        <UButton color="primary" @click="$router.go(0)">
+          Try again
+        </UButton>
+      </UiEmptyState>
+      <!-- A page that throws while it renders keeps the sidebar and the
+           header: the boundary swaps only the page for this notice. -->
+      <NuxtErrorBoundary v-else @error="onPageError">
+        <slot />
+        <template #error="{ error, clearError }">
+          <UiAlert
+            status="error"
+            icon="caution"
+            title="This page didn't load"
+            :description="isDev ? String(error) : 'Try again. If the error returns, reload the dashboard.'"
+          >
+            <template #action>
+              <div class="flex shrink-0 gap-2">
+                <UiButton size="xs" purpose="secondary" icon="refresh" @click="clearError">
+                  Try again
+                </UiButton>
+                <UiButton size="xs" purpose="quiet" @click="reloadNuxtApp({ persistState: false })">
+                  Reload
+                </UiButton>
+              </div>
+            </template>
+          </UiAlert>
+        </template>
+      </NuxtErrorBoundary>
+    </div>
   </UiAppShell>
 </template>

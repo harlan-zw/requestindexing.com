@@ -1,10 +1,29 @@
 <script lang="ts" setup>
 import type { GscdumpDataRow } from '#layers/pro-gsc/app/composables/useProGscdump'
+import { computed, watch } from 'vue'
+import { fmtGscMetric, formatNumber, getPath } from '~~/layers/design-system/app/composables/formatting'
 import ProCardGsc from '#layers/pro-gsc/app/components/pro/ProCardGsc.vue'
-import ProGscControlBar from '#layers/pro-gsc/app/components/pro/ProGscControlBar.vue'
+import ProGscReadError from '#layers/pro-gsc/app/components/pro/ProGscReadError.vue'
+import ProGscSurfaceBar from '#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue'
 import ProQueryLabel from '#layers/pro-gsc/app/components/pro/ProQueryLabel.vue'
-import { useProGscdumpDates, useProGscdumpTableData } from '#layers/pro-gsc/app/composables/useProGscdump'
+import { periodToDateRange } from '#layers/pro-gsc/app/composables/useGscPeriod'
+import {
+  useProEntitySparklines,
+  useProGscdumpDates,
+  useProGscdumpTableData,
+  useProGscQueryVariants,
+  useProQueryPositionSparklines,
+} from '#layers/pro-gsc/app/composables/useProGscdump'
+import { buildBrandFacet, buildQuestionFacet, useProGscFilters } from '#layers/pro-gsc/app/composables/useProGscFilters'
+import ProSparklineCell from '#layers/pro-gsc/app/internal/components/pro/ProSparklineCell.vue'
+import { deriveUrlBrandKeywords } from '#layers/pro-gsc/shared/brand-queries'
 import { HELD_TITLE, holdMessage } from '#layers/pro-gsc/shared/entitlement-copy'
+import { overviewLead } from '#layers/pro-gsc/shared/overview-lead'
+import { isBrandTerm } from '#layers/pro-gsc/shared/query-display'
+
+// Per-Site Search Console Overview, ported from nuxtseo.com's
+// `search-console/index.vue`. Dropped against upstream: the browser analyzer
+// boot progress, the chat and MCP ejects, and chart annotations.
 
 definePageMeta({
   proTab: { feature: 'search-console', label: 'Overview', icon: 'i-lucide-layout-dashboard', order: 0 },
@@ -14,7 +33,24 @@ definePageMeta({
 
 const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, hold } = useSite('Search Console')
 
-const { period, columns, stableData, compareMode, zoomTo, resetZoom } = useProGscFilters()
+const { period, columns, stableData, compareMode, searchType, brand, questions, zoomTo, resetZoom } = useProGscFilters()
+
+// No keyword profile exists yet, so brand terms come from what the site URL
+// implies. The Queries table and its Brand facet read the same list.
+const brandKeywords = computed(() => deriveUrlBrandKeywords(site.value?.url))
+function isBrandKeyword(query?: string | null): boolean {
+  return isBrandTerm(query, brandKeywords.value)
+}
+
+// Brand and Questions from the control bar apply to the query lists only.
+// Pages, countries and devices carry no query column.
+const queryFacets = computed(() => {
+  const list = [
+    buildBrandFacet(brand.value, brandKeywords.value),
+    buildQuestionFacet(questions.value),
+  ].filter((f): f is NonNullable<typeof f> => !!f)
+  return list.length ? list : undefined
+})
 
 function onZoom(range: { start: string, end: string } | null) {
   if (range)
@@ -81,33 +117,80 @@ const demoHeroStats = computed(() => {
   ]
 })
 
-// Primary metric only — overview stays clean, detail pages show full columns
-const primaryMetric = computed(() => columns.value[0] || 'clicks')
+// The main chart. `error` is consumed on purpose: dropping it let a failed
+// read render as a synced site with zero traffic.
+const { data: dates, status: datesStatus, error: datesError } = useProGscdumpDates(gscdumpSiteId, period, { stableData, compareMode })
 
-// Fetch dates directly from gscdump - this is for the main chart
-const { data: dates, status: datesStatus } = useProGscdumpDates(gscdumpSiteId, period, { stableData, compareMode })
+// Primary metric only: the overview stays clean, detail pages show every
+// column. A clicks-less slice (Images, Video, News) leads with impressions.
+const lead = computed(() => overviewLead({ columns: columns.value, searchType: searchType.value, totals: dates.value?.period }))
+const primaryMetric = computed(() => lead.value.metric)
 
-// Data fetching for lists - these load independently/progressively
-const { rows: keywordRows, isLoading: keywordsLoading, setSort: setKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
+// Row budget: each lead list keeps 5 rows, every mover list keeps 3.
+const MOVER_ROWS = 3
+
+// ── Search Queries: a lead list plus the Growing and Declining movers ───────
+// `includeTotal` rides the lead list's own fetch, which feeds the hero's
+// "Queries ranked" count with no second query. New and Lost rankings live on
+// the Queries tab as filter chips; the lead list's "View all" is the doorway.
+const { rows: keywordRows, isLoading: keywordsLoading, totalRows: keywordTotalRows, setSort: setKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
   siteId: computed(() => gscdumpSiteId.value ?? undefined),
   dimension: 'queryCanonical',
   period,
   stableData,
   compareMode,
+  facets: queryFacets,
   pageSize: 5,
+  includeTotal: true,
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
-const { rows: pageRows, isLoading: pagesLoading, setSort: setPageSort } = useProGscdumpTableData<GscdumpDataRow>({
+// Grouped by queryCanonical so variants stay merged.
+const { rows: improvingKeywordRows, isLoading: improvingKeywordsLoading, setSort: setImprovingKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
+  siteId: computed(() => gscdumpSiteId.value ?? undefined),
+  dimension: 'queryCanonical',
+  period,
+  stableData,
+  compareMode,
+  facets: queryFacets,
+  pageSize: MOVER_ROWS,
+  defaultFilter: 'improving',
+  defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
+})
+
+const { rows: decliningKeywordRows, isLoading: decliningKeywordsLoading, setSort: setDecliningKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
+  siteId: computed(() => gscdumpSiteId.value ?? undefined),
+  dimension: 'queryCanonical',
+  period,
+  stableData,
+  compareMode,
+  facets: queryFacets,
+  pageSize: MOVER_ROWS,
+  defaultFilter: 'declining',
+  defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
+})
+
+// Growing and Declining render the same list, so they share one template.
+const queryMovers = computed(() => [
+  { key: 'improving', title: 'Growing', tooltip: 'Queries with the biggest click gains vs the previous period.', rows: improvingKeywordRows.value, loading: improvingKeywordsLoading.value, empty: 'No growing queries this period' },
+  { key: 'declining', title: 'Declining', tooltip: 'Queries with the biggest click drops vs the previous period.', rows: decliningKeywordRows.value, loading: decliningKeywordsLoading.value, empty: 'No declining queries this period' },
+])
+
+// ── Pages: the lead list only ───────────────────────────────────────────────
+// Queries are the diagnosis; pages are where it landed. The page movers sit one
+// click away on the Pages tab, where Improving and Declining are filter chips.
+const { rows: pageRows, isLoading: pagesLoading, totalRows: pageTotalRows, setSort: setPageSort } = useProGscdumpTableData<GscdumpDataRow>({
   siteId: computed(() => gscdumpSiteId.value ?? undefined),
   dimension: 'page',
   period,
   stableData,
   compareMode,
   pageSize: 5,
+  includeTotal: true,
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
+// ── Countries and Devices ───────────────────────────────────────────────────
 const { rows: countryRows, isLoading: countriesLoading, setSort: setCountrySort } = useProGscdumpTableData<GscdumpDataRow>({
   siteId: computed(() => gscdumpSiteId.value ?? undefined),
   dimension: 'country',
@@ -118,76 +201,6 @@ const { rows: countryRows, isLoading: countriesLoading, setSort: setCountrySort 
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
-const { rows: newKeywordRows, isLoading: newKeywordsLoading, filter: newKeywordsFilter, setSort: setNewKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
-  dimension: 'query',
-  period,
-  stableData,
-  compareMode,
-  pageSize: 5,
-  defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
-})
-newKeywordsFilter.value = 'new'
-
-// Lost rankings — companion to New Rankings
-const { rows: lostKeywordRows, isLoading: lostKeywordsLoading, filter: lostKeywordsFilter, setSort: setLostKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
-  dimension: 'query',
-  period,
-  stableData,
-  compareMode,
-  pageSize: 5,
-  defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
-})
-lostKeywordsFilter.value = 'lost'
-
-// Growing / Declining queries (grouped by queryCanonical so variants stay merged)
-const { rows: improvingKeywordRows, isLoading: improvingKeywordsLoading, filter: improvingKeywordsFilter, setSort: setImprovingKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
-  dimension: 'queryCanonical',
-  period,
-  stableData,
-  compareMode,
-  pageSize: 5,
-  defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
-})
-improvingKeywordsFilter.value = 'improving'
-
-const { rows: decliningKeywordRows, isLoading: decliningKeywordsLoading, filter: decliningKeywordsFilter, setSort: setDecliningKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
-  dimension: 'queryCanonical',
-  period,
-  stableData,
-  compareMode,
-  pageSize: 5,
-  defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
-})
-decliningKeywordsFilter.value = 'declining'
-
-// Growing / Declining pages
-const { rows: improvingPageRows, isLoading: improvingPagesLoading, filter: improvingPagesFilter, setSort: setImprovingPageSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
-  dimension: 'page',
-  period,
-  stableData,
-  compareMode,
-  pageSize: 5,
-  defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
-})
-improvingPagesFilter.value = 'improving'
-
-const { rows: decliningPageRows, isLoading: decliningPagesLoading, filter: decliningPagesFilter, setSort: setDecliningPageSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
-  dimension: 'page',
-  period,
-  stableData,
-  compareMode,
-  pageSize: 5,
-  defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
-})
-decliningPagesFilter.value = 'declining'
-
-// Device data with distribution
 const { rows: deviceRows, isLoading: devicesLoading } = useProGscdumpTableData<GscdumpDataRow>({
   siteId: computed(() => gscdumpSiteId.value ?? undefined),
   dimension: 'device',
@@ -197,6 +210,38 @@ const { rows: deviceRows, isLoading: devicesLoading } = useProGscdumpTableData<G
   pageSize: 10,
   defaultSort: { column: 'impressions', direction: 'desc' },
 })
+
+// A canonical row carries only the variant count. The raw queries behind it
+// are a second read, fired when the variant popover opens.
+const queryVariants = useProGscQueryVariants({ siteId: gscdumpSiteId, period, stableData, compareMode })
+function variantsFor(row: GscdumpDataRow): Array<{ query: string, clicks: number, impressions: number, position: number }> {
+  return queryVariants.variantsFor(row.queryCanonical) ?? normalizedVariants(row)
+}
+function variantsLoadingFor(row: GscdumpDataRow): boolean {
+  return queryVariants.loadingFor(row.queryCanonical)
+}
+
+const sparkMetric = computed(() => primaryMetric.value === 'clicks' ? 'clicks' : 'impressions')
+const sparkRange = computed(() => periodToDateRange(period.value, stableData.value))
+const querySparklines = useProEntitySparklines({
+  gscdumpSiteId,
+  range: sparkRange,
+  dimension: 'queryCanonical',
+  metric: sparkMetric,
+  facets: queryFacets,
+  keys: computed(() => [...keywordRows.value, ...improvingKeywordRows.value, ...decliningKeywordRows.value].map(row => row.queryCanonical).filter((key): key is string => !!key)),
+})
+const pageSparklines = useProEntitySparklines({
+  gscdumpSiteId,
+  range: sparkRange,
+  dimension: 'page',
+  metric: sparkMetric,
+  keys: computed(() => pageRows.value.map(row => row.page).filter((key): key is string => !!key)),
+})
+
+// Position over time for the rank badge tooltips. Nothing fetches until a
+// badge is pointed at, and a term is read once per period.
+const positionSparklines = useProQueryPositionSparklines({ gscdumpSiteId, range: sparkRange })
 
 // Consider loading when site hasn't resolved yet (siteId null = no request fired = isLoading false)
 const siteLoading = computed(() => siteStatus.value === 'pending')
@@ -212,18 +257,38 @@ const topLabel = computed(() => {
   }
 })
 
+// Hero tail: "across how much surface" beside "how much traffic". Counts, not
+// chart series, and both ride the lead lists' `includeTotal`. No delta: the
+// comparison window's distinct count is not fetched.
+const heroEntityCounts = computed(() => [
+  {
+    key: 'queries',
+    label: 'Queries',
+    title: 'Queries ranked',
+    description: 'Distinct search queries this site ranked for in the selected period. Variants are grouped, so this counts canonical terms.',
+    icon: 'search',
+    value: keywordTotalRows.value,
+    loading: siteLoading.value || keywordsLoading.value,
+  },
+  {
+    key: 'pages',
+    label: 'Pages',
+    title: 'Pages ranked',
+    description: 'Distinct pages of this site that appeared in Google Search results in the selected period.',
+    icon: 'file',
+    value: pageTotalRows.value,
+    loading: siteLoading.value || pagesLoading.value,
+  },
+])
+
 // Re-sort when primary metric changes
 watch(primaryMetric, (metric) => {
   const dir = metric === 'position' ? 'asc' : 'desc'
   setKeywordSort(metric, dir)
   setPageSort(metric, dir)
   setCountrySort(metric, dir)
-  setNewKeywordSort(metric, dir)
-  setLostKeywordSort(metric, dir)
   setImprovingKeywordSort(metric, dir)
   setDecliningKeywordSort(metric, dir)
-  setImprovingPageSort(metric, dir)
-  setDecliningPageSort(metric, dir)
 })
 
 const deviceStats = computed(() => {
@@ -333,9 +398,14 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
     </UiAlert>
 
     <template v-else>
-      <!-- The shared control bar owns period, comparison, search type, chart
-           metrics and the facets for every Search Console surface. -->
-      <ProGscControlBar v-if="!showDemoPreview" show-metrics show-counts :site-id="siteId" />
+      <!-- The shared control strip owns period, comparison, search type, chart
+           metrics and the Brand and Questions facets. Country and Device stay
+           off: a per-Site breakdown cannot cross-filter by them. -->
+      <ProGscSurfaceBar v-if="!showDemoPreview" surface="overview" :site-id="siteId" />
+
+      <!-- The Search Console read failed. Distinct from the site-load error
+           above: the Site is fine, the upstream read is not. -->
+      <ProGscReadError :error="datesError" />
 
       <!-- Not connected or syncing without data: show live nuxtseo.com preview -->
       <UiSampleDataOverlay
@@ -394,424 +464,320 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
             :key="siteId"
             :dates="dates?.dates || []"
             :prev-dates="dates?.prevDates || null"
-            :period="dates?.period || { clicks: 0, impressions: 0, ctr: 0, position: 0, date: '' }"
+            :period="dates?.period ?? null"
             :prev-period="dates?.prevPeriod || null"
+            :error="datesError"
             :date-range="period"
-            :columns="columns"
+            :columns="lead.heroColumns"
+            :entity-counts="heroEntityCounts"
             :loading="datesStatus === 'pending' || siteStatus === 'pending'"
             show-buttons
             @zoom="onZoom"
           />
         </ProPageZone>
 
-        <!-- Queries section: 3 mover lists + New/Lost rail -->
+        <!-- Search Queries: the lead list, then the demoted movers -->
         <ProPageZone tier="secondary">
-          <ProSectionHeader
-            title="Search Queries"
-            icon="i-lucide-search"
-            class="!mb-0"
-          />
-          <ProSecondaryGrid layout="wide-narrow">
-            <div class="flex flex-col gap-4">
-              <UiDataList
-                :title="topLabel"
-                tooltip="Top search queries for this period. Variants (e.g. plural/singular) are grouped together."
-                :loading="siteLoading || keywordsLoading"
-                :loading-count="5"
-                :items="keywordRows"
-                :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries`"
-                :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
-              >
-                <template #default="{ item: row }">
-                  <ProQueryLabel
-                    :keyword="row.queryCanonical!"
-                    :query-canonical="row.queryCanonical"
-                    :variant-count="row.variantCount"
-                    :variants="normalizedVariants(row)"
-                    :position="bestPosition(row)"
-                    :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}`"
-                  />
-                  <UiTooltip side="left" size="lg">
-                    <div class="relative flex items-center gap-2 cursor-default">
-                      <span class="text-sm tabular-nums">{{ fmtMetric(row) }}</span>
+          <!-- The section title and its list are one artifact, so they sit at
+               gap-2. The zone gap separates the lead from the movers below. -->
+          <div class="flex flex-col gap-2">
+            <UiSectionHeader title="Search Queries" class="!mb-0" />
+            <UiDataList
+              :title="topLabel"
+              subtle
+              tooltip="Top search queries for this period. Variants, such as plural and singular spellings, are grouped together. The #N badge is the term's average Google position."
+              :loading="siteLoading || keywordsLoading"
+              :loading-count="5"
+              :items="keywordRows"
+              :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries`"
+              :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
+            >
+              <template #default="{ item: row }">
+                <ProQueryLabel
+                  :keyword="row.queryCanonical!"
+                  :query-canonical="row.queryCanonical"
+                  :variant-count="row.variantCount"
+                  :variants="variantsFor(row)"
+                  :variants-loading="variantsLoadingFor(row)"
+                  :position="bestPosition(row)"
+                  :previous-position="row.prevPosition"
+                  :impressions="row.impressions"
+                  :position-series="positionSparklines.seriesFor(row.queryCanonical)"
+                  :position-series-dates="positionSparklines.datesFor(row.queryCanonical)"
+                  :position-series-loading="positionSparklines.loadingFor(row.queryCanonical)"
+                  :brand="isBrandKeyword(row.queryCanonical)"
+                  :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}`"
+                  @variant-open="queryVariants.open(row.queryCanonical ?? '')"
+                  @position-open="positionSparklines.open(row.queryCanonical ?? '')"
+                />
+                <ProSparklineCell
+                  :data="querySparklines.map.value.get(row.queryCanonical ?? '') ?? null"
+                  :pending="querySparklines.pending.value"
+                  :error="!!querySparklines.error.value"
+                  :dates="querySparklines.dates.value"
+                  :label="row.queryCanonical ?? ''"
+                  :metric-label="sparkMetric === 'clicks' ? 'Clicks' : 'Impressions'"
+                  :partial="!stableData"
+                  :width="96"
+                  :height="20"
+                />
+                <UiTooltip side="left" size="lg">
+                  <!-- Fixed-width value and trend columns keep the sparkline
+                       column still across rows with different digit counts. -->
+                  <div class="relative flex shrink-0 items-center gap-2 cursor-default">
+                    <span class="w-12 text-right text-sm font-medium tabular-nums text-highlighted">{{ fmtMetric(row) }}</span>
+                    <span class="flex w-12 justify-end">
                       <UiTrend v-if="getPrevMetricValue(row)" :value="metricTrend(row)" format="percent" size="2xs" />
+                    </span>
+                  </div>
+                  <template #text>
+                    <div class="space-y-1.5 tabular-nums">
+                      <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
+                        <span class="text-muted">{{ line.label }}</span>
+                        <div class="flex items-center gap-1.5">
+                          <span>{{ line.value }}</span>
+                          <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
+                        </div>
+                      </div>
                     </div>
-                    <template #text>
-                      <div class="space-y-1.5 tabular-nums">
-                        <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
-                          <span class="text-muted">{{ line.label }}</span>
-                          <div class="flex items-center gap-1.5">
-                            <span>{{ line.value }}</span>
-                            <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-                  </UiTooltip>
-                </template>
-              </UiDataList>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <UiDataList
-                  title="Growing"
-                  icon="i-lucide-trending-up"
-                  icon-color="green"
-                  tooltip="Queries with the biggest click gains vs the previous period."
-                  :loading="siteLoading || improvingKeywordsLoading"
-                  :loading-count="5"
-                  :items="improvingKeywordRows"
-                  :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries?filter=improving`"
-                  empty-text="No growing queries this period"
-                  :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
-                >
-                  <template #default="{ item: row }">
-                    <ProQueryLabel
-                      :keyword="row.queryCanonical!"
-                      :query-canonical="row.queryCanonical"
-                      :variant-count="row.variantCount"
-                      :variants="normalizedVariants(row)"
-                      :position="bestPosition(row)"
-                      :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}`"
-                    />
-                    <UiTooltip side="left" size="lg">
-                      <div class="relative flex items-center gap-2 cursor-default">
-                        <span class="text-sm tabular-nums">{{ fmtMetric(row) }}</span>
-                        <UiTrend v-if="getPrevMetricValue(row)" :value="metricTrend(row)" format="percent" size="2xs" />
-                      </div>
-                      <template #text>
-                        <div class="space-y-1.5 tabular-nums">
-                          <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
-                            <span class="text-muted">{{ line.label }}</span>
-                            <div class="flex items-center gap-1.5">
-                              <span>{{ line.value }}</span>
-                              <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
-                            </div>
-                          </div>
-                        </div>
-                      </template>
-                    </UiTooltip>
                   </template>
-                </UiDataList>
+                </UiTooltip>
+              </template>
+            </UiDataList>
+          </div>
 
-                <UiDataList
-                  title="Declining"
-                  icon="i-lucide-trending-down"
-                  icon-color="red"
-                  tooltip="Queries with the biggest click drops vs the previous period."
-                  :loading="siteLoading || decliningKeywordsLoading"
-                  :loading-count="5"
-                  :items="decliningKeywordRows"
-                  :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries?filter=declining`"
-                  empty-text="No declining queries this period"
-                  :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
-                >
-                  <template #default="{ item: row }">
-                    <ProQueryLabel
-                      :keyword="row.queryCanonical!"
-                      :query-canonical="row.queryCanonical"
-                      :variant-count="row.variantCount"
-                      :variants="normalizedVariants(row)"
-                      :position="bestPosition(row)"
-                      :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}`"
-                    />
-                    <UiTooltip side="left" size="lg">
-                      <div class="relative flex items-center gap-2 cursor-default">
-                        <span class="text-sm tabular-nums">{{ fmtMetric(row) }}</span>
-                        <UiTrend v-if="getPrevMetricValue(row)" :value="metricTrend(row)" format="percent" size="2xs" />
-                      </div>
-                      <template #text>
-                        <div class="space-y-1.5 tabular-nums">
-                          <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
-                            <span class="text-muted">{{ line.label }}</span>
-                            <div class="flex items-center gap-1.5">
-                              <span>{{ line.value }}</span>
-                              <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
-                            </div>
-                          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <UiDataList
+              v-for="mover in queryMovers"
+              :key="mover.key"
+              :title="mover.title"
+              subtle
+              :tooltip="mover.tooltip"
+              :loading="siteLoading || mover.loading"
+              :loading-count="MOVER_ROWS"
+              :items="mover.rows"
+              :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries?filter=${mover.key}`"
+              :empty-text="mover.empty"
+              :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
+            >
+              <template #default="{ item: row }">
+                <ProQueryLabel
+                  :keyword="row.queryCanonical!"
+                  :query-canonical="row.queryCanonical"
+                  :variant-count="row.variantCount"
+                  :variants="variantsFor(row)"
+                  :variants-loading="variantsLoadingFor(row)"
+                  :position="bestPosition(row)"
+                  :previous-position="row.prevPosition"
+                  :impressions="row.impressions"
+                  :position-series="positionSparklines.seriesFor(row.queryCanonical)"
+                  :position-series-dates="positionSparklines.datesFor(row.queryCanonical)"
+                  :position-series-loading="positionSparklines.loadingFor(row.queryCanonical)"
+                  :brand="isBrandKeyword(row.queryCanonical)"
+                  :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}`"
+                  @variant-open="queryVariants.open(row.queryCanonical ?? '')"
+                  @position-open="positionSparklines.open(row.queryCanonical ?? '')"
+                />
+                <ProSparklineCell
+                  :data="querySparklines.map.value.get(row.queryCanonical ?? '') ?? null"
+                  :pending="querySparklines.pending.value"
+                  :error="!!querySparklines.error.value"
+                  :dates="querySparklines.dates.value"
+                  :label="row.queryCanonical ?? ''"
+                  :metric-label="sparkMetric === 'clicks' ? 'Clicks' : 'Impressions'"
+                  :partial="!stableData"
+                  :width="96"
+                  :height="20"
+                />
+                <UiTooltip side="left" size="lg">
+                  <div class="relative flex shrink-0 items-center gap-2 cursor-default">
+                    <span class="w-12 text-right text-sm font-medium tabular-nums text-highlighted">{{ fmtMetric(row) }}</span>
+                    <span class="flex w-12 justify-end">
+                      <UiTrend v-if="getPrevMetricValue(row)" :value="metricTrend(row)" format="percent" size="2xs" />
+                    </span>
+                  </div>
+                  <template #text>
+                    <div class="space-y-1.5 tabular-nums">
+                      <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
+                        <span class="text-muted">{{ line.label }}</span>
+                        <div class="flex items-center gap-1.5">
+                          <span>{{ line.value }}</span>
+                          <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
                         </div>
-                      </template>
-                    </UiTooltip>
+                      </div>
+                    </div>
                   </template>
-                </UiDataList>
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-6">
-              <UiDataList
-                title="New Rankings"
-                icon="i-lucide-sparkles"
-                icon-color="green"
-                tooltip="Queries your site started ranking for this period that had no impressions previously."
-                :loading="siteLoading || newKeywordsLoading"
-                :loading-count="5"
-                :items="newKeywordRows"
-                :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries?filter=new`"
-                empty-text="No new rankings this period"
-                :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
-              >
-                <template #default="{ item: row }">
-                  <NuxtLink
-                    :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.query!)}`"
-                    class="text-sm truncate max-w-[140px] hover:text-primary transition-colors"
-                  >
-                    {{ row.query }}
-                  </NuxtLink>
-                  <UiTooltip side="left" size="lg">
-                    <span class="text-sm tabular-nums cursor-default">{{ fmtMetric(row) }}</span>
-                    <template #text>
-                      <div class="space-y-1.5 tabular-nums">
-                        <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
-                          <span class="text-muted">{{ line.label }}</span>
-                          <span>{{ line.value }}</span>
-                        </div>
-                      </div>
-                    </template>
-                  </UiTooltip>
-                </template>
-              </UiDataList>
-
-              <UiDataList
-                title="Lost Rankings"
-                icon="i-lucide-ghost"
-                icon-color="red"
-                tooltip="Queries your site stopped ranking for this period. They previously had impressions but now show zero."
-                :loading="siteLoading || lostKeywordsLoading"
-                :loading-count="5"
-                :items="lostKeywordRows"
-                :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries?filter=lost`"
-                empty-text="No lost rankings this period"
-                :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
-              >
-                <template #default="{ item: row }">
-                  <NuxtLink
-                    :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.query!)}`"
-                    class="text-sm truncate max-w-[140px] hover:text-primary transition-colors"
-                  >
-                    {{ row.query }}
-                  </NuxtLink>
-                  <UiTooltip side="left" size="lg">
-                    <span class="text-sm tabular-nums cursor-default">{{ fmtMetric(row) }}</span>
-                    <template #text>
-                      <div class="space-y-1.5 tabular-nums">
-                        <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
-                          <span class="text-muted">{{ line.label }}</span>
-                          <span>{{ line.value }}</span>
-                        </div>
-                      </div>
-                    </template>
-                  </UiTooltip>
-                </template>
-              </UiDataList>
-            </div>
-          </ProSecondaryGrid>
+                </UiTooltip>
+              </template>
+            </UiDataList>
+          </div>
         </ProPageZone>
 
-        <!-- Pages section: 3 mover lists + Countries/Devices rail -->
+        <!-- Pages: the lead list only. The movers are one click away. -->
         <ProPageZone tier="secondary">
-          <ProSectionHeader
-            title="Pages"
-            icon="i-lucide-file-text"
-            class="!mb-0"
-          />
-          <ProSecondaryGrid layout="wide-narrow">
-            <div class="flex flex-col gap-4">
-              <UiDataList
-                :title="topLabel"
-                tooltip="Pages receiving the most search traffic this period."
-                :loading="siteLoading || pagesLoading"
-                :loading-count="5"
-                :items="pageRows"
-                :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/pages`"
-                :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
-              >
-                <template #default="{ item: row }">
-                  <NuxtLink
-                    :to="`/pro/dashboard/sites/${siteId}/search-console/pages/${encodeURIComponent(row.page!)}`"
-                    class="relative text-sm truncate max-w-[200px] hover:text-primary transition-colors"
-                    :title="row.page"
+          <div class="flex flex-col gap-2">
+            <UiSectionHeader title="Pages" class="!mb-0">
+              <!-- Each link keeps the destination its old mover list had. The
+                   lead list's own "View all" already opens the unfiltered tab. -->
+              <template #actions>
+                <span class="flex items-center gap-2 text-xs">
+                  <ULink
+                    :to="`/pro/dashboard/sites/${siteId}/search-console/pages?filter=improving`"
+                    class="text-muted hover:text-default transition-colors"
                   >
-                    {{ getPath(row.page!) }}
-                  </NuxtLink>
-                  <UiTooltip side="left" size="lg">
-                    <div class="relative flex items-center gap-2 cursor-default">
-                      <span class="text-sm tabular-nums">{{ fmtMetric(row) }}</span>
-                      <UiTrend v-if="getPrevMetricValue(row)" :value="metricTrend(row)" format="percent" size="2xs" />
-                    </div>
-                    <template #text>
-                      <div class="space-y-1.5 tabular-nums">
-                        <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
-                          <span class="text-muted">{{ line.label }}</span>
-                          <div class="flex items-center gap-1.5">
-                            <span>{{ line.value }}</span>
-                            <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-                  </UiTooltip>
-                </template>
-              </UiDataList>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <UiDataList
-                  title="Growing"
-                  icon="i-lucide-trending-up"
-                  icon-color="green"
-                  tooltip="Pages with the biggest click gains vs the previous period."
-                  :loading="siteLoading || improvingPagesLoading"
-                  :loading-count="5"
-                  :items="improvingPageRows"
-                  :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/pages?filter=improving`"
-                  empty-text="No growing pages this period"
-                  :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
+                    Growing
+                  </ULink>
+                  <span class="text-dimmed" aria-hidden="true">·</span>
+                  <ULink
+                    :to="`/pro/dashboard/sites/${siteId}/search-console/pages?filter=declining`"
+                    class="text-muted hover:text-default transition-colors"
+                  >
+                    Declining
+                  </ULink>
+                </span>
+              </template>
+            </UiSectionHeader>
+            <UiDataList
+              :title="topLabel"
+              subtle
+              tooltip="Pages receiving the most search traffic this period."
+              :loading="siteLoading || pagesLoading"
+              :loading-count="5"
+              :items="pageRows"
+              :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/pages`"
+              :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
+            >
+              <template #default="{ item: row }">
+                <NuxtLink
+                  :to="`/pro/dashboard/sites/${siteId}/search-console/pages/${encodeURIComponent(row.page!)}`"
+                  class="relative min-w-0 flex-1 truncate text-sm text-default hover:text-primary transition-colors"
+                  :title="row.page"
                 >
-                  <template #default="{ item: row }">
-                    <NuxtLink
-                      :to="`/pro/dashboard/sites/${siteId}/search-console/pages/${encodeURIComponent(row.page!)}`"
-                      class="relative text-sm truncate max-w-[200px] hover:text-primary transition-colors"
-                      :title="row.page"
-                    >
-                      {{ getPath(row.page!) }}
-                    </NuxtLink>
-                    <UiTooltip side="left" size="lg">
-                      <div class="relative flex items-center gap-2 cursor-default">
-                        <span class="text-sm tabular-nums">{{ fmtMetric(row) }}</span>
-                        <UiTrend v-if="getPrevMetricValue(row)" :value="metricTrend(row)" format="percent" size="2xs" />
-                      </div>
-                      <template #text>
-                        <div class="space-y-1.5 tabular-nums">
-                          <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
-                            <span class="text-muted">{{ line.label }}</span>
-                            <div class="flex items-center gap-1.5">
-                              <span>{{ line.value }}</span>
-                              <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
-                            </div>
-                          </div>
-                        </div>
-                      </template>
-                    </UiTooltip>
-                  </template>
-                </UiDataList>
-
-                <UiDataList
-                  title="Declining"
-                  icon="i-lucide-trending-down"
-                  icon-color="red"
-                  tooltip="Pages with the biggest click drops vs the previous period."
-                  :loading="siteLoading || decliningPagesLoading"
-                  :loading-count="5"
-                  :items="decliningPageRows"
-                  :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/pages?filter=declining`"
-                  empty-text="No declining pages this period"
-                  :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
-                >
-                  <template #default="{ item: row }">
-                    <NuxtLink
-                      :to="`/pro/dashboard/sites/${siteId}/search-console/pages/${encodeURIComponent(row.page!)}`"
-                      class="relative text-sm truncate max-w-[200px] hover:text-primary transition-colors"
-                      :title="row.page"
-                    >
-                      {{ getPath(row.page!) }}
-                    </NuxtLink>
-                    <UiTooltip side="left" size="lg">
-                      <div class="relative flex items-center gap-2 cursor-default">
-                        <span class="text-sm tabular-nums">{{ fmtMetric(row) }}</span>
-                        <UiTrend v-if="getPrevMetricValue(row)" :value="metricTrend(row)" format="percent" size="2xs" />
-                      </div>
-                      <template #text>
-                        <div class="space-y-1.5 tabular-nums">
-                          <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
-                            <span class="text-muted">{{ line.label }}</span>
-                            <div class="flex items-center gap-1.5">
-                              <span>{{ line.value }}</span>
-                              <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
-                            </div>
-                          </div>
-                        </div>
-                      </template>
-                    </UiTooltip>
-                  </template>
-                </UiDataList>
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-6">
-              <UiDataList
-                title="Countries"
-                tooltip="Where your search traffic comes from, based on the searcher's location."
-                :loading="siteLoading || countriesLoading"
-                :loading-count="5"
-                :items="countryRows"
-                :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/countries`"
-                :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
-              >
-                <template #default="{ item: row }">
-                  <div class="flex items-center gap-2">
-                    <UIcon :name="countryFlag(row.country!)" class="size-4" />
-                    <span class="text-sm">{{ countryName(row.country!) }}</span>
-                  </div>
-                  <UiTooltip side="left" size="lg">
-                    <div class="flex items-center gap-2 cursor-default">
-                      <span class="text-sm tabular-nums">{{ fmtMetric(row) }}</span>
+                  {{ getPath(row.page!) }}
+                </NuxtLink>
+                <ProSparklineCell
+                  :data="pageSparklines.map.value.get(row.page ?? '') ?? null"
+                  :pending="pageSparklines.pending.value"
+                  :error="!!pageSparklines.error.value"
+                  :dates="pageSparklines.dates.value"
+                  :label="row.page ?? ''"
+                  :metric-label="sparkMetric === 'clicks' ? 'Clicks' : 'Impressions'"
+                  :partial="!stableData"
+                  :width="96"
+                  :height="20"
+                />
+                <UiTooltip side="left" size="lg">
+                  <div class="relative flex shrink-0 items-center gap-2 cursor-default">
+                    <span class="w-12 text-right text-sm font-medium tabular-nums text-highlighted">{{ fmtMetric(row) }}</span>
+                    <span class="flex w-12 justify-end">
                       <UiTrend v-if="getPrevMetricValue(row)" :value="metricTrend(row)" format="percent" size="2xs" />
-                    </div>
-                    <template #text>
-                      <div class="space-y-1.5 tabular-nums">
-                        <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
-                          <span class="text-muted">{{ line.label }}</span>
-                          <div class="flex items-center gap-1.5">
-                            <span>{{ line.value }}</span>
-                            <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-                  </UiTooltip>
-                </template>
-              </UiDataList>
-
-              <UiDataList
-                title="Devices"
-                tooltip="How your search traffic is split across desktop, mobile, and tablet devices."
-                :loading="siteLoading || devicesLoading"
-                :loading-count="3"
-                :items="deviceStats"
-                empty-icon="i-lucide-smartphone"
-                empty-text="No device data available"
-                :bar-value="primaryMetric !== 'position' ? getDeviceMetric : undefined"
-              >
-                <template #default="{ item: device }">
-                  <div class="flex items-center gap-2">
-                    <ProNavIcon :icon="device.icon" />
-                    <span class="text-sm capitalize">{{ device.name }}</span>
+                    </span>
                   </div>
-                  <UiTooltip side="left" size="lg">
-                    <div class="flex items-center gap-2 cursor-default">
-                      <span class="text-sm tabular-nums">{{ fmtMetric(device.row) }}</span>
-                      <UiTrend
-                        v-if="device.shareRelative != null"
-                        :value="device.shareRelative"
-                        format="percent"
-                        precision="auto"
-                        size="2xs"
-                      />
-                    </div>
-                    <template #text>
-                      <div class="space-y-1.5 tabular-nums">
-                        <div v-for="line in rowTooltipLines(device.row)" :key="line.label" class="flex items-center justify-between gap-6">
-                          <span class="text-muted">{{ line.label }}</span>
-                          <div class="flex items-center gap-1.5">
-                            <span>{{ line.value }}</span>
-                            <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
-                          </div>
+                  <template #text>
+                    <div class="space-y-1.5 tabular-nums">
+                      <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
+                        <span class="text-muted">{{ line.label }}</span>
+                        <div class="flex items-center gap-1.5">
+                          <span>{{ line.value }}</span>
+                          <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
                         </div>
                       </div>
-                    </template>
-                  </UiTooltip>
-                </template>
-              </UiDataList>
-            </div>
-          </ProSecondaryGrid>
+                    </div>
+                  </template>
+                </UiTooltip>
+              </template>
+            </UiDataList>
+          </div>
+        </ProPageZone>
+
+        <!-- Countries and Devices -->
+        <ProPageZone tier="tertiary">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <UiDataList
+              title="Countries"
+              subtle
+              tooltip="Where your search traffic comes from, based on the searcher's location."
+              :loading="siteLoading || countriesLoading"
+              :loading-count="5"
+              :items="countryRows"
+              :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/countries`"
+              :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
+            >
+              <template #default="{ item: row }">
+                <div class="flex items-center gap-2">
+                  <UIcon :name="countryFlag(row.country!)" class="size-4" />
+                  <span class="text-sm">{{ countryName(row.country!) }}</span>
+                </div>
+                <UiTooltip side="left" size="lg">
+                  <div class="flex items-center gap-2 cursor-default">
+                    <span class="text-sm tabular-nums">{{ fmtMetric(row) }}</span>
+                    <UiTrend v-if="getPrevMetricValue(row)" :value="metricTrend(row)" format="percent" size="2xs" />
+                  </div>
+                  <template #text>
+                    <div class="space-y-1.5 tabular-nums">
+                      <div v-for="line in rowTooltipLines(row)" :key="line.label" class="flex items-center justify-between gap-6">
+                        <span class="text-muted">{{ line.label }}</span>
+                        <div class="flex items-center gap-1.5">
+                          <span>{{ line.value }}</span>
+                          <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </UiTooltip>
+              </template>
+            </UiDataList>
+
+            <UiDataList
+              title="Devices"
+              subtle
+              tooltip="How your search traffic is split across desktop, mobile, and tablet devices."
+              :loading="siteLoading || devicesLoading"
+              :loading-count="3"
+              :items="deviceStats"
+              empty-icon="smartphone"
+              empty-text="No device data available"
+              :bar-value="primaryMetric !== 'position' ? getDeviceMetric : undefined"
+            >
+              <!-- Countries has a "View all" link in its header. Devices has no
+                   detail route, so this spacer holds the same header height and
+                   the two cards start on one baseline. -->
+              <template #header-trailing>
+                <span class="block min-h-11" aria-hidden="true" />
+              </template>
+              <template #default="{ item: device }">
+                <div class="flex items-center gap-2">
+                  <!-- Bare glyph at the flag's footprint, so device labels line
+                       up with the country labels beside them. -->
+                  <UiIcon :name="device.icon" class="size-4 shrink-0 text-muted" aria-hidden="true" />
+                  <span class="text-sm capitalize">{{ device.name }}</span>
+                </div>
+                <UiTooltip side="left" size="lg">
+                  <div class="flex items-center gap-2 cursor-default">
+                    <span class="text-sm tabular-nums">{{ fmtMetric(device.row) }}</span>
+                    <UiTrend
+                      v-if="device.shareRelative != null"
+                      :value="device.shareRelative"
+                      format="percent"
+                      precision="auto"
+                      size="2xs"
+                    />
+                  </div>
+                  <template #text>
+                    <div class="space-y-1.5 tabular-nums">
+                      <div v-for="line in rowTooltipLines(device.row)" :key="line.label" class="flex items-center justify-between gap-6">
+                        <span class="text-muted">{{ line.label }}</span>
+                        <div class="flex items-center gap-1.5">
+                          <span>{{ line.value }}</span>
+                          <UiTrend v-if="line.trend" :value="line.trend" format="percent" size="2xs" :clamp="false" />
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </UiTooltip>
+              </template>
+            </UiDataList>
+          </div>
         </ProPageZone>
       </template>
     </template>

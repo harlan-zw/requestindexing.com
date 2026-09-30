@@ -25,8 +25,15 @@ interface PeriodTotals {
 const { loading: loadingProp, ...props } = defineProps<{
   dates: DateAnalytics[]
   prevDates: DateAnalytics[] | null
-  period: PeriodTotals
+  /**
+   * Null when the period totals are unknown: not loaded yet, or the read
+   * failed. Pass null, never a zeroed object. A fabricated zero looks the same
+   * on screen as a site with no traffic.
+   */
+  period: PeriodTotals | null
   prevPeriod: PeriodTotals | null
+  /** Raw read failure, if any. The hero shows no figures while it is set. */
+  error?: unknown
   /** Current period filter for tooltip labels */
   dateRange?: Period
   showButtons?: boolean
@@ -37,12 +44,28 @@ const { loading: loadingProp, ...props } = defineProps<{
   selectedSites?: { name: string, hostname: string }[]
   /** Show loading skeleton */
   loading?: boolean
+  /**
+   * Trailing entity counts ("Queries ranked", "Pages ranked") after the metric
+   * heroes, at a smaller scale. They answer "across how much surface", not "how
+   * much traffic", so they are counts and never chart series. `value: null`
+   * renders as unknown, never as a real zero.
+   */
+  entityCounts?: Array<{
+    key: string
+    label: string
+    title: string
+    description: string
+    icon: string
+    value: number | null
+    loading?: boolean
+  }>
 }>()
 
 const emit = defineEmits<{
   zoom: [range: { start: string, end: string, prevStart?: string, prevEnd?: string } | null]
 }>()
 const devSkeleton = useProDevSkeleton()
+const metricPopoverId = useId()
 const hydrated = ref(false)
 onMounted(() => {
   hydrated.value = true
@@ -461,7 +484,11 @@ const refetchLanded = computed(() => {
   return rows[0]!.date >= range.start && rows[rows.length - 1]!.date <= range.end
 })
 
-const displayedPeriod = computed<PeriodTotals>(() => {
+const displayedPeriod = computed<PeriodTotals | null>(() => {
+  // A failed read has no totals, zoomed or not. Aggregating an empty series
+  // here would rebuild the zeros this card must not show.
+  if (props.error)
+    return null
   if (!isZoomed.value)
     return props.period
   if (refetchLanded.value)
@@ -534,12 +561,16 @@ const zoomRangeLabel = computed(() => {
             <template v-if="loading">
               <UiSkeleton class="h-9 rounded" :base="80" :range="40" :index="selectedColumns.indexOf(col)" />
             </template>
+            <!-- No totals to show. An unknown value must look unknown. -->
+            <template v-else-if="!displayedPeriod">
+              <span class="text-2xl sm:text-4xl font-bold tracking-tight text-dimmed" :aria-label="`${metricMeta[col]?.label}: unavailable`">&mdash;</span>
+            </template>
             <template v-else>
               <span class="text-2xl sm:text-4xl font-bold tracking-tight tabular-nums">
-                <template v-if="col === 'clicks'">{{ useProHumanFriendlyNumber(displayedPeriod?.clicks) }}</template>
-                <template v-else-if="col === 'impressions'">{{ useProHumanFriendlyNumber(displayedPeriod?.impressions) }}</template>
-                <template v-else-if="col === 'position'">{{ Math.round(displayedPeriod?.position ?? 0) }}</template>
-                <template v-else-if="col === 'ctr'">{{ ((displayedPeriod?.ctr ?? 0) * 100).toFixed(1) }}%</template>
+                <template v-if="col === 'clicks'">{{ useProHumanFriendlyNumber(displayedPeriod.clicks) }}</template>
+                <template v-else-if="col === 'impressions'">{{ useProHumanFriendlyNumber(displayedPeriod.impressions) }}</template>
+                <template v-else-if="col === 'position'">{{ Math.round(displayedPeriod.position) }}</template>
+                <template v-else-if="col === 'ctr'">{{ (displayedPeriod.ctr * 100).toFixed(1) }}%</template>
               </span>
             </template>
             <div class="flex flex-col">
@@ -574,7 +605,7 @@ const zoomRangeLabel = computed(() => {
               <div class="border-t border-default pt-2 space-y-1.5">
                 <div class="flex justify-between items-center gap-4">
                   <span class="text-muted">{{ periodLabels[dateRange || '3m'] || 'Current' }}</span>
-                  <span class="font-mono font-medium tabular-nums text-default">{{ formatMetricValue(col, period) }}</span>
+                  <span class="font-mono font-medium tabular-nums text-default">{{ displayedPeriod ? formatMetricValue(col, displayedPeriod) : '—' }}</span>
                 </div>
                 <div v-if="prevPeriod" class="flex justify-between items-center gap-4">
                   <span class="text-muted">Previous period</span>
@@ -594,6 +625,53 @@ const zoomRangeLabel = computed(() => {
           </template>
         </UiPopover>
         <div v-if="selectedColumns.indexOf(col) < selectedColumns.length - 1" class="w-px self-stretch bg-[var(--ui-border)] hidden sm:block" />
+      </template>
+
+      <!-- Trailing entity counts: how much surface the traffic above landed
+           on. A step down in scale from the metric heroes, because they are
+           context for the headline, not another headline. -->
+      <template v-if="entityCounts?.length">
+        <div class="w-px self-stretch bg-[var(--ui-border)] hidden sm:block" />
+        <template v-for="entity in entityCounts" :key="entity.key">
+          <UiPopover
+            mode="hover"
+            role="tooltip"
+            :panel-id="`${metricPopoverId}-${entity.key}`"
+            :content="{ side: 'bottom' }"
+            class="flex"
+          >
+            <button
+              type="button"
+              class="flex items-center gap-2 cursor-default text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              :aria-label="`${entity.title} details`"
+              :aria-describedby="`${metricPopoverId}-${entity.key}`"
+            >
+              <UiIcon :name="entity.icon" class="size-4 shrink-0 text-dimmed" aria-hidden="true" />
+              <UiSkeleton v-if="entity.loading" class="h-6 rounded" :base="48" :range="20" />
+              <!-- An unknown count renders unknown. A page-size fallback here
+                   would read as a real site total. -->
+              <span
+                v-else-if="entity.value == null"
+                class="text-lg sm:text-xl font-semibold tracking-tight text-dimmed"
+                :aria-label="`${entity.title}: unavailable`"
+              >&mdash;</span>
+              <span v-else class="text-lg sm:text-xl font-semibold tracking-tight tabular-nums">
+                {{ formatNumber(entity.value) }}
+              </span>
+              <span class="text-xs text-muted">{{ entity.label }}</span>
+            </button>
+            <template #panel>
+              <div class="p-3 text-xs space-y-2 min-w-[220px] max-w-[250px]">
+                <div class="font-semibold text-default">
+                  {{ entity.title }}
+                </div>
+                <p class="text-muted leading-relaxed">
+                  {{ entity.description }}
+                </p>
+              </div>
+            </template>
+          </UiPopover>
+        </template>
       </template>
     </div>
 
