@@ -34,13 +34,23 @@ const {
 } = useProGscdumpIndexingDiagnostics(engineSiteId)
 
 // The clusters read the refused rows only, so the page never pulls the whole
-// inventory to group three buckets.
-const {
-  data: urlsData,
-  status: urlsStatus,
-  error: urlsError,
-  refresh: refreshUrls,
-} = useProGscdumpIndexingUrls(engineSiteId, { limit: 500, status: 'not_indexed' })
+// inventory to group three buckets. gscdump fills `issueType` only from the
+// `issue` filter, so each bucket is its own read: one read without it returns
+// every row with `issueType: null`, and the clusters would drop all of them.
+const rejectionReads = REJECTION_ISSUE_TYPES.map(issue =>
+  useProGscdumpIndexingUrls(engineSiteId, { limit: 200, status: 'not_indexed', issue }),
+)
+const urlsData = computed(() => {
+  const loaded = rejectionReads.filter(read => read.data.value)
+  return loaded.length ? { urls: loaded.flatMap(read => read.data.value?.urls ?? []) } : null
+})
+const urlsError = computed(() => rejectionReads.find(read => read.error.value)?.error.value ?? null)
+const urlsStatus = computed(() => rejectionReads.some(read => read.status.value === 'pending')
+  ? 'pending'
+  : rejectionReads.every(read => read.status.value === 'idle') ? 'idle' : 'success')
+function refreshUrls() {
+  return Promise.all(rejectionReads.map(read => read.refresh()))
+}
 
 const REJECTION_LABELS: Record<typeof REJECTION_ISSUE_TYPES[number], string> = {
   crawled_not_indexed: 'Crawled, then refused',
