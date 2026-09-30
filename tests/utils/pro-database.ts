@@ -35,7 +35,8 @@ export function proDatabase(sqlite: DatabaseSync): ProDatabase {
       return { rows: [] }
     }
     const rows = statement.all(...args).map(row => Object.values(row))
-    return { rows: method === 'get' ? rows[0] : rows }
+    // A `get` that matched nothing hands back no row, which the driver reads as undefined.
+    return { rows: (method === 'get' ? rows[0] : rows) as unknown[] }
   }, { schema }) as unknown as ProDatabase
 }
 
