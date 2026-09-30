@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { SitesPreview } from '~~/layers/core/app/types'
-
 definePageMeta({ layout: 'kit' })
 useHead({ title: 'Async states · Brand Kit' })
 
@@ -12,51 +10,6 @@ useHead({ title: 'Async states · Brand Kit' })
 // A one-millisecond watchdog so the stalled branch is reachable here. Real
 // cards use the 15s default.
 const STALLED_TIMEOUT_MS = 1
-
-const sites: SitesPreview = [
-  {
-    siteId: 'kv1109',
-    domain: 'harlanzw.com',
-    property: 'sc-domain:harlanzw.com',
-    pageCount30Day: 21,
-    startOfData: '2024-09-29',
-    isLosingData: false,
-    sitemaps: [],
-  },
-  // The case that shipped broken: a site imported from KV has no domain, so the
-  // card title rendered as "/" beside a broken-image glyph. `siteLabel` falls
-  // back to the property.
-  {
-    siteId: 'kv1110',
-    domain: null,
-    property: 'sc-domain:thewallsthotel.com',
-    pageCount30Day: 1,
-    startOfData: '2025-01-04',
-    isLosingData: true,
-    sitemaps: [],
-  },
-  {
-    siteId: 'kv1111',
-    domain: null,
-    property: 'https://unhead.unjs.io/',
-    pageCount30Day: 0,
-    startOfData: '2025-03-11',
-    isLosingData: false,
-    sitemaps: [],
-  },
-  {
-    siteId: 'kv1112',
-    domain: 'nuxtseo.com',
-    property: 'sc-domain:nuxtseo.com',
-    pageCount30Day: 373,
-    startOfData: '2024-11-20',
-    isLosingData: false,
-    sitemaps: [],
-  },
-]
-
-const withinLimit = ref<string[]>(['kv1109', 'kv1110'])
-const overLimit = ref<string[]>(['kv1109', 'kv1110', 'kv1111', 'kv1112'])
 </script>
 
 <template>
@@ -134,34 +87,6 @@ const overLimit = ref<string[]>(['kv1109', 'kv1110', 'kv1111', 'kv1112'])
           </KitRow>
         </div>
       </UCard>
-    </KitSection>
-
-    <KitSection title="TeamSiteSelector" code="<TeamSiteSelector>">
-      <div class="space-y-4">
-        <UCard variant="outline">
-          <template #header>
-            <span class="text-sm font-medium">2 of 3 selected, one site has no domain</span>
-          </template>
-          <TeamSiteSelector
-            :sites="sites"
-            :max="3"
-            :model-value="withinLimit"
-            @update:model-value="e => withinLimit = e"
-          />
-        </UCard>
-
-        <UCard variant="outline">
-          <template #header>
-            <span class="text-sm font-medium">over limit (4 of 3)</span>
-          </template>
-          <TeamSiteSelector
-            :sites="sites"
-            :max="3"
-            :model-value="overLimit"
-            @update:model-value="e => overLimit = e"
-          />
-        </UCard>
-      </div>
     </KitSection>
   </div>
 </template>

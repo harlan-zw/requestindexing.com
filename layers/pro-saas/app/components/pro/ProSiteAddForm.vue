@@ -6,11 +6,25 @@ import { parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
 // Connect a site by address. Search Console properties are offered as
 // one-click suggestions, not as the only way in: an account with no verified
 // property used to reach this screen with nothing to pick and no way forward.
-const { gscReturnTo = '/pro/dashboard/onboarding?step=sites' } = defineProps<{
-  gscReturnTo?: string
+//
+// Three pages render it: the onboarding wizard, Connect a Site, and the
+// Manage Sites modal. `gscReturnTo` is required because the Google grant must
+// come back to the page that started it. A default of the wizard once sent
+// finished users there, and the onboarding gate bounced them to the dashboard.
+const { gscReturnTo } = defineProps<{
+  gscReturnTo: string
 }>()
 
-const emit = defineEmits<{ changed: [count: number] }>()
+const emit = defineEmits<{
+  changed: [count: number]
+  /** One Site connected. */
+  connected: [site: { siteId: string, domain: string | null }]
+  /**
+   * A connect attempt failed, or the Free allowance is full so none can
+   * start. The wizard reveals its skip on this, as nuxtseo.com does.
+   */
+  blocked: []
+}>()
 
 interface ConnectedSite {
   siteId: string
@@ -41,13 +55,13 @@ interface GscPropertiesResponse {
 const toast = useToast()
 
 const { data: preview, refresh: refreshSites, status: sitesStatus } = await useFetch<SitesPreviewResponse>('/api/sites/preview', {
-  key: 'onboarding-connected-sites',
+  key: 'site-add-form-sites',
   server: false,
   default: (): SitesPreviewResponse => ({ sites: [], siteAllowance: { _tag: 'Unknown' } }),
 })
 
 const { data: gsc, refresh: refreshGsc, status: gscStatus } = await useFetch<GscPropertiesResponse>('/api/pro/gsc-properties', {
-  key: 'onboarding-gsc-properties',
+  key: 'site-add-form-gsc-properties',
   server: false,
   default: () => ({ connected: false, properties: [] }),
 })
@@ -72,6 +86,11 @@ const atLimit = computed(() => !!cappedAllowance.value && cappedAllowance.value.
 // One notice for a full allowance, above both ways to connect. Every Connect
 // control is disabled under it, so no click can fail with the same message.
 const allowanceFullNotice = computed(() => atLimit.value && cappedAllowance.value ? siteAllowanceReached(cappedAllowance.value.allowance) : null)
+
+watch(atLimit, (full) => {
+  if (full)
+    emit('blocked')
+}, { immediate: true })
 
 watch(connectedSites, sites => emit('changed', sites.length), { immediate: true })
 
@@ -131,16 +150,18 @@ async function connect(value: string) {
 
   submitting.value = parsed.domain
   try {
-    await $fetch('/api/pro/sites', { method: 'POST', body: { url: parsed.origin } })
+    const { site } = await $fetch<{ site: { id: string, domain: string | null } }>('/api/pro/sites', { method: 'POST', body: { url: parsed.origin } })
     url.value = ''
     await Promise.all([refreshSites(), refreshGsc()])
     toast.add({ title: `Connected ${parsed.domain}`, color: 'success' })
+    emit('connected', { siteId: site.id, domain: site.domain })
   }
   catch (err: unknown) {
     // The API error envelope carries the reader-facing message, including this
     // app's copy for a Free allowance refusal.
     const message = (err as { data?: { data?: { message?: unknown } } } | null)?.data?.data?.message
     inlineError.value = typeof message === 'string' && message ? message : 'Could not connect that site.'
+    emit('blocked')
     // A refusal means the allowance moved since the page loaded. Re-read it so
     // the count and the disabled state match what gscdump just said.
     await refreshSites()

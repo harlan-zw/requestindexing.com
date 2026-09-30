@@ -224,6 +224,8 @@ export default defineNuxtConfig({
     '/get-started': { redirect: { to: '/pro/onboarding', statusCode: 301 } },
     // The Site picker moved under the Sites roster, matching nuxtseo.com.
     '/pro/dashboard/team/sites': { redirect: { to: '/pro/dashboard/sites/connect', statusCode: 301 } },
+    // The all-sites indexing page moved to nuxtseo.com's route.
+    '/pro/dashboard/web-indexing': { redirect: { to: '/pro/dashboard/indexing', statusCode: 301 } },
     // `/dashboard/**` and `/account/**` are 301'd to the one tree by
     // `layers/pro-saas/server/middleware/00-legacy-dashboard.ts`. A route rule
     // can only swap the prefix, and several of those pages moved further.

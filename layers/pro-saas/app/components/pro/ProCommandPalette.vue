@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Ported from nuxtseo.com's `ProCommandPalette.vue`, cut to what this app
-// offers: no AI handoff, no recents, no groups, no fleet concern pages.
+// offers: no AI handoff, no recents, no groups. Indexing is the one fleet
+// concern page so far.
 //
 // Per-Site entries come from the Site nav manifest rather than a hand-kept
 // list, so the palette cannot offer a surface the sidebar does not have, and a
@@ -37,7 +38,7 @@ const groupLabels = new Map(proNavGroups.map(group => [group.id, group.label]))
 const navItems = computed<SiteCommandPaletteItem[]>(() => {
   const items: SiteCommandPaletteItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: 'home', to: '/pro/dashboard' },
-    { id: 'indexing', label: 'Indexing (all sites)', icon: 'database', to: '/pro/dashboard/web-indexing', keywords: ['submit', 'coverage', 'indexed'] },
+    { id: 'indexing', label: 'Indexing (all sites)', icon: 'database', to: '/pro/dashboard/indexing', keywords: ['submit', 'coverage', 'indexed'] },
     { id: 'manage-sites', label: 'Manage Sites', icon: 'settings', to: '/pro/dashboard/sites', keywords: ['remove', 'sites'] },
     { id: 'connect-site', label: 'Connect a Site', icon: 'add', to: '/pro/dashboard/sites/connect', keywords: ['search console', 'gsc', 'properties'] },
     { id: 'team-settings', label: 'Team settings', icon: 'settings', to: '/pro/dashboard/team/settings', keywords: ['workspace'] },

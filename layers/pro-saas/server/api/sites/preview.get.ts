@@ -1,6 +1,6 @@
-// Site picker for `dashboard/sites/connect.vue` and the onboarding wizard.
-// Lists the synced GSC properties the caller can pick from: their current
-// team's sites, plus any they created on another team they manage.
+// Connected Sites and the Site allowance for `ProSiteAddForm`, plus the
+// read-only list on Team settings. Lists the caller's current team's sites,
+// plus any they created on another team they manage.
 // Sync status/progress comes from gscdump's lifecycle;
 // `pageCount30Day` is a real per-site page count pulled from gscdump `getData`
 // (not fabricated), bounded to synced sites only.

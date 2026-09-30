@@ -72,6 +72,18 @@ export interface IndexCohortCoverage {
   notCrawled: number
 }
 
+/**
+ * The enumerated not-indexed list must cover at least this share of the count
+ * gscdump reports. Below it the list is a sample and every rate built on it
+ * would treat the unlisted URLs as absent. Ported from nuxtseo.com #1306.
+ */
+export const COHORT_MIN_ENUMERATED_SHARE = 0.9
+
+/** Message for the `sampled-index-state` no-evidence reason, shared by every surface. */
+export function sampledIndexStateMessage(enumerated: number, reported: number): string {
+  return `Google index state is a sample: ${enumerated.toLocaleString('en-US')} of ${reported.toLocaleString('en-US')} not-indexed URLs. Family rates would be invented. Read the indexing summary instead.`
+}
+
 export interface IndexCohortBaseline {
   total: number
   notIndexed: number
@@ -81,11 +93,18 @@ export interface IndexCohortBaseline {
 export type IndexCohortDiagnosis
   /**
    * `no-inspection-join` is the only reason the pure builder can produce; the
-   * server also reaches this state with `no-completed-crawl`, which it knows
-   * about and the builder cannot. Both are real domain states, so the union
-   * owns both rather than letting the wire type drift wider than the domain.
+   * server also reaches this state with `no-completed-crawl` and
+   * `sampled-index-state`, which it knows about and the builder cannot. All are
+   * real domain states, so the union owns them rather than letting the wire type
+   * drift wider than the domain.
+   *
+   * `sampled-index-state`: the not-indexed list covers under
+   * `COHORT_MIN_ENUMERATED_SHARE` of the count gscdump reports. A URL outside
+   * the list has an unknown state, so no rate can be computed. `enumerated` and
+   * `reported` are the two counts.
    */
   = | { _tag: 'no-evidence', reason: 'no-inspection-join' | 'no-completed-crawl' }
+    | { _tag: 'no-evidence', reason: 'sampled-index-state', enumerated: number, reported: number }
     | {
       _tag: 'uniform'
       baseline: IndexCohortBaseline
@@ -441,7 +460,7 @@ const asPercent = (value: number) => `${Math.round(value * 100)}%`
  * a symptom and sends the reader elsewhere to interpret it. When no cohort
  * separates, the reason-led headline remains correct and stays.
  */
-export function selectIndexCohortLead(diagnosis: IndexCohortDiagnosis): IndexCohortLead {
+export function selectIndexCohortLead(diagnosis: { _tag: 'no-evidence' } | Exclude<IndexCohortDiagnosis, { _tag: 'no-evidence' }>): IndexCohortLead {
   if (diagnosis._tag === 'no-evidence')
     return { _tag: 'none', reason: 'no-evidence' }
   if (diagnosis._tag === 'uniform')

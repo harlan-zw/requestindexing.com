@@ -36,11 +36,7 @@ const sites = computed<SitesPreview>(() => preview.value?._tag === 'Ready' ? pre
 
 <template>
   <div class="max-w-3xl space-y-6">
-    <!-- A read-only summary, not a picker. This used to render the full
-         `TeamSiteSelector` bound to a ref that was never seeded and never
-         saved: the counter read 0/3 for a team with sites, ticking a box moved
-         it, raised a limit toast, and persisted nothing. The copy below already
-         sends the user to Sites to make the change. -->
+    <!-- A read-only summary. Manage Sites connects and removes Sites. -->
     <div>
       <h2 class="mb-2 text-sm font-medium text-highlighted">
         Tracked sites
@@ -57,8 +53,8 @@ const sites = computed<SitesPreview>(() => preview.value?._tag === 'Ready' ? pre
     </div>
     <p class="text-sm text-muted">
       To change which sites this team tracks, go to
-      <NuxtLink to="/pro/dashboard/sites/connect" class="text-primary underline">
-        Sites
+      <NuxtLink to="/pro/dashboard/sites" class="text-primary underline">
+        Manage Sites
       </NuxtLink>.
     </p>
   </div>
