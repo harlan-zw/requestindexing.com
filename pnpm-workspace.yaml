@@ -42,8 +42,16 @@ overrides:
   vue: 3.5.43
 
 patchedDependencies:
+  '@harlan-zw/nuxt-cloudflare@0.4.3': patches/@harlan-zw__nuxt-cloudflare@0.4.3.patch
+  '@nuxt/nitro-server@4.5.2': patches/@nuxt__nitro-server@4.5.2.patch
   '@nuxt/ui@4.11.2': patches/@nuxt__ui@4.11.2.patch
+  mdream@1.7.2: patches/mdream@1.7.2.patch
+  nitropack@2.13.4: patches/nitropack@2.13.4.patch
+  nuxt-auth-utils@0.5.30: patches/nuxt-auth-utils@0.5.30.patch
+  nuxt-og-image@6.9.1: patches/nuxt-og-image@6.9.1.patch
+  nuxt-skew-protection@1.5.4: patches/nuxt-skew-protection@1.5.4.patch
   nuxt@4.5.2: patches/nuxt@4.5.2.patch
+  zod@4.6.5: patches/zod@4.6.5.patch
 
 allowBuilds:
   '@parcel/watcher': true

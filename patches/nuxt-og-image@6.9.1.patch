@@ -1,0 +1,23 @@
+diff --git a/dist/runtime/server/og-image/bindings/font-assets/dev-prerender.js b/dist/runtime/server/og-image/bindings/font-assets/dev-prerender.js
+index 22b57ccaaeef6defab58022bc28372ab0d6443a8..21daa71dcfaa14962014e0dc278a1d3211f97a6a 100644
+--- a/dist/runtime/server/og-image/bindings/font-assets/dev-prerender.js
++++ b/dist/runtime/server/og-image/bindings/font-assets/dev-prerender.js
+@@ -49,7 +49,7 @@ export async function resolve(event, font) {
+     }
+     if (path.startsWith("/_fonts/")) {
+       const filename2 = path.slice("/_fonts/".length);
+-      const cached = await readOptionalFile(join(rootDir, ".output", "public", "_fonts", filename2));
++      const cached = await readOptionalFile(join(buildDir, "cache", "fonts", filename2)) || await readOptionalFile(join(rootDir, ".output", "public", "_fonts", filename2));
+       if (cached?.length)
+         return cached;
+       const mapping = await loadFontUrlMapping();
+@@ -73,6 +73,9 @@ export async function resolve(event, font) {
+   }
+   if (import.meta.dev && path.startsWith("/_fonts/")) {
+     const filename = path.slice("/_fonts/".length);
++    const cached = await readOptionalFile(join(buildDir, "cache", "fonts", filename));
++    if (cached?.length)
++      return cached;
+     const mapping = await loadFontUrlMapping();
+     if (mapping[filename]) {
+       const res = await fetchOptionalFont(mapping[filename], timeout);

@@ -1,0 +1,17 @@
+diff --git a/dist/presets/cloudflare/utils.mjs b/dist/presets/cloudflare/utils.mjs
+index 68de76acbf568c69fa2254c57ac74451075fbb17..2cda6cd9442a723715924bf49d5cd19d3c9f2283 100644
+--- a/dist/presets/cloudflare/utils.mjs
++++ b/dist/presets/cloudflare/utils.mjs
+@@ -222,7 +222,11 @@ export async function writeWranglerConfig(nitro, cfTarget) {
+   const { config: userConfig = {} } = await readWranglerConfig(nitro);
+   const ctxConfig = nitro.options.cloudflare?.wrangler || {};
+   for (const key in overrides) {
+-    if (key in userConfig || key in ctxConfig) {
++    const userValue = ctxConfig[key] ?? userConfig[key];
++    const isConflict = key === "assets"
++      ? ["binding", "directory"].some((field) => userValue?.[field] !== undefined && userValue[field] !== overrides.assets[field])
++      : key in userConfig || key in ctxConfig;
++    if (isConflict) {
+       nitro.logger.warn(
+         `[cloudflare] Wrangler config \`${key}\`${key in ctxConfig ? "set by config or modules" : ""} is overridden and will be ignored.`
+       );

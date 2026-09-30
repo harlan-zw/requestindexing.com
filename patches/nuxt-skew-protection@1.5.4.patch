@@ -1,0 +1,15 @@
+diff --git a/dist/module.mjs b/dist/module.mjs
+index 9553989460025c41342c75a3aadfbf2d4d9efb92..18e17838be54beaf6f63e438d75112f249973768 100644
+--- a/dist/module.mjs
++++ b/dist/module.mjs
+@@ -1269,7 +1269,9 @@ export {}
+             const daysSince = Math.floor((Date.now() - oldestTimestamp) / (1e3 * 60 * 60 * 24));
+             const timeInfo = daysSince > 0 ? `${daysSince} day${daysSince > 1 ? "s" : ""} ago` : "today";
+             const storageInfo = options.storage.base ? `${colors.green(options.storage.driver)} ${colors.gray(`(${options.storage.base})`)}` : colors.green(options.storage.driver);
+-            if (totalReleases === 1) {
++            if (totalReleases === 1 && options.storage.driver === "fs") {
++              logger.info(`Initialized local storage with its first release.`);
++            } else if (totalReleases === 1) {
+               logger.warn(`No previous versions found in storage. This is either the first deployment or storage is misconfigured. https://nuxtseo.com/docs/skew-protection/storage-configuration`);
+             } else {
+               logger.log(`Storing ${colors.yellow(assets.length.toString())} assets for ${colors.cyan(buildId.slice(0, 8))} (${totalReleases} releases, oldest from ${timeInfo}) [${storageInfo}]`);

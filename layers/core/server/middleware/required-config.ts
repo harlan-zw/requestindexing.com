@@ -1,3 +1,4 @@
+import type { ResolvedRequiredConfig } from '~~/shared/server/required-config'
 /**
  * Runtime-secret guard: the last check a misconfigured deploy cannot skip.
  *
@@ -13,10 +14,10 @@
  * time. Reading them per request is the only reliable moment.
  *
  * Prerendering runs inside the build, where deploy secrets are absent by
- * design, and dev warns instead of throwing so a clone without `.env` still
+ * design, and dev reports missing services without throwing so a clone without `.env` still
  * boots.
  */
-import type { ResolvedRequiredConfig } from '~~/shared/server/required-config'
+import { logger } from '~~/shared/server/logger'
 import { readConfigSecrets, REQUIRED_CONFIG_SECRETS, resolveRequiredConfig } from '~~/shared/server/required-config'
 
 let check: ResolvedRequiredConfig | undefined
@@ -36,7 +37,7 @@ export default defineEventHandler((event) => {
   const names = check.secrets.map(({ env }) => env).join(', ')
 
   if (import.meta.dev) {
-    console.error(`Missing required config: ${names}. Set each value, then restart the dev server.`)
+    logger.info(`Missing required config: ${names}. Set each value, then restart the dev server.`)
     return
   }
 

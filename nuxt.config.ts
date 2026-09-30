@@ -39,6 +39,7 @@ export default defineNuxtConfig({
   },
 
   nuxtSentry: {
+    enabled: Boolean(process.env.SENTRY_RELEASE || process.env.GITHUB_SHA),
     dsn: SENTRY_DSN,
     project: 'request-indexing',
   },
@@ -63,6 +64,21 @@ export default defineNuxtConfig({
     '@nuxt/image',
     '@nuxt/ui',
     '@vueuse/nuxt',
+    (_, nuxt) => {
+      nuxt.hook('imports:sources', (sources) => {
+        for (const source of sources) {
+          if (!('from' in source) || source.from !== '@vueuse/core' || !Array.isArray(source.imports))
+            continue
+          source.imports = source.imports.filter((entry) => {
+            if (typeof entry === 'string')
+              return entry !== 'formatTimeAgo'
+            if (Array.isArray(entry))
+              return entry[0] !== 'formatTimeAgo'
+            return !('name' in entry) || entry.name !== 'formatTimeAgo'
+          })
+        }
+      })
+    },
     '@harlan-zw/comark-content',
     '@nuxtjs/seo',
     'nuxt-ai-ready',
@@ -80,6 +96,11 @@ export default defineNuxtConfig({
 
   nuxtCloudflare: {
     kvCache: { binding: 'CACHE' },
+    doctor: {
+      _tag: 'strict',
+      // Full request logs and version-isolated caching are deliberate policies.
+      allowedWarnings: ['observability-log-sampling-high', 'workers-cache-assets-billable'],
+    },
     requiredSecrets: CLOUDFLARE_REQUIRED_SECRETS,
   },
 
@@ -354,6 +375,10 @@ export default defineNuxtConfig({
   },
 
   vite: {
+    build: {
+      // Callback profiling is opt-in. Its ratio is not an application defect.
+      rolldownOptions: { checks: { bundlerTimings: false } },
+    },
     optimizeDeps: {
       include: [
         '@gscdump/sdk/v1',

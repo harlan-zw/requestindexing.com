@@ -1,0 +1,28 @@
+diff --git a/dist/runtime/server/plugins/ws.js b/dist/runtime/server/plugins/ws.js
+index 07f96b2e1185831beca058b42df28bfd86854449..f6f7cb80f2487eae5b0bba4058cf3f9b9872fb34 100644
+--- a/dist/runtime/server/plugins/ws.js
++++ b/dist/runtime/server/plugins/ws.js
+@@ -1,7 +1,10 @@
++import { getHeader } from "h3";
+ import { defineNitroPlugin } from "nitropack/runtime";
+ import { getUserSession } from "../utils/session.js";
+ export default defineNitroPlugin((nitroApp) => {
+   nitroApp.hooks.hook("request", async (event) => {
++    if (import.meta.prerender || getHeader(event, "upgrade")?.toLowerCase() !== "websocket")
++      return;
+     await getUserSession(event);
+   });
+ });
+diff --git a/dist/runtime/server/utils/session.js b/dist/runtime/server/utils/session.js
+index 7876216af7bd0c015b2a6206e03ebebc32aaf445..56f4404a374792462066c55975d45dbf998d89aa 100644
+--- a/dist/runtime/server/utils/session.js
++++ b/dist/runtime/server/utils/session.js
+@@ -4,6 +4,8 @@ import { createHooks } from "hookable";
+ import { useRuntimeConfig } from "#imports";
+ export const sessionHooks = createHooks();
+ export async function getUserSession(event) {
++  if (import.meta.prerender)
++    return {};
+   const session = await _useSession(event);
+   return {
+     ...session.data,
