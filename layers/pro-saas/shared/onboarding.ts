@@ -7,6 +7,8 @@
 // are no invites, so `help`, `plan` and `invite` are gone and `integrations`
 // folds into `connect`.
 
+import { GSC_SCOPE_MISSING_ERROR, isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
+
 /** Where a signed-out visitor starts. Renders the provider buttons. */
 export const ONBOARDING_ENTRY_ROUTE = '/pro/onboarding'
 
@@ -50,9 +52,37 @@ export function onboardingStepIndex(step: OnboardingStep): number {
   return ONBOARDING_STEPS.indexOf(step)
 }
 
+/**
+ * The user's Search Console connection, as the wizard sees it.
+ *
+ * `ScopeMissing` is its own state because a boolean read it as connected: an
+ * account keeps its gscdump key from an earlier grant, so a user who just
+ * unticked Search Console on Google's consent screen looked finished.
+ */
+export type GscConnection
+  = | { _tag: 'Connected' }
+    | { _tag: 'ScopeMissing' }
+    | { _tag: 'NotConnected' }
+
+export interface GscConnectionInput {
+  /** gscdump holds a user id and key for this account. */
+  gscdumpConnected: boolean
+  /** The untrusted `?error=` value the OAuth callback returned with. */
+  error: unknown
+}
+
+/**
+ * The callback's verdict outranks the stored credential. It is the only
+ * evidence about the grant Google returned a moment ago.
+ */
+export function resolveGscConnection(input: GscConnectionInput): GscConnection {
+  if (isGscScopeMissingError(input.error))
+    return { _tag: 'ScopeMissing' }
+  return input.gscdumpConnected ? { _tag: 'Connected' } : { _tag: 'NotConnected' }
+}
+
 export interface OnboardingResumeSignals {
-  /** The user granted the Search Console scopes and gscdump holds their key. */
-  gscConnected: boolean
+  gsc: GscConnection
   /** The user's current team owns at least one site. */
   hasSites: boolean
 }
@@ -70,7 +100,7 @@ export interface OnboardingResumeSignals {
 export function resolveOnboardingResumeStep(signals: OnboardingResumeSignals): OnboardingStep {
   if (signals.hasSites)
     return 'sync'
-  return signals.gscConnected ? 'sites' : 'connect'
+  return signals.gsc._tag === 'Connected' ? 'sites' : 'connect'
 }
 
 /**
@@ -84,6 +114,22 @@ export function resolveOnboardingResumeStep(signals: OnboardingResumeSignals): O
  */
 export function canAdvanceOnboardingStep(step: OnboardingStep, signals: OnboardingResumeSignals): boolean {
   return step === 'sites' ? signals.hasSites : true
+}
+
+/**
+ * Where the OAuth callback sends a user whose grant has no Search Console
+ * scope. `returnTo` is already parsed by `safeAuthRedirect`.
+ *
+ * A wizard return names `step=sites`, the step after a successful connect, so
+ * it is rewritten to `connect`: that is the step that shows the error and the
+ * retry. Any other page keeps its path and gains the error marker.
+ */
+export function gscScopeMissingRedirect(returnTo: string | null | undefined): string {
+  const url = new URL(returnTo || DASHBOARD_ROUTE, 'https://callback.local')
+  if (isUnder(url.pathname, ONBOARDING_ROUTE))
+    url.searchParams.set('step', 'connect')
+  url.searchParams.set('error', GSC_SCOPE_MISSING_ERROR)
+  return `${url.pathname}${url.search}${url.hash}`
 }
 
 export interface OnboardingGateInput extends OnboardingResumeSignals {

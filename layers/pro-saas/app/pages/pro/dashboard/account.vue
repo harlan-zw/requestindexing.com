@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
 // The sidebar calls this page "Profile", so it opens with the signed-in
 // person: avatar, name, email and sign-in method. Every field below comes from
 // the session the `pro-saas` session plugin already publishes. No endpoint and
@@ -32,6 +33,9 @@ const providerLabel = computed(() => user.value?.authProvider === 'google' ? 'Go
 const gscConnected = computed(() => !!session.value?.gscConnected)
 const gscEmail = computed(() => session.value?.gscEmail ?? null)
 const gscConnectHref = `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent('/pro/dashboard/account')}`
+// This page renders through `user-dashboard`, not the shell that reports a
+// scope-missing return, so it reports its own.
+const gscScopeMissing = computed(() => isGscScopeMissingError(route.query.error))
 
 // Identity linking bounces back here with `?notice=` / `?error=` from
 // `attachIdentityToCurrentSession`. Without feedback the round trip through
@@ -132,6 +136,8 @@ async function deleteAccount() {
 
 <template>
   <div class="max-w-3xl space-y-10">
+    <ProGscScopeMissingAlert v-if="gscScopeMissing" retry-to="/pro/dashboard/account" />
+
     <section>
       <ProSectionHeader title="Profile" icon="user" />
       <ProCard variant="default">

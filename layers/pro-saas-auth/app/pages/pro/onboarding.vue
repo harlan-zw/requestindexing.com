@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AuthProviderId } from '#layers/pro-saas-auth/shared/types/auth'
-import { ONBOARDING_ROUTE, resolveOnboardingResumeStep } from '#layers/pro-saas/shared/onboarding'
+import { ONBOARDING_ROUTE, resolveGscConnection, resolveOnboardingResumeStep } from '#layers/pro-saas/shared/onboarding'
 
 // The signup door. A signed-out visitor gets the provider buttons; a signed-in
 // one is never left here, because this page's only job is to route them on.
@@ -76,7 +76,7 @@ async function resolveSignedInLanding() {
     return
   }
   const step = resolveOnboardingResumeStep({
-    gscConnected: !!session.value?.gscdumpConnected,
+    gsc: resolveGscConnection({ gscdumpConnected: !!session.value?.gscdumpConnected, error: route.query.error }),
     hasSites: !!session.value?.hasSites,
   })
   await navigateTo({ path: ONBOARDING_ROUTE, query: { step } }, { replace: true })
