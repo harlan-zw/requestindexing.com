@@ -3,6 +3,7 @@ import type { IndexCohortsResponse } from '#layers/pro-indexing/shared/contracts
 import { withQuery } from 'ufo'
 import { computed } from 'vue'
 import { NuxtLink, UiIcon } from '#components'
+import { sampledIndexStateMessage } from '#layers/pro-indexing/shared/index-cohorts'
 // Which PART of the site does Google treat worse than the rest — the question
 // GSC's own taxonomy ("37 crawled but not indexed") cannot answer because it
 // names a symptom, not a place.
@@ -24,6 +25,8 @@ const cells = computed(() => state._tag === 'outliers' ? state.cells : [])
 /** One honest verdict sentence, then the list (ADR-0105). */
 const verdict = computed(() => {
   if (state._tag === 'no-evidence') {
+    if (state.reason === 'sampled-index-state' && state.sample)
+      return sampledIndexStateMessage(state.sample.enumerated, state.sample.reported)
     return state.reason === 'no-completed-crawl'
       ? 'No completed crawl yet, so pages cannot be grouped.'
       : 'No inspected URL matched a crawled page.'
