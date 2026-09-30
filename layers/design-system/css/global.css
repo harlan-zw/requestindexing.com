@@ -359,16 +359,20 @@
   --size-subheading: 0.75rem;
 }
 
-/* Dashboard body stays on DM Sans; Poppins is display only (DESIGN.md: body
-   copy never uses the display family). Tabular figures everywhere so numeric
-   columns and KPIs align. */
+/* Tabular figures everywhere so numeric columns and KPIs align. */
 .dashboard-theme,
 .dashboard-theme :where(p, span, div, td, th, li, button, input, label, a) {
-  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
 }
 
+/* Dashboard body stays on DM Sans; Poppins is display only (DESIGN.md: body
+   copy never uses the display family). The family is set once here and
+   inherited. nuxtseo.com sets it on each element in the list above instead.
+   That is safe there, because its body and display faces are one font. Here
+   it would put the text span of a Poppins page title in DM Sans. It would
+   also beat the layered `font-title` and `font-mono` utilities. */
 .dashboard-theme {
+  font-family: var(--font-sans);
   font-weight: var(--wght-body);
   font-stretch: var(--wdth-body);
 }
