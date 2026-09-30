@@ -15,6 +15,7 @@ import { errorStatusCode } from '#shared/sentry'
 /** The `/api/pro/sites/:id` projection the dashboard pages read. */
 export interface SiteResource {
   id?: string
+  teamId?: number
   publicId?: string
   url?: string
   name?: string | null

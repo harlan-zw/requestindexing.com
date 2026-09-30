@@ -22,6 +22,7 @@ export default defineProApiHandler(async (event) => {
   return {
     site: {
       id: site.id,
+      teamId: site.teamId,
       publicId: site.publicId,
       url: site.domain ?? site.property,
       name: site.domain,
