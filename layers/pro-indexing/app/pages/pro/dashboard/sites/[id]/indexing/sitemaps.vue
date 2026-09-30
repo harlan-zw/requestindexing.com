@@ -3,6 +3,7 @@ import type { FactItem } from '#layers/design-system/app/components/data/UiFacts
 import type { SemanticStatus } from '#layers/design-system/app/composables/semanticColors'
 import type { UiNavLink } from '#layers/design-system/app/shared/nav'
 import type { GscdumpSitemapChangesResponse } from '#layers/pro-gsc/shared/gscdump-api'
+import type { SitemapSubmissionState, SitemapSubmitResult } from '#layers/pro-indexing/app/utils/sitemap-submission-adapter'
 import type { SitemapLiveness } from '#layers/pro-indexing/shared/contracts/sitemap-liveness'
 import { gscConsoleUrl } from '@gscdump/sdk/gsc-console-url'
 import { sameSitemapIdentity } from 'gscdump/sitemap-identity'
@@ -14,9 +15,11 @@ import {
   useProGscdumpSitemapChanges,
   useProGscdumpSitemaps,
 } from '#layers/pro-gsc/app/composables/useProGscdump'
+import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump/useProGscdump'
 import { sitemapChangeCoverageView } from '#layers/pro-indexing/app/internal/sitemap-window-math'
 import { resolveSitemapEmptyState } from '#layers/pro-indexing/app/utils/sitemap-empty-state'
 import { resolveSitemapPublicationNotice } from '#layers/pro-indexing/app/utils/sitemap-publication-notice'
+import { sitemapSubmissionFromLiveness, sitemapSubmissionFromSubmit } from '#layers/pro-indexing/app/utils/sitemap-submission-adapter'
 import { sitemapLivenessSchema } from '#layers/pro-indexing/shared/contracts/sitemap-liveness'
 import { classifyCurrentSitemapDrop } from '#layers/pro-indexing/shared/trust-gate'
 
@@ -26,9 +29,13 @@ definePageMeta({
   icon: 'i-lucide-map',
 })
 
-const { siteId, gscdumpSiteId } = useSite('Sitemaps')
+const { siteId, gscdumpSiteId, site } = useSite('Sitemaps')
 const route = useRoute()
 const proFetch = useProFetch()
+const gscdump = useProGscdump()
+const { isAdmin } = useCaller()
+const teamPolicy = useTeamPolicy(() => site.value?.teamId)
+const canWrite = computed(() => isAdmin.value || teamPolicy.can('write-data'))
 const { period, compareMode, stableData } = useSitePeriod()
 const dateRange = computed(() => periodToDateRange(period.value))
 
@@ -186,10 +193,49 @@ const livenessUnavailable = computed(() =>
   Boolean(livenessError.value)
   || (livenessStatus.value === 'success' && rawLivenessData.value != null && !livenessData.value),
 )
+// Google's answer to the last submit on this page. It overrides what the live
+// probe predicts, because Google is the authority on the refusal.
+const submitAnswer = ref<SitemapSubmissionState | null>(null)
+const submitting = ref(false)
+const submitFailed = ref(false)
+watch(gscdumpSiteId, () => {
+  submitAnswer.value = null
+  submitFailed.value = false
+})
+
+async function submitSitemap(sitemapUrl: string) {
+  const engineSiteId = gscdumpSiteId.value
+  if (!engineSiteId || !canWrite.value || submitting.value)
+    return
+  submitting.value = true
+  submitFailed.value = false
+  // Silent: a refusal renders in place next to the button that caused it.
+  const result: SitemapSubmitResult = await gscdump.createSitemapAction({
+    params: { siteId: engineSiteId },
+    body: { action: 'submit', sitemapUrl },
+  }, true)
+    .then(data => ({ _tag: 'ok' as const, data }))
+    .catch((error: unknown) => ({ _tag: 'error' as const, error }))
+  submitting.value = false
+  if (gscdumpSiteId.value !== engineSiteId)
+    return
+  const answer = sitemapSubmissionFromSubmit(result, sitemapUrl)
+  if (answer)
+    submitAnswer.value = answer
+  else
+    submitFailed.value = true
+}
+
+const allowSubmissionTo = computed(() =>
+  withQuery('/auth/integrations/gsc/connect', { scope: 'write', returnTo: route.fullPath }),
+)
+
 const emptyState = computed(() => resolveSitemapEmptyState({
   liveness: livenessData.value,
   pending: livenessPending.value,
   unavailable: livenessUnavailable.value,
+  submission: submitAnswer.value ?? (livenessData.value ? sitemapSubmissionFromLiveness(livenessData.value) : null),
+  canSubmit: canWrite.value,
 }))
 const resolvedEmptyState = computed(() =>
   emptyState.value._tag === 'checking' ? null : emptyState.value,
@@ -473,32 +519,78 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
         aria-busy="true"
       />
 
-      <UiEmptyState
-        v-else-if="!hasReportShell && resolvedEmptyState"
-        :icon="resolvedEmptyState._tag === 'install' ? 'file-x' : resolvedEmptyState._tag === 'repair' ? 'wifi-off' : 'search'"
-        :title="resolvedEmptyState.title"
-        :description="resolvedEmptyState.description"
-      >
-        <UiButton
-          v-if="resolvedEmptyState._tag === 'retry'"
-          purpose="secondary"
-          class="min-h-11"
-          @click="refreshLiveness()"
+      <template v-else-if="!hasReportShell && resolvedEmptyState">
+        <UiAlert
+          v-if="submitFailed && resolvedEmptyState._tag === 'submit'"
+          status="error"
+          title="Sitemap not submitted"
+          description="Search Console did not accept the sitemap. Retry in a minute, or submit it in Search Console."
+          class="mb-6"
+        />
+        <UiEmptyState
+          :icon="resolvedEmptyState._tag === 'install' ? 'file-x' : resolvedEmptyState._tag === 'repair' ? 'wifi-off' : resolvedEmptyState._tag === 'submitted' ? 'file-check' : 'search'"
+          :title="resolvedEmptyState.title"
+          :description="resolvedEmptyState.description"
         >
-          {{ resolvedEmptyState.actionLabel }}
-        </UiButton>
-        <UiButton
-          v-else-if="emptyActionTo"
-          :to="emptyActionTo"
-          external
-          target="_blank"
-          purpose="secondary"
-          class="min-h-11"
-          trailing-icon="external"
-        >
-          {{ resolvedEmptyState.actionLabel }}
-        </UiButton>
-      </UiEmptyState>
+          <UiButton
+            v-if="resolvedEmptyState._tag === 'retry'"
+            purpose="secondary"
+            class="min-h-11"
+            @click="refreshLiveness()"
+          >
+            {{ resolvedEmptyState.actionLabel }}
+          </UiButton>
+          <div
+            v-else-if="resolvedEmptyState._tag === 'submit' || resolvedEmptyState._tag === 'submitted'"
+            class="flex flex-wrap items-center justify-center gap-3"
+          >
+            <UiButton
+              v-if="resolvedEmptyState._tag === 'submit' && resolvedEmptyState.action._tag === 'submit'"
+              purpose="cta"
+              class="min-h-11"
+              icon="send"
+              :loading="submitting"
+              @click="submitSitemap(resolvedEmptyState.action.sitemapUrl)"
+            >
+              {{ resolvedEmptyState.action.label }}
+            </UiButton>
+            <UiButton
+              v-else-if="resolvedEmptyState._tag === 'submit' && resolvedEmptyState.action._tag === 'allow_submission'"
+              :to="allowSubmissionTo"
+              external
+              purpose="cta"
+              class="min-h-11"
+              icon="key"
+            >
+              {{ resolvedEmptyState.action.label }}
+            </UiButton>
+            <!-- Always offered: an account without Owner or Full permission on
+            the property, or a viewer role, can only submit in Search Console. -->
+            <UiButton
+              v-if="emptyActionTo"
+              :to="emptyActionTo"
+              external
+              target="_blank"
+              purpose="secondary"
+              class="min-h-11"
+              trailing-icon="external"
+            >
+              Open Search Console
+            </UiButton>
+          </div>
+          <UiButton
+            v-else-if="emptyActionTo"
+            :to="emptyActionTo"
+            external
+            target="_blank"
+            purpose="secondary"
+            class="min-h-11"
+            trailing-icon="external"
+          >
+            {{ resolvedEmptyState.actionLabel }}
+          </UiButton>
+        </UiEmptyState>
+      </template>
 
       <!--
         The mobile track is spelled out. Without it the single implicit column is

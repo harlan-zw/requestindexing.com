@@ -67,6 +67,28 @@ describe('probeSitemap', () => {
     expect(result).toMatchObject({ status: 'reachable', statusCode: 200 })
   })
 
+  it('reports the sitemap URL it found through robots.txt', async () => {
+    const { fetch } = stubFetch({
+      'https://example.com/robots.txt': response(200, 'Sitemap: https://example.com/sitemap-main.xml\n'),
+      'https://example.com/sitemap-main.xml': response(200, '<urlset/>'),
+    })
+
+    const result = await probeSitemap('https://example.com', { fetch, now: clock() })
+
+    expect(result.url).toBe('https://example.com/sitemap-main.xml')
+  })
+
+  it('reports the redirect target as the sitemap URL', async () => {
+    const { fetch } = stubFetch({
+      'https://example.com/sitemap.xml': response(301, '', { location: 'https://www.example.com/sitemap.xml' }),
+      'https://www.example.com/sitemap.xml': response(200, '<urlset/>'),
+    })
+
+    const result = await probeSitemap('https://example.com', { fetch, now: clock() })
+
+    expect(result.url).toBe('https://www.example.com/sitemap.xml')
+  })
+
   it('probes the submitted sitemap without falling back to convention', async () => {
     const { fetch, calls } = stubFetch({
       'https://example.com/sitemap.xml': response(200, '<urlset/>'),
