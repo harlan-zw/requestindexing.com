@@ -29,6 +29,8 @@ Indexing API submissions this app still runs itself.
 | Quota | usages table | Site 1—N daily counter, unique on (site, date, key) | "limit" |
 | Free allowance | gscdump `partner.users.entitlements.get` | Billing owner 1—1 per usage pool; gscdump sets and enforces it | Free allowance |
 | Held | gscdump lifecycle site `hold` | Site 0—1 hold reason, before its first import | Held |
+| API key | gscdump `partner.users.api_keys.*`, Developers page | User 1—N, at most 10; gscdump stores them, this app stores none | API key |
+| Hosted mode | gscdump CLI `--mode hosted` | CLI access mode that reads the gscdump.com record; the other mode is Local | Hosted mode |
 
 Collisions: the product's submission history and Google's indexing state are different evidence. Never imply one proves the other.
 
@@ -134,12 +136,33 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 
 **Casing:** Held as a badge, held in prose. Stored reason values stay snake_case.
 
+### API key
+
+**Is:** a revocable gscdump user credential, prefix `gsd_user_`, that signs in the gscdump CLI, MCP clients, and the API as one person. This app creates, lists, and revokes keys through gscdump's `partner.users.api_keys.*` operations and never stores a raw key. Borrowed from the gscdump glossary, which owns the term.
+
+**Use for:** the keys on the Developers page, including the key named Agent setup that the agent setup prompt carries.
+
+**Never:** token, secret, or personal access token as a name for the key. "Bearer token" stays, because it names the HTTP scheme. Never use the term for the partner credential in `users.gscdumpApiKey`; no reader sees that credential.
+
+**Casing:** `API key` in prose, `API keys` as a heading.
+
+### Hosted mode
+
+**Is:** the gscdump CLI access mode that reads the record gscdump.com keeps for the account. It does not call Google. The other mode is Local. Borrowed from the gscdump glossary, which owns the term.
+
+**Use for:** CLI setup steps and the agent setup prompt.
+
+**Never:** Cloud, cloud mode, the cloud. Since `@gscdump/cli` 4.3.0 the CLI rejects `--mode cloud`.
+
+**Casing:** `Hosted mode` in prose, `--mode hosted` as the flag.
+
 ## Banned
 
 | Never | Use instead | Why |
 | --- | --- | --- |
 | indexed successfully for an accepted notification | notification accepted | Receipt does not establish indexing. |
 | guaranteed indexing | exact observed or documented outcome | No reviewed source establishes a guarantee. |
+| cloud mode, `--mode cloud` | Hosted mode, `--mode hosted` | The gscdump CLI rejects `cloud` since 4.3.0. |
 
 These restrictions apply to prose meanings, not stored enum values or existing route segments.
 
