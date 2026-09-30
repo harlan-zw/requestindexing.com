@@ -194,23 +194,33 @@ async function copyAgentSetupPrompt() {
     return
   preparingPrompt.value = true
   const reused = agentKey.value
-  const result = reused
-    ? { _tag: 'Ok' as const, value: reused }
-    : await proFetch<CreatedDeveloperApiKey>('/api/pro/developer/api-keys', { method: 'POST', body: { label: AGENT_SETUP_KEY_LABEL } })
-        .then(value => ({ _tag: 'Ok' as const, value }))
-        .catch((error: unknown) => ({ _tag: 'Err' as const, error }))
+  // Safari allows a clipboard write only during the click, and the key request
+  // ends after it. So the clipboard gets the prompt as a promise now, and the
+  // promise resolves when the key exists. Create the promise once: if the
+  // clipboard falls back to its legacy copy, it reads the same promise again.
+  const prompt = (reused
+    ? Promise.resolve(reused)
+    : proFetch<CreatedDeveloperApiKey>('/api/pro/developer/api-keys', { method: 'POST', body: { label: AGENT_SETUP_KEY_LABEL } })
+  ).then((key) => {
+    agentKey.value = key
+    return buildAgentSetupPrompt(key.apiKey, agentPromptSite.value)
+  })
+  copiedValue.value = null
+  const result = await copy(() => prompt)
+    .then(() => ({ _tag: 'Ok' as const }))
+    .catch((error: unknown) => ({ _tag: 'Err' as const, error }))
   preparingPrompt.value = false
 
   if (result._tag === 'Err') {
     toast.add({
       title: 'The setup prompt could not be copied',
-      description: apiErrorMessage(result.error, 'The API key for the prompt could not be created. Try again, or use the manual setup below.'),
+      description: agentKey.value
+        ? 'The browser did not allow the copy. Try again, or use the manual setup below.'
+        : apiErrorMessage(result.error, 'The API key for the prompt could not be created. Try again, or use the manual setup below.'),
       color: 'error',
     })
     return
   }
-  agentKey.value = result.value
-  copyValue(buildAgentSetupPrompt(result.value.apiKey, agentPromptSite.value))
   toast.add({
     title: 'Setup prompt copied',
     description: 'Paste it into Claude Code, Codex, or Cursor.',
@@ -415,7 +425,7 @@ async function copyAgentSetupPrompt() {
           Agent setup
         </h3>
         <p class="mt-0.5 text-sm text-muted">
-          Paste one prompt into Claude Code, Codex, or Cursor. The agent installs the CLI and the skill, then tells you how many of your pages Google has indexed.
+          Paste one prompt into Claude Code, Codex, or Cursor. The agent installs the CLI and the skill, then summarises the stored URL Inspection verdicts for your pages.
           The first copy creates an API key named {{ AGENT_SETUP_KEY_LABEL }}.
         </p>
         <UiButton

@@ -158,9 +158,12 @@ export interface AgentPromptSite {
 /**
  * The self-contained prompt that "Copy agent setup prompt" puts on the
  * clipboard. Ported from gscdump.com's `AppOverviewAgentSetup`. The agent
- * installs the CLI and the skill, stores the key in the environment, and ends
- * on a read of the indexing record, never on a connection message. The raw key
- * appears once, in the export line, and never in a command argument.
+ * installs the CLI and the skill, saves the key with a Hosted mode login, and
+ * ends on a read of the indexing record, never on a connection message.
+ *
+ * The key is saved, not exported: Claude Code and Codex start a new shell for
+ * each command, so an `export` is gone by the next step. The raw key appears
+ * once, as the environment of the login, and never in a command argument.
  */
 export function buildAgentSetupPrompt(apiKey: string, site: AgentPromptSite | null): string {
   const host = site?.host ?? 'my Sites'
@@ -177,13 +180,14 @@ export function buildAgentSetupPrompt(apiKey: string, site: AgentPromptSite | nu
 2. Install the agent skill, if you are Claude Code or Codex. The command prints where it wrote the skill. Read that SKILL.md before you run anything. It documents every command, the JSON envelope, and the exit codes:
    gscdump skill install --agent claude    # Codex: --agent codex
    Any other client, Cursor included: skip this step. Run \`gscdump --help\`, and \`gscdump <command> --help\`, which list the same commands and flags.
-3. Store this API key. It selects Hosted mode, so do not run \`gscdump auth login\`, and do not put the key in a command argument:
-   export GSCDUMP_API_KEY='${apiKey}'
+3. Save this API key with the CLI. The login stores the key and selects Hosted mode. Later commands read the saved key, so a new shell needs no setup. Give the key only through this variable, never as --api-key, and do not write it to a shell profile:
+   GSCDUMP_API_KEY='${apiKey}' gscdump auth login --mode hosted
 4. Confirm the key and list my Sites:
    gscdump auth status --json
    gscdump sites --json
-5. Read the indexing record and summarise it for me. Say how many URLs Google has indexed, how many it has not and at which stage they stopped, and what changed over the last 28 days:
+5. Read the indexing record and summarise it for me:
 ${read}
+   Its counts are stored URL Inspection verdicts. They are not Google's live index or the Search Console Page indexing report. Tell me that, and say when the verdicts were counted. Then say how many URLs have an indexed verdict. Say how many do not, and at which stage they stopped. Say what changed over the last 28 days.
 
 If this client cannot run a terminal, the MCP server at ${GSCDUMP_MCP_URL} reads the same Search Console data over HTTP. Send the API key from step 3 in the x-api-key header.`
 }

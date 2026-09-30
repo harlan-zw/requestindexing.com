@@ -35,19 +35,20 @@ export function useIndexingUrlsFirstPageSeed() {
       retry: { maxAttempts: 1 },
       // `event.fetch` routes the relative proxy path through Nitro in-process
       // and forwards the incoming request's cookie. It returns a plain
-      // `Response`, which the SDK reads itself.
+      // `Response`, which the SDK reads itself. The in-process fetch drops an
+      // abort signal, so the timeout below races the read instead.
       fetch: (request, init) => {
         const headers = new Headers(init?.headers)
         headers.delete('authorization')
-        return event.fetch(String(request), {
-          ...init,
-          headers: Object.fromEntries(headers),
-          signal: AbortSignal.timeout(FIRST_PAGE_TIMEOUT_MS),
-        })
+        return event.fetch(String(request), { ...init, headers: Object.fromEntries(headers) })
       },
     })
 
-    await client.listSiteIndexingUrls({ params: { siteId }, query: params })
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`No response in ${FIRST_PAGE_TIMEOUT_MS} ms`)), FIRST_PAGE_TIMEOUT_MS)
+    })
+    await Promise.race([client.listSiteIndexingUrls({ params: { siteId }, query: params }), timeout])
       .then((response) => {
         nuxtApp.payload.data[indexingUrlsQueryKey(siteId, params)] = response.data as GscdumpIndexingUrlsResponse
       })
@@ -56,5 +57,6 @@ export function useIndexingUrlsFirstPageSeed() {
         // and shows its own error state if that read fails too.
         console.warn('[indexing-urls] First page prefetch failed. The table fetches it in the browser instead.', error)
       })
+      .finally(() => clearTimeout(timer))
   }
 }
