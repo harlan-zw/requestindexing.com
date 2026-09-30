@@ -1,4 +1,6 @@
+import type { SessionConfig } from 'h3'
 import type { DatabaseSync } from 'node:sqlite'
+import { sealSession, useSession } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { migratedSqlite, proDatabase, seedUser } from './utils/pro-database'
 
@@ -6,72 +8,105 @@ import { migratedSqlite, proDatabase, seedUser } from './utils/pro-database'
 // user, whatever user id the connection URL names.
 const h = vi.hoisted(() => ({
   db: null as unknown,
-  sessions: new Map<string, { user?: { id: number } }>(),
   hook: vi.fn((_name: string, _callback: (message: unknown) => void) => vi.fn()),
 }))
 
+const SESSION: SessionConfig = { name: 'nuxt-session', password: 'a-test-password-that-is-32-chars!' }
+
+interface Request { url: string, headers: Headers, context?: Record<string, unknown> }
+
 interface FakePeer {
   id: string
-  request: { url: string, headers: Headers }
+  request: Request
+  context: Record<string, unknown>
   send: ReturnType<typeof vi.fn>
   close: ReturnType<typeof vi.fn>
 }
 
+// nuxt-auth-utils reads the session through h3, so this is its reader over the
+// real h3 session code. h3 cannot start a session on an upgrade request, which
+// is not an H3Event, so a request without a cookie throws.
+async function getUserSession(event: { headers?: Headers, request?: Request, context?: Record<string, unknown> }) {
+  const session = await useSession(event as never, SESSION)
+  return { ...session.data, id: session.id }
+}
+vi.stubGlobal('getUserSession', getUserSession)
 vi.stubGlobal('defineWebSocketHandler', (hooks: unknown) => hooks)
 vi.stubGlobal('useDrizzle', () => h.db)
 vi.stubGlobal('useNitroApp', () => ({ hooks: { hook: h.hook } }))
-vi.stubGlobal('getUserSession', async (peer: Pick<FakePeer, 'request'>) => h.sessions.get(peer.request.headers.get('cookie') ?? '') ?? {})
-// nuxt-auth-utils answers a request without a session by throwing a 401 Response.
-vi.stubGlobal('requireUserSession', async (request: FakePeer['request']) => {
-  const session = h.sessions.get(request.headers.get('cookie') ?? '')
-  if (!session?.user)
-    throw new Response('Unauthorized', { status: 401 })
-  return session
-})
+
+async function cookieFor(data: Record<string, unknown>): Promise<string> {
+  const sealed = await sealSession({ context: { sessions: { [SESSION.name!]: { id: 'sid', createdAt: Date.now(), data } } } } as never, SESSION)
+  return `${SESSION.name}=${sealed}`
+}
 
 function peer(url: string, cookie: string): FakePeer {
-  return { id: `peer-${cookie}`, request: { url, headers: new Headers({ cookie }) }, send: vi.fn(), close: vi.fn() }
+  const headers = new Headers(cookie ? { cookie } : {})
+  return { id: `peer-${cookie}`, request: { url, headers }, context: {}, send: vi.fn(), close: vi.fn() }
 }
 
 // The route reads Nitro auto-imports at module load, so it loads after the stubs.
 async function wsHooks() {
   const { default: hooks } = await import('../layers/core/server/routes/_ws')
   return hooks as unknown as {
-    upgrade: (request: FakePeer['request']) => Promise<void>
+    upgrade: (request: Request) => Promise<Response | void>
     open: (peer: FakePeer) => Promise<void>
     close: (peer: FakePeer) => void
   }
 }
 
-let sqlite: DatabaseSync
+// What crossws 0.3 does with the hook's outcome: a returned or thrown Response
+// ends the upgrade with that response, and any other throw becomes a 500.
+async function upgrade(request: Request): Promise<number | 'upgraded'> {
+  const hooks = await wsHooks()
+  const outcome = await hooks.upgrade(request).then(
+    result => result,
+    (error: { response?: unknown }) => {
+      const response = error?.response ?? error
+      return response instanceof Response ? response : 500
+    },
+  )
+  if (outcome === 500)
+    return 500
+  return outcome instanceof Response && !outcome.ok ? outcome.status : 'upgraded'
+}
 
-beforeEach(() => {
+let sqlite: DatabaseSync
+let signedIn: string
+
+beforeEach(async () => {
   vi.clearAllMocks()
   sqlite = migratedSqlite()
   h.db = proDatabase(sqlite)
   seedUser(sqlite, 1)
   seedUser(sqlite, 2)
-  h.sessions.set('session-1', { user: { id: 1 } })
+  signedIn = await cookieFor({ user: { id: 1 } })
 })
 
 describe('the /_ws websocket', () => {
-  it('refuses the upgrade for a visitor without a session', async () => {
-    const hooks = await wsHooks()
+  it('refuses the upgrade with a 401 for a visitor without a session cookie', async () => {
+    expect(await upgrade(peer('/_ws?userId=2', '').request)).toBe(401)
+  })
 
-    await expect(hooks.upgrade(peer('/_ws?userId=2', 'no-session').request)).rejects.toMatchObject({ status: 401 })
+  it('refuses the upgrade with a 401 for a session without a user', async () => {
+    expect(await upgrade(peer('/_ws', await cookieFor({ googleOauthState: 'x' })).request)).toBe(401)
+  })
+
+  it('upgrades a signed-in user', async () => {
+    expect(await upgrade(peer('/_ws', signedIn).request)).toBe('upgraded')
   })
 
   it('subscribes the signed-in user even when the URL names another user', async () => {
     const hooks = await wsHooks()
 
-    await hooks.open(peer('/_ws?userId=2', 'session-1'))
+    await hooks.open(peer('/_ws?userId=2', signedIn))
 
     expect(h.hook.mock.calls.map(([name]) => name)).toEqual(['ws:message:u_1'])
   })
 
   it('subscribes nobody for a visitor without a session', async () => {
     const hooks = await wsHooks()
-    const visitor = peer('/_ws?userId=2', 'no-session')
+    const visitor = peer('/_ws?userId=2', await cookieFor({}))
 
     await hooks.open(visitor)
 
@@ -83,7 +118,7 @@ describe('the /_ws websocket', () => {
     const unhook = vi.fn()
     h.hook.mockReturnValueOnce(unhook)
     const hooks = await wsHooks()
-    const connection = peer('/_ws', 'session-1')
+    const connection = peer('/_ws', signedIn)
 
     await hooks.open(connection)
     hooks.close(connection)
