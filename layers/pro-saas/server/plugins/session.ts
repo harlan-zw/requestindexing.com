@@ -16,39 +16,6 @@ export default defineNitroPlugin(() => {
 
     const db = useDrizzle(event)
 
-    // Admin impersonation: swap session user if cookie is set
-    const impersonateUserId = getCookie(event, 'nuxt-seo-impersonate')
-    if (impersonateUserId && isAdminEmail(session.user?.email ?? null)) {
-      const impersonated = await lookupUser(() => db.query.users.findFirst({
-        where: eq(schema.users.userId, impersonateUserId),
-      }))
-      if (impersonated._tag === 'Unavailable')
-        logger.error('[session] impersonation target lookup failed:', impersonated.cause)
-      if (impersonated._tag === 'Found') {
-        const impersonatedUser = impersonated.user
-        const primary = await db.query.userIdentities.findFirst({
-          where: eq(schema.userIdentities.userId, impersonatedUser.id),
-          orderBy: [desc(schema.userIdentities.lastUsedAt)],
-        }).catch((error: unknown) => {
-          logger.error('[session] impersonation identity lookup failed:', error)
-          return null
-        })
-        session.impersonating = {
-          adminEmail: session.user.email ?? '',
-          targetUserId: impersonatedUser.id,
-          targetDisplayName: primary?.displayName ?? null,
-        }
-        session.user = {
-          id: impersonatedUser.id,
-          email: primary?.email ?? impersonatedUser.email ?? null,
-          name: primary?.displayName ?? null,
-          avatarUrl: primary?.avatarUrl ?? null,
-          authProvider: (primary?.provider ?? 'github') as AuthProviderId,
-          currentTeamId: impersonatedUser.currentTeamId ?? null,
-        }
-      }
-    }
-
     const lookup = await lookupUser(() => db.query.users.findFirst({
       where: eq(schema.users.userId, session.user!.id),
     }))
