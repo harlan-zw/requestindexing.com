@@ -21,6 +21,7 @@ const { captureException, captureMessage, scopeSpies } = vi.hoisted(() => ({
     setTag: vi.fn(),
     setContext: vi.fn(),
     setFingerprint: vi.fn(),
+    setLevel: vi.fn(),
   },
 }))
 
