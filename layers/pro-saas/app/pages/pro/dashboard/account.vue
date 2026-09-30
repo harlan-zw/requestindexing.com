@@ -192,7 +192,7 @@ async function deleteAccount() {
                 {{ gscEmail }} grants access to your properties.
               </template>
               <template v-else>
-                This app reads your Search Console properties.
+                Request Indexing reads your Search Console data and can submit your sitemaps.
               </template>
             </p>
             <p v-else class="text-sm text-muted">

@@ -20,6 +20,11 @@ export const sitemapLivenessSchema = z.object({
   durationMs: z.number(),
   /** ISO timestamp the probe ran (drives "checked just now" / freshness). */
   checkedAt: z.string(),
+  /**
+   * The sitemap the verdict is about, after redirects. Absent when no request
+   * left, and on a response cached before the field existed.
+   */
+  url: z.string().optional(),
   /** URLs parsed from a reachable, valid sitemap. Absent on timeout / error / unparsable. */
   urlCount: z.number().optional(),
   /** Non-fatal validator warnings (e.g. internal routes in sitemap). */
