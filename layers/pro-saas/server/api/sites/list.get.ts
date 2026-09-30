@@ -43,6 +43,9 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx, event }) 
         sitemaps: site.sitemaps ?? [],
         gscdumpSiteId: site.gscdumpSiteId,
         syncStatus: syncStatusFor(lifecycleSite, site.gscdumpSyncStatus),
+        // Read live from the lifecycle, never mirrored onto `sites`: the local
+        // row is a cache, and a hold changes without a webhook for every step.
+        hold: lifecycleSite?.hold ?? null,
         lastSynced: site.lastSynced,
       }
     }),

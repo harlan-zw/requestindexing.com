@@ -68,6 +68,9 @@ export function useProUserMenu(options: { singleSite: MaybeRefOrGetter<boolean> 
     const personal: ProUserMenuItem[] = [
       { label: 'Account', type: 'label' },
       { label: 'Account', icon: 'user', to: '/pro/dashboard/account' },
+      // nuxtseo.com's user menu carries "Billing & Usage". The Free allowance
+      // is counted per account, so Usage sits with Account here.
+      { label: 'Usage', icon: 'gauge', to: '/pro/dashboard/usage' },
       { label: 'Developers', icon: 'terminal', to: '/pro/dashboard/developers' },
     ]
 

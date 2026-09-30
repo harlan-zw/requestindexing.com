@@ -22,6 +22,7 @@ const backLink: UiNavLink[] = [
 
 const accountLinks: UiNavLink[] = [
   { label: 'Profile', to: '/pro/dashboard/account', icon: 'user' },
+  { label: 'Usage', to: '/pro/dashboard/usage', icon: 'gauge' },
 ]
 
 const teamLinks: UiNavLink[] = [

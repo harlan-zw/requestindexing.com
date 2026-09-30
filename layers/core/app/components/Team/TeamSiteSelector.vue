@@ -2,18 +2,12 @@
 import type { SitePreview, SitesPreview } from '~~/layers/core/app/types'
 import { useHumanFriendlyNumber } from '~~/layers/design-system/app/composables/formatting'
 
-const props = withDefaults(defineProps<{
+// No cap here. Picking moves Sites the caller already has onto the Team, so it
+// creates no Site. gscdump's Free allowance counts a Site when it registers.
+const props = defineProps<{
   sites: SitesPreview
   modelValue: string[]
-  /**
-   * Site limit for the team. The server owns this number and returns it from
-   * `/api/sites/preview`; the hard-coded 3 here disagreed with the page copy
-   * ("up to 6 sites") and with the counter.
-   */
-  max?: number
-}>(), {
-  max: 3,
-})
+}>()
 
 const emits = defineEmits<{
   'update:modelValue': [value: string[]]
@@ -25,7 +19,6 @@ const data = ref<SitesPreview>(props.sites)
 // const isPending = computed(() => !props.sites.length)
 
 const selected = ref<string[]>([...props.modelValue])
-const maxSites = computed(() => props.max)
 
 watch(selected, () => {
   emits('update:modelValue', selected.value)
@@ -33,15 +26,10 @@ watch(selected, () => {
 
 const toast = useToast()
 function select(row: SitePreview) {
-  if (!selected.value.includes(row.siteId)) {
-    if (selected.value.length < maxSites.value)
-      selected.value.push(row.siteId)
-    else
-      toast.add({ title: `You can only select up to ${maxSites.value} sites.`, color: 'error' })
-  }
-  else {
+  if (!selected.value.includes(row.siteId))
+    selected.value.push(row.siteId)
+  else
     selected.value = selected.value.filter(s => s !== row.siteId)
-  }
 }
 
 // `property` is the Search Console identifier and the only field that carries
@@ -118,15 +106,8 @@ onBeforeUnmount(() => {
           Selected Sites
         </div>
         <div class="text-lg font-bold tabular-nums text-highlighted">
-          {{ selected.length }}/{{ maxSites }}
+          {{ selected.length }}
         </div>
-        <!-- Rounded: the raw ratio reached `aria-valuenow="66.66666666666666"`,
-             which a screen reader reads out in full. -->
-        <UProgress :model-value="Math.round(Math.min(selected.length / maxSites * 100, 100))" :color="selected.length < maxSites ? 'primary' : 'warning'" class="mt-1" />
-        <p class="mt-1 text-xs text-muted">
-          <UIcon name="i-heroicons-information-circle" class="size-4 -mb-1" />
-          You can select up to {{ maxSites }} sites.
-        </p>
       </div>
       <div class="max-w-[240px]">
         <UButton :loading="isSyncing" type="button" class="mb-1 min-h-10" icon="i-heroicons-arrow-path" @click="resync">
