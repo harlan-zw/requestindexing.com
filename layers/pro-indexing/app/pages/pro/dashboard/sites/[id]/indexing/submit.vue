@@ -1,9 +1,12 @@
 <script lang="ts" setup>
 import type { UiTableColumn } from '#layers/design-system/app/shared/table'
 import type { GscdumpIndexingUrl } from '#layers/pro-gsc/shared/gscdump-api'
+import type { IndexingGrantRefusal } from '#layers/pro-indexing/app/utils/indexing-grant'
+import type { IndexingGrant } from '#layers/pro-indexing/shared/contracts/indexing-grant'
 import { h } from 'vue'
 import { UiStatusBadge, UiUrlLabel } from '#components'
 import { useProGscdumpIndexingUrls } from '#layers/pro-gsc/app/composables/useProGscdump'
+import { readIndexingGrantRefusal, resolveSubmitAction } from '#layers/pro-indexing/app/utils/indexing-grant'
 
 definePageMeta({
   proTab: { feature: 'indexing', label: 'Submit', icon: 'i-ph-check-circle-duotone', order: 40 },
@@ -18,6 +21,7 @@ definePageMeta({
 const { siteId, siteName, gscdumpSiteId } = useSite('Submit for indexing')
 
 const toast = useToast()
+const route = useRoute()
 
 // `sites.gscdumpSiteId` is nullable. Rendering the history table without it
 // leaves a box that can never fill, so say so once instead.
@@ -47,6 +51,18 @@ function parseAbsoluteUrl(value: string): URL | null {
     return null
   }
 }
+
+// Submission sends with the account's own Indexing API grant, which the
+// Search Console connect never writes. Without it the only action that can
+// work is the grant, so it takes the Submit button's place.
+const { data: grant, error: grantError } = useFetch<IndexingGrant>('/api/indexing/auth', { key: 'indexing-grant' })
+const grantRefusal = ref<IndexingGrantRefusal | null>(null)
+const submitAction = computed(() => resolveSubmitAction({
+  grant: grant.value ?? null,
+  grantUnavailable: !!grantError.value,
+  refusal: grantRefusal.value,
+  returnTo: route.fullPath,
+}))
 
 function errorMessage(error: unknown): string {
   const e = error as { statusMessage?: string, data?: { statusMessage?: string, message?: string }, message?: string }
@@ -78,6 +94,13 @@ async function submitForIndexing() {
   submitting.value = false
 
   if (result._tag === 'Err') {
+    // A grant refusal gets the grant action beside the field, not a dead end.
+    const refusal = readIndexingGrantRefusal(result.error)
+    if (refusal) {
+      grantRefusal.value = refusal
+      lastSubmit.value = { _tag: 'Idle' }
+      return
+    }
     const message = errorMessage(result.error)
     lastSubmit.value = { _tag: 'Err', message }
     toast.add({ title: 'Indexing request failed', description: message, color: 'error' })
@@ -173,17 +196,34 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
             />
           </UFormField>
           <UiButton
+            v-if="submitAction._tag === 'GrantAccess'"
+            :to="submitAction.to"
+            external
+            purpose="cta"
+            icon="key"
+            class="min-h-11"
+          >
+            Grant Indexing API access
+          </UiButton>
+          <UiButton
+            v-else
             type="submit"
             purpose="cta"
             :loading="submitting"
-            :disabled="!url.trim()"
+            :disabled="!url.trim() || submitAction._tag === 'Checking'"
             class="min-h-11"
           >
             Request indexing
           </UiButton>
         </form>
 
-        <p v-if="lastSubmit._tag === 'Err'" class="mt-3 text-sm text-error">
+        <p v-if="submitAction._tag === 'GrantAccess' && submitAction.cause === 'rejected'" class="mt-3 text-sm text-error">
+          Google no longer accepts this app's Indexing API access. This app did not send the URL. Grant access again, then submit the URL.
+        </p>
+        <p v-else-if="submitAction._tag === 'GrantAccess'" class="mt-3 text-sm text-muted">
+          To submit a URL, this app needs Indexing API access from your Google account. After you grant access, you return to this page.
+        </p>
+        <p v-else-if="lastSubmit._tag === 'Err'" class="mt-3 text-sm text-error">
           {{ lastSubmit.message }}
         </p>
         <p v-else-if="lastSubmit._tag === 'Ok'" class="mt-3 text-sm text-muted">

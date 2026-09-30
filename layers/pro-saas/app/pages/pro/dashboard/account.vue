@@ -6,6 +6,7 @@
 //
 // The layer that owns `ProConnectedAccounts` opts out of auto-import, so the
 // component is imported by path.
+import type { IndexingGrant } from '#layers/pro-indexing/shared/contracts/indexing-grant'
 import ProConnectedAccounts from '#layers/pro-saas-auth/app/components/auth/ProConnectedAccounts.vue'
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 
@@ -16,8 +17,11 @@ definePageMeta({
   description: 'Manage your profile, connected accounts and account data.',
 })
 
-const { session, fetch } = useUserSession()
-const indexingAuth = computed(() => session.value?.googleIndexingAuth)
+const { session } = useUserSession()
+// The stored grant the submit route sends with. `session.googleIndexingAuth`
+// is the in-flight OAuth state instead: set before Google asks for consent,
+// gone after the next sign-in, and kept after a revoke.
+const { data: indexingGrant, error: indexingGrantError, refresh: refreshIndexingGrant } = useFetch<IndexingGrant>('/api/indexing/auth', { key: 'indexing-grant' })
 const logout = createLogoutHandler()
 const toast = useToast()
 const route = useRoute()
@@ -94,10 +98,10 @@ async function revokeIndexingAuth() {
     })
     toast.add({
       title: 'Google token revoked',
-      description: 'You removed access to the Web Indexing API.',
+      description: 'You removed access to the Indexing API.',
       color: 'success',
     })
-    await fetch()
+    await refreshIndexingGrant()
   }
   catch {
     toast.add({
@@ -215,11 +219,32 @@ async function deleteAccount() {
     </section>
 
     <section>
-      <ProSectionHeader title="Web Indexing API" icon="lock" />
+      <ProSectionHeader title="Indexing API" icon="lock" />
       <ProCard variant="default">
-        <template v-if="indexingAuth?.indexingOAuthId">
+        <template v-if="indexingGrantError">
           <p class="mb-3 text-sm text-muted">
-            You gave this app access to the Web Indexing API. You can revoke access at any time.
+            Indexing API access could not load. Retry to read the stored grant.
+          </p>
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            class="self-start"
+            @click="refreshIndexingGrant()"
+          >
+            Retry loading
+          </UButton>
+        </template>
+        <USkeleton v-else-if="!indexingGrant" class="h-5 w-2/3" />
+        <template v-else-if="indexingGrant._tag === 'Granted'">
+          <p class="mb-3 text-sm break-words text-muted">
+            <template v-if="indexingGrant.googleEmail">
+              {{ indexingGrant.googleEmail }} gave this app access to the Indexing API.
+            </template>
+            <template v-else>
+              You gave this app access to the Indexing API.
+            </template>
+            You can revoke access at any time.
           </p>
           <UButton
             color="error"
@@ -233,7 +258,7 @@ async function deleteAccount() {
           </UButton>
         </template>
         <p v-else class="text-sm text-muted">
-          This app has no access to the Web Indexing API. Grant access when you request indexing.
+          This app has no access to the Indexing API. To grant access, open the Submit tab of a Site.
         </p>
       </ProCard>
     </section>
