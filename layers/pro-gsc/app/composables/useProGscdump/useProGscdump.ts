@@ -54,6 +54,11 @@ export function useProGscdump() {
     return runV1<GscdumpDataResponse>(() => createV1Client().queryAnalyticsReport(input), silent)
   }
 
+  /** Raw grouped rows. Unlike a list report, it accepts `date` as a dimension. */
+  function queryAnalyticsRows(input: GscdumpV1OperationInput<'analytics.rows.query'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'analytics.rows.query'>['data']>(() => createV1Client().queryAnalyticsRows(input), silent)
+  }
+
   function queryAnalyticsReportDetail(input: GscdumpV1OperationInput<'analytics.reports.detail.query'>, silent = false) {
     return runV1<GscdumpDataDetailResponse>(() => createV1Client().queryAnalyticsReportDetail(input), silent)
   }
@@ -91,10 +96,6 @@ export function useProGscdump() {
       () => createV1Client().recoverSitePermission(input),
       silent,
     )
-  }
-
-  function queryKeywordSparklines<T = GscdumpV1OperationResponse<'partner.sites.keyword.sparklines.query'>['data']>(input: GscdumpV1OperationInput<'partner.sites.keyword.sparklines.query'>, silent = false) {
-    return runV1<T>(() => createV1Client().queryKeywordSparklines(input), silent)
   }
 
   function getQueryTrend<T = GscdumpV1OperationResponse<'partner.sites.query.trend.get'>['data']>(input: GscdumpV1OperationInput<'partner.sites.query.trend.get'>, silent = false) {
@@ -227,11 +228,11 @@ export function useProGscdump() {
     getTopAssociation,
     listSiteIndexingTransitions,
     listSitemapUrls,
-    queryKeywordSparklines,
     inspectSiteUrls,
     listSiteIndexingUrls,
     queryAnalyticsReport,
     queryAnalyticsReportDetail,
+    queryAnalyticsRows,
     recoverSitePermission,
     verifySiteBingConnection,
   }
