@@ -358,7 +358,10 @@ function tooltipTemplate(d: T): string {
 <style scoped>
 .ui-line-chart {
   display: grid;
-  grid-template-columns: 1fr;
+  /* minmax(0, …): a bare 1fr track floors at the stacked SVGs' width, so the
+     chart grew with the window but never shrank back and pushed the page into
+     a horizontal scroll. */
+  grid-template-columns: minmax(0, 1fr);
   position: relative;
 }
 

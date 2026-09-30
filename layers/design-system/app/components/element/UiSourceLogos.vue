@@ -15,7 +15,12 @@ export interface SourceLogo {
 
 const { sources, size = 'sm', dither = false } = defineProps<{
   sources: readonly SourceLogo[]
-  size?: 'xs' | 'sm'
+  /**
+   * `inline` drops the frame so the mark sits inside a line of text at 12px,
+   * the way a byline credits its Source. `xs` and `sm` frame the mark as a
+   * badge for a row's edge.
+   */
+  size?: 'inline' | 'xs' | 'sm'
   /**
    * Quiet provenance mark for a card corner that must not compete with the
    * number beside it: desaturated, softened, stippled with a fine dot mask.
@@ -27,9 +32,11 @@ const { sources, size = 'sm', dither = false } = defineProps<{
 }>()
 
 const accessibleLabel = computed(() => sources.map(source => source.label).join(' and '))
-const frameClass = computed(() => size === 'xs' ? 'size-5 rounded-md' : 'size-6 rounded-md')
-const iconClass = computed(() => size === 'xs' ? 'size-3.5' : 'size-4')
-const iconPixels = computed(() => size === 'xs' ? 14 : 16)
+const framed = computed(() => size !== 'inline')
+const frameClass = computed(() => size === 'inline' ? '' : `border border-default bg-default shadow-xs rounded-md ${size === 'xs' ? 'size-5' : 'size-6'}`)
+const iconClass = computed(() => size === 'inline' ? 'size-3' : size === 'xs' ? 'size-3.5' : 'size-4')
+const brandClass = computed(() => size === 'inline' ? '!size-3' : size === 'xs' ? '!size-3.5' : '!size-4')
+const iconPixels = computed(() => size === 'inline' ? 12 : size === 'xs' ? 14 : 16)
 </script>
 
 <template>
@@ -43,8 +50,8 @@ const iconPixels = computed(() => size === 'xs' ? 14 : 16)
     <span
       v-for="(source, index) in sources"
       :key="source.id"
-      class="relative inline-flex shrink-0 items-center justify-center border border-default bg-default shadow-xs"
-      :class="[frameClass, index ? '-ml-1.5' : '', dither ? 'ui-source-logo-dithered' : '']"
+      class="relative inline-flex shrink-0 items-center justify-center"
+      :class="[frameClass, index ? (framed ? '-ml-1.5' : 'ml-0.5') : '', dither ? 'ui-source-logo-dithered' : '']"
       aria-hidden="true"
     >
       <img
@@ -56,7 +63,7 @@ const iconPixels = computed(() => size === 'xs' ? 14 : 16)
         :class="[iconClass, dither ? 'ui-source-logo-dither' : '']"
         class="rounded-full"
       >
-      <UiBrandIcon v-else-if="source.brand" size="md" :class="[size === 'xs' ? '!size-3.5' : '!size-4', dither ? 'ui-source-logo-dither' : '']" />
+      <UiBrandIcon v-else-if="source.brand" size="md" :class="[brandClass, dither ? 'ui-source-logo-dither' : '']" />
       <UiIcon
         v-else
         :name="source.icon"

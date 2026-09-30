@@ -265,8 +265,12 @@
   --fx-accent: var(--ui-text);
 
   /* Focus ring — an interaction-state token, orthogonal to the elevation
-     ladder. Left standalone; not part of the --elevation-* family. */
-  --shadow-focus: 0 0 0 3px color-mix(in oklab, var(--ui-color-primary-500) 30%, transparent);
+     ladder. Left standalone; not part of the --elevation-* family. The colour
+     is its own token because the ring ships in two forms: a box-shadow halo
+     (--shadow-focus) and the outline every Nuxt UI control draws on
+     `:focus-visible` (see "One focus treatment" below). One tint, both forms. */
+  --focus-ring-color: color-mix(in oklab, var(--ui-color-primary-500) 30%, transparent);
+  --shadow-focus: 0 0 0 3px var(--focus-ring-color);
 }
 
 /* ═══ Greydients — the visibility arc ══════════════════════════════════════
@@ -587,6 +591,19 @@ html {
   accent-color: var(--ui-color-primary-500);
 }
 
+/* One focus treatment. Every Nuxt UI control focuses with `outline-primary/25`,
+   which reads the `--ui-primary` alias, while `--shadow-focus` reads the primary
+   scale. Colour the outline from the focus token too, so a focused control and
+   a focus halo share one emerald tint. It is 30% against Nuxt UI's 25%, so
+   keyboard focus gets more visible, never less.
+
+   Matched on the utility itself: only a control that took Nuxt UI's default
+   focus outline is repainted, and anything that sets its own outline colour on
+   purpose keeps it. Unlayered on purpose, so it beats the utility. */
+[class*="outline-primary/25"]:focus-visible {
+  outline-color: var(--focus-ring-color);
+}
+
 /* Autofill: the UA paints a hard yellow fill that ignores `background-color`.
    Override it via the inset box-shadow trick so autofilled fields read as our
    surface, keep token text colour, and don't fade back to yellow. */
@@ -765,8 +782,10 @@ textarea {
   transform: translateY(0.5rem);
 }
 
-/* Unovis chart theming — prevent blinding white grid lines in dark mode */
-.dark :is(.unovis-xy-container, .unovis-single-container) {
+/* Unovis chart theming: prevent blinding white grid lines in dark mode.
+   The tooltip vars repeat on the tooltip element itself because a tooltip
+   mounted on `document.body` (UiTopEntityStackChart) is outside the container. */
+.dark :is(.unovis-xy-container, .unovis-single-container, .unovis-tooltip, .vis-tooltip) {
   --vis-axis-grid-color: var(--ui-border);
   --vis-axis-tick-color: var(--ui-border);
   --vis-axis-tick-label-color: var(--ui-text-dimmed);

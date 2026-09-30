@@ -220,8 +220,10 @@ const formattedTrend = computed(() => {
           <UiIcon v-if="icon" :name="icon" class="size-3 text-dimmed shrink-0" />
         </slot>
         <slot name="title">
+          <!-- `mx-0.5` cancels the trigger button's `-m-0.5` bleed, so this
+               title starts on the same edge as the link-mode title and the value. -->
           <UiTooltip v-if="tooltip && title && !to" :text="tooltipDescription || tooltip" trigger-as="button">
-            <span class="inline-flex items-center gap-1" :class="titleTypeClass">
+            <span class="mx-0.5 inline-flex items-center gap-1" :class="titleTypeClass">
               {{ title }}
               <UiIcon name="help" class="size-3 opacity-50 shrink-0" aria-hidden="true" />
             </span>
