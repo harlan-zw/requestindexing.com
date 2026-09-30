@@ -1,10 +1,8 @@
 import type { H3Event } from 'h3'
+import type { DatabaseSync } from 'node:sqlite'
 import type { CurrentTeamContext } from './require-current-team'
-import { readdirSync, readFileSync } from 'node:fs'
-import { DatabaseSync } from 'node:sqlite'
-import { fileURLToPath } from 'node:url'
-import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { migratedDatabase, proDatabase } from '~~/tests/support/migrated-d1'
 import { createUserWithPersonalTeam } from './create-user-with-personal-team'
 import { registerSite } from './register-site'
 
@@ -14,43 +12,13 @@ vi.mock('#domain-events/server', () => ({
   dispatchEvent: vi.fn(async () => undefined),
 }))
 
-// The committed migrations are the only description of the live D1 schema, so
-// the funnel writes run against them rather than against a hand-built table.
-const MIGRATIONS_DIR = fileURLToPath(new URL('../../../core/server/db/migrations', import.meta.url))
+// The Free allowance is gscdump's, and this file is about funnel milestones.
+const noAllowanceCap = { readSiteAllowance: async () => ({ _tag: 'Uncapped' as const }) }
 
 interface ProEventRow {
   type: string
   user_id: number
   payload: string | null
-}
-
-function migratedDatabase(): DatabaseSync {
-  const db = new DatabaseSync(':memory:')
-  const files = readdirSync(MIGRATIONS_DIR).filter(name => name.endsWith('.sql')).sort()
-  for (const name of files) {
-    for (const statement of readFileSync(`${MIGRATIONS_DIR}/${name}`, 'utf8').split('--> statement-breakpoint')) {
-      const sql = statement.trim()
-      if (sql)
-        db.exec(sql)
-    }
-  }
-  return db
-}
-
-// Drizzle's remote driver speaks the same async shape D1 does, so the code under
-// test runs unchanged. Rows go back positionally, which is what the driver reads.
-function proDatabase(sqlite: DatabaseSync) {
-  return drizzle(async (sql, params, method) => {
-    const statement = sqlite.prepare(sql)
-    const args = params as never[]
-    if (method === 'run') {
-      statement.run(...args)
-      return { rows: [] }
-    }
-    const rows = statement.all(...args).map(row => Object.values(row))
-    // A `get` hands back one row, or nothing when the query matched no row.
-    return { rows: method === 'get' ? rows[0] : rows }
-  })
 }
 
 function proEventRows(sqlite: DatabaseSync): ProEventRow[] {
@@ -94,8 +62,8 @@ describe('signup funnel milestones', () => {
     } as unknown as CurrentTeamContext
     const event = {} as H3Event
 
-    const first = await registerSite(event, ctx, { url: 'https://example.com' })
-    const second = await registerSite(event, ctx, { url: 'https://example.com' })
+    const first = await registerSite(event, ctx, { url: 'https://example.com' }, noAllowanceCap)
+    const second = await registerSite(event, ctx, { url: 'https://example.com' }, noAllowanceCap)
 
     expect(first._tag).toBe('Ok')
     expect(second._tag).toBe('AlreadyConnected')
@@ -116,7 +84,7 @@ describe('signup funnel milestones', () => {
       team: { teamId: created.team.teamId },
     } as unknown as CurrentTeamContext
 
-    const result = await registerSite({} as H3Event, ctx, { url: 'not a url' })
+    const result = await registerSite({} as H3Event, ctx, { url: 'not a url' }, noAllowanceCap)
 
     expect(result._tag).toBe('InvalidUrl')
     expect(proEventRows(sqlite).filter(row => row.type === 'site_added')).toHaveLength(0)

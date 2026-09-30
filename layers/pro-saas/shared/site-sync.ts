@@ -1,4 +1,5 @@
 import type { SiteFleetRow } from '~~/layers/core/app/types'
+import { SITE_NOT_LINKED_LABEL } from '#layers/pro-gsc/shared/entitlement-copy'
 
 export type SiteSyncStatus = SiteFleetRow['syncStatus']
 
@@ -9,6 +10,7 @@ export const SITE_SYNC_LABELS: Record<SiteSyncStatus, string> = {
   syncing: 'Syncing',
   synced: 'Synced',
   error: 'Sync failed',
+  refused: SITE_NOT_LINKED_LABEL,
 }
 
 /** A first sync is queued or running, so the Site has no data to show yet. */
