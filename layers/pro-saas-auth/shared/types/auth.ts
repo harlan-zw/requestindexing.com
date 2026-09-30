@@ -6,6 +6,10 @@ export interface NormalizedIdentity {
   providerUserId: string
   email: string | null
   emailVerified: boolean
+  // True when the provider's email endpoint was unreachable, so verification
+  // could not be read at all. Kept apart from `emailVerified: false`, because
+  // telling the user to verify an email they already verified misleads them.
+  emailLookupFailed?: boolean
   name?: string | null
   avatarUrl?: string | null
   allVerifiedEmails: string[]

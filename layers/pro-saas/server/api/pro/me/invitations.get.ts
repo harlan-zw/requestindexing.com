@@ -1,15 +1,16 @@
 import { and, eq, gt, inArray, isNull } from 'drizzle-orm'
-import { getUserIdentities } from '#layers/pro-saas-auth/server/utils/auth/identity'
+import { getUserIdentities, verifiedIdentityEmails } from '#layers/pro-saas-auth/server/utils/auth/identity'
 import { teamInvitations, teams } from '../../../database'
 import { defineProApiHandler } from '../../../utils/handler'
 
 /**
- * Pending invitations for the current user (matched by email on either oauth provider).
- * Used by the sidebar nav badge so users see invites they haven't acted on.
+ * Pending invitations for the current user, matched by a verified email on
+ * either oauth provider. Each row carries the accept token, so an unverified
+ * email must never list it. Used by the sidebar nav badge.
  */
 export default defineProApiHandler({}, async ({ db, caller }) => {
   const identities = await getUserIdentities(db, caller.user.id)
-  const emails = identities.map(i => i.email).filter(Boolean).map(e => e!.toLowerCase())
+  const emails = verifiedIdentityEmails(identities)
 
   if (!emails.length)
     return { invitations: [] }

@@ -86,9 +86,7 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx }): Promis
       gscdumpSiteUrl: sites.gscdumpSiteUrl,
     })
     .from(sites)
-    .where(ctx.caller.currentTeamId
-      ? eq(sites.teamId, ctx.caller.currentTeamId)
-      : eq(sites.ownerId, ctx.caller.user.id))
+    .where(eq(sites.teamId, ctx.team.teamId))
 
   // Build domain lookup for matching
   const siteDomains = userSites

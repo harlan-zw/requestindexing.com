@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { logWarn } from '~~/shared/logging'
 import { dispatchEvent } from '#domain-events/server'
-import { getUserIdentities } from '#layers/pro-saas-auth/server/utils/auth/identity'
+import { getUserIdentities, verifiedIdentityEmails } from '#layers/pro-saas-auth/server/utils/auth/identity'
 import { ProError } from '../../../../shared/errors'
 import { invitationAcceptSchema } from '../../../../shared/validators/invitations'
 import { teamInvitations, teamMemberships, users } from '../../../database'
@@ -28,9 +28,10 @@ export default defineProApiHandler({
     throw new ProError('invitation_expired')
 
   // Wrong-account guard (T3.3): the signed-in user's email must match the invitation.
-  // Match against either oauth provider since users may sign in with either.
+  // Match verified identities only, on either provider. An unverified provider
+  // email must never grant workspace access.
   const identities = await getUserIdentities(db, caller.user.id)
-  const myEmails = identities.map(i => i.email).filter(Boolean).map(e => e!.toLowerCase())
+  const myEmails = verifiedIdentityEmails(identities)
   if (!myEmails.includes(invitation.email.toLowerCase())) {
     throw createError({
       statusCode: 403,

@@ -174,9 +174,14 @@ export async function deleteTeam(
 export async function inviteTeamMember(event: H3Event, ctx: CurrentTeamContext, input: InviteTeamMemberInput) {
   const { email, role } = input
 
+  // Only a verified identity proves an account owns this email. An unverified
+  // match would let any account block an invitation to someone else's address.
   const githubMatch = await findIdentityByProviderEmail(ctx.db, 'github', email)
-  const googleMatch = githubMatch ? null : await findIdentityByProviderEmail(ctx.db, 'google', email)
-  const existingUser = (githubMatch ?? googleMatch) ? { id: (githubMatch ?? googleMatch)!.userId } : null
+  const verifiedGithubMatch = githubMatch?.identity.emailVerified ? githubMatch : null
+  const googleMatch = verifiedGithubMatch ? null : await findIdentityByProviderEmail(ctx.db, 'google', email)
+  const verifiedGoogleMatch = googleMatch?.identity.emailVerified ? googleMatch : null
+  const existingIdentity = verifiedGithubMatch ?? verifiedGoogleMatch
+  const existingUser = existingIdentity ? { id: existingIdentity.userId } : null
 
   if (existingUser) {
     if (existingUser.id === ctx.team.ownerId)
@@ -326,6 +331,15 @@ export async function removeTeamMember(event: H3Event, ctx: CurrentTeamContext, 
     eq(teamMemberships.teamId, ctx.team.teamId),
     eq(teamMemberships.userId, targetUserId),
   ))
+
+  // Background work reads `users.current_team_id` without a session, so a
+  // removed member must not keep pointing at this team. Same reset as deleteTeam.
+  await ctx.db.update(users)
+    .set({
+      currentTeamId: sql`(SELECT team_id FROM teams WHERE owner_id = users.user_id AND personal_team = 1 LIMIT 1)`,
+      updatedAt: Date.now(),
+    })
+    .where(and(eq(users.userId, targetUserId), eq(users.currentTeamId, ctx.team.teamId)))
 
   await ctx.team.audit({
     actorUserId: ctx.caller.user.id,
