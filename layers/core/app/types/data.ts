@@ -1,3 +1,5 @@
+import type { SiteHoldReason } from '@gscdump/contracts'
+
 export interface GscDataRow {
   clicks: number
   impressions: number
@@ -136,5 +138,7 @@ export interface SiteFleetRow {
   sitemaps: SitemapSummary[]
   gscdumpSiteId: string | null
   syncStatus: 'idle' | 'pending' | 'syncing' | 'synced' | 'error'
+  /** Why gscdump holds the Site before its first import, read live from its lifecycle. */
+  hold: SiteHoldReason | null
   lastSynced: number | null
 }

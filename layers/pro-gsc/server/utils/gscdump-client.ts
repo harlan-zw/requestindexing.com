@@ -8,6 +8,7 @@ import type {
   BuilderStateWire,
   DataDetailOptions,
   DataQueryOptions,
+  EntitlementRefusal,
   GscdumpAnalysisParams,
   GscdumpAvailableSite,
   GscdumpUserSite,
@@ -16,6 +17,7 @@ import type {
   RegisterPartnerUserParams,
   UpdatePartnerUserTokensParams,
 } from '@gscdump/contracts'
+import type { PartnerSiteRegistrationV1Response, PartnerUserEntitlementsV1 } from '@gscdump/contracts/v1'
 import type {
   GscdumpAnalysisResponse,
   GscdumpDataDetailResponse,
@@ -24,7 +26,7 @@ import type {
   PartnerLifecycleResponse,
   PartnerLifecycleSite,
 } from '../../shared/gscdump-api'
-import { GSCDUMP_ONBOARDING_CONTRACT_VERSION } from '@gscdump/contracts'
+import { GSCDUMP_ONBOARDING_CONTRACT_VERSION, parseEntitlementRefusal } from '@gscdump/contracts'
 import { withDefaultSearchType } from '@gscdump/sdk/hosted-query'
 import {
   analyticsStatusToSyncStatus,
@@ -33,10 +35,19 @@ import {
 } from '@gscdump/sdk/lifecycle'
 import { isGscdumpV1Error } from '@gscdump/sdk/v1'
 import { CANONICAL_WEBHOOK_EVENTS } from '@gscdump/sdk/webhook'
+import { refusalMessage } from '../../shared/entitlement-copy'
 import { createGscdumpPublicV1Client } from './gscdump-origin'
 
 export { analyticsStatusToSyncStatus }
 export type { GscdumpAvailableSite }
+
+/**
+ * The outcome of `partner.users.sites.create`. An entitlement refusal is an
+ * expected answer once the partner is metered, so it is a value, not a throw.
+ */
+export type SiteRegistrationResult
+  = | { _tag: 'Registered', registration: PartnerSiteRegistrationV1Response['data'] }
+    | { _tag: 'Refused', refusal: EntitlementRefusal }
 
 export function findLifecycleSite(lifecycle: PartnerLifecycleResponse, siteIdOrPropertyUrl: string): PartnerLifecycleSite | null {
   return findSdkLifecycleSite(lifecycle as never, siteIdOrPropertyUrl) as PartnerLifecycleSite | null
@@ -85,9 +96,13 @@ export function useGscdumpClient() {
 
   function rethrowV1AsH3(err: unknown): never {
     if (isGscdumpV1Error(err)) {
+      // gscdump's own message for an entitlement refusal points the reader to
+      // Local mode. Render the refusal in this app's copy; the tag stays in
+      // `details` for any caller that branches on it.
+      const refusal = parseEntitlementRefusal(err.details)
       throw createError({
         statusCode: err.status ?? 500,
-        message: err.message,
+        message: refusal ? refusalMessage(refusal) : err.message,
         data: {
           code: err.code,
           details: err.details,
@@ -190,6 +205,9 @@ export function useGscdumpClient() {
     getAvailableSites: (userId: string) =>
       client.listAvailableSites({ params: { userId }, query: {} }).then(response => response.data).catch(rethrowV1AsH3),
 
+    getUserEntitlements: (userId: string): Promise<PartnerUserEntitlementsV1> =>
+      client.getUserEntitlements({ params: { userId } }).then(response => response.data).catch(rethrowV1AsH3),
+
     // Site management
     registerSite: (params: {
       userId: string
@@ -197,7 +215,7 @@ export function useGscdumpClient() {
       requestedUrl?: string
       gscPropertyUrl?: string
       webhookUrl?: string
-    }) =>
+    }): Promise<SiteRegistrationResult> =>
       client.createSite({
         params: { userId: params.userId },
         body: {
@@ -207,7 +225,12 @@ export function useGscdumpClient() {
           ...(params.webhookUrl && { webhookUrl: params.webhookUrl }),
           webhookEvents: [...CANONICAL_WEBHOOK_EVENTS],
         },
-      }).then(response => response.data).catch(rethrowV1AsH3),
+      }).then((response): SiteRegistrationResult => ({ _tag: 'Registered', registration: response.data })).catch((err: unknown) => {
+        const refusal = isGscdumpV1Error(err) ? parseEntitlementRefusal(err.details) : null
+        if (refusal)
+          return { _tag: 'Refused', refusal } satisfies SiteRegistrationResult
+        return rethrowV1AsH3(err)
+      }),
     deleteSite: (siteId: string) =>
       client.deleteSite({ params: { siteId } }).then(response => response.data).catch(rethrowV1AsH3),
 

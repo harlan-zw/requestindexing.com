@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { SiteAllowance } from '#layers/pro-gsc/shared/free-allowance'
+import { siteAllowanceReached, siteAllowanceSummary } from '#layers/pro-gsc/shared/entitlement-copy'
 import { parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
 
 // Connect a site by address. Search Console properties are offered as
@@ -18,7 +20,8 @@ interface ConnectedSite {
 
 interface SitesPreviewResponse {
   sites: ConnectedSite[]
-  maxSites: number
+  /** gscdump's Site allowance. `Uncapped` while the partner is exempt. */
+  siteAllowance: SiteAllowance
 }
 
 interface GscProperty {
@@ -40,7 +43,7 @@ const toast = useToast()
 const { data: preview, refresh: refreshSites, status: sitesStatus } = await useFetch<SitesPreviewResponse>('/api/sites/preview', {
   key: 'onboarding-connected-sites',
   server: false,
-  default: () => ({ sites: [], maxSites: 0 }),
+  default: (): SitesPreviewResponse => ({ sites: [], siteAllowance: { _tag: 'Unknown' } }),
 })
 
 const { data: gsc, refresh: refreshGsc, status: gscStatus } = await useFetch<GscPropertiesResponse>('/api/pro/gsc-properties', {
@@ -57,8 +60,15 @@ const gscPending = computed(() => gscStatus.value !== 'success' && gscStatus.val
 const sitesPending = computed(() => sitesStatus.value !== 'success' && sitesStatus.value !== 'error')
 
 const connectedSites = computed(() => preview.value?.sites ?? [])
-const maxSites = computed(() => preview.value?.maxSites ?? 0)
-const atLimit = computed(() => maxSites.value > 0 && connectedSites.value.length >= maxSites.value)
+// nuxtseo.com shows the count against its cap and stops the form at the cap.
+// Here the cap is the Free allowance, which gscdump counts across every Team
+// the owner has, so the count can be higher than this Team's list. With no
+// cap (an exempt partner, or an unknown read) the form shows no count.
+const cappedAllowance = computed(() => {
+  const allowance = preview.value?.siteAllowance
+  return allowance?._tag === 'Capped' ? allowance : null
+})
+const atLimit = computed(() => !!cappedAllowance.value && cappedAllowance.value.used >= cappedAllowance.value.allowance)
 
 watch(connectedSites, sites => emit('changed', sites.length), { immediate: true })
 
@@ -116,8 +126,13 @@ async function connect(value: string) {
     toast.add({ title: `Connected ${parsed.domain}`, color: 'success' })
   }
   catch (err: unknown) {
-    const message = (err as { data?: { message?: string } })?.data?.message
-    inlineError.value = message || 'Could not connect that site.'
+    // The API error envelope carries the reader-facing message, including this
+    // app's copy for a Free allowance refusal.
+    const message = (err as { data?: { data?: { message?: unknown } } } | null)?.data?.data?.message
+    inlineError.value = typeof message === 'string' && message ? message : 'Could not connect that site.'
+    // A refusal means the allowance moved since the page loaded. Re-read it so
+    // the count and the disabled state match what gscdump just said.
+    await refreshSites()
   }
   finally {
     submitting.value = null
@@ -141,9 +156,6 @@ async function connect(value: string) {
           <span class="truncate text-sm text-highlighted">{{ site.domain || site.property }}</span>
         </li>
       </ul>
-      <p v-if="maxSites" class="text-xs text-muted">
-        {{ connectedSites.length }} of {{ maxSites }} sites connected.
-      </p>
     </div>
 
     <form class="space-y-2" @submit.prevent="connect(url)">
@@ -168,8 +180,8 @@ async function connect(value: string) {
           />
         </div>
       </UFormField>
-      <p v-if="atLimit" class="text-xs text-muted">
-        You have connected the maximum of {{ maxSites }} sites.
+      <p v-if="cappedAllowance && !inlineError" class="text-xs text-muted">
+        {{ atLimit ? siteAllowanceReached(cappedAllowance.allowance) : siteAllowanceSummary(cappedAllowance.used, cappedAllowance.allowance) }}
       </p>
     </form>
 

@@ -151,7 +151,10 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     ),
   )
 
-  const linkedSites = results.filter(result => result.status === 'fulfilled' && result.value).length
+  const linkedSites = results.filter(result => result.status === 'fulfilled' && result.value._tag === 'Linked').length
+  const refusedSites = results.filter(result => result.status === 'fulfilled' && result.value._tag === 'Refused').length
+  if (refusedSites)
+    logger.log(`[gscdump reconcile] gscdump refused ${refusedSites} Site registrations (Free allowance or duplicate property)`)
   logger.log(`[gscdump reconcile] auto-link complete: ${linkedSites}/${unlinkedSites.length}`)
 
   return {

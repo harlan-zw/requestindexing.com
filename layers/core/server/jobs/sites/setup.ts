@@ -28,11 +28,18 @@ export default defineJob({
     const gscdump = useGscdumpClient()
     const config = useRuntimeConfig()
 
-    const registration = await gscdump.registerSite({
+    const result = await gscdump.registerSite({
       userId: user.gscdumpUserId,
       siteUrl: site.property,
       webhookUrl: `${config.public.baseUrl}/api/webhooks/gscdump`,
     })
+    // A refused registration stays refused until the owner frees a place in
+    // the Free allowance, so a retry cannot help. Fail the job with the reason.
+    if (result._tag === 'Refused') {
+      await ctx.fail(`gscdump refused Site registration: ${result.refusal.reason}`)
+      return
+    }
+    const { registration } = result
     const syncStatus = registration.status === 'idle' ? 'pending' : registration.status
 
     await db.update(sites).set({

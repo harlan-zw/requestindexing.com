@@ -37,6 +37,7 @@ claims more than the marketing site does today. See Truth rules.
 | Empty states | Acknowledge, explain the value, give the action | "Search Console keeps data for the last 16 months" then the quote then the CTA |
 | Errors | What broke, why it matters, how to fix. Never blame the reader | three parts, in that order |
 | Quota and limits | State the number and who tracks it | "We respect Google's 200/day publish quota so you don't have to track it yourself." |
+| Free allowance refusals and holds | State the number, what did not happen, and the next step inside this app | "You have connected all 3 Sites in your Free allowance. Remove a Site to connect another." |
 
 **Headings are sentence case, meta titles are title case.** Both ship today and the split is
 deliberate: a meta title competes in a search result, a heading does not.
@@ -62,6 +63,7 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | Google's Indexing API publish quota is 200 per day | Google's documented quota; the app tracks it for the user |
 | Free and open source, MIT | `LICENSE`, and the repository is public |
 | We read Search Console properties and never write | the OAuth scope is `webmasters.readonly` |
+| The Free allowance numbers | gscdump returns them from `partner.users.entitlements.get`; copy reads them at runtime and never hardcodes one |
 
 **Not claimed until it ships.** Bing and IndexNow submission arrive by upgrading the gscdump
 protocol, not by building them here. The plumbing exists (`getSiteBingData`,
@@ -99,6 +101,48 @@ Engine contracts own IndexNow and Submission Receipt terms.
 IndexNow reason codes use the corrective-action strings in the IndexNow page.
 Each string names the failed step and the next action.
 
+## Free allowance assets
+
+These assets apply to Site connection, held Sites, URL Inspection refusals, the Usage page, and the allowance emails.
+`GLOSSARY.md` defines Free allowance and Held. Engine terms (Preserved rows, URL Inspections) are gscdump's.
+`{braces}` are values that gscdump returns. `{date}` renders as a month and a day, for example November 1.
+`layers/pro-gsc/shared/entitlement-copy.ts` holds these strings. Change them here first.
+
+| Asset | String |
+| --- | --- |
+| Section heading | Free allowance |
+| Connect flow count | {used} of {allowance} Sites in your Free allowance. |
+| Site allowance reached | You have connected all {limit} Sites in your Free allowance. Remove a Site to connect another. |
+| Duplicate property | This Search Console property is already connected as {siteUrl}. You can connect each property once. |
+| Held badge | Held |
+| Held notice title | This Site is held |
+| Held, size limit | This Site adds more Search Console rows each day than the Free allowance accepts. Its Search Console data is not imported. |
+| Held, sitemap limit | The sitemaps of this Site list more URLs than the Free allowance accepts. Its Search Console data is not imported. |
+| Held, size unknown | Request Indexing could not measure the size of this Site, so its Search Console data is not imported. Remove the Site and connect it again to retry. |
+| Held, size pending | Request Indexing is measuring the size of this Site. The import of its Search Console data starts when the measurement succeeds. |
+| URL Inspection allowance reached | You used the {limit} URL Inspections in this month's Free allowance. URL Inspection starts again on {date}. |
+| URL Inspection off | URL Inspection is off for this Site, so its index status does not update. To turn it on, email harlan@harlanzw.com. |
+| Usage meter labels | Sites · Preserved rows · URL Inspections this month |
+| Usage, Sites left | {count} more Sites fit your Free allowance. (One: 1 more Site fits your Free allowance.) |
+| Usage, Sites full | Your Free allowance is full. Remove a Site to connect another. |
+| Usage, Preserved rows | Search Console rows kept for your Sites. |
+| Usage, Preserved rows not counted | Preserved rows are counted once a day. |
+| Usage, URL Inspections | The count starts again on {date}. |
+| Usage, URL Inspections without a cap | The count starts again on {date}. Your URL Inspections continue past the allowance. |
+| Usage, read failure | Your Free allowance could not load. Retry to read it again. |
+| Email subject, 80% | Your Request Indexing account is near its Free allowance |
+| Email subject, 100% | Your Request Indexing account reached its Free allowance |
+| Email, Sites 80% | You have connected {used} of the {allowance} Sites in your Free allowance. |
+| Email, Sites 100% | You have connected all {allowance} Sites in your Free allowance. Remove a Site to connect another. |
+| Email, Preserved rows 80% | Your Sites keep {used} Preserved rows of the {allowance} in your Free allowance. |
+| Email, Preserved rows 100% | Your Sites keep {used} Preserved rows. The Free allowance covers {allowance}. During beta, sync continues. |
+| Email, URL Inspections 80% | Your Sites used {used} of the {allowance} URL Inspections in this month's Free allowance. The count starts again on {date}. |
+| Email, URL Inspections 100% | Your Sites used all {allowance} URL Inspections in this month's Free allowance. Automatic URL Inspection stops until {date}. |
+| Email, link line | Manage your Sites: {url} |
+| Email, sign-off | Request Indexing |
+
+The daily URL Inspection pool of one Site is a different limit. Its refusal keeps its own rate-limit message and never says Free allowance.
+
 ## Banned language
 
 Harlan's global writing rules already apply and are not repeated here: no em dashes, never the
@@ -111,6 +155,7 @@ Harlan's global writing rules already apply and are not repeated here: no em das
 | solutions, empower, leverage (as a verb), seamless, powerful | say what it does | Corporate hedging. The reader is a developer with a page that is not showing up |
 | OK, Submit, Click here (as a button label) | a verb and its object | A label that names no action tells the reader nothing |
 | emoji in production copy | a status pip, or nothing | Set by `DESIGN.md` and repeated here because it is a copy decision |
+| Local mode, the gscdump CLI, your own Google keys, as advice to a reader | the next step inside this app | gscdump's own refusal and hold copy points there. A Request Indexing reader has neither, so never pass gscdump's message through |
 
 ## Open questions
 

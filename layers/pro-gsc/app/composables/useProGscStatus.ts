@@ -1,3 +1,4 @@
+import type { SiteHoldReason } from '@gscdump/contracts'
 import type { PartnerLifecycleSite } from '../../shared/gscdump-api'
 import { lifecycleSiteToSyncStatus } from '@gscdump/sdk/lifecycle'
 import { useProSiteInjection } from '#layers/pro-saas/app/composables/useProSiteInjection'
@@ -41,11 +42,13 @@ interface GscSyncStatus {
   sourceMode?: string
   sitemapStatus?: string
   indexingStatus?: string
+  /** Why gscdump holds the Site before its first import, or null. */
+  hold: SiteHoldReason | null
 }
 
 const MIN_DAYS_FOR_DATA = 60
 const POLL_INTERVAL_SYNCING = 5000
-const POLL_INTERVAL_PERMISSION_LOST = 60000
+const POLL_INTERVAL_SLOW = 60000
 const DEMO_GSCDUMP_SITE_ID = 's_9dnsyZ8vVZNlH8'
 
 export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
@@ -88,6 +91,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
         hasMinimumData: true,
         tablesProgress: [],
         indexing: null,
+        hold: null,
       }
       fetchStatus.value = 'success'
       return
@@ -137,6 +141,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
         sourceMode: lifecycleSite.analytics.sourceMode,
         sitemapStatus: lifecycleSite.sitemaps.status,
         indexingStatus: lifecycleSite.indexing.status,
+        hold: lifecycleSite.hold,
       } satisfies GscSyncStatus
     }).catch((cause: unknown) => {
       error.value = cause instanceof Error ? cause : new Error(String(cause))
@@ -172,11 +177,17 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
     }, { immediate: true })
 
     // Auto-manage polling based on phase / permission state
-    watch(() => [syncData.value?.phase, syncData.value?.permissionLost, syncData.value?.sitemapStatus, syncData.value?.indexingStatus] as const, ([phase, permissionLost, sitemapStatus, indexingStatus]) => {
-      if (phase === 'preparing' || phase === 'syncing' || phase === 'indexing' || sitemapStatus === 'discovering' || sitemapStatus === 'syncing' || indexingStatus === 'discovering' || indexingStatus === 'checking' || indexingStatus === 'waiting_for_sitemaps')
+    watch(() => [syncData.value?.phase, syncData.value?.permissionLost, syncData.value?.sitemapStatus, syncData.value?.indexingStatus, syncData.value?.hold] as const, ([phase, permissionLost, sitemapStatus, indexingStatus, hold]) => {
+      // A held Site does not import, so a fast poll would never see progress.
+      // Only a pending size measurement can clear on its own; check it slowly.
+      if (hold === 'size_pending')
+        startPolling(POLL_INTERVAL_SLOW)
+      else if (hold)
+        stopPolling()
+      else if (phase === 'preparing' || phase === 'syncing' || phase === 'indexing' || sitemapStatus === 'discovering' || sitemapStatus === 'syncing' || indexingStatus === 'discovering' || indexingStatus === 'checking' || indexingStatus === 'waiting_for_sitemaps')
         startPolling(POLL_INTERVAL_SYNCING)
       else if (permissionLost)
-        startPolling(POLL_INTERVAL_PERMISSION_LOST)
+        startPolling(POLL_INTERVAL_SLOW)
       else
         stopPolling()
     })
@@ -262,6 +273,10 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
 
   const isPermissionLost = computed(() => !!data.value?.permissionLost)
 
+  // Read live from the lifecycle on every refresh, like the sync status. A
+  // held Site is waiting, not failing, so it has its own notice.
+  const hold = computed<SiteHoldReason | null>(() => syncData.value?.hold ?? null)
+
   const isProcessing = computed(() => {
     if (!data.value?.connected)
       return false
@@ -316,6 +331,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
     isNotConnected,
     isTokenRevoked,
     isPermissionLost,
+    hold,
     isTokenExpiring: computed(() => false),
     isProcessing,
     isReady,

@@ -1,3 +1,4 @@
+import type { EntitlementRefusal } from '@gscdump/contracts'
 import type { GscdumpAvailableSite } from './gscdump-client'
 import { eq } from 'drizzle-orm'
 import { isVerifiedGscPermission, matchGscSite, normalizeRegistrationTarget, pickBestGscProperty } from 'gscdump'
@@ -8,10 +9,21 @@ import { getGscdumpWebhookUrl } from './gscdump-origin'
 import { updateOnboardingState } from './onboarding'
 
 /**
+ * The outcome of one auto-link attempt.
+ *
+ * `Refused` is gscdump declining to register the Site: a full Free allowance,
+ * or a property that is already a Site of the same owner. The Site stays
+ * connected locally without Search Console, and the refusal travels up so a
+ * caller that answers a person can say why.
+ */
+export type AutoLinkResult
+  = | { _tag: 'Linked', gscdumpSiteId: string }
+    | { _tag: 'NotLinked' }
+    | { _tag: 'Refused', refusal: EntitlementRefusal }
+
+/**
  * Auto-link a site to its matching GSC property via gscdump.
  * Finds the matching GSC property, registers if needed, and updates the site row.
- *
- * Returns the gscdumpSiteId if linked, or undefined.
  */
 export async function autoLinkGsc(opts: {
   db: ReturnType<typeof useDrizzle>
@@ -21,14 +33,14 @@ export async function autoLinkGsc(opts: {
   preferredSiteUrl?: string
   /** Pre-fetched available sites (for bulk operations) */
   availableSites?: GscdumpAvailableSite[]
-}): Promise<string | undefined> {
+}): Promise<AutoLinkResult> {
   const { db, gscdumpUserId, siteId, origin } = opts
   const gscdump = useGscdumpClient()
 
   // Idempotency guard: return early if already linked
   const [existing] = await db.select({ gscdumpSiteId: sites.gscdumpSiteId }).from(sites).where(eq(sites.id, siteId))
   if (existing?.gscdumpSiteId)
-    return existing.gscdumpSiteId
+    return { _tag: 'Linked', gscdumpSiteId: existing.gscdumpSiteId }
 
   await gscdump.waitForUserReady(gscdumpUserId).catch((err) => {
     logWarn('auth.optional_probe_failed', err, { stage: 'autoLinkGsc_user_not_ready', gscdumpUserId })
@@ -43,7 +55,7 @@ export async function autoLinkGsc(opts: {
     })
 
   if (!availableSites)
-    return undefined
+    return { _tag: 'NotLinked' }
 
   // Prefer a verified property. Google returns the Domain property first in
   // most accounts, so a naive `.find()` picks `sc-domain:X` even when the user
@@ -53,7 +65,7 @@ export async function autoLinkGsc(opts: {
     ? availableSites.find(p => p.siteUrl === opts.preferredSiteUrl && matchGscSite(origin, p.siteUrl))
     : pickBestGscProperty(origin, availableSites)
   if (!matchingGsc)
-    return undefined
+    return { _tag: 'NotLinked' }
 
   if (!isVerifiedGscPermission(matchingGsc.permissionLevel)) {
     // Only unverified matches exist. Skip auto-link rather than register a
@@ -61,12 +73,12 @@ export async function autoLinkGsc(opts: {
     // section of the dashboard and can verify it or request access.
     // dev observability: surfaces unverified-match skips
     console.warn('[autoLinkGsc] skipping unverified match for', origin, '-', matchingGsc.siteUrl, matchingGsc.permissionLevel)
-    return undefined
+    return { _tag: 'NotLinked' }
   }
 
   const simpleDomain = normalizeRegistrationTarget(origin)
   if (!simpleDomain)
-    return undefined
+    return { _tag: 'NotLinked' }
   let gscdumpSiteId: string | undefined
   let gscdumpSiteUrl: string | undefined
 
@@ -85,8 +97,10 @@ export async function autoLinkGsc(opts: {
       return null
     })
 
-    if (result) {
-      gscdumpSiteId = result.siteId
+    if (result?._tag === 'Refused')
+      return { _tag: 'Refused', refusal: result.refusal }
+    if (result?._tag === 'Registered') {
+      gscdumpSiteId = result.registration.siteId
       gscdumpSiteUrl = simpleDomain
     }
   }
@@ -107,5 +121,5 @@ export async function autoLinkGsc(opts: {
     }
   }
 
-  return gscdumpSiteId
+  return gscdumpSiteId ? { _tag: 'Linked', gscdumpSiteId } : { _tag: 'NotLinked' }
 }

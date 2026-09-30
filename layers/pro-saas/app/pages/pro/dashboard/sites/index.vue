@@ -1,7 +1,9 @@
 <script lang="ts" setup>
+import type { SiteHoldReason } from '@gscdump/contracts'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { SiteFleetRow } from '~~/layers/core/app/types'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
+import { HELD_LABEL, holdMessage } from '#layers/pro-gsc/shared/entitlement-copy'
 import ProAbilityGate from '#layers/pro-saas/app/components/pro/team/ProAbilityGate.vue'
 
 // The Site roster, ported from nuxtseo.com's `sites/index.vue` and cut to what
@@ -25,6 +27,8 @@ interface SiteRow {
   url: string
   property: string
   syncLabel: string
+  /** gscdump holds the Site before its first import; the sync label does not apply. */
+  hold: SiteHoldReason | null
   to: string
 }
 
@@ -42,6 +46,7 @@ const rows = computed<SiteRow[]>(() => (data.value?.sites ?? []).map(site => ({
   url: siteLabel(site),
   property: site.property,
   syncLabel: SYNC_LABELS[site.syncStatus],
+  hold: site.hold,
   to: `/pro/dashboard/sites/${site.siteId}`,
 })))
 
@@ -174,7 +179,10 @@ async function removeSite() {
             <span class="block truncate font-mono text-xs text-muted">{{ row.property }}</span>
           </UiTableTd>
           <UiTableTd>
-            <span class="text-sm">{{ row.syncLabel }}</span>
+            <UTooltip v-if="row.hold" :text="holdMessage(row.hold)">
+              <UBadge color="warning" variant="subtle" :label="HELD_LABEL" />
+            </UTooltip>
+            <span v-else class="text-sm">{{ row.syncLabel }}</span>
           </UiTableTd>
           <UiTableTd>
             <UDropdownMenu :items="rowMenuItems(row)" :content="{ align: 'end', sideOffset: 6 }">
@@ -188,7 +196,10 @@ async function removeSite() {
         <li v-for="row in rows" :key="row.siteId" class="flex min-h-16 items-center gap-2 px-4 py-3">
           <NuxtLink :to="row.to" class="min-w-0 flex-1">
             <ProSiteIdentity :url="row.url" :size="18" />
-            <span class="mt-1 block pl-7 text-xs text-muted">{{ row.syncLabel }}</span>
+            <span v-if="row.hold" class="mt-1 block pl-7 text-xs text-muted">
+              <UBadge color="warning" variant="subtle" size="sm" :label="HELD_LABEL" class="mr-1" />{{ holdMessage(row.hold) }}
+            </span>
+            <span v-else class="mt-1 block pl-7 text-xs text-muted">{{ row.syncLabel }}</span>
           </NuxtLink>
           <UDropdownMenu :items="rowMenuItems(row)" :content="{ align: 'end', sideOffset: 6 }">
             <UiButton purpose="quiet" icon="more-horizontal" class="min-h-11 min-w-11" :aria-label="`Actions for ${row.label}`" />
