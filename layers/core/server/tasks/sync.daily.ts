@@ -26,10 +26,10 @@ export default defineTask({
     for (const site of validSites) {
       await batchJobs(db, env, {
         name: 'site/sync',
-        siteId: site.id,
+        siteId: site.siteId,
         onFinish: {
           name: 'sites/sync-finished',
-          payload: { siteId: site.id },
+          payload: { siteId: site.siteId },
         },
       }, [])
     }
