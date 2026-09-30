@@ -7,6 +7,7 @@ import {
   breakdownRequest,
   dailyReportRequest,
   entityDailySeriesRequest,
+  periodCountInput,
   siteDailySeriesRequest,
 } from './analytics-requests'
 
@@ -25,6 +26,7 @@ type Read
 // passes. A new read belongs in this table.
 const READS: Array<[string, () => Read]> = [
   ['Overview query lead list', () => ({ kind: 'list', body: breakdownRequest({ searchType: SLICE, dimension: 'queryCanonical', range: RANGE, comparisonRange: PREVIOUS, facets: BRAND, orderBy: { column: 'clicks', dir: 'desc' }, rowLimit: 5, startRow: 0 }) })],
+  ['Overview hero query count', () => ({ kind: 'list', body: breakdownRequest(periodCountInput({ searchType: SLICE, dimension: 'queryCanonical', range: RANGE, facets: BRAND })) })],
   ['Overview Growing movers', () => ({ kind: 'list', body: breakdownRequest({ searchType: SLICE, dimension: 'queryCanonical', range: RANGE, comparisonRange: PREVIOUS, orderBy: { column: 'clicks', dir: 'desc' }, rowLimit: 3, startRow: 0, moversFilter: 'improving' }) })],
   ['Queries table, searched and sorted by position', () => ({ kind: 'list', body: breakdownRequest({ searchType: SLICE, dimension: 'queryCanonical', range: RANGE, comparisonRange: PREVIOUS, search: 'nuxt', orderBy: { column: 'position', dir: 'asc' }, rowLimit: 100, startRow: 0 }) })],
   ['Keyword detail pages, pinned to one query', () => ({ kind: 'list', body: breakdownRequest({ searchType: SLICE, dimension: 'page', range: RANGE, comparisonRange: null, facets: [{ column: 'queryCanonical', op: 'eq', value: 'nuxt seo' }], orderBy: { column: 'clicks', dir: 'desc' }, rowLimit: 50 }) })],
@@ -63,6 +65,17 @@ describe('every Search Console read', () => {
     expect(body.state?.searchType).toBe(SLICE)
     if (body.comparison)
       expect(body.comparison.searchType).toBe(SLICE)
+  })
+})
+
+describe('periodCountInput', () => {
+  // A comparison read counts the full outer join of both windows, so a query
+  // seen only in the previous period would count as ranked in this one.
+  it('counts the selected period alone', () => {
+    const body = breakdownRequest(periodCountInput({ searchType: 'web', dimension: 'page', range: RANGE }))
+    const current = breakdownRequest({ searchType: 'web', dimension: 'page', range: RANGE, comparisonRange: null, orderBy: { column: 'clicks', dir: 'desc' }, rowLimit: 1 })
+    expect(body).not.toHaveProperty('comparison')
+    expect(body.state.filter).toEqual(current.state.filter)
   })
 })
 

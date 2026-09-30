@@ -30,12 +30,15 @@ export interface GscPropertiesSummary {
   stats?: GscIntegrationStats
 }
 
+// `disconnected` means no grant Search Console can use: the account never
+// granted one, or gscdump holds none although this app has one on record.
+// Connecting is the fix either way.
 export type GscIntegrationState
   = | { _tag: 'disconnected' }
     /**
      * The grant is on record but Google stopped honouring it, so every
      * collection attempt fails until the user reconnects. Distinct from
-     * `disconnected`, which means they never granted access: the fix reads
+     * `disconnected`, where no grant exists to reconnect: the fix reads
      * differently, and a retry can never clear it.
      */
     | { _tag: 'reconnect-required', reason: GscReconnectReason }
@@ -56,6 +59,12 @@ export interface GscIntegrationStateInput {
 
 const RECONNECT_STATUSES: ReadonlySet<AccountStatus> = new Set<GscReconnectReason>(['reauth_required', 'refresh_missing'])
 
+/**
+ * The gscdump account statuses that mean it holds no Google grant at all. Its
+ * lifecycle asks for a connect here, and a retry can never clear them.
+ */
+const NOT_CONNECTED_STATUSES: ReadonlySet<AccountStatus> = new Set<AccountStatus>(['disconnected', 'oauth_received'])
+
 function isReconnectReason(status: AccountStatus | null): status is GscReconnectReason {
   return !!status && RECONNECT_STATUSES.has(status)
 }
@@ -68,6 +77,9 @@ const PAYLOAD_RECONNECT_REASONS: Readonly<Record<string, GscReconnectReason>> = 
   AUTH_EXPIRED: 'reauth_required',
   MISSING_REFRESH_TOKEN: 'refresh_missing',
 }
+
+/** The reason code the same read gives for `NOT_CONNECTED_STATUSES`. */
+const PAYLOAD_NOT_CONNECTED_REASON = 'GSCDUMP_NOT_CONNECTED'
 
 function resolvedStats(data: GscPropertiesSummary): GscIntegrationStats {
   if (data.stats)
@@ -91,6 +103,8 @@ export function projectGscIntegrationState(input: GscIntegrationStateInput): Gsc
   // the user is invited to retry.
   if (isReconnectReason(input.accountStatus))
     return { _tag: 'reconnect-required', reason: input.accountStatus }
+  if (input.accountStatus && NOT_CONNECTED_STATUSES.has(input.accountStatus))
+    return { _tag: 'disconnected' }
 
   if (input.queryStatus === 'error' || input.queryErrorMessage) {
     return {
@@ -103,6 +117,8 @@ export function projectGscIntegrationState(input: GscIntegrationStateInput): Gsc
     const reconnect = PAYLOAD_RECONNECT_REASONS[input.data.error.reason]
     if (reconnect)
       return { _tag: 'reconnect-required', reason: reconnect }
+    if (input.data.error.reason === PAYLOAD_NOT_CONNECTED_REASON)
+      return { _tag: 'disconnected' }
     return {
       _tag: 'payload-error',
       reason: input.data.error.reason,

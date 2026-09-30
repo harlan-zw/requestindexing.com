@@ -7,6 +7,7 @@ import { useRoute } from 'nuxt/app'
 import { computed, h, watchEffect } from 'vue'
 import { UiProgressPercent } from '#components'
 import { deriveUrlBrandKeywords } from '../../../../shared/brand-queries'
+import { canonicalQueryKey } from '../../../../shared/canonical-query'
 import { isBrandTerm } from '../../../../shared/query-display'
 import { tableAvailability } from '../../../../shared/table-availability'
 import ProGscTableShell from '../../../components/pro/ProGscTableShell.vue'
@@ -152,7 +153,15 @@ function rowQuery(r: GscdumpDataRow): string {
   return r.queryCanonical || r.query || ''
 }
 
-const queryKeys = computed(() => rows.value.map(rowQuery).filter(Boolean))
+// What the sparkline, variant and top page reads filter on. A canonical row's
+// `queryCanonical` is the display label the report wrote over the clustering
+// key, and filtering on it matches nothing when the two differ. A raw query
+// row, on a page-filtered table, is its own key.
+function rowKey(r: GscdumpDataRow): string {
+  return canonicalQueryKey(r) || r.query || ''
+}
+
+const queryKeys = computed(() => rows.value.map(rowKey).filter(Boolean))
 
 // The variant badge resolves the raw queries folded into a canonical when its
 // popover opens, so a table of 25 rows costs nothing until one is asked about.
@@ -200,23 +209,25 @@ const columns = computed<UiTableColumn<KeywordTableRow>[]>(() => {
       cell: ({ row }: CellContext<UiTableFeatures, KeywordTableRow, unknown>) => {
         const r = row.original
         const query = rowQuery(r)
+        const key = rowKey(r)
+        const loadedVariants = queryVariants.variantsFor(key)
         return h('div', { class: 'flex items-center gap-3 min-w-0' }, [
           h('div', { class: 'relative min-w-0 flex-1' }, [
             h(UiProgressPercent, { value: r.clicks, total: data.value?.totalClicks }, () => [
               h(ProQueryLabel, {
                 keyword: query,
-                queryCanonical: r.queryCanonical,
+                queryCanonical: key,
                 variantCount: r.variantCount,
-                variants: queryVariants.variantsFor(query) ?? r.variants,
-                variantsLoading: queryVariants.loadingFor(query),
+                variants: loadedVariants?.length ? loadedVariants : r.variants,
+                variantsLoading: queryVariants.loadingFor(key),
                 brand: isBrandKeyword(query),
                 to: `/pro/dashboard/sites/${linkSiteId.value}/search-console/queries/${encodeURIComponent(query)}`,
-                onVariantOpen: () => queryVariants.open(query),
+                onVariantOpen: () => queryVariants.open(key),
               }, () => newBadge(r)),
             ]),
           ]),
           h(ProSparklineCell, {
-            data: sparklines.map.value.get(query) ?? null,
+            data: sparklines.map.value.get(key) ?? null,
             pending: sparklines.pending.value,
             error: !!sparklines.error.value,
             dates: sparklines.dates.value,
@@ -246,7 +257,7 @@ const columns = computed<UiTableColumn<KeywordTableRow>[]>(() => {
           return dash()
         return h(ProTopPageCell, {
           siteId,
-          page: topPages.map.value.get(rowQuery(row.original)) ?? null,
+          page: topPages.map.value.get(rowKey(row.original)) ?? null,
           pending: topPages.pending.value,
         })
       },

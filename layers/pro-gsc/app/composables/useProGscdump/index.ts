@@ -30,6 +30,7 @@ export {
   useProGscdumpIndexingUrls,
   useProGscdumpInspectUrls,
 } from './useProGscdumpIndexing'
+export { useProGscdumpPeriodCount, type UseProGscdumpPeriodCountOptions } from './useProGscdumpPeriodCount'
 export { useProGscdumpSitemapChanges, useProGscdumpSitemaps } from './useProGscdumpSitemaps'
 export {
   type Dimension,

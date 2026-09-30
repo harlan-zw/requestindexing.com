@@ -31,7 +31,7 @@ const {
 } = defineProps<{
   /** Display name (top variant) */
   keyword: string
-  /** Canonical form for linking */
+  /** Clustering key the `variantOpen` and `positionOpen` payloads carry. Not the display label. */
   queryCanonical?: string | null
   /** Number of grouped variants */
   variantCount?: number | null

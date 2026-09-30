@@ -47,6 +47,25 @@ describe('projectGscIntegrationState', () => {
     expect(state).toEqual({ _tag: 'reconnect-required', reason: status })
   })
 
+  // gscdump holds no grant it can use, although this app has one on record.
+  // A retry cannot fix that; connecting again is the only exit.
+  it.each(['disconnected', 'oauth_received'] as const)(
+    'offers a connect when gscdump reports %s',
+    (status) => {
+      expect(projectGscIntegrationState({ ...connected, accountStatus: status, queryStatus: 'pending' }))
+        .toEqual({ _tag: 'disconnected' })
+    },
+  )
+
+  it('offers a connect when a fresh read reports GSCDUMP_NOT_CONNECTED behind a stale session', () => {
+    const state = projectGscIntegrationState({
+      ...connected,
+      queryStatus: 'success',
+      data: { connected: true, properties: [], error: { reason: 'GSCDUMP_NOT_CONNECTED', message: 'Please reconnect your Google account.' } },
+    })
+    expect(state).toEqual({ _tag: 'disconnected' })
+  })
+
   it('leaves a missing Search Console scope to the scope alert', () => {
     const state = projectGscIntegrationState({
       ...connected,

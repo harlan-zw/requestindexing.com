@@ -51,11 +51,6 @@ export interface ProGscdumpTableOptions<T = GscdumpDataRow> {
    */
   loadMore?: boolean
   /**
-   * Report the distinct group count without entering load-more accumulation.
-   * Lets a single-page overview list show the true total.
-   */
-  includeTotal?: boolean
-  /**
    * Seed the initial preset filter from the `?filter=` query param, for the
    * overview's "View all" mover deep links. Read once at construction.
    */
@@ -95,7 +90,6 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
     pageSize = 50,
     defaultSort,
     loadMore = false,
-    includeTotal = false,
   } = options
 
   const _siteId = computed(() => toValue(options.siteId) ?? '')
@@ -217,9 +211,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
 
     return {
       rows,
-      total: (loadMore || includeTotal)
-        ? (result.totalCount || zeroFilteredCount)
-        : zeroFilteredCount,
+      total: loadMore ? (result.totalCount || zeroFilteredCount) : zeroFilteredCount,
       totalClicks,
       totalImpressions,
       hasPrevData,

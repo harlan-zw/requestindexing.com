@@ -10,6 +10,7 @@ import { periodToDateRange } from '#layers/pro-gsc/app/composables/useGscPeriod'
 import {
   useProEntitySparklines,
   useProGscdumpDates,
+  useProGscdumpPeriodCount,
   useProGscdumpTableData,
   useProGscQueryVariants,
   useProQueryPositionSparklines,
@@ -17,6 +18,7 @@ import {
 import { buildBrandFacet, buildQuestionFacet, useProGscFilters } from '#layers/pro-gsc/app/composables/useProGscFilters'
 import ProSparklineCell from '#layers/pro-gsc/app/internal/components/pro/ProSparklineCell.vue'
 import { deriveUrlBrandKeywords } from '#layers/pro-gsc/shared/brand-queries'
+import { canonicalQueryKey } from '#layers/pro-gsc/shared/canonical-query'
 import { HELD_TITLE, holdMessage } from '#layers/pro-gsc/shared/entitlement-copy'
 import { overviewLead } from '#layers/pro-gsc/shared/overview-lead'
 import { isBrandTerm } from '#layers/pro-gsc/shared/query-display'
@@ -130,10 +132,9 @@ const primaryMetric = computed(() => lead.value.metric)
 const MOVER_ROWS = 3
 
 // ── Search Queries: a lead list plus the Growing and Declining movers ───────
-// `includeTotal` rides the lead list's own fetch, which feeds the hero's
-// "Queries ranked" count with no second query. New and Lost rankings live on
-// the Queries tab as filter chips; the lead list's "View all" is the doorway.
-const { rows: keywordRows, isLoading: keywordsLoading, totalRows: keywordTotalRows, setSort: setKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
+// New and Lost rankings live on the Queries tab as filter chips; the lead
+// list's "View all" is the doorway.
+const { rows: keywordRows, isLoading: keywordsLoading, setSort: setKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
   siteId: computed(() => gscdumpSiteId.value ?? undefined),
   dimension: 'queryCanonical',
   period,
@@ -141,7 +142,6 @@ const { rows: keywordRows, isLoading: keywordsLoading, totalRows: keywordTotalRo
   compareMode,
   facets: queryFacets,
   pageSize: 5,
-  includeTotal: true,
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
@@ -179,14 +179,13 @@ const queryMovers = computed(() => [
 // ── Pages: the lead list only ───────────────────────────────────────────────
 // Queries are the diagnosis; pages are where it landed. The page movers sit one
 // click away on the Pages tab, where Improving and Declining are filter chips.
-const { rows: pageRows, isLoading: pagesLoading, totalRows: pageTotalRows, setSort: setPageSort } = useProGscdumpTableData<GscdumpDataRow>({
+const { rows: pageRows, isLoading: pagesLoading, setSort: setPageSort } = useProGscdumpTableData<GscdumpDataRow>({
   siteId: computed(() => gscdumpSiteId.value ?? undefined),
   dimension: 'page',
   period,
   stableData,
   compareMode,
   pageSize: 5,
-  includeTotal: true,
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
@@ -211,14 +210,19 @@ const { rows: deviceRows, isLoading: devicesLoading } = useProGscdumpTableData<G
   defaultSort: { column: 'impressions', direction: 'desc' },
 })
 
-// A canonical row carries only the variant count. The raw queries behind it
-// are a second read, fired when the variant popover opens.
+// Every follow-up read below filters on the row's clustering key. The report
+// writes the group's top raw variant over `queryCanonical`, and that label
+// matches nothing for a term whose label and key differ.
+//
+// The raw queries behind a canonical row are a second read, fired when the
+// variant popover opens. The row's own variants stand in until it answers.
 const queryVariants = useProGscQueryVariants({ siteId: gscdumpSiteId, period, stableData, compareMode })
 function variantsFor(row: GscdumpDataRow): Array<{ query: string, clicks: number, impressions: number, position: number }> {
-  return queryVariants.variantsFor(row.queryCanonical) ?? normalizedVariants(row)
+  const loaded = queryVariants.variantsFor(canonicalQueryKey(row))
+  return loaded?.length ? loaded : normalizedVariants(row)
 }
 function variantsLoadingFor(row: GscdumpDataRow): boolean {
-  return queryVariants.loadingFor(row.queryCanonical)
+  return queryVariants.loadingFor(canonicalQueryKey(row))
 }
 
 const sparkMetric = computed(() => primaryMetric.value === 'clicks' ? 'clicks' : 'impressions')
@@ -229,7 +233,7 @@ const querySparklines = useProEntitySparklines({
   dimension: 'queryCanonical',
   metric: sparkMetric,
   facets: queryFacets,
-  keys: computed(() => [...keywordRows.value, ...improvingKeywordRows.value, ...decliningKeywordRows.value].map(row => row.queryCanonical).filter((key): key is string => !!key)),
+  keys: computed(() => [...keywordRows.value, ...improvingKeywordRows.value, ...decliningKeywordRows.value].map(canonicalQueryKey).filter(Boolean)),
 })
 const pageSparklines = useProEntitySparklines({
   gscdumpSiteId,
@@ -258,8 +262,11 @@ const topLabel = computed(() => {
 })
 
 // Hero tail: "across how much surface" beside "how much traffic". Counts, not
-// chart series, and both ride the lead lists' `includeTotal`. No delta: the
-// comparison window's distinct count is not fetched.
+// chart series. Each is its own one-period read: the lead lists compare, and a
+// compared read counts every row either window has. No delta: the comparison
+// window's distinct count is not fetched.
+const queryCount = useProGscdumpPeriodCount({ siteId: gscdumpSiteId, dimension: 'queryCanonical', period, stableData, facets: queryFacets })
+const pageCount = useProGscdumpPeriodCount({ siteId: gscdumpSiteId, dimension: 'page', period, stableData })
 const heroEntityCounts = computed(() => [
   {
     key: 'queries',
@@ -267,8 +274,8 @@ const heroEntityCounts = computed(() => [
     title: 'Queries ranked',
     description: 'Distinct search queries this site ranked for in the selected period. Variants are grouped, so this counts canonical terms.',
     icon: 'search',
-    value: keywordTotalRows.value,
-    loading: siteLoading.value || keywordsLoading.value,
+    value: queryCount.count.value,
+    loading: siteLoading.value || queryCount.isLoading.value,
   },
   {
     key: 'pages',
@@ -276,8 +283,8 @@ const heroEntityCounts = computed(() => [
     title: 'Pages ranked',
     description: 'Distinct pages of this site that appeared in Google Search results in the selected period.',
     icon: 'file',
-    value: pageTotalRows.value,
-    loading: siteLoading.value || pagesLoading.value,
+    value: pageCount.count.value,
+    loading: siteLoading.value || pageCount.isLoading.value,
   },
 ])
 
@@ -495,23 +502,23 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               <template #default="{ item: row }">
                 <ProQueryLabel
                   :keyword="row.queryCanonical!"
-                  :query-canonical="row.queryCanonical"
+                  :query-canonical="canonicalQueryKey(row)"
                   :variant-count="row.variantCount"
                   :variants="variantsFor(row)"
                   :variants-loading="variantsLoadingFor(row)"
                   :position="bestPosition(row)"
                   :previous-position="row.prevPosition"
                   :impressions="row.impressions"
-                  :position-series="positionSparklines.seriesFor(row.queryCanonical)"
-                  :position-series-dates="positionSparklines.datesFor(row.queryCanonical)"
-                  :position-series-loading="positionSparklines.loadingFor(row.queryCanonical)"
+                  :position-series="positionSparklines.seriesFor(canonicalQueryKey(row))"
+                  :position-series-dates="positionSparklines.datesFor(canonicalQueryKey(row))"
+                  :position-series-loading="positionSparklines.loadingFor(canonicalQueryKey(row))"
                   :brand="isBrandKeyword(row.queryCanonical)"
                   :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}`"
-                  @variant-open="queryVariants.open(row.queryCanonical ?? '')"
-                  @position-open="positionSparklines.open(row.queryCanonical ?? '')"
+                  @variant-open="queryVariants.open(canonicalQueryKey(row))"
+                  @position-open="positionSparklines.open(canonicalQueryKey(row))"
                 />
                 <ProSparklineCell
-                  :data="querySparklines.map.value.get(row.queryCanonical ?? '') ?? null"
+                  :data="querySparklines.map.value.get(canonicalQueryKey(row)) ?? null"
                   :pending="querySparklines.pending.value"
                   :error="!!querySparklines.error.value"
                   :dates="querySparklines.dates.value"
@@ -563,23 +570,23 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               <template #default="{ item: row }">
                 <ProQueryLabel
                   :keyword="row.queryCanonical!"
-                  :query-canonical="row.queryCanonical"
+                  :query-canonical="canonicalQueryKey(row)"
                   :variant-count="row.variantCount"
                   :variants="variantsFor(row)"
                   :variants-loading="variantsLoadingFor(row)"
                   :position="bestPosition(row)"
                   :previous-position="row.prevPosition"
                   :impressions="row.impressions"
-                  :position-series="positionSparklines.seriesFor(row.queryCanonical)"
-                  :position-series-dates="positionSparklines.datesFor(row.queryCanonical)"
-                  :position-series-loading="positionSparklines.loadingFor(row.queryCanonical)"
+                  :position-series="positionSparklines.seriesFor(canonicalQueryKey(row))"
+                  :position-series-dates="positionSparklines.datesFor(canonicalQueryKey(row))"
+                  :position-series-loading="positionSparklines.loadingFor(canonicalQueryKey(row))"
                   :brand="isBrandKeyword(row.queryCanonical)"
                   :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}`"
-                  @variant-open="queryVariants.open(row.queryCanonical ?? '')"
-                  @position-open="positionSparklines.open(row.queryCanonical ?? '')"
+                  @variant-open="queryVariants.open(canonicalQueryKey(row))"
+                  @position-open="positionSparklines.open(canonicalQueryKey(row))"
                 />
                 <ProSparklineCell
-                  :data="querySparklines.map.value.get(row.queryCanonical ?? '') ?? null"
+                  :data="querySparklines.map.value.get(canonicalQueryKey(row)) ?? null"
                   :pending="querySparklines.pending.value"
                   :error="!!querySparklines.error.value"
                   :dates="querySparklines.dates.value"

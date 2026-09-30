@@ -1,11 +1,12 @@
 import type { Metric } from 'gscdump/query'
 import type { MaybeRefOrGetter, Ref } from 'vue'
-import type { TopEntityDayRow, TopEntityStackResult } from '~~/layers/design-system/app/utils/topEntityStack'
+import type { TopEntityStackResult } from '~~/layers/design-system/app/utils/topEntityStack'
 import type { GscFacet } from '../../../shared/utils/gsc-facets'
 import { onScopeDispose, ref, shallowRef, toValue, watch } from 'vue'
 import { bucketTopEntities } from '~~/layers/design-system/app/utils/topEntityStack'
 import { breakdownRequest, entityDailySeriesRequest, siteDailySeriesRequest } from '../../../shared/analytics-requests'
 import { isSearchOperatorQuery } from '../../../shared/search-operator-queries'
+import { rankTrendEntities, trendDayRows } from '../../../shared/top-entity-trend'
 import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdump } from './useProGscdump'
 
@@ -118,26 +119,14 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
       return
     }
 
-    const rankTotals = new Map<string, number>()
-    for (const row of candidates) {
-      const key = String(row[dimension] ?? '')
-      if (!key || (opts.dimension === 'query' && isSearchOperatorQuery(key)))
-        continue
-      const value = Number(row[metric] ?? 0) || 0
-      // The breakdown orders by the metric but never filters on it, so a site
-      // with almost no clicks ranks zero-click queries as its top queries and
-      // every named band is flat. A zero-valued candidate is not a top entity.
-      if (value <= 0 && (metric === 'clicks' || metric === 'impressions'))
-        continue
-      rankTotals.set(key, value)
-    }
+    const entities = rankTrendEntities(candidates, {
+      dimension,
+      metric,
+      topN,
+      exclude: opts.dimension === 'query' ? isSearchOperatorQuery : undefined,
+    })
 
-    const mergedKeys = [...rankTotals.entries()]
-      .sort((a, b) => metric === 'position' ? a[1] - b[1] : b[1] - a[1])
-      .slice(0, topN)
-      .map(([key]) => key)
-
-    if (!mergedKeys.length) {
+    if (!entities.length) {
       result.value = { buckets: [], series: [] }
       pending.value = false
       return
@@ -150,7 +139,7 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
       }, true)),
       readRows(async () => gscdump.queryAnalyticsRows({
         params: { siteId },
-        body: entityDailySeriesRequest({ searchType, dimension, keys: mergedKeys, range, metric, facets }),
+        body: entityDailySeriesRequest({ searchType, dimension, keys: entities.map(entity => entity.key), range, metric, facets }),
       }, true)),
     ])
     if (current !== token || !totalRows || !entityRows) {
@@ -164,15 +153,6 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
       if (day)
         totalsByDate.set(day, Number(row[metric] ?? 0) || 0)
     }
-    const dayRows: TopEntityDayRow[] = []
-    for (const row of entityRows) {
-      const key = String(row[dimension] ?? '')
-      const day = String(row.date ?? '')
-      if (!key || !day || !mergedKeys.includes(key))
-        continue
-      dayRows.push({ date: day, key, label: key, value: Number(row[metric] ?? 0) || 0 })
-    }
-
     const dates = [...totalsByDate.keys()].sort()
     if (dates.length < 2) {
       result.value = { buckets: [], series: [] }
@@ -180,13 +160,15 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
       return
     }
 
+    // Operator strings were dropped by label before ranking, so every row here
+    // belongs to a named band. Its key is the clustering key, which is not the
+    // string an operator check should read.
     result.value = bucketTopEntities({
       dates,
-      rows: dayRows,
+      rows: trendDayRows(entityRows, { dimension, metric, entities }),
       totals: dates.map(d => totalsByDate.get(d) ?? 0),
       topN,
       maxBuckets,
-      excludeKey: opts.dimension === 'query' ? isSearchOperatorQuery : undefined,
     })
     pending.value = false
   }
