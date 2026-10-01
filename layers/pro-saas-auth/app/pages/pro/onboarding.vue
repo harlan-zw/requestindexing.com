@@ -138,7 +138,7 @@ useSeoMeta({
       </ul>
 
       <p class="mt-4 text-xs text-muted">
-        Google asks for two scopes. Your Google profile sets up the team. The Google Search Console API, read only, queries your data.
+        In setup, Google asks you for two permissions: view and manage Search Console data, and submit pages for indexing. We read your Search Console data, and the one change we make there is a sitemap submission.
       </p>
 
       <p class="mt-7 text-xs text-muted">

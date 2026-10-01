@@ -66,7 +66,7 @@ const submitAction = computed(() => resolveSubmitAction({
 
 function errorMessage(error: unknown): string {
   const e = error as { statusMessage?: string, data?: { statusMessage?: string, message?: string }, message?: string }
-  return e?.data?.statusMessage || e?.statusMessage || e?.data?.message || e?.message || 'The request could not be sent.'
+  return e?.data?.statusMessage || e?.statusMessage || e?.data?.message || e?.message || 'The URL was not submitted. Try again in a few minutes.'
 }
 
 // Submission history: the URLs Google has inspected most recently, so a reader
@@ -103,15 +103,15 @@ async function submitForIndexing() {
     }
     const message = errorMessage(result.error)
     lastSubmit.value = { _tag: 'Err', message }
-    toast.add({ title: 'Indexing request failed', description: message, color: 'error' })
+    toast.add({ title: 'Submission failed', description: message, color: 'error' })
     return
   }
 
-  const status = result.response.status === 'already-submitted'
-    ? 'Google was already told about this URL in the last 48 hours.'
-    : 'Google was told this URL changed. Indexing can still take a few days.'
-  lastSubmit.value = { _tag: 'Ok', url: target.toString(), status }
-  toast.add({ title: 'Indexing requested', description: status, color: 'success' })
+  const notice = result.response.status === 'already-submitted'
+    ? { title: 'Already submitted', status: 'Google was already told about this URL in the last 48 hours.' }
+    : { title: 'URL submitted', status: 'Google was told this URL changed. Indexing can still take a few days.' }
+  lastSubmit.value = { _tag: 'Ok', url: target.toString(), status: notice.status }
+  toast.add({ title: notice.title, description: notice.status, color: 'success' })
   void refreshHistory()
 }
 
@@ -213,7 +213,7 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
             :disabled="!url.trim() || submitAction._tag === 'Checking'"
             class="min-h-11"
           >
-            Request indexing
+            Submit URL
           </UiButton>
         </form>
 
@@ -240,7 +240,7 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
             compact
             icon="link"
             title="No indexing history yet"
-            description="Connect this site to Search Console to see whether a requested URL has been crawled."
+            description="Connect this site to Search Console to see whether Google crawled a URL you submitted."
           />
           <UiEmptyState
             v-else-if="historyError"
@@ -275,9 +275,9 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
 
         <UiCard title="How this works" variant="subtle" size="sm">
           <div class="space-y-2 text-sm text-muted">
-            <p>A request tells Google the page is new or has changed. It is not a guarantee of indexing.</p>
+            <p>A Submission tells Google that the page is new or changed. Google decides whether to index it.</p>
             <p>Indexing status comes from the Search Console URL Inspection API, re-checked on a schedule.</p>
-            <p>Requesting the same URL twice inside 48 hours does nothing, so one request is enough.</p>
+            <p>If you submit the same URL twice within 48 hours, Google gets only the first notification.</p>
           </div>
         </UiCard>
       </ProSecondaryGrid>
