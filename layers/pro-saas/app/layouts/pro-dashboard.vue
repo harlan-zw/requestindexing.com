@@ -40,12 +40,30 @@ const gscRetryTo = computed(() => {
   return router.resolve({ path: route.path, query, hash: route.hash }).fullPath
 })
 
-const { data: siteData, status: sitesStatus } = await fetchSites()
+const routeSiteId = computed(() => typeof route.params.id === 'string' ? route.params.id : null)
+
+// Site scope, nuxtseo.com's `pro-site-dashboard` shape (ADR-0012): the layout
+// is the one place that derives the Site from the route. It reads it once,
+// provides it, and owns what happens when the read does not come back.
+//
+// The roster and the Site read do not depend on each other. Awaiting them one
+// after the other added the Site read's whole round trip to every Site page
+// before it could render, so both start here and the layout waits once.
+const proFetch = useProFetch()
+const [
+  { data: siteData, status: sitesStatus },
+  { data: siteLookup, status: siteLookupStatus },
+] = await Promise.all([
+  fetchSites(),
+  useAsyncData<SiteLookup | null>(
+    () => siteLookupKey(routeSiteId.value || 'none'),
+    () => routeSiteId.value ? readSiteLookup(url => proFetch(url), routeSiteId.value) : Promise.resolve(null),
+    { watch: [routeSiteId], immediate: !!routeSiteId.value, dedupe: 'defer' },
+  ),
+])
 const sites = computed<ProNavSite[]>(() => (siteData.value?.sites ?? []) as ProNavSite[])
 const sitesLoading = computed(() => sitesStatus.value === 'pending')
 const singleSite = computed(() => sites.value.length === 1)
-
-const routeSiteId = computed(() => typeof route.params.id === 'string' ? route.params.id : null)
 
 /**
  * The Site the sidebar is scoped to, or `null` for the fleet.
@@ -66,16 +84,6 @@ const scopedSite = computed<ProNavSite | null>(() => {
 // one Site gets a way back to all of them above the Site nav. An account with
 // one Site has nowhere wider to go, so it gets none.
 const showSiteBack = computed(() => !!routeSiteId.value && !singleSite.value)
-
-// Site scope, nuxtseo.com's `pro-site-dashboard` shape (ADR-0012): the layout
-// is the one place that derives the Site from the route. It reads it once,
-// provides it, and owns what happens when the read does not come back.
-const proFetch = useProFetch()
-const { data: siteLookup, status: siteLookupStatus } = await useAsyncData<SiteLookup | null>(
-  () => siteLookupKey(routeSiteId.value || 'none'),
-  () => routeSiteId.value ? readSiteLookup(url => proFetch(url), routeSiteId.value) : Promise.resolve(null),
-  { watch: [routeSiteId], immediate: !!routeSiteId.value, dedupe: 'defer' },
-)
 
 const site = computed<SiteResource | null>(() => siteLookup.value?._tag === 'Found' ? siteLookup.value.site : null)
 const siteStatus = computed(() => {
