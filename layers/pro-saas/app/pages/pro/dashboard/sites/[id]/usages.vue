@@ -43,7 +43,7 @@ const rows = computed(() => (data.value ?? []).map(row => ({
     <!-- U2: the shell already titles this page "API Usages". -->
     <UCard>
       <div class="mb-4 text-sm text-muted">
-        API calls this site has made so far this month.
+        API calls this Site has made so far this month.
       </div>
 
       <div v-if="status === 'pending'" class="flex items-center justify-center py-8" aria-live="polite">

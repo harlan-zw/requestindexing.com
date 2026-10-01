@@ -42,7 +42,7 @@ const scatterRows = computed(() => countryRows.value.map(r => ({
   <UiAlert
     v-if="siteStatus === 'error'"
     status="error"
-    title="Failed to load site data."
+    title="Failed to load Site data."
   >
     <template #action>
       <UiButton size="xs" purpose="secondary" to="/pro/dashboard">

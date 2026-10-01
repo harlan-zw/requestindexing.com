@@ -17,6 +17,8 @@ import { useProBingIntegration } from '#layers/pro-gsc/app/composables/useProGsc
 import ProBingIntegrationCard from '#layers/pro-gsc/app/internal/components/bing/ProBingIntegrationCard.vue'
 import { bingIntegrationStatusLine } from '#layers/pro-gsc/app/utils/bing-integration-view'
 import { projectGscIntegrationState } from '#layers/pro-gsc/shared/gsc-integration-state'
+import { INTEGRATIONS_NO_PROPERTY } from '#layers/pro-gsc/shared/no-property-copy'
+import ProNoPropertyNotice from '#layers/pro-saas/app/components/pro/ProNoPropertyNotice.vue'
 import { INTEGRATIONS_ROUTE } from '#layers/pro-shell/app/utils/integrations-pending'
 
 definePageMeta({
@@ -84,7 +86,7 @@ const gscStatusLine = computed(() => {
       // Connected, with nothing to read. "0 of 0 properties synced" told the
       // reader nothing about why no data arrives.
       if (!state.stats.total)
-        return 'Connected. This Google account has no Search Console property.'
+        return INTEGRATIONS_NO_PROPERTY
       const count = state.stats.readyToSync
         ? `${state.stats.synced} of ${state.stats.total} properties synced, ${state.stats.readyToSync} ready`
         : `${state.stats.synced} of ${state.stats.total} properties synced`
@@ -99,6 +101,12 @@ const gscStatusLine = computed(() => {
       return state.message
   }
 })
+
+// The no-property state. nuxtseo.com has none: its Sites need no property.
+// The ready row there offers "Manage properties" and "Reconnect"; here, with
+// no property, both lead nowhere new, so the row offers the no-property
+// actions instead.
+const gscNoProperty = computed(() => gscState.value._tag === 'ready' && !gscState.value.stats.total)
 
 const gscFailure = computed(() => {
   const state = gscState.value
@@ -179,20 +187,16 @@ const bingActionLoading = computed(() => !!bingCard.value
             Impressions, clicks, and average position for every query and page Google serves. This is the
             data behind Search Performance and Indexing.
           </p>
-          <template v-if="gscState._tag === 'ready' && !gscState.stats.total">
-            <p class="mt-2 text-sm break-words text-muted">
-              {{ gscEmail ? `${gscEmail} has no Search Console property.` : 'This Google account has no Search Console property.' }}
-              Add your site in Search Console and verify it. If a different Google account owns the property, connect that account.
-            </p>
-            <UiButton
-              :to="gscConnectHref"
-              external
-              purpose="secondary"
-              size="xs"
-              label="Connect another Google account"
-              class="mt-2 min-h-11 sm:min-h-0"
-            />
-          </template>
+          <!-- No property: the same state and the same three actions as
+               Connect a Site. Its grant control is the only one in the row,
+               so "Reconnect" never sits beside a second label for the same
+               round trip (2026-10-01 replay, N9). -->
+          <ProNoPropertyNotice
+            v-if="gscNoProperty"
+            class="mt-3"
+            :email="gscEmail"
+            :gsc-return-to="INTEGRATIONS_ROUTE"
+          />
           <p v-else-if="gscState._tag === 'ready' && gscEmail" class="mt-2 text-sm break-words text-muted">
             {{ gscEmail }} grants access to your properties.
           </p>
@@ -218,7 +222,7 @@ const bingActionLoading = computed(() => !!bingCard.value
               <UiButton v-else purpose="secondary" size="xs" icon="refresh" label="Retry" class="min-h-11 sm:min-h-0" @click="refreshGsc()" />
             </template>
           </UiAlert>
-          <div v-if="gscState._tag === 'ready'" class="mt-3 flex flex-wrap gap-2">
+          <div v-if="gscState._tag === 'ready' && !gscNoProperty" class="mt-3 flex flex-wrap gap-2">
             <UiButton
               to="/pro/dashboard/sites"
               size="xs"

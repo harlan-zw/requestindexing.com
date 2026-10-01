@@ -271,7 +271,7 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
           <UCheckbox v-model="intentConfirmed" label="I will submit only pages I own that are new or changed." />
         </div>
         <p v-else-if="engineId && canWrite" class="mt-3 text-sm text-muted">
-          {{ submissionsLeft }} of {{ GOOGLE_SUBMISSION_SITE_DAILY_LIMIT }} Google Submissions left today for this site.
+          {{ submissionsLeft }} of {{ GOOGLE_SUBMISSION_SITE_DAILY_LIMIT }} Google Submissions left today for this Site.
         </p>
         <p v-else-if="engineId" class="mt-3 text-sm text-muted">
           Your Team role allows viewing only.
@@ -326,7 +326,7 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
             compact
             icon="link"
             title="No indexing history yet"
-            description="Connect this site to Search Console to see whether Google crawled a URL you submitted."
+            description="Connect this Site to Search Console to see whether Google crawled a URL you submitted."
           />
           <UiEmptyState
             v-else-if="historyError"
@@ -363,7 +363,7 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
           <div class="space-y-2 text-sm text-muted">
             <p>A Submission tells Google that the page is new or changed. Google decides whether to index it.</p>
             <p>Indexing status comes from the Search Console URL Inspection API, re-checked on a schedule.</p>
-            <p>Each site can send {{ GOOGLE_SUBMISSION_SITE_DAILY_LIMIT }} Submissions a day. After Google accepts a URL, you can submit it again after 7 days.</p>
+            <p>Each Site can send {{ GOOGLE_SUBMISSION_SITE_DAILY_LIMIT }} Submissions a day. After Google accepts a URL, you can submit it again after 7 days.</p>
           </div>
         </UiCard>
       </ProSecondaryGrid>

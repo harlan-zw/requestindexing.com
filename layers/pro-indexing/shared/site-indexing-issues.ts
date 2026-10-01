@@ -89,7 +89,7 @@ export function describeEmptyIndexingBreakdown(
   summary: SiteIndexingIssueSummary | null | undefined,
 ): string {
   if (!point || !hasIndexingCoverageObservation(summary))
-    return 'Google has not reported coverage for this site yet. The breakdown appears after the first Search Console sync.'
+    return 'Google has not reported coverage for this Site yet. The breakdown appears after the first Search Console sync.'
 
   const unindexed = Math.max(0, summary.totalUrls - summary.indexed)
   if (unindexed === 0)

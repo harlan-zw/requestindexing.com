@@ -205,6 +205,14 @@ A Site connects only from a verified Search Console property in the reader's own
 `{domain}` is the address the reader chose. `{email}` is the Google account of the Search Console grant.
 `layers/pro-gsc/shared/site-property.ts` holds the refusals; `ProSiteAddForm.vue` holds the list states.
 
+These surfaces show the no-property state, each with the same title and the same three actions:
+
+- the property list
+- the Dashboard, Indexing, Manage Sites, and Developers, when no Site is connected
+- the Search Console row on Integrations
+
+`layers/pro-gsc/shared/no-property-copy.ts` holds the no-property strings.
+
 | Asset | String |
 | --- | --- |
 | Step and page description | Choose a property from your Search Console. Request Indexing reads each Site from its property. |
@@ -213,6 +221,7 @@ A Site connects only from a verified Search Console property in the reader's own
 | No Google connection | Request Indexing lists your Search Console properties here after you connect Google. |
 | No property, title | {email} has no Search Console property |
 | No property, detail | Add your site in Search Console and verify it, then refresh this list. If a different Google account owns the property, connect that account. |
+| No property, detail outside the list | Add your site in Search Console and verify it. If a different Google account owns the property, connect that account. |
 | No property, actions | Open Search Console · Connect another Google account · How to verify a site |
 | Every property connected | Every property in this Google account is already connected. Add another site in Search Console, then refresh this list. |
 | Unverified property | Not verified for this Google account. Verify it in Search Console, then refresh this list. |

@@ -6,6 +6,8 @@ import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { agentPromptGate } from '#layers/pro-gsc/shared/agent-prompt-site'
 import { DEVELOPER_API_KEY_LABEL_MAX } from '#layers/pro-gsc/shared/developer-api-keys'
 import { buildAgentSetupPrompt, buildSetupSteps, presentApiKey } from '#layers/pro-gsc/shared/developer-setup'
+import ProNoPropertyNotice from '#layers/pro-saas/app/components/pro/ProNoPropertyNotice.vue'
+import { useNoSearchConsoleProperty } from '#layers/pro-saas/app/composables/useNoSearchConsoleProperty'
 import { CONNECT_SITE_ROUTE } from '#layers/pro-saas/shared/onboarding'
 
 // Ported from nuxtseo.com's `developers/index.vue` and `DevApiTokenCreate.vue`.
@@ -101,6 +103,11 @@ const promptGate = computed(() => agentPromptGate({
   gscConnected: !!session.value?.gscConnected,
   sites: sitesData.value?.sites ?? [],
 }))
+
+// No Site, and a Google account with no Search Console property: the prompt
+// waits on a Site that cannot connect yet, so the page names the cause
+// instead of Connect a Site (2026-10-01 replay, N6).
+const noProperty = useNoSearchConsoleProperty(() => promptGate.value._tag === 'SiteRequired' && !sitesData.value?.sites.length)
 
 // The newest raw key this visit created, from the form or from the agent setup
 // prompt. It lives only in this ref. The manual steps read only this ref: the
@@ -388,7 +395,10 @@ async function copyAgentSetupPrompt() {
         Every option reads the same data.
       </p>
 
-      <div class="mt-4 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Setup method">
+      <!-- nuxtseo.com scrolls these sideways. At 390px that clipped the
+           third card off screen (2026-10-01 replay, N11), so below sm they
+           stack and nothing scrolls sideways. -->
+      <div class="mt-4 grid gap-2 sm:grid-cols-3" role="tablist" aria-label="Setup method">
         <button
           v-for="method in setupMethods"
           :id="`setup-${method.id}`"
@@ -397,7 +407,7 @@ async function copyAgentSetupPrompt() {
           role="tab"
           :aria-selected="setupMethod === method.id"
           aria-controls="setup-quick-start"
-          class="relative min-h-24 min-w-44 flex-1 cursor-pointer rounded-xl border p-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary"
+          class="relative min-h-24 min-w-0 cursor-pointer rounded-xl border p-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary"
           :class="setupMethod === method.id ? 'border-accented bg-elevated text-highlighted' : 'border-default bg-default text-muted hover:border-accented hover:text-default'"
           @click="selectSetupMethod(method.id)"
         >
@@ -459,6 +469,12 @@ async function copyAgentSetupPrompt() {
         >
           <ConnectSearchConsoleButton />
         </UiEmptyState>
+        <div
+          v-else-if="keysState?._tag === 'Ready' && noProperty"
+          class="mt-3 rounded-lg border border-dashed border-default p-4"
+        >
+          <ProNoPropertyNotice :email="session?.gscEmail ?? null" gsc-return-to="/pro/dashboard/developers" />
+        </div>
         <UiEmptyState
           v-else-if="keysState?._tag === 'Ready'"
           class="mt-3"
@@ -494,7 +510,9 @@ async function copyAgentSetupPrompt() {
 
             <template v-if="step._tag === 'command'">
               <div class="mt-2.5 flex min-h-11 items-center gap-2 rounded-lg border border-default bg-muted px-3 py-2">
-                <code tabindex="0" class="min-w-0 flex-1 overflow-x-auto whitespace-pre text-xs text-default">{{ step.command.display }}</code>
+                <!-- Wraps rather than scrolls, so a phone shows the whole
+                     command. The copy button copies it exactly. -->
+                <code class="min-w-0 flex-1 whitespace-pre-wrap wrap-anywhere text-xs text-default">{{ step.command.display }}</code>
                 <UiButton
                   :icon="copied && copiedValue === step.command.copy ? 'check' : 'copy'"
                   purpose="quiet"

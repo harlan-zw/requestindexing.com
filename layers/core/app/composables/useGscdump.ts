@@ -109,7 +109,7 @@ function parseGscdumpError(e: unknown): GscdumpError {
     case 'permission':
       return { message: 'Authentication failed. Please reconnect your account.', code: 'AUTH', status, retry: false }
     case 'not-found':
-      return { message: 'Data not found. The site may not be synced yet.', code: 'NOT_FOUND', status, retry: false }
+      return { message: 'Data not found. The Site may not be synced yet.', code: 'NOT_FOUND', status, retry: false }
     case 'rate-limit':
       return { message: 'Rate limited. Please wait a moment and try again.', code: 'RATE_LIMIT', status, retry: true }
     case 'server':

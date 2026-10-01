@@ -54,7 +54,7 @@ describe('describeSubmissionRefusal', () => {
 
   it('names the daily limit gscdump applied', () => {
     expect(describeSubmissionRefusal({ reason: 'site_daily_limit', limit: 5, resetsAt: '2026-10-02T07:00:00.000Z' }))
-      .toBe('This site used its 5 Google Submissions for today. The daily limit resets at midnight Pacific Time.')
+      .toBe('This Site used its 5 Google Submissions for today. The daily limit resets at midnight Pacific Time.')
   })
 })
 

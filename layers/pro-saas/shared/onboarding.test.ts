@@ -233,7 +233,7 @@ describe('resolveOnboardingCompletion', () => {
     expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: false, now })).toEqual({
       _tag: 'Blocked',
       reason: 'no_sites',
-      message: 'Connect at least one site before you finish setup.',
+      message: 'Connect at least one Site before you finish setup.',
     })
   })
 

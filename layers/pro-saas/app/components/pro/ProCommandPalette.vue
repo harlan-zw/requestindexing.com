@@ -38,7 +38,7 @@ const groupLabels = new Map(proNavGroups.map(group => [group.id, group.label]))
 const navItems = computed<SiteCommandPaletteItem[]>(() => {
   const items: SiteCommandPaletteItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: 'home', to: '/pro/dashboard' },
-    { id: 'indexing', label: 'Indexing (all sites)', icon: 'database', to: '/pro/dashboard/indexing', keywords: ['submit', 'coverage', 'indexed'] },
+    { id: 'indexing', label: 'Indexing (all Sites)', icon: 'database', to: '/pro/dashboard/indexing', keywords: ['submit', 'coverage', 'indexed'] },
     { id: 'manage-sites', label: 'Manage Sites', icon: 'settings', to: '/pro/dashboard/sites', keywords: ['remove', 'sites'] },
     { id: 'connect-site', label: 'Connect a Site', icon: 'add', to: '/pro/dashboard/sites/connect', keywords: ['search console', 'gsc', 'properties'] },
     { id: 'team-settings', label: 'Team settings', icon: 'settings', to: '/pro/dashboard/team/settings', keywords: ['workspace'] },
@@ -90,7 +90,7 @@ const groups = computed(() => [{ id: 'navigation', label: 'Navigation', items: n
     size="sm"
     :groups="groups"
     :fuse="{ fuseOptions }"
-    placeholder="Search pages and sites…"
+    placeholder="Search pages and Sites…"
   >
     <template #item-leading="{ item }">
       <UiFavicon
