@@ -12,6 +12,51 @@ export interface SerpTaskResult {
 }
 
 /**
+ * One Live SERP task, parsed once at the provider boundary. DataForSEO answers
+ * HTTP 200 for most failures and puts the error code on the task. A task that
+ * ran no search is a `TaskError`, never an empty search. The one exception is
+ * 40102 No Search Results: Google ran the search and returned nothing.
+ */
+export type SerpTask
+  = | { _tag: 'Searched', serp: SerpTaskResult }
+    | { _tag: 'TaskError', statusCode: number | null, statusMessage: string }
+
+/** DataForSEO's task code for a task that ran. */
+const TASK_OK = 20000
+/** Google ran the search and returned nothing. For a `site:` search, that is a verdict. */
+const TASK_NO_SEARCH_RESULTS = 40102
+
+interface RawStatus {
+  status_code?: unknown
+  status_message?: unknown
+}
+
+interface RawSerpResponse extends RawStatus {
+  tasks?: Array<RawStatus & { result?: unknown }> | null
+}
+
+/**
+ * Read the one task of a Live SERP response. A response without a task carries
+ * its error on the envelope, so the envelope status stands in for it.
+ */
+export function parseSerpTask(response: unknown): SerpTask {
+  const envelope = (typeof response === 'object' && response !== null ? response : {}) as RawSerpResponse
+  const task = Array.isArray(envelope.tasks) ? envelope.tasks[0] : undefined
+  const status = task ?? envelope
+  const statusCode = typeof status.status_code === 'number' ? status.status_code : null
+
+  if (statusCode === TASK_NO_SEARCH_RESULTS)
+    return { _tag: 'Searched', serp: { items: [] } }
+
+  const serp: unknown = statusCode === TASK_OK && Array.isArray(task?.result) ? task.result[0] : undefined
+  if (typeof serp === 'object' && serp !== null)
+    return { _tag: 'Searched', serp: serp as SerpTaskResult }
+
+  const statusMessage = typeof status.status_message === 'string' ? status.status_message : 'no status message'
+  return { _tag: 'TaskError', statusCode, statusMessage }
+}
+
+/**
  * The verdict of one `site:` search. `indexed` is the discriminant: the
  * matched result exists exactly when the URL counts as indexed.
  */
@@ -39,9 +84,10 @@ function siteSearchKey(raw: string): string | null {
 /**
  * Decide whether a `site:` search shows the checked URL in Google's index.
  * `site:` matches by prefix, so it also returns other URLs under the same path.
- * Only an organic result that is the checked URL itself counts.
+ * Only an organic result that is the checked URL itself counts. The search
+ * must have run: `parseSerpTask` keeps a task error away from this verdict.
  */
-export function matchSiteSearch(url: string, serp: SerpTaskResult | undefined): IndexCheckResult {
+export function matchSiteSearch(url: string, serp: SerpTaskResult): IndexCheckResult {
   const totalSiteResults = serp?.total || 0
   const key = siteSearchKey(url)
   const match = key === null

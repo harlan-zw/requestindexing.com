@@ -9,7 +9,7 @@ import {
   isTransientDataForSeoFailure,
 } from '../../../../../shared/dataforseo'
 import { dataForSeoSpendEnv, recordDataForSeoSpend } from './dataforseo-spend'
-import { matchSiteSearch } from './site-search'
+import { matchSiteSearch, parseSerpTask } from './site-search'
 
 export interface DataForSeoCallContext extends DataForSeoSpendEnv {
   /** Tool name for spend attribution, e.g. 'check-index'. Omitted = unmetered. */
@@ -172,17 +172,36 @@ async function dataforseoFetch<T>(endpoint: string, body: Record<string, unknown
   }
 }
 
-export async function checkUrlIndexed(url: string, ctx?: DataForSeoCallContext): Promise<IndexCheckResult> {
-  const data = await dataforseoFetch<DataForSeoResponse<SerpTaskResult>>('/serp/google/organic/live/advanced', [
+/**
+ * One `site:` search on Google US in English. DataForSEO answers HTTP 200 when
+ * a task fails, so a task that ran no search gets the 503 of a provider outage
+ * here. A caller then never reads a missing result as "no match". The task
+ * status stays on the cause, so the error report names an account failure
+ * such as 40210 Insufficient Funds.
+ */
+async function siteSearch(target: string, depth: number, ctx?: DataForSeoCallContext): Promise<SerpTaskResult> {
+  const response = await dataforseoFetch<unknown>('/serp/google/organic/live/advanced', [
     {
-      keyword: `site:${url}`,
+      keyword: `site:${target}`,
       location_code: 2840, // US
       language_code: 'en',
-      depth: 10,
+      depth,
     },
   ], ctx)
 
-  return matchSiteSearch(url, data?.tasks?.[0]?.result?.[0])
+  const task = parseSerpTask(response)
+  if (task._tag === 'TaskError') {
+    throw createError({
+      statusCode: 503,
+      message: DATAFORSEO_UNAVAILABLE_MESSAGE,
+      cause: new Error(`DataForSEO ran no search for site:${target}: task status ${task.statusCode ?? 'missing'} ${task.statusMessage}`),
+    })
+  }
+  return task.serp
+}
+
+export async function checkUrlIndexed(url: string, ctx?: DataForSeoCallContext): Promise<IndexCheckResult> {
+  return matchSiteSearch(url, await siteSearch(url, 10, ctx))
 }
 
 /**
@@ -193,8 +212,9 @@ export async function checkUrlIndexed(url: string, ctx?: DataForSeoCallContext):
 const BULK_CHECK_CONCURRENCY = 3
 
 /**
- * One row of a bulk run. `NotChecked` means the provider stayed down for that
- * URL after its retries, so the row has no verdict.
+ * One row of a bulk run. `NotChecked` means no search ran for that URL: the
+ * provider stayed down after its retries, or its task came back with an error.
+ * The row has no verdict.
  */
 export type BulkCheckRow
   = | ({ _tag: 'Checked' } & IndexCheckResult)
@@ -205,13 +225,14 @@ export type BulkCheckRow
  * Live SERP API call can contain only one task". A batched call was billed like
  * one check, so the other URLs in a bulk run got a verdict no search backed.
  *
- * A provider outage for one URL becomes a `NotChecked` row and the other rows
- * keep their verdicts. An outage for every URL is the 503 a single check
- * gives. Any other failure, such as a credential error, fails the run and stops
- * new calls.
+ * A provider outage or a task error for one URL becomes a `NotChecked` row and
+ * the other rows keep their verdicts. When no URL was searched, the run answers
+ * with the 503 a single check gives, cause included. Any other failure, such as
+ * a credential error, fails the run and stops new calls.
  */
 export async function checkUrlsIndexed(urls: string[], ctx?: DataForSeoCallContext): Promise<BulkCheckRow[]> {
   const rows: BulkCheckRow[] = []
+  const outages: unknown[] = []
   const failures: unknown[] = []
   let next = 0
 
@@ -224,10 +245,13 @@ export async function checkUrlsIndexed(urls: string[], ctx?: DataForSeoCallConte
           rows[index] = { _tag: 'Checked', ...result }
         },
         (error: unknown) => {
-          if (isTransientDataForSeoFailure(error))
+          if (isTransientDataForSeoFailure(error)) {
             rows[index] = { _tag: 'NotChecked', url }
-          else
+            outages.push(error)
+          }
+          else {
             failures.push(error)
+          }
         },
       )
     }
@@ -239,22 +263,14 @@ export async function checkUrlsIndexed(urls: string[], ctx?: DataForSeoCallConte
   if (failures.length > 0)
     throw failures[0]
   if (rows.length > 0 && rows.every(row => row._tag === 'NotChecked'))
-    throw createError({ statusCode: 503, message: DATAFORSEO_UNAVAILABLE_MESSAGE })
+    throw outages[0]
   return rows
 }
 
 export async function getDomainOverview(domain: string, ctx?: DataForSeoCallContext): Promise<DomainOverviewResult> {
-  // Get estimated indexed pages via site: query
-  const siteData = await dataforseoFetch<DataForSeoResponse<SerpTaskResult>>('/serp/google/organic/live/advanced', [
-    {
-      keyword: `site:${domain}`,
-      location_code: 2840,
-      language_code: 'en',
-      depth: 100,
-    },
-  ], ctx)
-
-  const siteResult = siteData?.tasks?.[0]?.result?.[0]
+  // Estimated indexed pages from a site: search. A task error throws, so a
+  // search that never ran cannot report zero pages.
+  const siteResult = await siteSearch(domain, 100, ctx)
   const estimatedIndexedPages = siteResult?.total || 0
   const topOrganicPages = (siteResult?.items || [])
     .filter(item => item.type === 'organic')

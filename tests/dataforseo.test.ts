@@ -28,7 +28,7 @@ describe('dataForSEO requests', () => {
 
   it('adds attribution at the provider transport boundary', async () => {
     const fetchMock = vi.fn(async (_url: string, _options: { body: Array<{ tag: string }> }) => ({
-      tasks: [{ result: [{ total: 0, items: [] }] }],
+      tasks: [{ status_code: 20000, status_message: 'Ok.', result: [{ se_results_count: 0, items: [] }] }],
     }))
     await checkUrlIndexed('https://docs.example.com/guide', {
       budgetMicros: 0,
