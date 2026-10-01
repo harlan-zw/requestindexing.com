@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import type { FeatureDataState } from '../../../pro-shell/shared/types'
 import { computed } from 'vue'
+import { searchConsoleLinkCta } from '../utils/site-search-state'
 import { useProGscStatus } from './useProGscStatus'
 
 interface GscFeatureDataStateOptions {
@@ -13,12 +14,13 @@ export function useGscFeatureDataState(
   options: GscFeatureDataStateOptions = {},
 ): Ref<FeatureDataState> {
   const status = useProGscStatus(siteId)
+  const { session } = useUserSession()
 
   return computed<FeatureDataState>(() => {
     if (status.isNotConnected.value || status.isTokenRevoked.value) {
       return {
         status: 'unconnected',
-        cta: { label: 'Connect GSC', to: '/pro/dashboard/search-console' },
+        cta: searchConsoleLinkCta(!!session.value?.gscConnected),
       }
     }
     if (status.hasError.value)

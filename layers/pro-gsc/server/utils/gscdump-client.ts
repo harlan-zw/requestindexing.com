@@ -111,8 +111,35 @@ export function lifecycleSiteToUserSite(site: PartnerLifecycleSite): GscdumpUser
   }
 }
 
-export function useGscdumpClient() {
+/**
+ * The ceiling on every partner call, from nuxtseo.com's
+ * `DEFAULT_PARTNER_TIMEOUT_MS`. With no deadline a hung upstream held the
+ * request open: a lifecycle read took 57 s on 2026-10-01, and two dashboard
+ * renders waited on it for 60 s and 23 s.
+ */
+export const DEFAULT_PARTNER_TIMEOUT_MS = 20_000
+
+/**
+ * The deadline for a gscdump read that a signed-in page waits on before it
+ * renders. Each such read already has a fallback when gscdump does not answer,
+ * so a slow answer costs the page this much at most. The lifecycle read took
+ * 1.1 s at p50, 1.7 s at p90 and 2.0 s at p95 over the 24 hours to
+ * 2026-10-01 09:00 UTC (Sentry `http.client` spans), so 2.5 s keeps the
+ * normal answers and drops the stalls.
+ */
+export const RENDER_PATH_TIMEOUT_MS = 2_500
+
+export interface GscdumpClientOptions {
+  /** One deadline per call. It covers the SDK's retries as well as each attempt. */
+  timeoutMs?: number
+}
+
+export function useGscdumpClient(options: GscdumpClientOptions = {}) {
   const client = createGscdumpPublicV1Client()
+  const timeoutMs = options.timeoutMs ?? DEFAULT_PARTNER_TIMEOUT_MS
+  // A fresh signal per call, so a client reused across calls never shares a
+  // spent deadline. The SDK stops retrying once the signal aborts.
+  const deadline = () => ({ signal: AbortSignal.timeout(timeoutMs) })
 
   function rethrowV1AsH3(err: unknown): never {
     if (isGscdumpV1Error(err)) {
@@ -121,7 +148,8 @@ export function useGscdumpClient() {
       // `details` for any caller that branches on it.
       const refusal = parseEntitlementRefusal(err.details)
       throw createError({
-        statusCode: err.status ?? 500,
+        // An aborted call is this app's deadline, not a gscdump answer.
+        statusCode: err.status ?? (err.code === 'aborted' ? 504 : 500),
         message: refusal ? refusalMessage(refusal) : err.message,
         data: {
           code: err.code,
@@ -139,7 +167,7 @@ export function useGscdumpClient() {
   }
 
   async function getUserLifecycle(userId: string): Promise<PartnerLifecycleResponse> {
-    return client.getUserLifecycle({ params: { userId } })
+    return client.getUserLifecycle({ params: { userId } }, deadline())
       .then(response => ({
         contractVersion: GSCDUMP_ONBOARDING_CONTRACT_VERSION,
         ...response.data,
@@ -208,7 +236,7 @@ export function useGscdumpClient() {
         message: 'brandTerms is required for brand/non-brand presets',
       })
     }
-    return client.getSiteAnalysis({ params: { siteId }, query: params })
+    return client.getSiteAnalysis({ params: { siteId }, query: params }, deadline())
       .then(response => response.data as unknown as GscdumpAnalysisResponse)
       .catch(rethrowV1AsH3)
   }
@@ -216,19 +244,19 @@ export function useGscdumpClient() {
   return {
     // User management
     registerUser: (body: RegisterPartnerUserParams) =>
-      client.createUser({ body }).then(response => response.data).catch(rethrowV1AsH3),
+      client.createUser({ body }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
     updateUserTokens: (userId: string, body: UpdatePartnerUserTokensParams) =>
-      client.updateUserTokens({ params: { userId }, body }).then(response => response.data).catch(rethrowV1AsH3),
+      client.updateUserTokens({ params: { userId }, body }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
     getUserLifecycle,
     getSiteSyncStatus,
     waitForUserReady,
     // gscdump answers from its stored copy of the Google list. `refresh` makes
     // it read Google live, for a property the user verified a moment ago.
     getAvailableSites: (userId: string, options: { refresh?: boolean } = {}) =>
-      client.listAvailableSites({ params: { userId }, query: options.refresh ? { refresh: true } : {} }).then(response => response.data).catch(rethrowV1AsH3),
+      client.listAvailableSites({ params: { userId }, query: options.refresh ? { refresh: true } : {} }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
 
     getUserEntitlements: (userId: string): Promise<PartnerUserEntitlementsV1> =>
-      client.getUserEntitlements({ params: { userId } }).then(response => response.data).catch(rethrowV1AsH3),
+      client.getUserEntitlements({ params: { userId } }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
 
     // Site management
     registerSite: (params: {
@@ -247,18 +275,18 @@ export function useGscdumpClient() {
           ...(params.webhookUrl && { webhookUrl: params.webhookUrl }),
           webhookEvents: [...SITE_WEBHOOK_EVENTS],
         },
-      }).then((response): SiteRegistrationResult => ({ _tag: 'Registered', registration: response.data })).catch((err: unknown) => {
+      }, deadline()).then((response): SiteRegistrationResult => ({ _tag: 'Registered', registration: response.data })).catch((err: unknown) => {
         const refusal = isGscdumpV1Error(err) ? parseEntitlementRefusal(err.details) : null
         if (refusal)
           return { _tag: 'Refused', refusal } satisfies SiteRegistrationResult
         return rethrowV1AsH3(err)
       }),
     deleteSite: (siteId: string) =>
-      client.deleteSite({ params: { siteId } }).then(response => response.data).catch(rethrowV1AsH3),
+      client.deleteSite({ params: { siteId } }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
     // The IndexNow connection read is the cheapest Site read on the partner
     // surface. Its authorization is the answer; the body is not used.
     readSiteAccess: (siteId: string): Promise<GscdumpSiteAccess> =>
-      client.getSiteIndexNowConnection({ params: { siteId } })
+      client.getSiteIndexNowConnection({ params: { siteId } }, deadline())
         .then((): GscdumpSiteAccess => ({ _tag: 'Readable' }))
         .catch((err: unknown) => {
           if (isGscdumpV1Error(err) && err.code === 'site_not_found')
@@ -275,7 +303,7 @@ export function useGscdumpClient() {
           ...(queryOptions?.comparison ? { comparison: toV1ReportState(queryOptions.comparison, queryOptions.searchType) } : {}),
           ...(queryOptions?.filter ? { filter: queryOptions.filter } : {}),
         },
-      }).then(response => response.data as unknown as GscdumpDataResponse).catch(rethrowV1AsH3),
+      }, deadline()).then(response => response.data as unknown as GscdumpDataResponse).catch(rethrowV1AsH3),
     getDataDetail: (siteId: string, state: BuilderStateWire, queryOptions?: DataDetailOptions): Promise<GscdumpDataDetailResponse> =>
       client.queryAnalyticsReportDetail({
         params: { siteId },
@@ -283,29 +311,29 @@ export function useGscdumpClient() {
           state: toV1ReportState(state, queryOptions?.searchType),
           ...(queryOptions?.comparison ? { comparison: toV1ReportState(queryOptions.comparison, queryOptions.searchType) } : {}),
         },
-      }).then(response => response.data as unknown as GscdumpDataDetailResponse).catch(rethrowV1AsH3),
+      }, deadline()).then(response => response.data as unknown as GscdumpDataDetailResponse).catch(rethrowV1AsH3),
     getAnalysis,
 
     // Sitemaps: all v1 since `partner.sites.sitemaps.action.create` (submit/delete/refresh).
     getSitemaps: (siteId: string) =>
-      client.getSiteSitemaps({ params: { siteId } }).then(response => response.data).catch(rethrowV1AsH3),
+      client.getSiteSitemaps({ params: { siteId } }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
     getSitemapChanges: (siteId: string, days = 28) =>
-      client.getSiteSitemapChanges({ params: { siteId }, query: { days } }).then(response => response.data).catch(rethrowV1AsH3),
+      client.getSiteSitemapChanges({ params: { siteId }, query: { days } }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
     submitSitemap: (siteId: string, sitemapUrl: string, action: 'submit' | 'delete') =>
-      client.createSitemapAction({ params: { siteId }, body: { action, sitemapUrl } })
+      client.createSitemapAction({ params: { siteId }, body: { action, sitemapUrl } }, deadline())
         .then(response => response.data)
         .catch(rethrowV1AsH3),
     refreshSitemaps: (siteId: string) =>
-      client.createSitemapAction({ params: { siteId }, body: { action: 'refresh' } })
+      client.createSitemapAction({ params: { siteId }, body: { action: 'refresh' } }, deadline())
         .then(response => response.data)
         .catch(rethrowV1AsH3),
 
     // Indexing
     getIndexing: (siteId: string, days = 28) =>
-      client.getSiteIndexing({ params: { siteId }, query: { days } }).then(response => response.data).catch(rethrowV1AsH3),
+      client.getSiteIndexing({ params: { siteId }, query: { days } }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
     getIndexingUrls: (siteId: string, query: IndexingUrlsParams = {}) =>
-      client.listSiteIndexingUrls({ params: { siteId }, query }).then(response => response.data).catch(rethrowV1AsH3),
+      client.listSiteIndexingUrls({ params: { siteId }, query }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
     getIndexingDiagnostics: (siteId: string, query: IndexingDiagnosticsParams = {}) =>
-      client.getSiteIndexingDiagnostics({ params: { siteId }, query }).then(response => response.data).catch(rethrowV1AsH3),
+      client.getSiteIndexingDiagnostics({ params: { siteId }, query }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
   }
 }

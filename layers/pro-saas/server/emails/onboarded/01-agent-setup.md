@@ -19,7 +19,7 @@ Agent setup takes one prompt:
 
 The first copy creates an API key named Agent setup. The agent installs the CLI and the skill. Then it summarises the stored URL Inspection verdicts for your pages.
 
-If the page says "Connect Search Console first", connect it, then copy the prompt.
+If the page asks you to connect Search Console or a Site first, do that. Then copy the prompt.
 
 Claude.ai and ChatGPT cannot run the prompt, because they have no terminal. For those, use the MCP tab on the same page.
 

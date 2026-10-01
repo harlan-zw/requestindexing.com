@@ -155,6 +155,30 @@ export function canSkipOnboardingSites(input: SitesSkipInput): boolean {
   return !input.hasSites && input.connectBlocked
 }
 
+/** The footer controls of one wizard step. */
+export interface OnboardingNavControls {
+  /** The skip link beside the advance button. Undefined renders none. */
+  skipLabel: string | undefined
+  /** Whether the advance button renders. */
+  showNext: boolean
+}
+
+/**
+ * The footer controls of `step`. Every step gets exactly one way forward.
+ *
+ * Before a grant, the connect step's own Connect button drives the advance,
+ * because the Google round trip returns to the sites step. Continue then did
+ * the same thing as "Skip for now", and read as a second Connect. So the
+ * footer offers only the skip until Search Console is connected, and only
+ * Continue after. This is nuxtseo.com's `UiWizardNav` rule: hide the advance
+ * button while the step's own CTA drives the advance.
+ */
+export function resolveOnboardingNav(step: OnboardingStep, gsc: GscConnection): OnboardingNavControls {
+  if (step === 'connect' && gsc._tag !== 'Connected')
+    return { skipLabel: 'Skip for now', showNext: false }
+  return { skipLabel: undefined, showNext: true }
+}
+
 /**
  * Where the OAuth callback sends a user whose grant has no Search Console
  * scope. `returnTo` is already parsed by `safeAuthRedirect`.

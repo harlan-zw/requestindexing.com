@@ -11,6 +11,14 @@ const emit = defineEmits<{
   retry: []
 }>()
 
+const route = useRoute()
+// The OAuth connect flow, as `ProGscReadError` and nuxtseo.com link it. The
+// old target, `/pro/dashboard/settings`, names no page in this app, so an
+// AUTH failure in a Search Console table led to a 404.
+const reconnectHref = computed(
+  () => `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent(route.fullPath)}`,
+)
+
 // Normalize error to GscdumpError format
 const normalizedError = computed<GscdumpError | null>(() => {
   if (!props.error)
@@ -78,10 +86,11 @@ const errorConfig = computed(() => {
     </UButton>
     <NuxtLink
       v-else-if="normalizedError.code === 'AUTH'"
-      to="/pro/dashboard/settings"
+      :to="reconnectHref"
+      external
       class="text-xs text-primary hover:underline mt-2"
     >
-      Reconnect account
+      Reconnect Search Console
     </NuxtLink>
   </div>
 </template>

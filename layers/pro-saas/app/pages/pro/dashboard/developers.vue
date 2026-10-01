@@ -1,10 +1,12 @@
 <script lang="ts" setup>
 import type { CreatedDeveloperApiKey, DeveloperApiKey, DeveloperApiKeysState } from '#layers/pro-gsc/shared/developer-api-keys'
-import type { AgentPromptSite, SetupMethod } from '#layers/pro-gsc/shared/developer-setup'
+import type { SetupMethod } from '#layers/pro-gsc/shared/developer-setup'
 import { useClipboard } from '@vueuse/core'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
+import { agentPromptGate } from '#layers/pro-gsc/shared/agent-prompt-site'
 import { DEVELOPER_API_KEY_LABEL_MAX } from '#layers/pro-gsc/shared/developer-api-keys'
 import { buildAgentSetupPrompt, buildSetupSteps, presentApiKey } from '#layers/pro-gsc/shared/developer-setup'
+import { CONNECT_SITE_ROUTE } from '#layers/pro-saas/shared/onboarding'
 
 // Ported from nuxtseo.com's `developers/index.vue` and `DevApiTokenCreate.vue`.
 // This app has no API of its own: its data plane is gscdump (VISION.md), so
@@ -92,12 +94,18 @@ const { data: sitesData } = await fetchSites()
 const keys = computed<DeveloperApiKey[]>(() => keysState.value?._tag === 'Ready' ? keysState.value.keys : [])
 const firstSite = computed(() => sitesData.value?.sites.find(site => site.gscdumpSiteId) ?? null)
 const firstSiteId = computed(() => firstSite.value?.gscdumpSiteId ?? null)
-const agentPromptSite = computed<AgentPromptSite | null>(() => {
-  const site = firstSite.value
-  return site?.gscdumpSiteId ? { gscdumpSiteId: site.gscdumpSiteId, host: site.domain ?? site.property } : null
-})
+// Whether the agent setup prompt has anything to read. When it has not, the
+// page names the step that comes first instead of offering the prompt.
+const { session } = useUserSession()
+const promptGate = computed(() => agentPromptGate({
+  gscConnected: !!session.value?.gscConnected,
+  sites: sitesData.value?.sites ?? [],
+}))
 
-// The raw key from the last create. It lives only in this ref.
+// The newest raw key this visit created, from the form or from the agent setup
+// prompt. It lives only in this ref. The manual steps read only this ref: the
+// prompt used to keep its key in a ref of its own, so after a copy the steps
+// still showed $GSCDUMP_API_KEY (UX replay A14).
 const createdKey = ref<CreatedDeveloperApiKey | null>(null)
 const createdKeyPresentation = computed(() => presentApiKey(createdKey.value?.apiKey ?? null))
 const steps = computed(() => buildSetupSteps(setupMethod.value, createdKey.value?.apiKey ?? null, firstSiteId.value))
@@ -190,8 +198,10 @@ function copyValue(value: string) {
 }
 
 async function copyAgentSetupPrompt() {
-  if (preparingPrompt.value)
+  const gate = promptGate.value
+  if (preparingPrompt.value || gate._tag !== 'Ready')
     return
+  const site = gate.site
   preparingPrompt.value = true
   const reused = agentKey.value
   // Safari allows a clipboard write only during the click, and the key request
@@ -203,7 +213,8 @@ async function copyAgentSetupPrompt() {
     : proFetch<CreatedDeveloperApiKey>('/api/pro/developer/api-keys', { method: 'POST', body: { label: AGENT_SETUP_KEY_LABEL } })
   ).then((key) => {
     agentKey.value = key
-    return buildAgentSetupPrompt(key.apiKey, agentPromptSite.value)
+    createdKey.value = key
+    return buildAgentSetupPrompt(key.apiKey, site)
   })
   copiedValue.value = null
   const result = await copy(() => prompt)
@@ -429,7 +440,7 @@ async function copyAgentSetupPrompt() {
           The first copy creates an API key named {{ AGENT_SETUP_KEY_LABEL }}.
         </p>
         <UiButton
-          v-if="keysState?._tag === 'Ready'"
+          v-if="keysState?._tag === 'Ready' && promptGate._tag === 'Ready'"
           purpose="secondary"
           icon="copy"
           class="mt-3 min-h-11"
@@ -438,6 +449,28 @@ async function copyAgentSetupPrompt() {
         >
           Copy agent setup prompt
         </UiButton>
+        <UiEmptyState
+          v-else-if="keysState?._tag === 'Ready' && promptGate._tag === 'SearchConsoleRequired'"
+          class="mt-3"
+          icon="key"
+          title="Connect Search Console first"
+          description="The prompt reads the data that Request Indexing syncs from Search Console. Connect Search Console, then connect a Site."
+          compact
+        >
+          <ConnectSearchConsoleButton />
+        </UiEmptyState>
+        <UiEmptyState
+          v-else-if="keysState?._tag === 'Ready'"
+          class="mt-3"
+          icon="globe"
+          title="Connect a Site first"
+          description="The prompt reads the indexing record of a linked Site. You have no linked Site yet."
+          compact
+        >
+          <UiButton :to="CONNECT_SITE_ROUTE" purpose="cta" icon="add" class="min-h-11">
+            Connect a Site
+          </UiButton>
+        </UiEmptyState>
         <UiSkeleton v-else-if="keysStatus === 'pending' && !keysState" class="mt-3 h-11 w-60 rounded-lg" />
         <a v-else href="#api-keys" class="mt-2 inline-flex min-h-11 items-center text-sm text-primary hover:underline">Go to API keys</a>
       </div>

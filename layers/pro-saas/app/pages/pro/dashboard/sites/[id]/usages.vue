@@ -56,7 +56,7 @@ const rows = computed(() => (data.value ?? []).map(row => ({
       </div>
       <!-- U1: an empty array used to render an empty bordered box. -->
       <div v-else-if="!rows.length" class="py-6 text-sm text-muted">
-        No API calls yet this month. Requesting indexing for a URL from Web Indexing will show up here.
+        No API calls yet this month. Each URL you submit on the Submit page adds one call.
       </div>
       <dl v-else class="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div v-for="row in rows" :key="row.key">

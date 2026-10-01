@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import type { DataForSeoSpendEnv } from './dataforseo-spend'
+import type { IndexCheckResult, SerpTaskResult } from './site-search'
 import { createError } from 'h3'
 import {
   DATAFORSEO_RETRY_OPTIONS,
@@ -8,6 +9,7 @@ import {
   isTransientDataForSeoFailure,
 } from '../../../../../shared/dataforseo'
 import { dataForSeoSpendEnv, recordDataForSeoSpend } from './dataforseo-spend'
+import { matchSiteSearch } from './site-search'
 
 export interface DataForSeoCallContext extends DataForSeoSpendEnv {
   /** Tool name for spend attribution, e.g. 'check-index'. Omitted = unmetered. */
@@ -32,19 +34,6 @@ export function dataForSeoCallContext(tool: string, event?: H3Event): DataForSeo
 interface DataForSEOCredentials {
   login: string
   password: string
-}
-
-interface SerpResult {
-  url: string
-  title: string
-  description: string
-  position: number
-  type: string
-}
-
-interface SerpTaskResult {
-  total?: number
-  items?: SerpResult[]
 }
 
 interface DataForSeoResponse<T> {
@@ -108,14 +97,6 @@ interface DomainRankResult {
   items?: Array<{
     metrics?: { organic?: { etv?: number, count?: number } }
   }>
-}
-
-export interface IndexCheckResult {
-  url: string
-  indexed: boolean
-  matchedUrl?: string
-  matchedTitle?: string
-  totalSiteResults?: number
 }
 
 export interface DomainOverviewResult {
@@ -201,23 +182,7 @@ export async function checkUrlIndexed(url: string, ctx?: DataForSeoCallContext):
     },
   ], ctx)
 
-  const task = data?.tasks?.[0]
-  const result = task?.result?.[0]
-  const items = (result?.items || []).filter(item => item.type === 'organic')
-
-  const normalizedUrl = url.replace(/\/$/, '').toLowerCase()
-  const match = items.find((item: SerpResult) => {
-    const itemUrl = item.url.replace(/\/$/, '').toLowerCase()
-    return itemUrl === normalizedUrl || itemUrl.startsWith(normalizedUrl)
-  })
-
-  return {
-    url,
-    indexed: items.length > 0,
-    matchedUrl: match?.url,
-    matchedTitle: match?.title,
-    totalSiteResults: result?.total || 0,
-  }
+  return matchSiteSearch(url, data?.tasks?.[0]?.result?.[0])
 }
 
 export async function checkUrlsIndexed(urls: string[], ctx?: DataForSeoCallContext): Promise<IndexCheckResult[]> {
@@ -237,26 +202,8 @@ export async function checkUrlsIndexed(urls: string[], ctx?: DataForSeoCallConte
     const batch = tasks.slice(i, i + batchSize)
     const data = await dataforseoFetch<DataForSeoResponse<SerpTaskResult>>('/serp/google/organic/live/advanced', batch, ctx)
 
-    for (let j = 0; j < batch.length; j++) {
-      const task = data?.tasks?.[j]
-      const result = task?.result?.[0]
-      const items = (result?.items || []).filter(item => item.type === 'organic')
-      const url = urls[i + j]!
-      const normalizedUrl = url.replace(/\/$/, '').toLowerCase()
-
-      const match = items.find((item) => {
-        const itemUrl = item.url.replace(/\/$/, '').toLowerCase()
-        return itemUrl === normalizedUrl || itemUrl.startsWith(normalizedUrl)
-      })
-
-      results.push({
-        url,
-        indexed: items.length > 0,
-        matchedUrl: match?.url,
-        matchedTitle: match?.title,
-        totalSiteResults: result?.total || 0,
-      })
-    }
+    for (let j = 0; j < batch.length; j++)
+      results.push(matchSiteSearch(urls[i + j]!, data?.tasks?.[j]?.result?.[0]))
   }
 
   return results
