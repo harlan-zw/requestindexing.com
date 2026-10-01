@@ -1,6 +1,7 @@
 interface FAQ {
   question: string
   answer: string
+  sources?: { label: string, to: string }[]
 }
 
 interface ToolSeoOptions {

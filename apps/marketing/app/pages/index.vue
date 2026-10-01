@@ -714,7 +714,7 @@ const marketingTools = [
       <UPageSection :ui="{ container: 'max-w-4xl' }">
         <UPageCTA
           title="Find out which of your pages Google has indexed"
-          description="Free, open-source, and takes less than a minute to set up."
+          description="Free and open source."
           variant="subtle"
           :links="[
             { label: 'Get Started Free', to: '/pro/onboarding', color: 'primary', size: 'xl', trailingIcon: 'i-heroicons-arrow-right' },

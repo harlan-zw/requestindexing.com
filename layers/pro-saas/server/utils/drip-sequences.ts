@@ -62,15 +62,15 @@ export type OnboardingDripEnrolment
  * Enrol a user who just finished onboarding, as nuxtseo.com's
  * `onboarding-completed-queue-drip` listener does.
  *
- * NUXT_NOTIFICATIONS_ENABLED=false holds the drip back. A held user is not
+ * NUXT_ONBOARDING_DRIP_ENABLED=false holds the drip back. A held user is not
  * enrolled at all, so opening the switch later never mails people who
  * onboarded while it was shut.
  */
 export async function enrolOnboardingDrip(
-  deps: { db: Db, notificationsEnabled: boolean, now: Date },
+  deps: { db: Db, onboardingDripEnabled: boolean, now: Date },
   userId: number,
 ): Promise<OnboardingDripEnrolment> {
-  if (!deps.notificationsEnabled)
+  if (!deps.onboardingDripEnabled)
     return { _tag: 'Held' }
   const user = await deps.db.select({ email: users.email })
     .from(users)

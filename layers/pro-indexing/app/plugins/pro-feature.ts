@@ -1,4 +1,5 @@
 import { useGscFeatureDataState } from '#layers/pro-gsc/app/composables/useGscFeatureDataState'
+import { INTEGRATIONS_ROUTE } from '#layers/pro-shell/app/utils/integrations-pending'
 import { proFeatureSetup } from '#layers/pro-shell/app/utils/registry-factories'
 
 /**
@@ -17,7 +18,7 @@ export default defineNuxtPlugin({
       stateResolver: siteId => useGscFeatureDataState(siteId),
       lockedDescription: 'See how Google indexes your site\'s pages. Identify issues blocking indexing.',
       lockedUnlockLabel: 'Connect GSC',
-      lockedUnlockTo: '/pro/dashboard/search-console',
+      lockedUnlockTo: INTEGRATIONS_ROUTE,
     }],
   }),
 })

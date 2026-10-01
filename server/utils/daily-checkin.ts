@@ -10,6 +10,7 @@ export function runDailyCheckin(event: H3Event) {
   // Preserve the event context so public Cloudflare checks read the existing bindings.
   const context = {
     context: event.context,
+    onboardingDripEnabled: config.onboardingDripEnabled,
     notificationsEnabled: config.notificationsEnabled,
     gscdump: config.gscdump,
   }

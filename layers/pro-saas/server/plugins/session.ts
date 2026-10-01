@@ -1,13 +1,9 @@
 import type { AuthProviderId } from '#layers/pro-saas-auth/shared/types/auth'
-import { desc, eq } from 'drizzle-orm'
-import { googleAccounts } from '~~/layers/core/server/db/schema'
 import { logger } from '~~/shared/server/logger'
-import { lookupUser } from '~~/shared/server/user-lookup'
 import { readGscdumpAccountStatus } from '#layers/pro-gsc/server/utils/gscdump-account-status'
-import * as schema from '#layers/pro-saas/server/database'
-import { readCurrentTeam } from '../utils/current-team'
 import { buildGscSessionFields } from '../utils/gsc-session-fields'
 import { hasAuthenticatedSession } from '../utils/session-auth-state'
+import { readSessionEnrichment } from '../utils/session-enrichment'
 
 export default defineNitroPlugin(() => {
   sessionHooks.hook('fetch', async (session, event) => {
@@ -16,42 +12,30 @@ export default defineNitroPlugin(() => {
 
     const db = useDrizzle(event)
 
-    const lookup = await lookupUser(() => db.query.users.findFirst({
-      where: eq(schema.users.userId, session.user!.id),
-    }))
+    // One D1 round trip for every row below. See utils/session-enrichment.ts.
+    const read = await readSessionEnrichment(db, session.user!.id)
 
     // A read that never answered is not evidence the account is gone. Skip
     // enrichment for this one request and leave the sealed session alone; only
     // a definitive miss may clear it (D4: a D1 blip signed the owner out).
-    if (lookup._tag === 'Unavailable') {
-      logger.error('[session] user lookup unavailable, session kept:', lookup.cause)
+    if (read._tag === 'Unavailable') {
+      logger.error('[session] user lookup unavailable, session kept:', read.cause)
       return
     }
 
-    if (lookup._tag === 'NotFound') {
+    if (read._tag === 'NotFound') {
       await clearUserSession(event)
       return
     }
 
-    const user = lookup.user
-    // Checked against membership: a stale `current_team_id` must not publish
-    // a team's name or Sites to someone who left it.
-    const currentTeam = await readCurrentTeam(db, user.userId).catch((error: unknown) => {
-      logger.error('[session] team lookup failed:', error)
-      return null
-    })
+    // `currentTeam` is checked against membership inside the batch: a stale
+    // `current_team_id` must not publish a team's name or Sites to someone who
+    // left it.
+    const { user, currentTeam, primaryIdentity, googleAccount, hasSites } = read.rows
 
     // Remap session.user from the primary identity row. Provider-agnostic
     // shape (id/name/avatarUrl/authProvider) on every authenticated request.
     // See google-signin-plan.md Round 9.
-    const allIdentities = await db.query.userIdentities.findMany({
-      where: eq(schema.userIdentities.userId, user.userId),
-      orderBy: [desc(schema.userIdentities.lastUsedAt)],
-    }).catch((error: unknown) => {
-      logger.error('[session] identity lookup failed:', error)
-      return []
-    })
-    const primaryIdentity = allIdentities[0] ?? null
     const primaryIdentityEmail = primaryIdentity?.email ?? null
 
     if (primaryIdentity) {
@@ -86,14 +70,6 @@ export default defineNitroPlugin(() => {
     // for every user and `pro-gate.global.ts` plus the integration-readiness
     // policy gated on a constant. Derived here the same way
     // `/api/pro/gsc-properties` derives it.
-    const googleAccount = await db.select()
-      .from(googleAccounts)
-      .where(eq(googleAccounts.userId, user.userId))
-      .get()
-      .catch((error: unknown) => {
-        logger.error('[session] google account lookup failed:', error)
-        return null
-      })
     // One projection publishes the whole Search Console block. `pro-gate` reads
     // `gscIndexingScope` and `gscSitemapsScope` from it; assigning the
     // connection without them left both gates permanently closed.
@@ -128,18 +104,6 @@ export default defineNitroPlugin(() => {
       return d.toISOString()
     }
     session.onboardingCompletedAt = toIso(user.onboardingCompletedAt)
-
-    // `sites.team_id` is the ownership axis, so the roster is one read.
-    session.hasSites = currentTeam
-      ? await db.select({ siteId: schema.sites.id })
-          .from(schema.sites)
-          .where(eq(schema.sites.teamId, currentTeam.teamId))
-          .limit(1)
-          .then(rows => rows.length > 0)
-          .catch((error: unknown) => {
-            logger.error('[session] hasSites lookup failed:', error)
-            return false
-          })
-      : false
+    session.hasSites = hasSites
   })
 })

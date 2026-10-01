@@ -26,9 +26,10 @@ export function migratedSqlite(): DatabaseSync {
 export type ProDatabase = ReturnType<typeof useDrizzle>
 
 // Drizzle's remote driver speaks the same async shape D1 does. Rows go back
-// positionally, which is what the driver decodes.
+// positionally, which is what the driver decodes. A batch answers each
+// statement the same way, as D1's batch does in one round trip.
 export function proDatabase(sqlite: DatabaseSync): ProDatabase {
-  return drizzle(async (sql, params, method) => {
+  function query(sql: string, params: unknown[], method: string): { rows: unknown[] } {
     const statement = sqlite.prepare(sql)
     const args = params as never[]
     if (method === 'run') {
@@ -38,36 +39,72 @@ export function proDatabase(sqlite: DatabaseSync): ProDatabase {
     const rows = statement.all(...args).map(row => Object.values(row))
     // A `get` that matched nothing hands back no row, which the driver reads as undefined.
     return { rows: (method === 'get' ? rows[0] : rows) as unknown[] }
-  }, { schema }) as unknown as ProDatabase
+  }
+  return drizzle(
+    async (sql, params, method) => query(sql, params, method),
+    async queries => queries.map(({ sql, params, method }) => query(sql, params, method)),
+    { schema },
+  ) as unknown as ProDatabase
 }
 
 // The proxy above cannot tell a raw `db.all(sql)` from a select, so a raw read
 // comes back positional and `row.c` is undefined. Code that counts with raw SQL
 // needs the driver production runs: this is `drizzle-orm/d1` over a binding
 // that answers from the same in-memory SQLite.
-export function d1Database(sqlite: DatabaseSync): ProDatabase {
+export interface D1DatabaseOptions {
+  /**
+   * Called once per round trip to D1: each statement, or a whole batch. D1
+   * runs far from the Worker, so round trips are what a signed-in page waits on.
+   */
+  onRoundTrip?: (kind: 'statement' | 'batch') => void
+  /**
+   * Reject a batch whose statements match, as D1 rejects a whole batch when
+   * one statement in it fails.
+   */
+  failBatch?: (statements: string[]) => boolean
+  /** Reject every statement and batch: the database is not answering. */
+  unavailable?: boolean
+}
+
+export function d1Database(sqlite: DatabaseSync, options: D1DatabaseOptions = {}): ProDatabase {
+  const unavailable = () => Promise.reject(new Error('D1_ERROR: database unavailable'))
+  function roundTrip<T>(read: () => T): Promise<T> {
+    options.onRoundTrip?.('statement')
+    return options.unavailable ? unavailable() : Promise.resolve(read())
+  }
   function prepare(sql: string) {
     let params: never[] = []
     const statement = {
+      sql,
       bind: (...args: unknown[]) => {
         params = args as never[]
         return statement
       },
-      all: async () => ({ results: sqlite.prepare(sql).all(...params), success: true, meta: {} }),
-      raw: async () => {
+      // A batch answers each statement with the shape `all()` returns.
+      results: () => ({ results: sqlite.prepare(sql).all(...params), success: true, meta: {} }),
+      all: () => roundTrip(() => statement.results()),
+      raw: () => roundTrip(() => {
         const prepared = sqlite.prepare(sql)
         prepared.setReturnArrays(true)
         return prepared.all(...params)
-      },
-      first: async () => sqlite.prepare(sql).get(...params) ?? null,
-      run: async () => {
+      }),
+      first: () => roundTrip(() => sqlite.prepare(sql).get(...params) ?? null),
+      run: () => roundTrip(() => {
         const result = sqlite.prepare(sql).run(...params)
         return { results: [], success: true, meta: { changes: Number(result.changes), last_row_id: Number(result.lastInsertRowid) } }
-      },
+      }),
     }
     return statement
   }
-  return d1Drizzle({ prepare } as never, { schema }) as unknown as ProDatabase
+  async function batch(statements: ReturnType<typeof prepare>[]) {
+    options.onRoundTrip?.('batch')
+    if (options.unavailable)
+      return unavailable()
+    if (options.failBatch?.(statements.map(statement => statement.sql)))
+      throw new Error('D1_ERROR: batch failed')
+    return statements.map(statement => statement.results())
+  }
+  return d1Drizzle({ prepare, batch } as never, { schema }) as unknown as ProDatabase
 }
 
 /** A user who owns a personal team with the same id. */

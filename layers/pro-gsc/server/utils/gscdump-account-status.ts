@@ -2,7 +2,7 @@ import type { AccountStatus } from '@gscdump/contracts'
 import type { CachedAccountStatus } from '../../shared/gscdump-account-status'
 import { logger } from '~~/shared/server/logger'
 import { lookupCachedAccountStatus } from '../../shared/gscdump-account-status'
-import { useGscdumpClient } from './gscdump-client'
+import { RENDER_PATH_TIMEOUT_MS, useGscdumpClient } from './gscdump-client'
 
 function cacheKey(gscdumpUserId: string): string {
   return `gscdump-account-status:${gscdumpUserId}`
@@ -26,13 +26,16 @@ export async function forgetGscdumpAccountStatus(gscdumpUserId: string): Promise
  * gscdump's account status for this user, or null when gscdump could not
  * answer. A null never blocks the caller: the stored credential decides, which
  * is what every session did before this read existed.
+ *
+ * The session fetch hook waits on this before a signed-in page renders, so the
+ * read has the render-path deadline. A read that misses it caches as `Failed`.
  */
 export async function readGscdumpAccountStatus(gscdumpUserId: string): Promise<AccountStatus | null> {
   const cached = lookupCachedAccountStatus(await useStorage('cache').getItem(cacheKey(gscdumpUserId)), Date.now())
   if (cached._tag === 'Hit')
     return cached.status
 
-  const status = await useGscdumpClient().getUserLifecycle(gscdumpUserId).then(lifecycle => lifecycle.account.status).catch((error: unknown) => {
+  const status = await useGscdumpClient({ timeoutMs: RENDER_PATH_TIMEOUT_MS }).getUserLifecycle(gscdumpUserId).then(lifecycle => lifecycle.account.status).catch((error: unknown) => {
     logger.error('[gscdump account status] lifecycle read failed, status unknown for:', gscdumpUserId, error)
     return null
   })

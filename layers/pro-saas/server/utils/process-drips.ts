@@ -16,7 +16,7 @@ const BATCH_SIZE = 20
 export interface ProcessDripsDeps {
   db: Db
   now: Date
-  notificationsEnabled: boolean
+  onboardingDripEnabled: boolean
   send: (message: OutgoingEmail) => Promise<EmailSendResult>
   /** The site origin that unsubscribe links point at. */
   baseUrl: string
@@ -46,8 +46,8 @@ export type ProcessDripsResult
  * due, and the next run tries again until the 7 day ceiling cancels it.
  */
 export async function processDueDrips(deps: ProcessDripsDeps): Promise<ProcessDripsResult> {
-  // NUXT_NOTIFICATIONS_ENABLED=false holds every drip email.
-  if (!deps.notificationsEnabled)
+  // NUXT_ONBOARDING_DRIP_ENABLED=false holds every drip email.
+  if (!deps.onboardingDripEnabled)
     return { _tag: 'Held' }
 
   const { db, now } = deps

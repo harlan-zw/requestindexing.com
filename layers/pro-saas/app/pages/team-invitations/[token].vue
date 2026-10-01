@@ -46,12 +46,15 @@ async function accept() {
     return
   accepting.value = true
   try {
-    const res = await $fetch<{ teamId: string }>('/api/pro/invitations/accept', {
+    await $fetch<{ teamId: string }>('/api/pro/invitations/accept', {
       method: 'POST',
       body: { token: token.value },
     })
     toast.add({ title: 'Welcome to the team', color: 'success' })
-    await navigateTo(`/pro/dashboard/teams/${res.teamId}/settings`)
+    // As nuxtseo.com does: a full load of the dashboard, so the session it
+    // renders carries the Team this invitation joined. The old target,
+    // `/pro/dashboard/teams/:id/settings`, names no page in this app.
+    await navigateTo('/pro/dashboard', { external: true })
   }
   catch (err: unknown) {
     toast.add({
@@ -113,7 +116,7 @@ function decline() {
         </h1>
         <UButton
           class="mt-6"
-          :to="`/pro/dashboard/teams/${inv.team.id}/settings`"
+          to="/pro/dashboard"
           color="primary"
           label="Go to team"
         />

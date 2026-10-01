@@ -9,6 +9,7 @@ import {
   onboardingStepIndex,
   parseOnboardingStep,
   resolveGscConnection,
+  resolveOnboardingNav,
   resolveOnboardingResumeStep,
 } from '#layers/pro-saas/shared/onboarding'
 
@@ -131,10 +132,9 @@ function skipSites() {
   return finish({ skipSites: true })
 }
 
-// Search Console is an offer, so the skip has to be visible. Without it the
-// only wording on the step is "Connect", and a user who cannot connect reads a
-// working Continue as a mistake rather than as the way out.
-const skipLabel = computed(() => step.value === 'connect' && !gscConnected.value ? 'Skip for now' : undefined)
+// Search Console is an offer, so the way past it has to be visible. The rule
+// lives in `resolveOnboardingNav`: one way forward per step.
+const nav = computed(() => resolveOnboardingNav(step.value, gsc.value))
 
 function back() {
   goStep(ONBOARDING_STEPS[Math.max(0, stepIndex.value - 1)]!)
@@ -241,7 +241,8 @@ useSeoMeta({ title: 'Set up Request Indexing' })
 
     <UiWizardNav
       :can-back="stepIndex > 0"
-      :skip-label="skipLabel"
+      :skip-label="nav.skipLabel"
+      :show-next="nav.showNext"
       :next-label="nextLabel"
       :next-disabled="nextDisabled"
       :next-loading="finishing"

@@ -51,6 +51,17 @@ const POLL_INTERVAL_SYNCING = 5000
 const POLL_INTERVAL_SLOW = 60000
 const DEMO_GSCDUMP_SITE_ID = 's_9dnsyZ8vVZNlH8'
 
+/**
+ * A Site is "not connected" only when it has no gscdump link. Ported from
+ * nuxtseo.com, where a failed status read used to count here too and flipped
+ * a linked Site to its unconnected empty state. This app had the same fold:
+ * a lifecycle read that failed put the sample overlay and a connect button on
+ * a linked Site (UX replay A5). `hasError` carries the failure.
+ */
+export function computeIsNotConnected(gscdumpSiteId: string | null | undefined): boolean {
+  return !gscdumpSiteId
+}
+
 export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
   // The layout's Site, not a second read of the same endpoint. This used to
   // keep its own `pro-gsc:site:` key and its own `.catch(() => null)`, so the
@@ -64,6 +75,10 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
   const syncData = ref<GscSyncStatus | null>(null)
   const fetchStatus = ref<'idle' | 'pending' | 'success' | 'error'>('idle')
   const error = ref<Error | null>(null)
+  // True once any lifecycle read has finished. A poll sets `fetchStatus` back
+  // to pending every few seconds, so a page that waits for the first answer
+  // cannot read it from `fetchStatus`.
+  const settled = ref(false)
 
   async function refresh() {
     const siteIdVal = gscdumpSiteId.value
@@ -94,6 +109,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
         hold: null,
       }
       fetchStatus.value = 'success'
+      settled.value = true
       return
     }
 
@@ -149,8 +165,11 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
       return null
     })
 
-    if (syncData.value)
+    // A lifecycle that does not list this Site is a finished read too. Gating
+    // this on `syncData` left such a read pending for good.
+    if (!error.value)
       fetchStatus.value = 'success'
+    settled.value = true
   }
 
   // Auto-poll during active sync
@@ -259,13 +278,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
   // or when it failed, there is nothing to say about this Site's Search Console
   // connection, and saying "not connected" put the sample-data shell on screen
   // for a Site that does not exist (D5).
-  const isNotConnected = computed(() => {
-    if (!site.value)
-      return false
-    if (error.value)
-      return true
-    return !gscdumpSiteId.value
-  })
+  const isNotConnected = computed(() => !!site.value && computeIsNotConnected(gscdumpSiteId.value))
 
   const isTokenRevoked = computed(() => {
     return !!error.value && 'code' in error.value && error.value.code === 'AUTH'
@@ -329,6 +342,8 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
     fetchStatus,
     error,
     isNotConnected,
+    /** A lifecycle read has finished, with a result or a failure. */
+    isLifecycleSettled: computed(() => settled.value),
     isTokenRevoked,
     isPermissionLost,
     hold,
