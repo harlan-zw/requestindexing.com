@@ -139,7 +139,7 @@ function runCheck() {
 function exportCsv() {
   if (!result.value)
     return
-  const header = 'URL,Status (estimate from a Google site: search),Matched URL\n'
+  const header = 'URL,Status (Indexed and Not Indexed are site: search estimates),Matched URL\n'
   const rows = result.value.results
     .map(r => `"${r.url}","${STATUS_CSV[rowStatus(r)]}","${r._tag === 'Checked' ? r.matchedUrl || '' : ''}"`)
     .join('\n')
@@ -254,7 +254,7 @@ function exportCsv() {
     <!-- Results -->
     <div v-if="result" class="max-w-4xl">
       <p class="text-sm text-toned mb-3">
-        Each status is an estimate from a Google <span class="whitespace-nowrap"><code>site:</code> search</span> for that URL.
+        Indexed and Not Indexed are estimates from a Google <span class="whitespace-nowrap"><code>site:</code> search</span> for that URL.
       </p>
 
       <!-- Summary Cards -->
