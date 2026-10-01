@@ -7,7 +7,8 @@ export interface SerpResult {
 }
 
 export interface SerpTaskResult {
-  total?: number
+  /** Google's estimate of all results for the query. The API has no `total` field. */
+  se_results_count?: number
   items?: SerpResult[]
 }
 
@@ -42,7 +43,7 @@ function siteSearchKey(raw: string): string | null {
  * Only an organic result that is the checked URL itself counts.
  */
 export function matchSiteSearch(url: string, serp: SerpTaskResult | undefined): IndexCheckResult {
-  const totalSiteResults = serp?.total || 0
+  const totalSiteResults = serp?.se_results_count || 0
   const key = siteSearchKey(url)
   const match = key === null
     ? undefined
