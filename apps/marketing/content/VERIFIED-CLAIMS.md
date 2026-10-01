@@ -88,6 +88,17 @@ Evidence was read on the full source page. Private copies are outside Git.
 | PRODUCT-08 | Observed | Implementation inspection | The Site Indexing Report health score starts at 50. It adds 20 for an estimated indexed page count above 0, 15 for estimated organic traffic above 100, and 15 for more than 10 ranking keywords. The cap is 100. | The page shows 80 or above in green and 50 to 79 in amber. The score cannot fall below 50, so the red state never shows. The inputs are DataForSEO estimates. The tool reads no Search Console data. | apps/marketing/server/api/tools/site-report.post.ts; apps/marketing/app/pages/tools/site-indexing-report.vue | 2026-10-01 | f33aba8 |
 | VENDOR-05 | Documented | Official vendor page | SEO Gets pricing lists a 16-month historical data window on Free and Core. | Five-year storage is an extended storage upgrade that a customer requests in chat (VENDOR-03). Prices are not cited. | https://seogets.com/pricing ; https://seogets.com/features/how-to-extend-gsc-historical-data | 2026-10-01 | Current page; update date unstated |
 
+## IndexNow claims
+
+Checked 2 October 2026 for the dashboard Submit to Google and IndexNow pages.
+Evidence was read on the full source page. No IndexNow submission was sent.
+
+| ID | Status | Evidence kind | Claim | Scope and qualifications | Supporting URL or evidence | Checked | Source date/version |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| INDEXNOW-01 | Documented | Official protocol site | IndexNow lists its participating search engines. The FAQ names Amazon, Bing, Naver, Seznam.cz, Yandex, and Yep. Google is not on the list. | `searchengines.json` also lists the Internet Archive. Google's absence comes from the list; indexnow.org makes no statement about Google. Name Bing, and say "other participating search engines" for the rest, because the list changes. | https://www.indexnow.org/faq ; https://www.indexnow.org/searchengines.json | 2026-10-02 | Current page; update date unstated |
+| INDEXNOW-02 | Documented | Official protocol site | Submitted URLs are shared with all other participating search engines. | Documentation wording: "submitted URLs will be automatically shared with all other participating search engines." gscdump sends every IndexNow notification to `https://api.indexnow.org/indexnow`. HTTP 200 "only indicates that the search engine has received your URL". | https://www.indexnow.org/documentation ; `gscdump/indexnow` in `node_modules/gscdump/dist/indexnow.mjs` | 2026-10-02 | gscdump 4.8.0 |
+| INDEXNOW-03 | Documented | Official protocol site | IndexNow excludes no page type. The key file is a UTF-8 text file that contains the key, on the same host. | The documentation states no content restriction, so the claim rests on that absence. A key file in a subdirectory covers only URLs under that directory, and gscdump refuses a URL outside it. | https://www.indexnow.org/documentation ; https://www.indexnow.org/faq | 2026-10-02 | Current page; update date unstated |
+
 ## Executable example evidence
 
 Checked 15 September 2026 with Node.js 24.18.0 and googleapis 181.0.0.

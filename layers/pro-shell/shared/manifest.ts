@@ -125,9 +125,11 @@ export const proSiteFeatureManifest = {
     integration: 'gsc-connected',
   },
   // The namesake action. It runs on this account's pooled Google client, not on
-  // gscdump, so it carries no integration prerequisite of its own.
+  // gscdump, so it carries no integration prerequisite of its own. The label
+  // names Google because the IndexNow row beside it also submits URLs, to
+  // other search engines (COPY.md, "Indexing channel assets").
   'indexing.submit': {
-    label: 'Submit',
+    label: 'Submit to Google',
     icon: 'send',
     group: 'indexing',
     order: 38,
