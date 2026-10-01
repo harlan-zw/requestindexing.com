@@ -68,6 +68,7 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | Free and open source, MIT | `LICENSE`, and the repository is public |
 | We read your Search Console data, and the one change we make there is a sitemap submission | the connect flow asks for `webmasters` (read and write) and `indexing`. A sitemap submission comes from Submit sitemap on the Sitemaps tab, or from gscdump's daily sync when it finds a live sitemap |
 | The Free allowance numbers | gscdump returns them from `partner.users.entitlements.get`; copy reads them at runtime and never hardcodes one |
+| A free tool verdict is an estimate from a Google `site:` search | PRODUCT-06 in `apps/marketing/content/VERIFIED-CLAIMS.md`. The tools read no Search Console data and no URL Inspection result |
 
 **Not claimed until it ships.** Bing and IndexNow submission arrive by upgrading the gscdump
 protocol, not by building them here. The plumbing exists (`getSiteBingData`,
@@ -128,6 +129,21 @@ Engine contracts own IndexNow and Submission Receipt terms.
 
 IndexNow reason codes use the corrective-action strings in the IndexNow page.
 Each string names the failed step and the next action.
+
+## Free tool assets
+
+These assets apply to the result of each free `/tools` page.
+A `site:` search is public search output. URL Inspection is Google's own report on one URL. A tool result never implies that it is the other.
+`layers/core/app/components/tools/ToolInspectionCta.vue` holds the verdict offer. Change these strings here first.
+
+| Asset | String | Where it goes |
+| --- | --- | --- |
+| Estimate label | Estimate from a Google `site:` search | under the Google Index Checker verdict, and under the Site Indexing Report page count |
+| Bulk estimate label | Each status is an estimate from a Google `site:` search for that URL. | above the Bulk Indexing Checker results |
+| Verdict offer heading | See Google's own verdict | below each tool result |
+| Verdict offer | Search Console's URL Inspection says whether Google indexed a page, and if not, why. Request Indexing shows that answer for the Sites you connect. | below each tool result |
+| Verdict offer action, signed out | Connect Google | links to `/pro/onboarding`, whose first step has the same label |
+| Verdict offer action, signed in | Open Indexing | links to `/pro/dashboard/indexing`, the sidebar item of the same name |
 
 ## Free allowance assets
 

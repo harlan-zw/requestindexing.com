@@ -101,7 +101,7 @@ function runCheck() {
 function exportCsv() {
   if (!result.value)
     return
-  const header = 'URL,Status,Matched URL\n'
+  const header = 'URL,Status (estimate from a Google site: search),Matched URL\n'
   const rows = result.value.results
     .map(r => `"${r.url}","${r.indexed ? 'Indexed' : 'Not Indexed'}","${r.matchedUrl || ''}"`)
     .join('\n')
@@ -210,6 +210,10 @@ function exportCsv() {
 
     <!-- Results -->
     <div v-if="result" class="max-w-4xl">
+      <p class="text-sm text-toned mb-3">
+        Each status is an estimate from a Google <span class="whitespace-nowrap"><code>site:</code> search</span> for that URL.
+      </p>
+
       <!-- Summary Cards -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <div class="p-4 rounded-xl bg-[var(--ui-bg-elevated)] border border-[var(--ui-border)] text-center">
@@ -309,6 +313,8 @@ function exportCsv() {
           </div>
         </div>
       </div>
+
+      <ToolsToolInspectionCta class="mb-6" />
 
       <!-- CTA -->
       <div v-if="result.summary.notIndexed > 0" class="p-6 rounded-xl bg-gradient-to-br from-primary-50 to-emerald-50 dark:from-primary-900/20 dark:to-emerald-900/20 border border-primary-200 dark:border-primary-800">

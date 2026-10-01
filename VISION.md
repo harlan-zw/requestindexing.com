@@ -25,7 +25,7 @@ The non-goals are the point. This is a small product on purpose.
 - **Not an engine.** Sync, storage, retention, and the multi-engine submission surface belong to gscdump. IndexNow and Bing Webmaster Tools arrive through the protocol when gscdump ships them, and are not rebuilt here.
 - **Not an AI-visibility tool.** No crawler observability, no LLM citation tracking, no prerendering, no edge worker in the request path, and no injecting `llms.txt` into anyone else's site. That was the previous direction and it is dropped. Serving our own `llms.txt` through `nuxt-ai-ready` stays, because that is this site being readable, not a capability we sell.
 - **Not a generic SEO platform.** Matching Ahrefs feature lists is a treadmill.
-- **Not a black-hat tool.** Public APIs, published quotas, your own OAuth grants. No SERP scraping, no proxy rotation.
+- **Not a black-hat tool.** Public APIs, published quotas, your own OAuth grants. No SERP scraping, no proxy rotation. One exception: the free `/tools` pages run a Google `site:` search through DataForSEO, so a visitor gets an answer before signup. Each answer says it is an estimate and offers Google's own URL Inspection verdict through a Search Console connect.
 
 ## Where the work happens
 
