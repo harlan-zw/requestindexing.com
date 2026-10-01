@@ -1,9 +1,9 @@
 import type { DripSequence, DripSequenceId } from './drip-step'
 import { eq } from 'drizzle-orm'
+import onboardedWhy from '#emails/onboarded/00-why-i-built-it'
+import onboardedAgents from '#emails/onboarded/01-agent-setup'
+import onboardedRecord from '#emails/onboarded/02-indexing-record'
 import { dripEmails, users } from '../database'
-import onboardedWhy from '../emails/onboarded/00-why-i-built-it.md'
-import onboardedAgents from '../emails/onboarded/01-agent-setup.md'
-import onboardedRecord from '../emails/onboarded/02-indexing-record.md'
 import { stepSendAt } from './drip-step'
 import { parseEmailTemplate } from './email-template'
 

@@ -3,9 +3,9 @@ import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig, defineProject } from 'vitest/config'
 
-// Nitro's `raw` rollup plugin imports a server `.md` file as its text, which
-// is how the drip email templates load. Vite would parse the file as
-// JavaScript, so a test gets the same text from this plugin.
+// `nuxt.config.ts` serves each drip email template as a `#emails/...` virtual
+// module holding the Markdown text. The alias below points those ids at the
+// files, and this plugin loads a `.md` file as its text.
 function rawMarkdown() {
   return {
     name: 'raw-markdown',
@@ -44,6 +44,7 @@ function alias() {
     { find: '#imports', replacement: fileURLToPath(new URL('./tests/setup/nuxt-imports.ts', import.meta.url)) },
     { find: '#components', replacement: fileURLToPath(new URL('./tests/setup/nuxt-components.ts', import.meta.url)) },
     { find: /^#layers\/(.*)$/, replacement: `${ROOT}layers/$1` },
+    { find: /^#emails\/(.*)$/, replacement: `${ROOT}layers/pro-saas/server/emails/$1.md` },
     { find: '~~', replacement: ROOT },
   ]
 }
