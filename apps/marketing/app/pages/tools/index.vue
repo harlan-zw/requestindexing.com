@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
+
 useSeoMeta({
   title: 'Free Google Indexing Tools',
   description: 'Free tools to check if your pages are indexed by Google, audit your site\'s index coverage, and diagnose indexing problems. No signup required.',
@@ -29,7 +31,7 @@ const tools = [
   },
   {
     title: 'Bulk Indexing Checker',
-    description: 'Check up to 50 URLs at once. Paste a list or give it your sitemap, then export the results as CSV.',
+    description: `Check up to ${BULK_CHECK_URL_LIMIT} URLs at once. Paste a list or give it your sitemap, then export the results as CSV.`,
     icon: 'i-heroicons-queue-list',
     to: '/tools/bulk-indexing-checker',
     tags: ['Bulk', 'Sitemap', 'CSV'],

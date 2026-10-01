@@ -114,4 +114,4 @@ Do not depend on input order to predict which requests consume the remaining quo
 
 Before scaling up, decide how all workers sharing a Google Cloud project will account for requests. A counter inside one script misses other workers and resets when the process restarts. The [quota guide](/google-indexing-api-quota) separates project limits, reset times, and tool-specific limits.
 
-The executable example was checked with Node.js 24.18.0 and intercepted Google client requests, without any authenticated submission. A successful notification still does not prove crawling or indexing. To see which URLs Google returns in search later, paste up to 50 of them into the [bulk indexing checker](/tools/bulk-indexing-checker), which runs a `site:` search for each one.
+The executable example was checked with Node.js 24.18.0 and intercepted Google client requests, without any authenticated submission. A successful notification still does not prove crawling or indexing. To see which URLs Google returns in search later, paste up to 10 of them into the [bulk indexing checker](/tools/bulk-indexing-checker), which runs a `site:` search for each one.

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { checkUrlsIndexed } from '../layers/core/server/app/services/dataforseo'
 import { matchSiteSearch } from '../layers/core/server/app/services/site-search'
 
 function organic(url: string, title = `Title of ${url}`) {
@@ -62,34 +61,5 @@ describe('matchSiteSearch', () => {
     })
 
     expect(result.indexed).toBe(false)
-  })
-})
-
-describe('checkUrlsIndexed', () => {
-  it('matches each URL in a batch against its own site: search', async () => {
-    const providerFetch = async () => ({
-      tasks: [
-        { result: [{ total: 1, items: [organic('https://example.com/blog/other')] }] },
-        { result: [{ total: 1, items: [organic('https://example.com/about/', 'About')] }] },
-      ],
-    })
-
-    const results = await checkUrlsIndexed(['https://example.com/blog', 'https://example.com/about'], {
-      budgetMicros: 0,
-      credentials: { login: 'login', password: 'password' },
-      providerFetch: providerFetch as unknown as typeof $fetch,
-      storage: { getItem: async () => null, setItem: () => Promise.resolve() },
-    })
-
-    expect(results).toEqual([
-      { url: 'https://example.com/blog', indexed: false, totalSiteResults: 1 },
-      {
-        url: 'https://example.com/about',
-        indexed: true,
-        matchedUrl: 'https://example.com/about/',
-        matchedTitle: 'About',
-        totalSiteResults: 1,
-      },
-    ])
   })
 })

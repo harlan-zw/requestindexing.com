@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
+
 const faqs = [
   {
     question: 'How do I check if Google indexed my page?',
@@ -216,7 +218,7 @@ function checkIndex() {
                   Check More URLs
                 </h3>
                 <p class="text-sm text-[var(--ui-text-muted)] mb-3">
-                  Check up to 50 URLs, or the first 50 in a sitemap, with the bulk checker.
+                  Check up to {{ BULK_CHECK_URL_LIMIT }} URLs, or the first {{ BULK_CHECK_URL_LIMIT }} in a sitemap, with the bulk checker.
                 </p>
                 <UButton to="/tools/bulk-indexing-checker" size="sm" variant="outline" color="neutral">
                   Open the bulk checker
