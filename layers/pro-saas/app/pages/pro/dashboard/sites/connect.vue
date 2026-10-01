@@ -21,7 +21,7 @@ async function onConnected() {
 <template>
   <div class="max-w-2xl space-y-5">
     <p class="text-sm text-muted">
-      Name the address you want tracked. We match it to a Search Console property for you.
+      Choose a property from your Search Console. Request Indexing reads each Site from its property.
     </p>
     <UCard>
       <ProSiteAddForm :gsc-return-to="CONNECT_SITE_ROUTE" @connected="onConnected" />

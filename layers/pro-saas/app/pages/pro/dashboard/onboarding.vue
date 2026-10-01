@@ -118,10 +118,11 @@ const nextDisabled = computed(() => !canAdvanceOnboardingStep(step.value, {
 }))
 
 // nuxtseo.com's escape hatch. The sites step needs a Site, but a Site that
-// cannot connect must not trap the user: a gscdump outage or a full Free
-// allowance would. The form reports a failed attempt or a full allowance, and
-// only then does the step offer a skip. Skipping finishes setup with no Site,
-// and the dashboard's Connect a Site takes over.
+// cannot connect must not trap the user: a Google account with no Search
+// Console property, a gscdump outage, or a full Free allowance would. The form
+// reports a property list with nothing to connect, a failed attempt, or a full
+// allowance, and only then does the step offer a skip. Skipping finishes setup
+// with no Site, and the dashboard's Connect a Site takes over.
 const sitesBlocked = ref(false)
 const canSkipSites = computed(() => canSkipOnboardingSites({
   hasSites: hasSites.value,
@@ -208,7 +209,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       <UiAuthHeading
         size="md"
         title="Connect your sites"
-        description="Name the address you want tracked. We match it to a Search Console property for you."
+        description="Choose a property from your Search Console. Request Indexing reads each Site from its property."
       />
       <ProSiteAddForm :gsc-return-to="returnToSites" @changed="siteCount = $event" @blocked="sitesBlocked = true" />
       <p v-if="canSkipSites" class="flex flex-wrap items-center gap-x-1 text-sm text-muted">

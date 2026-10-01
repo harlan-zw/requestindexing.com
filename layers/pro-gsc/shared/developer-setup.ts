@@ -1,6 +1,7 @@
 // Setup steps for the Developers page. Each command exists twice: `display`
 // masks the API key for the screen, and `copy` holds the full key for the
 // clipboard. Before a key exists, both show the same placeholder.
+import { CONNECT_SITE_ROUTE } from '#layers/pro-saas/shared/onboarding'
 
 export type SetupMethod = 'cli' | 'mcp' | 'api'
 
@@ -14,6 +15,8 @@ export const GSCDUMP_MCP_URL = 'https://gscdump.com/mcp'
 export const GSCDUMP_API_ROOT = 'https://gscdump.com/api'
 export const GSCDUMP_SKILL_URL = 'https://gscdump.com/skill'
 const GSCDUMP_CLI_PACKAGE = '@gscdump/cli'
+/** Where a Request Indexing reader connects a Site. The agent prompt sends them here, never to gscdump.com. */
+export const CONNECT_SITE_URL = `https://requestindexing.com${CONNECT_SITE_ROUTE}`
 
 export interface ApiKeyPresentation {
   display: string
@@ -161,6 +164,10 @@ export interface AgentPromptSite {
  * installs the CLI and the skill, saves the key with a Hosted mode login, and
  * ends on a read of the indexing record, never on a connection message.
  *
+ * A Site can be removed after the prompt is copied, so the prompt carries its
+ * own stop for an empty Site list. Without it, the CLI's message for an
+ * account with no Sites sent the agent, and the reader, to gscdump.com.
+ *
  * The key is saved, not exported: Claude Code and Codex start a new shell for
  * each command, so an `export` is gone by the next step. The raw key appears
  * once, as the environment of the login, and never in a command argument.
@@ -185,6 +192,7 @@ export function buildAgentSetupPrompt(apiKey: string, site: AgentPromptSite | nu
 4. Confirm the key and list my Sites:
    gscdump auth status --json
    gscdump sites --json
+   If the Site list is empty, stop here. Tell me to connect a Site at ${CONNECT_SITE_URL}, then run step 5. Do not send me to gscdump.com: my Sites live in Request Indexing.
 5. Read the indexing record and summarise it for me:
 ${read}
    Its counts are stored URL Inspection verdicts. They are not Google's live index or the Search Console Page indexing report. Tell me that, and say when the verdicts were counted. Then say how many URLs have an indexed verdict. Say how many do not, and at which stage they stopped. Say what changed over the last 28 days.

@@ -250,8 +250,10 @@ export function useGscdumpClient(options: GscdumpClientOptions = {}) {
     getUserLifecycle,
     getSiteSyncStatus,
     waitForUserReady,
-    getAvailableSites: (userId: string) =>
-      client.listAvailableSites({ params: { userId }, query: {} }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
+    // gscdump answers from its stored copy of the Google list. `refresh` makes
+    // it read Google live, for a property the user verified a moment ago.
+    getAvailableSites: (userId: string, options: { refresh?: boolean } = {}) =>
+      client.listAvailableSites({ params: { userId }, query: options.refresh ? { refresh: true } : {} }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
 
     getUserEntitlements: (userId: string): Promise<PartnerUserEntitlementsV1> =>
       client.getUserEntitlements({ params: { userId } }, deadline()).then(response => response.data).catch(rethrowV1AsH3),

@@ -82,8 +82,9 @@ export default defineEventHandler(async (event) => {
 
   // 2. `team_sites.google_account_id` is NOT NULL, so the roster read that the
   //    sidebar depends on needs a Google grant row. The seeded grant carries no
-  //    scopes, so `gscIndexingScope` and `gscSitemapsScope` stay false and only
-  //    the read-path gate opens.
+  //    scopes, so `gscIndexingScope` and `gscSitemapsScope` stay false. It does
+  //    not connect Search Console: that is a gscdump user and key, which a dev
+  //    server cannot mint, so the session reads Search Console as not connected.
   let account = await db.select().from(googleAccounts).where(eq(googleAccounts.userId, identity.userId)).get()
   if (!account) {
     let client = await db.select().from(googleOAuthClients).limit(1).get()

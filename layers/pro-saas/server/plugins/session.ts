@@ -1,6 +1,7 @@
 import type { AuthProviderId } from '#layers/pro-saas-auth/shared/types/auth'
 import { logger } from '~~/shared/server/logger'
 import { readGscdumpAccountStatus } from '#layers/pro-gsc/server/utils/gscdump-account-status'
+import { hasGscdumpConnection } from '#layers/pro-gsc/server/utils/search-console-properties'
 import { buildGscSessionFields } from '../utils/gsc-session-fields'
 import { hasAuthenticatedSession } from '../utils/session-auth-state'
 import { readSessionEnrichment } from '../utils/session-enrichment'
@@ -63,25 +64,23 @@ export default defineNitroPlugin(() => {
 
     session.deliveryEmail = primaryIdentityEmail || user.email || null
 
-    // GSC connection state lives on `google_accounts`, not on a `users` column.
-    // These three used to read `user.gscConnected` / `user.gscEmail` /
-    // `user.googleScopes`, which the live `users` table has never had: the
-    // reads were always `undefined`, so `gscConnected` was permanently false
-    // for every user and `pro-gate.global.ts` plus the integration-readiness
-    // policy gated on a constant. Derived here the same way
-    // `/api/pro/gsc-properties` derives it.
+    // The Search Console connection is the gscdump user and key, the predicate
+    // every route reads too. A gscdump user id alone does not make Search
+    // Console usable: every browser query goes through the same-origin v1
+    // proxy, which needs the per-user API key. `google_accounts` is not the
+    // connection: the Search Console callback never writes it, and reading it
+    // showed connected accounts as "Not connected". The row still carries the
+    // Indexing API grant's scopes.
+    session.gscdumpConnected = hasGscdumpConnection(user)
     // One projection publishes the whole Search Console block. `pro-gate` reads
     // `gscIndexingScope` and `gscSitemapsScope` from it; assigning the
     // connection without them left both gates permanently closed.
-    Object.assign(session, buildGscSessionFields(googleAccount))
+    Object.assign(session, buildGscSessionFields({
+      gscdumpConnected: session.gscdumpConnected,
+      grantEmail: typeof session.gscEmail === 'string' ? session.gscEmail : null,
+      account: googleAccount,
+    }))
     session.gscdumpUserId = user.gscdumpUserId
-    // A gscdump user id alone does not make Search Console usable: every
-    // browser query goes through the same-origin v1 proxy, which needs the
-    // per-user API key too. Accounts registered before the callback persisted
-    // that key have an id and no key, so the dashboard hid its "Connect"
-    // prompt while every panel failed with `gscdump_api_key_missing`. This is
-    // the same predicate `/api/pro/gscdump-integration` reports.
-    session.gscdumpConnected = !!(user.gscdumpUserId && user.gscdumpApiKey)
     // A stored key does not prove the grant still works. A user who unticked
     // Search Console keeps the key from an earlier grant, and only gscdump's
     // lifecycle knows the grant is `scope_missing`. Read it here, where the

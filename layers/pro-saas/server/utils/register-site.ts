@@ -1,10 +1,12 @@
 import type { H3Event } from 'h3'
 import type { SiteSelect } from '~~/layers/core/server/db/schema'
 import type { SiteAllowance, SiteAllowanceRefusal } from '#layers/pro-gsc/shared/free-allowance'
+import type { SearchConsolePropertyRead, SiteAddress, SitePropertyMatch, SitePropertyRefusal } from '#layers/pro-gsc/shared/site-property'
 import type { CurrentTeamContext } from './require-current-team'
 import { and, eq } from 'drizzle-orm'
 import { dispatchEvent } from '#domain-events/server'
 import { decideSiteConnect } from '#layers/pro-gsc/shared/free-allowance'
+import { isStalePropertyRefusal, matchSiteProperty } from '#layers/pro-gsc/shared/site-property'
 import { sites } from '#layers/pro-saas/server/database'
 import { parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
 import { emitFirstProEvent } from './pro-events'
@@ -22,23 +24,42 @@ export interface RegisterSiteDeps {
    * past it by creating another Team.
    */
   readSiteAllowance: () => Promise<SiteAllowance>
+  /**
+   * The Search Console properties gscdump holds for the caller's Google
+   * account. `refresh` asks gscdump to read Google live instead of its stored
+   * copy of the list.
+   */
+  readSearchConsoleProperties: (options: { refresh: boolean }) => Promise<SearchConsolePropertyRead>
 }
 
 export type RegisterSiteResult
   = | { _tag: 'Ok', site: SiteSelect, isNew: boolean }
     | { _tag: 'InvalidUrl', message: string }
     | { _tag: 'AlreadyConnected', site: SiteSelect }
+    | { _tag: 'PropertyRefused', refusal: SitePropertyRefusal }
     | { _tag: 'Refused', refusal: SiteAllowanceRefusal }
 
+/** Match on gscdump's stored list, and read Google live once before a refusal it could change. */
+async function matchOwnedProperty(
+  address: SiteAddress,
+  read: RegisterSiteDeps['readSearchConsoleProperties'],
+): Promise<SitePropertyMatch> {
+  const stored = matchSiteProperty(address, await read({ refresh: false }))
+  if (stored._tag === 'Matched' || !isStalePropertyRefusal(stored.refusal.reason))
+    return stored
+  return matchSiteProperty(address, await read({ refresh: true }))
+}
+
 /**
- * Register a Site from its address, then let Google Search Console catch up.
+ * Register a Site from its address, once the caller's Google account holds a
+ * verified Search Console property for it.
  *
- * This is nuxtseo.com's order, and it is the reverse of what this app used to
- * do. Picking a Search Console property first meant a user with no verified
- * property had nothing to pick and no way forward. The address is the identity;
- * the `pro:site:added` listener in pro-gsc matches a property to it and calls
- * gscdump's `registerSite` afterwards, so an unverified account still gets a
- * Site and can verify later.
+ * nuxtseo.com registers the address first and matches a property later,
+ * because a nuxtseo.com Site has value without Search Console. A Site here has
+ * none: every page reads it through gscdump. Registering first let an address
+ * the account did not own read as "Connected" (the 2026-10-01 replay), so the
+ * property is matched before the row exists. The `pro:site:added` listener in
+ * pro-gsc then registers that property with gscdump.
  */
 export async function registerSite(
   event: H3Event,
@@ -58,6 +79,10 @@ export async function registerSite(
     .get()
   if (existing)
     return { _tag: 'AlreadyConnected', site: existing }
+
+  const match = await matchOwnedProperty(parsed, deps.readSearchConsoleProperties)
+  if (match._tag === 'Refused')
+    return { _tag: 'PropertyRefused', refusal: match.refusal }
 
   // nuxtseo.com checks its site cap before the insert, and so does this. A
   // full Free allowance refuses here, before a local row exists that gscdump
@@ -97,9 +122,9 @@ export async function registerSite(
   // never throws, so registration keeps its own failure modes.
   await emitFirstProEvent(db, caller.user.id, 'site_added', { domain: parsed.domain })
 
-  // Fan out so Search Console links itself to the new Site. The listener is
-  // isolated, so a Google failure leaves the Site registered rather than
-  // failing the whole request.
+  // Fan out so Search Console links the property matched above. The listener
+  // is isolated, so a gscdump failure leaves the Site connected and unlinked,
+  // and the reconcile links it later.
   await dispatchEvent('pro:site:added', {
     event,
     siteId: site.id,
@@ -107,6 +132,12 @@ export async function registerSite(
     url: parsed.origin,
     userId: caller.user.id,
     isNew: true,
+    gscProperty: {
+      siteUrl: match.property.siteUrl,
+      permissionLevel: match.property.permissionLevel,
+      registered: match.property.registered,
+      ...(match.property.siteId && { siteId: match.property.siteId }),
+    },
   })
 
   return { _tag: 'Ok', site, isNew: true }

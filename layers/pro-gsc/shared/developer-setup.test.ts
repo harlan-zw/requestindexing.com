@@ -62,6 +62,13 @@ describe('buildAgentSetupPrompt', () => {
     expect(prompt).toContain('gscdump indexing summary --site s_abc --json')
   })
 
+  // A Persona B replay on 2026-10-01: the CLI answered an account with no
+  // Sites with "Add a Site at https://gscdump.com", and the agent passed that on.
+  it.each([site, null])('stops on an empty Site list and points at Connect a Site in Request Indexing', (promptSite) => {
+    const prompt = buildAgentSetupPrompt(RAW_KEY, promptSite)
+    expect(prompt).toContain('If the Site list is empty, stop here. Tell me to connect a Site at https://requestindexing.com/pro/dashboard/sites/connect')
+  })
+
   it('asks the agent to pick a Site when none is connected', () => {
     const prompt = buildAgentSetupPrompt(RAW_KEY, null)
     expect(prompt).toContain('gscdump indexing summary --json')
