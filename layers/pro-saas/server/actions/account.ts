@@ -1,4 +1,5 @@
 import type { H3Event } from 'h3'
+import { revokeOAuthTokenResult } from 'gscdump'
 import { logWarn } from '~~/shared/logging'
 import { feedback } from '../database'
 import { deleteUserData } from '../utils/delete-user'
@@ -54,5 +55,5 @@ export async function deleteAccount(
     })
   }
 
-  return await deleteUserData(event, { userId: opts.userId })
+  return await deleteUserData(event, { userId: opts.userId, revokeGoogleToken: revokeOAuthTokenResult })
 }

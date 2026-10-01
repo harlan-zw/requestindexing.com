@@ -93,6 +93,8 @@ const marketingTools = [
 
 <template>
   <div>
+    <ProAccountDeletedModal />
+
     <!-- Hero -->
     <div class="bg-verdant divider-tilt">
       <UContainer class="z-1 relative max-w-8xl xl:max-w-[1400px]" :ui="{ base: 'max-w-8xl xl:max-w-[1335px]!' }">

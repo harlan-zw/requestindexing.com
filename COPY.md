@@ -65,6 +65,12 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | Free and open source, MIT | `LICENSE`, and the repository is public |
 | We read your Search Console data, and the one change we make there is a sitemap submission | the connect flow asks for `webmasters` (read and write) and `indexing`. A sitemap submission comes from Submit sitemap on the Sitemaps tab, or from gscdump's daily sync when it finds a live sitemap |
 | The Free allowance numbers | gscdump returns them from `partner.users.entitlements.get`; copy reads them at runtime and never hardcodes one |
+| Deleting an account removes its Teams, Sites, and data here, and gscdump.com deletes its record and API keys | `deleteUserData` purges the rows; its `pro:user:deleting` listener calls gscdump's `partner.users.delete`, which queues the gscdump user cleanup |
+
+**Never claim that a delete revokes Google access.** The Search Console grant comes from this
+app's OAuth client, and gscdump holds its token. gscdump's user cleanup skips a grant a partner's
+client issued (`partner_issued`). The delete revokes only the tokens `google_accounts` stores. The
+copy sends the reader to their Google Account instead.
 
 **Not claimed until it ships.** Bing and IndexNow submission arrive by upgrading the gscdump
 protocol, not by building them here. The plumbing exists (`getSiteBingData`,
@@ -174,6 +180,18 @@ A Site connects only from a verified Search Console property in the reader's own
 | Refused, read failed | Request Indexing could not read your Search Console properties, so {domain} is not connected. Try again in a minute. |
 | Integrations, no property | Connected. This Google account has no Search Console property. |
 
+## Account deletion assets
+
+These assets apply to the Danger zone on the Account page, the delete dialog, and the landing page
+after a delete. `layers/pro-saas/shared/account-deletion-copy.ts` holds them.
+
+| Asset | String |
+| --- | --- |
+| Blast radius | Deleting your account removes every Team you own and all Sites and data in them. You also lose access to Teams you joined. |
+| Engine record | gscdump.com, which Request Indexing runs on, deletes the record it keeps for your account. Your API keys stop working. |
+| Google access | Google can keep the access you gave Request Indexing. Remove it in your Google Account. |
+| Google access action | Open Google Account connections, a link to `https://myaccount.google.com/connections` |
+
 ## Banned language
 
 Harlan's global writing rules already apply and are not repeated here: no em dashes, never the
@@ -205,3 +223,7 @@ section above, then delete it from this list.
    address, Discord, and GitHub issues, but this file names none of them as the product's
    support channel. Refusal and hold copy carries no contact line until one is chosen and
    recorded as a canonical asset.
+4. **The account deletion assets were written without a review.** They replaced "We revoke your
+   Google account tokens", which was false (UX replay N1). The blast radius is nuxtseo.com's
+   sentence with Team and Site in place of workspace and site. Confirm the four strings, or
+   change them here first.

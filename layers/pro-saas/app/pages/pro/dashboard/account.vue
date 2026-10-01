@@ -8,6 +8,7 @@
 // component is imported by path.
 import type { IndexingGrant } from '#layers/pro-indexing/shared/contracts/indexing-grant'
 import ProConnectedAccounts from '#layers/pro-saas-auth/app/components/auth/ProConnectedAccounts.vue'
+import { ACCOUNT_DELETED_PATH, accountDeletionCopy } from '#layers/pro-saas/shared/account-deletion-copy'
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 
 definePageMeta({
@@ -22,7 +23,6 @@ const { session } = useUserSession()
 // is the in-flight OAuth state instead: set before Google asks for consent,
 // gone after the next sign-in, and kept after a revoke.
 const { data: indexingGrant, error: indexingGrantError, refresh: refreshIndexingGrant } = useFetch<IndexingGrant>('/api/indexing/auth', { key: 'indexing-grant' })
-const logout = createLogoutHandler()
 const toast = useToast()
 const route = useRoute()
 
@@ -111,28 +111,24 @@ async function revokeIndexingAuth() {
 
 async function deleteAccount() {
   deleteState.value = { _tag: 'deleting' }
-  try {
-    await $fetch('/api/user/me', {
-      method: 'DELETE',
-      headers: { Accept: 'text/json' },
-    })
-    toast.add({
-      id: 'logout',
-      title: 'Account deleted',
-      description: 'We deleted your account and all of its data.',
-      color: 'success',
-    })
-    session.value = null
-    await logout()
-  }
-  catch {
+  const deleted = await $fetch('/api/user/me', {
+    method: 'DELETE',
+    headers: { Accept: 'text/json' },
+  }).then(() => true, () => false)
+  if (!deleted) {
     deleteState.value = { _tag: 'idle' }
     toast.add({
       title: 'Failed to delete the account',
       description: 'The request failed. Try again later.',
       color: 'error',
     })
+    return
   }
+  // The route already cleared the session cookie. A full page load drops every
+  // client cache of the account and lands on the page that confirms the delete,
+  // as on nuxtseo.com. The sign-out handler is not used: its "See you next
+  // time!" toast replaced the confirmation (UX replay N4).
+  await navigateTo(ACCOUNT_DELETED_PATH, { external: true, replace: true })
 }
 </script>
 
@@ -229,12 +225,9 @@ async function deleteAccount() {
         </h2>
       </div>
       <p class="text-sm text-muted">
-        Delete all data linked to your account.
+        {{ accountDeletionCopy.blastRadius }} {{ accountDeletionCopy.permanent }}
       </p>
-      <ul class="mt-2 ml-5 list-disc text-sm text-muted">
-        <li>We delete every cached and stored record for your account.</li>
-        <li>We revoke your Google account tokens.</li>
-      </ul>
+      <ProAccountDeletionScope class="mt-2" />
       <UButton
         color="error"
         variant="outline"
@@ -248,10 +241,21 @@ async function deleteAccount() {
 
     <UModal
       v-model:open="isConfirmingDelete"
-      title="Delete your account?"
-      description="This action is irreversible. We delete all data linked to your account."
+      title="Delete account?"
       :dismissible="deleteState._tag === 'confirming'"
     >
+      <template #body>
+        <div class="space-y-4">
+          <UAlert
+            color="error"
+            variant="subtle"
+            icon="warning"
+            title="This is permanent"
+            :description="accountDeletionCopy.blastRadius"
+          />
+          <ProAccountDeletionScope />
+        </div>
+      </template>
       <template #footer>
         <div class="flex justify-end gap-2">
           <UButton
@@ -267,7 +271,7 @@ async function deleteAccount() {
             :loading="deleteState._tag === 'deleting'"
             @click="deleteAccount"
           >
-            Delete account
+            Delete my account
           </UButton>
         </div>
       </template>
