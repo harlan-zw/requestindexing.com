@@ -3,7 +3,29 @@
 The daily routine combines site checks and Sentry at 06:00 Australia/Sydney.
 It replaces the existing Sentry routine and preserves its cadence and propose mode.
 
-Site checks cover D1 readability and gscdump configuration. Intentional notification and bulk-sync pauses remain healthy evidence.
+Site checks cover D1 readability and gscdump configuration. Intentional onboarding drip and bulk-sync pauses remain healthy evidence.
+
+## Switches
+
+The `request-indexing.integration` result reports one switch in each evidence key.
+
+| Evidence key | Switch | `true` means |
+|---|---|---|
+| `welcomeEmailPaused` | `NUXT_ONBOARDING_DRIP_ENABLED` | No user enrols in the onboarding drip, and no drip email sends. |
+| `dailySyncPaused` | `NUXT_NOTIFICATIONS_ENABLED` | The daily bulk sync queues no Site sync. |
+
+The Free allowance email checks no switch. It always sends.
+Both switches are Worker vars that `nuxt.config.ts` writes at build time.
+The build reads each one from its environment. If a switch is unset, the build writes `'false'`.
+Set a production value only in the build step of `.github/workflows/deploy-cloudflare.yml`.
+Never change either switch with the Cloudflare CLI or the dashboard. The next deploy overwrites that value.
+
+To read both keys from production:
+
+```sh
+curl -fsS -H "Authorization: Bearer $CHECKIN_TOKEN" https://requestindexing.com/api/internal/checkin \
+  | jq '.results[] | select(.id == "request-indexing.integration") | .result.evidence'
+```
 The authenticated admin route returns a versioned report with required IDs, identity, severity, and coverage.
 The external caller checks freshness and deployment identity before accepting the report.
 Missing credentials and missing evidence never prove health.

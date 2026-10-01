@@ -19,7 +19,8 @@ const HOUR_MS = 60 * 60 * 1000
 /**
  * nuxtseo.com's ceiling for onboarding mail. A step this late describes an
  * account that has moved on, so the sender cancels it instead of sending it.
- * It also stops a backlog from going out at once when the kill switch opens.
+ * It also stops a backlog from going out at once when
+ * NUXT_ONBOARDING_DRIP_ENABLED turns on.
  */
 export const DRIP_MAX_OVERDUE_MS = 7 * 24 * HOUR_MS
 
