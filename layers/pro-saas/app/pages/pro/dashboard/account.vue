@@ -213,7 +213,7 @@ async function deleteAccount() {
           </UButton>
         </template>
         <p v-else class="text-sm text-muted">
-          This app has no access to the Indexing API. To grant access, open the Submit tab of a Site.
+          This app has no access to the Indexing API. To grant access, open the Submit to Google page of a Site.
         </p>
       </ProCard>
     </section>

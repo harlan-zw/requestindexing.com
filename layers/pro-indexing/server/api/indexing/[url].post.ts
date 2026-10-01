@@ -63,7 +63,7 @@ function mapGscError(error: unknown): (SubmitOutcome & { _tag: 'Err' }) | null {
       _tag: 'Err',
       reason: INDEXING_GRANT_INVALID_REASON,
       statusCode: 401,
-      message: 'Google no longer accepts this account\'s Indexing API access. Grant access again on the Submit page.',
+      message: 'Google no longer accepts this account\'s Indexing API access. Grant access again on the Submit to Google page.',
     }
   }
   return null
@@ -93,7 +93,7 @@ async function submitUrlToGoogle(opts: SubmitOpts): Promise<SubmitOutcome> {
       _tag: 'Err',
       reason: INDEXING_GRANT_INVALID_REASON,
       statusCode: 401,
-      message: 'Google returned no refresh token for Indexing API access. Grant access again on the Submit page.',
+      message: 'Google returned no refresh token for Indexing API access. Grant access again on the Submit to Google page.',
     }
   }
 
@@ -177,7 +177,7 @@ export default defineEventHandler(async (event) => {
   if (!account) {
     throw createError({
       statusCode: 401,
-      statusMessage: 'This account has no Indexing API access. Grant access on the Submit page, then submit the URL again.',
+      statusMessage: 'This account has no Indexing API access. Grant access on the Submit to Google page, then submit the URL again.',
       data: { reason: INDEXING_GRANT_MISSING_REASON },
     })
   }
