@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import { useProGscdumpSitemaps } from '#layers/pro-gsc/app/composables/useProGscdump'
+import { useRemoveSite } from '#layers/pro-saas/app/composables/useRemoveSite'
+import { MISSING_SITE_PATH } from '#layers/pro-saas/shared/site-lookup'
 
 definePageMeta({
   proTab: { feature: 'settings', label: 'Site Settings', icon: 'i-heroicons-cog', order: 90 },
@@ -28,28 +30,22 @@ const sitemapsLoading = computed(() =>
 
 const toast = useToast()
 const confirmOpen = ref(false)
-const removing = ref(false)
+const { removeSite: removeSiteById, removing } = useRemoveSite()
 
 async function removeSite() {
-  removing.value = true
-  const result = await $fetch<{ success: boolean }>(`/api/sites/${siteId.value}`, { method: 'DELETE' })
-    .then(() => ({ _tag: 'Ok' as const }))
-    .catch((error: unknown) => ({ _tag: 'Err' as const, error }))
-  removing.value = false
-
+  const name = siteName.value
+  const result = await removeSiteById(siteId.value)
   if (result._tag === 'Err') {
-    const e = result.error as { statusMessage?: string, data?: { statusMessage?: string } }
-    toast.add({
-      title: 'Site could not be removed',
-      description: e?.data?.statusMessage || e?.statusMessage || 'Try again in a moment.',
-      color: 'error',
-    })
+    toast.add({ title: 'Site could not be removed', description: result.message, color: 'error' })
     return
   }
 
   confirmOpen.value = false
-  toast.add({ title: 'Site removed', description: `${siteName.value} is no longer connected.`, color: 'success' })
-  await navigateTo('/pro/dashboard')
+  toast.add({ title: 'Site removed', description: `${name} is no longer connected.`, color: 'success' })
+  // The Sites list, as nuxtseo.com does, never the Overview. The Overview sends
+  // an account with one Site into that Site, so it is the one page that can
+  // bounce the reader back to a Site that is gone.
+  await navigateTo(MISSING_SITE_PATH, { replace: true })
 }
 </script>
 

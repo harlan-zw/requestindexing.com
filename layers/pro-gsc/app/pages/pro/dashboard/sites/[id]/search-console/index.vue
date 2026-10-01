@@ -17,9 +17,9 @@ import {
 } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { buildBrandFacet, buildQuestionFacet, useProGscFilters } from '#layers/pro-gsc/app/composables/useProGscFilters'
 import ProSparklineCell from '#layers/pro-gsc/app/internal/components/pro/ProSparklineCell.vue'
+import { resolveSiteSearchState, sampleOverlay } from '#layers/pro-gsc/app/utils/site-search-state'
 import { deriveUrlBrandKeywords } from '#layers/pro-gsc/shared/brand-queries'
 import { canonicalQueryKey } from '#layers/pro-gsc/shared/canonical-query'
-import { HELD_TITLE, holdMessage } from '#layers/pro-gsc/shared/entitlement-copy'
 import { overviewLead } from '#layers/pro-gsc/shared/overview-lead'
 import { isBrandTerm } from '#layers/pro-gsc/shared/query-display'
 
@@ -33,7 +33,8 @@ definePageMeta({
   icon: 'i-lucide-layout-dashboard',
 })
 
-const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, hold } = useSite('Search Console')
+const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, isLifecycleSettled, hold } = useSite('Search Console')
+const { session } = useUserSession()
 
 const { period, columns, stableData, compareMode, searchType, brand, questions, zoomTo, resetZoom } = useProGscFilters()
 
@@ -61,33 +62,21 @@ function onZoom(range: { start: string, end: string } | null) {
     resetZoom()
 }
 
-// Sample data preview, for a resolved Site that is not connected or is still
-// syncing. `site` must be resolved first: an unknown id used to fall through to
-// this shell, which showed another customer's domain as this Site's data (D5).
-//
-// A held Site gets the same shell with its own words. gscdump holds it before
-// its first import, so "syncing, a few minutes" would be untrue, and gscdump's
-// own hold message points to Local mode, which this app does not offer.
-const showDemoPreview = computed(() => !!site.value && (isNotConnected.value || !!hold.value || (isProcessing.value && !isReady.value)))
-const demoMessage = computed(() => {
-  if (isNotConnected.value)
-    return 'Sample search data'
-  return hold.value ? HELD_TITLE : 'Syncing your search data...'
-})
-const demoDescription = computed(() => {
-  if (isNotConnected.value)
-    return 'Connect Google Search Console to see your real data.'
-  return hold.value
-    ? holdMessage(hold.value)
-    : 'Showing sample data while we backfill your Search Console history. This usually takes a few minutes.'
-})
-const demoCta = computed(() => {
-  if (isNotConnected.value)
-    return { label: 'Connect your site', to: '/pro/dashboard/search-console' }
-  return hold.value
-    ? { label: 'Manage Sites', to: '/pro/dashboard/sites' }
-    : { label: 'View sync status', to: `/pro/dashboard/sites/${siteId.value}` }
-})
+// One state for the page, from the Site's gscdump link and its lifecycle.
+// `site` must be resolved first: an unknown id used to fall through to the
+// sample shell, which showed another customer's domain as this Site's data (D5).
+// `utils/site-search-state.ts` says why a failed lifecycle read is not
+// "not connected", and where each overlay button goes.
+const searchState = computed(() => resolveSiteSearchState({
+  linked: !isNotConnected.value,
+  lifecycleSettled: isLifecycleSettled.value,
+  hold: hold.value,
+  syncing: isProcessing.value,
+  ready: isReady.value,
+}))
+const overlay = computed(() => site.value
+  ? sampleOverlay(searchState.value, { gscConnected: !!session.value?.gscConnected })
+  : null)
 interface DemoDatesResponse {
   dates: { date: string, clicks: number, impressions: number, position: number, ctr: number }[]
   period: { clicks: number, impressions: number, ctr: number, position: number }
@@ -408,19 +397,19 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
       <!-- The shared control strip owns period, comparison, search type, chart
            metrics and the Brand and Questions facets. Country and Device stay
            off: a per-Site breakdown cannot cross-filter by them. -->
-      <ProGscSurfaceBar v-if="!showDemoPreview" surface="overview" :site-id="siteId" />
+      <ProGscSurfaceBar v-if="!overlay" surface="overview" :site-id="siteId" />
 
       <!-- The Search Console read failed. Distinct from the site-load error
            above: the Site is fine, the upstream read is not. -->
       <ProGscReadError :error="datesError" />
 
-      <!-- Not connected or syncing without data: show live nuxtseo.com preview -->
+      <!-- Not linked, held, or in its first sync: show the live nuxtseo.com preview -->
       <UiSampleDataOverlay
-        v-if="showDemoPreview"
-        :message="demoMessage"
-        :description="demoDescription"
-        :cta-label="demoCta.label"
-        :cta-to="demoCta.to"
+        v-if="overlay"
+        :message="overlay.message"
+        :description="overlay.description"
+        :cta-label="overlay.cta.label"
+        :cta-to="overlay.cta.to"
       >
         <div class="space-y-6">
           <UiStats :data="demoHeroStats" variant="cards" />
@@ -463,6 +452,12 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
           </div>
         </div>
       </UiSampleDataOverlay>
+
+      <!-- Linked, and the lifecycle has not answered yet. The dashboard waits,
+           so an empty read cannot show before the overlay replaces it. -->
+      <div v-else-if="searchState._tag === 'Checking'" aria-busy="true" aria-label="Loading Search Console data">
+        <UiLoadingState :rows="3" />
+      </div>
 
       <template v-else>
         <!-- Hero: Metrics + Chart -->

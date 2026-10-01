@@ -7,6 +7,11 @@
 // A new GSC scope (or a new integration entirely) is one new union member
 // plus one new case in `checkIntegration`.
 
+import { INTEGRATIONS_ROUTE } from '#layers/pro-shell/app/utils/integrations-pending'
+
+// Account holds the Indexing API grant; Integrations holds Search Console.
+const ACCOUNT_ROUTE = '/pro/dashboard/account'
+
 export type IntegrationReadiness
   = | 'gsc-connected' // webmasters.readonly — sufficient for read paths
     | 'gsc-indexing-connected' // indexing API scope — required for "request indexing" actions
@@ -38,7 +43,7 @@ export function checkIntegration(name: IntegrationReadiness, ctx: IntegrationCon
         return null
       return {
         reason: 'Connect Google Search Console to view this feature.',
-        cta: { label: 'Connect GSC', to: '/pro/dashboard/search-console' },
+        cta: { label: 'Connect GSC', to: INTEGRATIONS_ROUTE },
       }
     case 'gsc-indexing-connected':
       if (ctx.gscConnected && ctx.gscIndexingScope)
@@ -47,7 +52,7 @@ export function checkIntegration(name: IntegrationReadiness, ctx: IntegrationCon
         reason: ctx.gscConnected
           ? 'Grant Indexing API permission to request indexing.'
           : 'Connect Google Search Console with Indexing API permission.',
-        cta: { label: 'Grant indexing permission', to: '/pro/dashboard/search-console' },
+        cta: { label: 'Grant indexing permission', to: ctx.gscConnected ? ACCOUNT_ROUTE : INTEGRATIONS_ROUTE },
       }
     case 'gsc-sitemaps-writable':
       if (ctx.gscConnected && ctx.gscSitemapsScope)
@@ -56,7 +61,7 @@ export function checkIntegration(name: IntegrationReadiness, ctx: IntegrationCon
         reason: ctx.gscConnected
           ? 'Grant sitemap write permission to submit sitemaps.'
           : 'Connect Google Search Console with sitemap write permission.',
-        cta: { label: 'Grant sitemap permission', to: '/pro/dashboard/search-console' },
+        cta: { label: 'Grant sitemap permission', to: INTEGRATIONS_ROUTE },
       }
   }
 }
