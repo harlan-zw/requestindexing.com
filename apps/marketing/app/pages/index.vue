@@ -250,7 +250,7 @@ const marketingTools = [
             <p class="text-toned text-sm leading-relaxed">
               Search Console only shows the last <NuxtLink to="https://gscdump.com/learn-google-search-console/limits/16-month-data-retention" target="_blank" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
                 16 months
-              </NuxtLink>, and older days age out every day. Request Indexing keeps your history past that window, searchable and exportable.
+              </NuxtLink> of data, and older days age out every day. Request Indexing keeps your history past that window, searchable and exportable.
             </p>
           </div>
 
@@ -589,9 +589,9 @@ const marketingTools = [
         </div>
 
         <p class="text-toned mt-8 max-w-2xl">
-          Weighing another tool? See <NuxtLink to="/comparisons" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+          Weighing another tool? Read <NuxtLink to="/comparisons" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
             how Request Indexing compares with Indexly and SEO Gets
-          </NuxtLink>, and what replaces the closed Tag Parrot.
+          </NuxtLink> or what replaces the closed Tag Parrot.
         </p>
       </section>
 

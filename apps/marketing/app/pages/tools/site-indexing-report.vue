@@ -340,11 +340,11 @@ const recommendationColor = {
           </div>
         </div>
         <p class="text-sm text-[var(--ui-text-muted)] mt-6">
-          Missing pages you expected in Google? Check those URLs with the <NuxtLink to="/tools/bulk-indexing-checker" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+          Missing pages you expected in Google? Run those URLs through the <NuxtLink to="/tools/bulk-indexing-checker" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
             bulk indexing checker
-          </NuxtLink>, then <NuxtLink to="/indexing-api-for-blog-posts" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+          </NuxtLink> to confirm, then <NuxtLink to="/indexing-api-for-blog-posts" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
             request indexing with URL Inspection or a sitemap
-          </NuxtLink>.
+          </NuxtLink> for the ones Google does not have.
         </p>
       </div>
     </div>

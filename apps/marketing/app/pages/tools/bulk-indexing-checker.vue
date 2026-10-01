@@ -333,9 +333,9 @@ function exportCsv() {
           Reading Your Results
         </h2>
         <p class="text-sm text-[var(--ui-text-muted)] mb-3">
-          Indexed means the URL appeared in Google search results when the tool checked. For URLs that did not, the next step depends on the page. Google recommends a sitemap for many ordinary pages, and <NuxtLink to="/indexing-api-for-blog-posts" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
-            URL Inspection for a few important ones
-          </NuxtLink>.
+          Indexed means the URL appeared in Google search results when the tool checked. For URLs that did not, the next step depends on the page. For ordinary pages, Google recommends <NuxtLink to="/indexing-api-for-blog-posts" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+            URL Inspection for a few URLs and a sitemap for many
+          </NuxtLink> through Search Console.
         </p>
         <p class="text-sm text-[var(--ui-text-muted)]">
           Job posting and livestream URLs can go through the Indexing API instead. The <NuxtLink to="/bulk-submit-urls-google-indexing-api" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">

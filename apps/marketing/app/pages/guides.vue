@@ -85,7 +85,7 @@ const iconMap: Record<string, string> = {
           free indexing checkers
         </NuxtLink> answer that without an account. Choosing a tool? Read <NuxtLink to="/comparisons" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
           how Request Indexing compares with Indexly and SEO Gets
-        </NuxtLink>.
+        </NuxtLink> before you pick one.
       </p>
     </UPageSection>
   </div>

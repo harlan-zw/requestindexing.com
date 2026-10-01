@@ -174,9 +174,9 @@ const tools = [
               Automate submission
             </div>
             <p class="text-muted text-sm leading-relaxed">
-              When spot-checks stop being enough, sign up and submit job posting or livestream URLs through the Indexing API. For other pages, <NuxtLink to="/indexing-api-for-blog-posts" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
-                request indexing with URL Inspection or a sitemap
-              </NuxtLink>.
+              Sign up to submit job posting and livestream URLs through the Indexing API. Other pages need <NuxtLink to="/indexing-api-for-blog-posts" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+                URL Inspection or a sitemap
+              </NuxtLink> instead.
             </p>
           </div>
         </div>

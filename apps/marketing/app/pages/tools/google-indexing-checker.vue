@@ -270,9 +270,9 @@ function checkIndex() {
           </div>
         </div>
         <p class="text-sm text-[var(--ui-text-muted)] mt-6">
-          Not indexed? For an ordinary page, <NuxtLink to="/indexing-api-for-blog-posts" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
-            request indexing with URL Inspection or a sitemap
-          </NuxtLink>. For a job posting or livestream page, the <NuxtLink to="/google-indexing-api" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+          Not indexed? <NuxtLink to="/indexing-api-for-blog-posts" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+            Request indexing with URL Inspection or a sitemap
+          </NuxtLink> for an ordinary page. For a job posting or livestream page, the <NuxtLink to="/google-indexing-api" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
             Indexing API guide
           </NuxtLink> explains what a notification can and cannot tell you.
         </p>
