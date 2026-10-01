@@ -23,6 +23,8 @@ export type IndexCheckResult
  * Fold a URL to the spelling Google treats as one page. The host loses a
  * leading `www.`, the protocol and fragment drop, one trailing slash drops, and
  * the query string stays. The URL parser already lowercases the host.
+ * Percent-encoding hex is uppercased, because RFC 3986 makes `%d8` and `%D8`
+ * the same octet and WordPress writes non-Latin slugs in lowercase hex.
  * An unparseable URL has no key, so it never matches.
  */
 function siteSearchKey(raw: string): string | null {
@@ -31,7 +33,7 @@ function siteSearchKey(raw: string): string | null {
   const url = new URL(raw)
   const host = url.host.replace(/^www\./, '')
   const path = url.pathname.endsWith('/') ? url.pathname.slice(0, -1) : url.pathname
-  return `${host}${path}${url.search}`
+  return `${host}${path}${url.search}`.replace(/%[0-9a-f]{2}/gi, octet => octet.toUpperCase())
 }
 
 /**

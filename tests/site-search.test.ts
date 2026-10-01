@@ -39,6 +39,8 @@ describe('matchSiteSearch', () => {
     ['the fragment', 'https://example.com/blog#comments', 'https://example.com/blog'],
     ['the same query string', 'https://example.com/blog?page=2', 'https://example.com/blog?page=2'],
     ['the root path', 'https://example.com', 'https://www.example.com/'],
+    ['percent-encoding case', 'https://example.com/%d8%b3%d9%84/', 'https://example.com/%D8%B3%D9%84'],
+    ['percent-encoding against Unicode', 'https://example.com/%d8%b3%d9%84', 'https://example.com/سل'],
   ])('matches a result that differs only by %s', (_, checked, returned) => {
     expect(matchSiteSearch(checked, { total: 1, items: [organic(returned)] }).indexed).toBe(true)
   })
