@@ -2,21 +2,26 @@
 // both fetched this path since the pro tree landed; nothing served it, and
 // both swallowed the 404 with a `.catch`, so every page that needed a site's
 // gscdump id silently got null.
-import { eq } from 'drizzle-orm'
-import { useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
-import { users } from '#layers/pro-saas/server/database'
-import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
+import { RENDER_PATH_TIMEOUT_MS, useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
+import { readCallerGscdumpUserId } from '#layers/pro-saas/server/utils/caller-rows'
+import { defineProApiHandler, getProLogger } from '#layers/pro-saas/server/utils/handler'
 import { requireSiteAccess } from '#layers/pro-saas/server/utils/require-site-access'
 
 export default defineProApiHandler(async (event) => {
   const { db, site, caller } = await requireSiteAccess(event)
 
-  const [user] = await db.select({ gscdumpUserId: users.gscdumpUserId })
-    .from(users)
-    .where(eq(users.userId, caller.user.id))
+  const gscdumpUserId = await readCallerGscdumpUserId(event, db, caller.user.id)
 
-  const syncStatus = (site.gscdumpSiteId && user?.gscdumpUserId)
-    ? await useGscdumpClient().getSiteSyncStatus(site.gscdumpSiteId, user.gscdumpUserId).catch(() => null)
+  // The dashboard layout reads this before every Site page renders, so the
+  // sync status read has the render-path deadline. If the read misses it, the
+  // page shows no sync status, as it did whenever gscdump failed.
+  const syncStatus = (site.gscdumpSiteId && gscdumpUserId)
+    ? await useGscdumpClient({ timeoutMs: RENDER_PATH_TIMEOUT_MS })
+        .getSiteSyncStatus(site.gscdumpSiteId, gscdumpUserId)
+        .catch((error: unknown) => {
+          getProLogger(event).warn('[pro/sites/:id] gscdump sync status unavailable:', error)
+          return null
+        })
     : null
 
   return {
