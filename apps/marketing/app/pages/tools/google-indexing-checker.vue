@@ -151,6 +151,9 @@ function checkIndex() {
             >
               {{ result.indexed ? 'Indexed' : 'Not Indexed' }}
             </h2>
+            <p class="text-sm text-toned mb-2">
+              Estimate from a Google <span class="whitespace-nowrap"><code>site:</code> search</span>
+            </p>
             <p class="text-sm text-[var(--ui-text-muted)] font-mono truncate mb-2">
               {{ result.url }}
             </p>
@@ -165,6 +168,8 @@ function checkIndex() {
           </div>
         </div>
       </div>
+
+      <ToolsToolInspectionCta class="mb-6" />
 
       <!-- Actions -->
       <div class="grid sm:grid-cols-2 gap-4 mb-8">
