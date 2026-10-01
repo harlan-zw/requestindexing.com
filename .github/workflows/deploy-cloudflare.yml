@@ -6,6 +6,10 @@ on:
   workflow_run:
     workflows: [CI]
     types: [completed]
+    # Only CI runs on main start this workflow. A run started by a pull request's
+    # CI used to join the concurrency group below, then replace the pending main
+    # deploy and skip itself, so a merge to main could ship nothing.
+    branches: [main]
   workflow_dispatch:
 
 permissions:
