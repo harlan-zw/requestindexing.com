@@ -29,7 +29,7 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscdump/_internal', () => ({
 
 Object.assign(globalThis, {
   definePageMeta: () => {},
-  useSite: () => ({ gscdumpSiteId: ref('s_engine'), site: ref({ teamId: 1 }) }),
+  useSite: () => ({ siteId: ref('kv1109'), gscdumpSiteId: ref('s_engine'), site: ref({ teamId: 1 }) }),
   useTeamPolicy: () => ({ can: () => fixture.canWrite }),
   useCaller: () => ({ isAdmin: ref(false) }),
 })
@@ -62,8 +62,10 @@ function mount() {
     }))
   }
   app.component('UiButton', defineComponent({
-    props: ['disabled', 'type', 'loading'],
-    setup: (props, { slots }) => () => h('button', { type: props.type || 'button', disabled: props.disabled }, slots.default?.()),
+    props: ['disabled', 'type', 'loading', 'to'],
+    setup: (props, { slots }) => () => props.to
+      ? h('a', { href: props.to }, slots.default?.())
+      : h('button', { type: props.type || 'button', disabled: props.disabled }, slots.default?.()),
   }))
   app.mount(host)
   apps.push(app)
@@ -206,6 +208,13 @@ describe('indexNow page', () => {
     await flush()
     expect(fixture.submit).not.toHaveBeenCalled()
     expect(host.textContent).toContain('Each URL must include its full address. Check the URLs before submitting.')
+  })
+
+  // A Site has two ids. The engine id addresses gscdump; only the app id builds a route.
+  it('links the channel comparison to Submit to Google by the app Site id', () => {
+    const host = mount()
+    const links = [...host.querySelectorAll('a')].map(link => [link.textContent?.trim(), link.getAttribute('href')])
+    expect(links).toEqual([['Submit to Google', '/pro/dashboard/sites/kv1109/indexing/submit']])
   })
 
   it('shows a failed setup read and lets the reader retry it', () => {

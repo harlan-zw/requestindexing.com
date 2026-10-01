@@ -7,13 +7,14 @@ import { useMounted } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
 import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump/useProGscdump'
+import IndexingChannelsCard from '#layers/pro-indexing/app/internal/components/indexing/IndexingChannelsCard.vue'
 
 definePageMeta({
   proTab: { feature: 'indexing', label: 'IndexNow', icon: 'i-ph-paper-plane-tilt-duotone', order: 45 },
   title: 'IndexNow',
 })
 
-const { gscdumpSiteId, site } = useSite('IndexNow')
+const { siteId, gscdumpSiteId, site } = useSite('IndexNow')
 const engineId = computed(() => gscdumpSiteId.value ?? undefined)
 const gscdump = useProGscdump()
 const { isAdmin } = useCaller()
@@ -204,6 +205,10 @@ function formatDate(value: string) {
 <template>
   <ProPageStates>
     <ProPageZone tier="primary" first>
+      <!-- Evidence: INDEXNOW-01 and INDEXNOW-02 in VERIFIED-CLAIMS.md. -->
+      <p class="mb-4 max-w-2xl text-base text-muted">
+        IndexNow notifies Bing and other participating search engines about new or changed URLs. Google is not one of them.
+      </p>
       <UiCard v-if="!engineId" size="lg">
         <p class="text-base text-muted">
           Connect this Site before setting up IndexNow.
@@ -335,6 +340,10 @@ function formatDate(value: string) {
           </UiButton>
         </div>
       </UiCard>
+    </ProPageZone>
+
+    <ProPageZone tier="secondary">
+      <IndexingChannelsCard current="indexnow" :site-id="siteId" />
     </ProPageZone>
   </ProPageStates>
 </template>

@@ -3,21 +3,16 @@ import type {
   GscdumpAnalysisParams,
   GscdumpDataDetailResponse,
   GscdumpDataResponse,
-  GscdumpDataRow,
   GscdumpIndexingDiagnosticsResponse,
   GscdumpIndexingUrlsResponse,
-  GscdumpMeta,
   GscdumpPageTrendResponse,
   GscdumpQueryTrendResponse,
   GscdumpSitemapsResponse,
 } from '@gscdump/contracts'
-import type { RollingPeriod } from '@gscdump/sdk/period'
 import type { GscdumpV1Client, GscdumpV1OperationInput } from '@gscdump/sdk/v1'
-import type { BuilderState, Column, Filter, Metric } from 'gscdump/query'
+import type { BuilderState } from 'gscdump/query'
 import { toPartnerError } from '@gscdump/sdk/partner-errors'
-import { periodToDays as gscPeriodToDays } from '@gscdump/sdk/period'
 import { createGscdumpV1Client } from '@gscdump/sdk/v1'
-import { and, between, contains, country, date, device, daysAgo as gscDaysAgo, page as pageColumn, queryCanonical, query as queryColumn } from 'gscdump/query'
 
 export type {
   GscdumpAnalysisPreset as AnalysisPreset,
@@ -356,191 +351,4 @@ export function useGscdumpSitemaps(
       watch: (options?.watch ?? true) ? [_siteId] : undefined,
     },
   )
-}
-
-// ===== Table Data Helper =====
-
-export type Period = RollingPeriod
-
-export function periodToDays(period: Period | string): number {
-  return gscPeriodToDays(period)
-}
-
-export function daysAgo(days: number): string {
-  return gscDaysAgo(days)
-}
-
-type GscdumpTableDimension = 'page' | 'query' | 'queryCanonical' | 'country' | 'device' | 'date'
-
-const GSCDUMP_DIMENSION_COLUMNS = {
-  country,
-  date,
-  device,
-  page: pageColumn,
-  query: queryColumn,
-  queryCanonical,
-} satisfies Record<GscdumpTableDimension, Column<GscdumpTableDimension>>
-
-export interface GscdumpTableOptions {
-  siteId: MaybeRefOrGetter<string | undefined>
-  dimension: GscdumpTableDimension
-  period?: MaybeRefOrGetter<Period>
-  pageSize?: number
-  defaultSort?: { column: Metric | 'date', direction: 'asc' | 'desc' }
-  extraFilters?: MaybeRefOrGetter<Array<Filter<object>> | undefined>
-}
-
-export interface GscdumpTableResponse<T = GscdumpDataRow> {
-  rows: T[]
-  total: number
-  totalClicks: number
-  totalImpressions: number
-  hasPrevData: boolean
-  meta: GscdumpMeta | null
-}
-
-export function useGscdumpTableData<T = GscdumpDataRow>(options: GscdumpTableOptions) {
-  const { siteId, dimension, pageSize = 50, defaultSort } = options
-
-  const _siteId = computed(() => toValue(siteId))
-  const _period = computed(() => toValue(options.period) ?? '28d')
-  const _extraFilters = computed(() => toValue(options.extraFilters) ?? [])
-
-  const q = ref('')
-  const page = ref(1)
-  const filter = ref<GscComparisonFilter | 'default'>('default')
-  const sort = ref<{ column: Metric | 'date', direction: 'asc' | 'desc' }>(defaultSort ?? { column: 'clicks', direction: 'desc' })
-  const _isLoading = ref(false)
-  const isLoading = computed(() => _isLoading.value)
-  const error = ref<GscdumpError | null>(null)
-  const data = ref<GscdumpTableResponse<T>>({
-    rows: [],
-    total: 0,
-    totalClicks: 0,
-    totalImpressions: 0,
-    hasPrevData: false,
-    meta: null,
-  })
-
-  const rows = computed(() => data.value.rows)
-  const total = computed(() => data.value.total)
-
-  async function refresh() {
-    const siteIdVal = _siteId.value
-    if (!siteIdVal)
-      return
-
-    _isLoading.value = true
-    error.value = null
-
-    const days = periodToDays(_period.value)
-    const offset = (page.value - 1) * pageSize
-
-    const filters = [
-      between(date, daysAgo(days), daysAgo(1)),
-      q.value ? contains(GSCDUMP_DIMENSION_COLUMNS[dimension], q.value) : null,
-      ..._extraFilters.value,
-    ].filter((value): value is Filter<object> => value != null)
-
-    const state: BuilderState = {
-      dimensions: [dimension],
-      filter: and(...filters),
-      orderBy: { column: sort.value.column, dir: sort.value.direction },
-      rowLimit: pageSize,
-      startRow: offset,
-    }
-
-    const comparison: BuilderState = {
-      dimensions: [dimension],
-      filter: between(date, daysAgo(days * 2), daysAgo(days + 1)),
-    }
-
-    const gscdump = useGscdump()
-    const result = await gscdump.queryAnalyticsReport({
-      params: { siteId: siteIdVal },
-      body: {
-        state,
-        comparison,
-        filter: filter.value === 'default' ? undefined : filter.value,
-      },
-    }, true)
-      .catch(() => {
-        error.value = gscdump.error.value
-        return null
-      })
-      .finally(() => { _isLoading.value = false })
-
-    if (!result)
-      return
-
-    const oldestSynced = result.meta?.oldestDateSynced
-    const prevStartDate = daysAgo(days * 2 + 2)
-    const hasPrevData = !!(oldestSynced && prevStartDate >= oldestSynced)
-
-    data.value = {
-      rows: result.rows as T[],
-      total: result.totalCount,
-      totalClicks: result.totals?.clicks ?? 0,
-      totalImpressions: result.totals?.impressions ?? 0,
-      hasPrevData,
-      meta: result.meta ?? null,
-    }
-  }
-
-  function toggleFilter(newFilter: GscComparisonFilter | 'default') {
-    filter.value = filter.value === newFilter ? 'default' : newFilter
-    page.value = 1
-  }
-
-  function setPage(newPage: number) {
-    page.value = newPage
-  }
-
-  function setSort(column: Metric | 'date', direction: 'asc' | 'desc' = 'desc') {
-    sort.value = { column, direction }
-    page.value = 1
-  }
-
-  function toggleSort(column: Metric | 'date') {
-    if (sort.value.column === column)
-      sort.value.direction = sort.value.direction === 'asc' ? 'desc' : 'asc'
-    else
-      sort.value = { column, direction: 'desc' }
-    page.value = 1
-  }
-
-  watch([q, filter, page, sort, _siteId, _period, _extraFilters], () => {
-    if (_siteId.value)
-      refresh()
-  }, { deep: true })
-
-  // Client-only, like every other composable in this file (they all pass
-  // `server: false` to `useAsyncData`). This one instead fired an async
-  // `refresh()` straight out of an immediate watcher, so it ran during the
-  // server render and 500'd every route that mounts a table — overview, pages,
-  // keywords, keyword-insights — while client-side navigation to the same
-  // routes worked. The response is caller-scoped and never part of the
-  // server-rendered HTML, so there is nothing to gain by fetching it here.
-  watch(_siteId, (id) => {
-    if (id && import.meta.client)
-      refresh()
-  }, { immediate: true })
-
-  return {
-    q,
-    page,
-    filter,
-    sort,
-    isLoading,
-    error,
-    data,
-    rows,
-    total,
-    pageSize,
-    refresh,
-    toggleFilter,
-    setPage,
-    setSort,
-    toggleSort,
-  }
 }

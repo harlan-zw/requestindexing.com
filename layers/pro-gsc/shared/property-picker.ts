@@ -40,8 +40,11 @@ export type PropertyPickerState
     | { _tag: 'Properties', properties: PickerProperty[] }
 
 export interface PropertyPickerInput {
+  /** The property read. A re-read keeps `data` at the last answer until it lands. */
   queryStatus: QueryStatus
   data: PropertyPickerResponse | null | undefined
+  /** The Team's Sites answered at least once. */
+  sitesLoaded: boolean
   /** The bare hosts of the Team's connected Sites. */
   connectedDomains: ReadonlySet<string>
 }
@@ -87,8 +90,13 @@ function pickerProperties(response: PropertyPickerResponse, connectedDomains: Re
 export function projectPropertyPicker(input: PropertyPickerInput): PropertyPickerState {
   if (input.queryStatus === 'error')
     return { _tag: 'Failed', message: READ_FAILED }
+  // Only the first read shows Loading. Refresh, a connect, and the realtime
+  // resync each re-read the list, and the answer stays on screen until the new
+  // one lands. Before this, the resync about 3 s after load put the list back
+  // to Loading for a second full read. Until the Team's Sites answer, a
+  // connected property would show as connectable, so the list waits for them.
   const data = input.data
-  if (input.queryStatus !== 'success' || !data)
+  if (!data || !input.sitesLoaded)
     return { _tag: 'Loading' }
   if (!data.connected)
     return { _tag: 'NotConnected' }

@@ -12,6 +12,9 @@
 //   gates activation behind the same predicate.
 // - Closes the socket on tab unload. We do NOT close on route change off the
 //   dashboard — re-entering is common and reconnect cost > keep-alive cost.
+// - Keeps the resume cursor in localStorage per account, as nuxtseo.com does.
+//   With the SDK's in-memory default, every full page load had no cursor, so
+//   the SDK asked for a resync and `refreshNuxtData()` re-read the whole page.
 //
 // Event handling:
 // - `sync.site_complete` / `sync.complete` / `enrichment.complete` →
@@ -24,11 +27,22 @@
 import type { RealtimeV1Event } from '@gscdump/contracts/v1'
 import type { GscdumpRealtimeV1Client } from '@gscdump/sdk/v1'
 import type { GscdumpIntegration } from '../composables/useGscdumpIntegration'
+import type { CursorStorage } from '../internal/gscdump-realtime-cursor'
+import { createRealtimeV1Schemas } from '@gscdump/contracts/v1/realtime'
 import { createGscdumpRealtimeV1Client, createGscdumpV1Client } from '@gscdump/sdk/v1'
 import { logWarn } from '~~/shared/logging'
 import { GSCDUMP_INTEGRATION_KEY } from '../composables/useGscdumpIntegration'
 import { bumpGscInvalidation } from '../internal/composables/useGscInvalidation'
+import { createGscdumpCursorStore } from '../internal/gscdump-realtime-cursor'
 import { isProAppPath } from '../utils/_is-pro-app-path'
+
+// Reading `window.localStorage` itself throws where the browser blocks site
+// data. Each call goes through here, so the cursor store's own guard covers it.
+const lazyLocalStorage: CursorStorage = {
+  getItem: key => localStorage.getItem(key),
+  setItem: (key, value) => localStorage.setItem(key, value),
+  removeItem: key => localStorage.removeItem(key),
+}
 
 export default defineNuxtPlugin({
   name: 'pro-gscdump-realtime',
@@ -62,6 +76,7 @@ export default defineNuxtPlugin({
       activated = true
 
       const integration = useNuxtData<GscdumpIntegration | null>(GSCDUMP_INTEGRATION_KEY).data
+      const { user } = useUserSession()
 
       stopWatch = watch(
         () => integration.value?.connected ?? false,
@@ -85,7 +100,13 @@ export default defineNuxtPlugin({
               return fetch(request, { ...init, headers })
             },
           })
+          const userId = user.value?.id
           const client = createGscdumpRealtimeV1Client({
+            // Without a signed-in id there is no account to key the cursor
+            // by, so the SDK keeps it in memory for this page load only.
+            ...(userId != null && {
+              cursorStore: createGscdumpCursorStore(createRealtimeV1Schemas(), String(userId), lazyLocalStorage),
+            }),
             // The body is empty on purpose. A ticket's origin is host policy,
             // so the proxy substitutes its own request origin; sending one from
             // the browser is rejected as an unexpected body and the ticket

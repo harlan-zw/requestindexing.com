@@ -27,6 +27,7 @@ Indexing API submissions this app still runs itself.
 | Link | gscdump Site binding; Bing `partner.sites.indexing.bing.link.create` | A Site has 0 or 1 link per Integration that reads it | link, linked |
 | funnel milestone | pro_events table | First-time record of one step toward an active account | (internal) |
 | Submission | indexing_jobs table | Site 1—N Submission, unique on (site, path, transport) | "Submit" |
+| IndexNow | gscdump `partner.sites.indexing.indexnow.*`, IndexNow page | Site 0—1 verified key; notifies participating search engines, never Google | IndexNow |
 | Investigation | indexing_investigations table | Site 1—N Investigation, unique on (site, url, issue) | (not surfaced as a noun) |
 | Quota | usages table | Site 1—N daily counter, unique on (site, date, key) | "limit" |
 | Free allowance | gscdump `partner.users.entitlements.get` | Billing owner 1—1 per usage pool; gscdump sets and enforces it | Free allowance |
@@ -37,6 +38,8 @@ Indexing API submissions this app still runs itself.
 | Product updates | notification_optouts, category `lifecycle` | Address 0—1 opt-out per category | product updates |
 
 Collisions: the product's submission history and Google's indexing state are different evidence. Never imply one proves the other.
+
+The Google Indexing API and IndexNow are separate channels. The Indexing API notifies Google only. IndexNow notifies Bing and other participating search engines, and Google is not one of them. Never call one channel by the other's name. Never imply that an IndexNow receipt says anything about Google.
 
 Quota and Free allowance are different ceilings. Quota is a local daily counter on one Site. The Free allowance is gscdump's ceiling on one account's Sites, Preserved rows, and URL Inspections. Never use one word for the other.
 
@@ -111,13 +114,23 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 
 **Is:** one Indexing API notification this app sent for one URL, and its outcome. Table `indexing_jobs`, keyed on `(site, path, transport)`.
 
-**Use for:** the act and the record. The control that starts it says **Submit**.
+**Use for:** the act and the record. The control that starts it says **Submit**. The Site page and nav row that hold it say **Submit to Google**, so the row names the one search engine it reaches.
 
 **Never:** request, push, ping, or index (as a verb). A Submission is a notification Google accepted, never evidence that a page is indexed. The Banned table below holds that line.
 
 **Exception:** a meta title may echo the searcher's own words, so the landing title says "Request Google Indexing". Searchers type "google index request". Body copy and controls keep Submit and Submission.
 
 **Casing:** `Submission` in prose, `submit` on a control, `indexing_jobs` in identifiers.
+
+### IndexNow
+
+**Is:** the open protocol that gscdump uses to notify participating search engines about new or changed URLs on one Site. Bing is one of them. Google is not. Borrowed from the gscdump protocol, which owns the term and its Submission Receipt.
+
+**Use for:** the IndexNow page, its nav row, and the comparison with the Google Indexing API.
+
+**Never:** Bing submission, because IndexNow reaches more engines than Bing. Never imply that IndexNow reaches Google.
+
+**Casing:** `IndexNow`, one word, capital I and N.
 
 ### Investigation
 

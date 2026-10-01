@@ -185,28 +185,62 @@ export async function checkUrlIndexed(url: string, ctx?: DataForSeoCallContext):
   return matchSiteSearch(url, data?.tasks?.[0]?.result?.[0])
 }
 
-export async function checkUrlsIndexed(urls: string[], ctx?: DataForSeoCallContext): Promise<IndexCheckResult[]> {
-  // DataForSEO allows batching — send multiple tasks in one request
-  const tasks = urls.map(url => ({
-    keyword: `site:${url}`,
-    location_code: 2840,
-    language_code: 'en',
-    depth: 10,
-  }))
+/**
+ * Live SERP calls one bulk run keeps open at once. A Worker holds at most six
+ * connections that wait for response headers, and each call also starts its
+ * spend ledger writes, so three leaves room for them.
+ */
+const BULK_CHECK_CONCURRENCY = 3
 
-  // DataForSEO has a limit of 100 tasks per request
-  const batchSize = 100
-  const results: IndexCheckResult[] = []
+/**
+ * One row of a bulk run. `NotChecked` means the provider stayed down for that
+ * URL after its retries, so the row has no verdict.
+ */
+export type BulkCheckRow
+  = | ({ _tag: 'Checked' } & IndexCheckResult)
+    | { _tag: 'NotChecked', url: string }
 
-  for (let i = 0; i < tasks.length; i += batchSize) {
-    const batch = tasks.slice(i, i + batchSize)
-    const data = await dataforseoFetch<DataForSeoResponse<SerpTaskResult>>('/serp/google/organic/live/advanced', batch, ctx)
+/**
+ * Check each URL with its own `site:` search. DataForSEO documents that "each
+ * Live SERP API call can contain only one task". A batched call was billed like
+ * one check, so the other URLs in a bulk run got a verdict no search backed.
+ *
+ * A provider outage for one URL becomes a `NotChecked` row and the other rows
+ * keep their verdicts. An outage for every URL is the 503 a single check
+ * gives. Any other failure, such as a credential error, fails the run and stops
+ * new calls.
+ */
+export async function checkUrlsIndexed(urls: string[], ctx?: DataForSeoCallContext): Promise<BulkCheckRow[]> {
+  const rows: BulkCheckRow[] = []
+  const failures: unknown[] = []
+  let next = 0
 
-    for (let j = 0; j < batch.length; j++)
-      results.push(matchSiteSearch(urls[i + j]!, data?.tasks?.[j]?.result?.[0]))
+  async function worker(): Promise<void> {
+    while (failures.length === 0 && next < urls.length) {
+      const index = next++
+      const url = urls[index]!
+      await checkUrlIndexed(url, ctx).then(
+        (result) => {
+          rows[index] = { _tag: 'Checked', ...result }
+        },
+        (error: unknown) => {
+          if (isTransientDataForSeoFailure(error))
+            rows[index] = { _tag: 'NotChecked', url }
+          else
+            failures.push(error)
+        },
+      )
+    }
   }
 
-  return results
+  // Every worker settles before the run answers, so no provider call outlives the request.
+  await Promise.all(Array.from({ length: Math.min(BULK_CHECK_CONCURRENCY, urls.length) }, worker))
+
+  if (failures.length > 0)
+    throw failures[0]
+  if (rows.length > 0 && rows.every(row => row._tag === 'NotChecked'))
+    throw createError({ statusCode: 503, message: DATAFORSEO_UNAVAILABLE_MESSAGE })
+  return rows
 }
 
 export async function getDomainOverview(domain: string, ctx?: DataForSeoCallContext): Promise<DomainOverviewResult> {

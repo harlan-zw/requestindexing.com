@@ -61,10 +61,14 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | Claim | Evidence |
 | --- | --- |
 | Google keeps 16 months of Search Console data | Google's documented retention window |
-| Google's Indexing API publish quota is 200 per day | Google's documented quota; the app tracks it for the user |
+| Google's Indexing API publish quota is 200 per day | GOOGLE-03 in `apps/marketing/content/VERIFIED-CLAIMS.md`. It is the default for one Google Cloud project. This app spreads accounts across several projects and limits each account to 100 calls a day (PRODUCT-03). A dashboard page never shows 200 as the reader's own limit |
+| Google documents the Indexing API for job posting and livestream pages only | GOOGLE-01 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
+| IndexNow notifies Bing and other participating search engines, and Google is not one of them | INDEXNOW-01 and INDEXNOW-02 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
+| IndexNow takes any page type on the host, and needs a key file on the site | INDEXNOW-03 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
 | Free and open source, MIT | `LICENSE`, and the repository is public |
 | We read your Search Console data, and the one change we make there is a sitemap submission | the connect flow asks for `webmasters` (read and write) and `indexing`. A sitemap submission comes from Submit sitemap on the Sitemaps tab, or from gscdump's daily sync when it finds a live sitemap |
 | The Free allowance numbers | gscdump returns them from `partner.users.entitlements.get`; copy reads them at runtime and never hardcodes one |
+| A free tool verdict is an estimate from a Google `site:` search | PRODUCT-06 in `apps/marketing/content/VERIFIED-CLAIMS.md`. The tools read no Search Console data and no URL Inspection result |
 | Deleting an account removes its Teams, Sites, and data here, and gscdump.com deletes its record and API keys | `deleteUserData` purges the rows; its `pro:user:deleting` listener calls gscdump's `partner.users.delete`, which queues the gscdump user cleanup |
 
 **Never claim that a delete revokes Google access.** The Search Console grant comes from this
@@ -77,6 +81,29 @@ protocol, not by building them here. The plumbing exists (`getSiteBingData`,
 `getSiteBingConnection`) and the marketing site says nothing about either, which is correct
 today. Do not put multi-engine submission on a marketing page before the protocol ships it.
 
+## Indexing channel assets
+
+A Site sends change notifications through two channels: the Google Indexing API and IndexNow.
+These strings tell them apart. The Submit to Google page and the IndexNow page both show the
+comparison card, so its strings stay identical on both. The person decides which channel to use.
+The scope warning informs that choice and never blocks a Submission.
+
+| Asset | String |
+| --- | --- |
+| Google page heading and nav row | Submit to Google |
+| Google page intro | This sends one URL to Google's Indexing API. Google decides whether to crawl it, and when. |
+| Google page scope warning | Google documents the Indexing API for job posting and livestream pages only. Check your page type before you submit. |
+| Comparison heading | Google Indexing API or IndexNow |
+| Comparison row labels | Search engines · Pages · Setup |
+| Google Indexing API, search engines | Google only. |
+| Google Indexing API, pages | Google documents it for job posting and livestream pages only. |
+| Google Indexing API, setup | Indexing API access from your Google account. |
+| IndexNow, search engines | Bing and other participating search engines. Google is not one of them. |
+| IndexNow, pages | Any page type on this host. |
+| IndexNow, setup | A key file on your site. |
+| Link to the Google page | Submit to Google |
+| Link to the IndexNow page | Submit with IndexNow |
+
 ## IndexNow dashboard assets
 
 These assets apply to the IndexNow setup, submission, and receipt history.
@@ -85,6 +112,7 @@ Engine contracts own IndexNow and Submission Receipt terms.
 | Asset | String |
 | --- | --- |
 | Page heading | IndexNow |
+| Page intro | IndexNow notifies Bing and other participating search engines about new or changed URLs. Google is not one of them. |
 | Setup heading | Verify your IndexNow key |
 | Setup instruction | Publish a UTF-8 text file containing only your key at the key location. |
 | Key label | IndexNow key |
@@ -107,6 +135,21 @@ Engine contracts own IndexNow and Submission Receipt terms.
 
 IndexNow reason codes use the corrective-action strings in the IndexNow page.
 Each string names the failed step and the next action.
+
+## Free tool assets
+
+These assets apply to the result of each free `/tools` page.
+A `site:` search is public search output. URL Inspection is Google's own report on one URL. A tool result never implies that it is the other.
+`layers/core/app/components/tools/ToolInspectionCta.vue` holds the verdict offer. Change these strings here first.
+
+| Asset | String | Where it goes |
+| --- | --- | --- |
+| Estimate label | Estimate from a Google `site:` search | under the Google Index Checker verdict, and under the Site Indexing Report page count |
+| Bulk estimate label | Each status is an estimate from a Google `site:` search for that URL. | above the Bulk Indexing Checker results |
+| Verdict offer heading | See Google's own verdict | below each tool result |
+| Verdict offer | Search Console's URL Inspection says whether Google indexed a page, and if not, why. Request Indexing shows that answer for the Sites you connect. | below each tool result |
+| Verdict offer action, signed out | Connect Google | links to `/pro/onboarding`, whose first step has the same label |
+| Verdict offer action, signed in | Open Indexing | links to `/pro/dashboard/indexing`, the sidebar item of the same name |
 
 ## Free allowance assets
 

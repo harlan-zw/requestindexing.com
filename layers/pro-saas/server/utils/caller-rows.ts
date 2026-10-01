@@ -50,3 +50,18 @@ export async function readCallerGscdumpUserId(event: H3Event, db: Db, userId: nu
     .where(eq(users.userId, userId))
   return user?.gscdumpUserId ?? null
 }
+
+/**
+ * The caller's gscdump connection columns. The caller batch already holds the
+ * user row, so this reads D1 only when nothing resolved the caller in this
+ * request.
+ */
+export async function readCallerGscdumpConnection(event: H3Event, db: Db, userId: number): Promise<Pick<User, 'gscdumpUserId' | 'gscdumpApiKey'> | null> {
+  const rows = loadedCallerRows(event)
+  if (rows && rows.user.userId === userId)
+    return { gscdumpUserId: rows.user.gscdumpUserId, gscdumpApiKey: rows.user.gscdumpApiKey }
+  const [user] = await db.select({ gscdumpUserId: users.gscdumpUserId, gscdumpApiKey: users.gscdumpApiKey })
+    .from(users)
+    .where(eq(users.userId, userId))
+  return user ?? null
+}
