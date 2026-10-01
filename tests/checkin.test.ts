@@ -35,14 +35,19 @@ function databaseEvent(db: unknown) {
 }
 
 it('keeps an intentional welcome email and daily sync pause healthy', async () => {
-  const report = await runChecks([integration], { event: { notificationsEnabled: false, gscdump: { apiKey: 'private', webhookSecret: 'private' } } })
+  const report = await runChecks([integration], { event: { onboardingDripEnabled: false, notificationsEnabled: false, gscdump: { apiKey: 'private', webhookSecret: 'private' } } })
   expect(report.coverage).toBe('complete')
   expect(report.results[0]?.result).toEqual({ _tag: 'Pass', evidence: { configured: true, welcomeEmailPaused: true, dailySyncPaused: true } })
   expect(JSON.stringify(report)).not.toContain('private')
 })
 
+it('reports the onboarding drip switch and the daily sync switch apart', async () => {
+  const report = await runChecks([integration], { event: { onboardingDripEnabled: true, notificationsEnabled: false, gscdump: { apiKey: 'private', webhookSecret: 'private' } } })
+  expect(report.results[0]?.result).toEqual({ _tag: 'Pass', evidence: { configured: true, welcomeEmailPaused: false, dailySyncPaused: true } })
+})
+
 it('marks missing integration credentials unavailable', async () => {
-  const report = await runChecks([integration], { event: { notificationsEnabled: true, gscdump: { apiKey: '', webhookSecret: '' } } })
+  const report = await runChecks([integration], { event: { onboardingDripEnabled: true, notificationsEnabled: true, gscdump: { apiKey: '', webhookSecret: '' } } })
   expect(report.coverage).toBe('incomplete')
 })
 

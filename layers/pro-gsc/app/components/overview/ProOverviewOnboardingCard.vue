@@ -35,7 +35,7 @@ const { step } = defineProps<{
           Connect Google Search Console
         </h2>
         <p class="max-w-xl text-sm text-muted">
-          Connecting grants read access to your Search Console properties so your Sites, indexing status, coverage, and submissions can load.
+          Indexing status and coverage for your Sites come from Search Console. We read your Search Console data, and the one change we make there is a sitemap submission.
         </p>
       </div>
       <ConnectSearchConsoleButton return-to="/pro/dashboard" class="shrink-0" />

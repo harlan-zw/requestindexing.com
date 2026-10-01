@@ -35,12 +35,12 @@ async function recordSend(message: OutgoingEmail): Promise<EmailSendResult> {
   return { _tag: 'Sent' }
 }
 
-function run(now: Date, overrides: { notificationsEnabled?: boolean, send?: typeof recordSend } = {}) {
-  return processDueDrips({ db, now, notificationsEnabled: true, send: recordSend, baseUrl: BASE_URL, secret: SECRET, ...overrides })
+function run(now: Date, overrides: { onboardingDripEnabled?: boolean, send?: typeof recordSend } = {}) {
+  return processDueDrips({ db, now, onboardingDripEnabled: true, send: recordSend, baseUrl: BASE_URL, secret: SECRET, ...overrides })
 }
 
-function enrol(now = T0, notificationsEnabled = true) {
-  return enrolOnboardingDrip({ db, notificationsEnabled, now }, 1)
+function enrol(now = T0, onboardingDripEnabled = true) {
+  return enrolOnboardingDrip({ db, onboardingDripEnabled, now }, 1)
 }
 
 function dripRows() {
@@ -91,7 +91,7 @@ describe('enrolment', () => {
     expect(sent.map(message => message.subject)).toEqual([SUBJECTS[0]])
   })
 
-  it('enrols nobody while NUXT_NOTIFICATIONS_ENABLED is false', async () => {
+  it('enrols nobody while NUXT_ONBOARDING_DRIP_ENABLED is false', async () => {
     expect(await enrol(T0, false)).toEqual({ _tag: 'Held' })
     expect(dripRows()).toEqual([])
   })
@@ -129,10 +129,10 @@ describe('sending', () => {
     expect(message!.textBody).toContain(`Unsubscribe: ${unsubscribeUrlOf(message!)}\n`)
   })
 
-  it('holds every send while NUXT_NOTIFICATIONS_ENABLED is false, then sends once it opens', async () => {
+  it('holds every send while NUXT_ONBOARDING_DRIP_ENABLED is false, then sends once it opens', async () => {
     await enrol()
 
-    expect(await run(hoursAfterOnboarding(1), { notificationsEnabled: false })).toEqual({ _tag: 'Held' })
+    expect(await run(hoursAfterOnboarding(1), { onboardingDripEnabled: false })).toEqual({ _tag: 'Held' })
     expect(sent).toEqual([])
 
     await run(hoursAfterOnboarding(2))

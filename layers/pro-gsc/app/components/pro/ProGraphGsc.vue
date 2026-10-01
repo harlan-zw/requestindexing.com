@@ -307,11 +307,16 @@ const position = (d: DataRow) => d.position
 
     <!-- Not enough data for chart (need >=2 points for lines) -->
     <div v-else-if="value.length < 2" class="flex flex-col items-center justify-center h-full text-center gap-1">
+      <!-- Ported from nuxtseo.com: this branch never claims a sync is pending.
+           Only the page knows the lifecycle, and its overlay covers a Site
+           that is not linked or still syncing. This branch knows only that the
+           window came back empty. "ETA ~5 min after connect" here told a
+           reader with an unreadable Site to wait (UX replay A5). -->
       <p class="text-sm text-muted">
-        {{ value.length === 0 ? 'Search Console data fills in once your first sync lands. ETA ~5 min after connect.' : 'First day of GSC data is in; trend renders once we have 2+' }}
+        {{ value.length === 0 ? 'No search impressions in this period.' : 'First day of GSC data is in; trend renders once we have 2+' }}
       </p>
-      <p v-if="value.length === 1" class="text-xs text-dimmed">
-        Check back tomorrow for the trend line.
+      <p class="text-xs text-dimmed">
+        {{ value.length === 0 ? 'Try a wider date range.' : 'Check back tomorrow for the trend line.' }}
       </p>
     </div>
 

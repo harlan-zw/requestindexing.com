@@ -1,9 +1,9 @@
 // The one outbound email path: Postmark, from the address the welcome email
 // has always used. Every send honours the dev skip.
 //
-// This helper does not check the NUXT_NOTIFICATIONS_ENABLED kill switch. The
-// onboarding drip checks it before it calls here. The Free allowance email
-// must always send, so it does not check the switch.
+// This helper checks no switch. The onboarding drip checks
+// NUXT_ONBOARDING_DRIP_ENABLED before it calls here. The Free allowance email
+// must always send, so it checks no switch.
 
 export interface OutgoingEmail {
   to: string

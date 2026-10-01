@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm'
 import { logWarn } from '~~/shared/logging'
 import { can } from '../../shared/policies/team-policy'
 import { teams } from '../database'
+import { loadedCallerTeam } from './caller-rows'
 import { requireCaller } from './get-caller'
 import { ensurePersonalTeam } from './personal-team'
 import { attachTeamOps } from './team-domain'
@@ -79,7 +80,11 @@ export async function requireCurrentTeam(
   if (!teamId)
     throw createError({ statusCode: 400, message: 'No team selected' })
 
-  const team = await db.select().from(teams).where(eq(teams.teamId, teamId)).get()
+  // The caller batch already read every team the caller belongs to. Only an
+  // admin viewing a team outside their memberships, or a backfilled personal
+  // team, still needs this read.
+  const team = loadedCallerTeam(event, teamId)
+    ?? await db.select().from(teams).where(eq(teams.teamId, teamId)).get()
   if (!team)
     throw createError({ statusCode: 404, message: 'Team not found' })
 

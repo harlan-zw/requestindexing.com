@@ -53,7 +53,7 @@ git clone git@github.com:harlan-zw/requestindexing.com.git
 pnpm i
 ```
 
-Configure a Google OAuth client at the [Google Developer Console](https://console.developers.google.com/) with scopes `userinfo.email`, `webmasters.readonly`, `indexing`, and redirect URLs `http://localhost:3000/auth/google` and `http://localhost:3000/auth/google-indexing`.
+Configure a Google OAuth client at the [Google Developer Console](https://console.developers.google.com/) with scopes `openid`, `email`, `profile`, `webmasters`, and `indexing`, and redirect URLs `http://localhost:3000/auth/google`, `http://localhost:3000/auth/integrations/gsc/callback`, and `http://localhost:3000/auth/google-indexing`.
 
 ```bash
 # .env

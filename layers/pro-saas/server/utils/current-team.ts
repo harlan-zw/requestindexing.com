@@ -18,14 +18,31 @@ export interface CurrentTeam {
   personalTeam: boolean
 }
 
-export async function readCurrentTeam(db: Db, userId: number): Promise<CurrentTeam | null> {
+// The membership rule both reads below share: the selected team counts only
+// while the user owns it or still belongs to it.
+function selectedTeamFilter(db: Db, userId: number) {
   const membership = db.select({ teamId: teamMemberships.teamId })
     .from(teamMemberships)
     .where(and(eq(teamMemberships.teamId, teams.teamId), eq(teamMemberships.userId, userId)))
-  const row = await db.select({ teamId: teams.teamId, name: teams.name, personalTeam: teams.personalTeam })
+  return and(eq(users.userId, userId), or(eq(teams.ownerId, userId), exists(membership)))
+}
+
+/** The current team as a query, so the session batch can run it in its one round trip. */
+export function currentTeamQuery(db: Db, userId: number) {
+  return db.select({ teamId: teams.teamId, name: teams.name, personalTeam: teams.personalTeam })
     .from(users)
     .innerJoin(teams, eq(teams.teamId, users.currentTeamId))
-    .where(and(eq(users.userId, userId), or(eq(teams.ownerId, userId), exists(membership))))
-    .get()
-  return row ?? null
+    .where(selectedTeamFilter(db, userId))
+}
+
+/** The current team's id alone, for use as a sub-select. Empty when the user has left it. */
+export function currentTeamIdQuery(db: Db, userId: number) {
+  return db.select({ teamId: teams.teamId })
+    .from(users)
+    .innerJoin(teams, eq(teams.teamId, users.currentTeamId))
+    .where(selectedTeamFilter(db, userId))
+}
+
+export async function readCurrentTeam(db: Db, userId: number): Promise<CurrentTeam | null> {
+  return (await currentTeamQuery(db, userId).get()) ?? null
 }

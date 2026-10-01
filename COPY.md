@@ -33,7 +33,7 @@ claims more than the marketing site does today. See Truth rules.
 | Landing H1 and section headings | Sentence case, outcome not feature | "From Search Console to indexed in four steps" |
 | Meta title | Title case, the search intent first | "Request Google Indexing for Your Pages" |
 | Body copy | Technical but friendly, second person | "Submit any URL from your dashboard with one click." |
-| Button labels | Verb-object | "Get Started", "Request Indexing", "View Code". Never "OK", "Submit", "Click here" |
+| Button labels | Verb-object | "Get Started", "Submit URL", "View Code". Never "OK", "Submit", "Click here" |
 | Empty states | Acknowledge, explain the value, give the action | "Search Console keeps data for the last 16 months" then the quote then the CTA |
 | Errors | What broke, why it matters, how to fix. Never blame the reader | three parts, in that order |
 | Quota and limits | State the number and who tracks it | "We respect Google's 200/day publish quota so you don't have to track it yourself." |

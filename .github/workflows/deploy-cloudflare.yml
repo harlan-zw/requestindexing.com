@@ -79,6 +79,11 @@ jobs:
           # the release named a commit this build does not contain. Sentry then
           # blamed live errors on code that was never deployed.
           SENTRY_RELEASE: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # Turns the onboarding drip on in production. `nuxt.config.ts` writes
+          # it into the Worker vars at build time. A build without it deploys
+          # the drip off. The daily bulk sync keeps its own switch,
+          # NUXT_NOTIFICATIONS_ENABLED, which this workflow leaves unset.
+          NUXT_ONBOARDING_DRIP_ENABLED: 'true'
 
       # Schema before code. On 2026-09-15 a deploy shipped code that reads
       # migration 0014's `sites` columns while production D1 still held the old

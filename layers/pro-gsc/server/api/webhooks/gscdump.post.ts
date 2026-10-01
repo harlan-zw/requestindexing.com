@@ -97,8 +97,9 @@ export default defineEventHandler(async (event) => {
         columns: { email: true },
         where: eq(users.gscdumpUserId, gscdumpUserId),
       }).then(user => user ?? null),
-      // No NUXT_NOTIFICATIONS_ENABLED check: the kill switch holds back the
-      // onboarding drip and the daily sync, never a Free allowance email.
+      // No switch check. NUXT_ONBOARDING_DRIP_ENABLED holds back the onboarding
+      // drip and NUXT_NOTIFICATIONS_ENABLED holds back the daily sync. Neither
+      // holds back a Free allowance email.
       send: sendEmail,
       manageSitesUrl: `${getRequestURL(event).origin}/pro/dashboard/sites`,
     }).catch(async (error: unknown) => {

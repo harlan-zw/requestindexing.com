@@ -1,6 +1,7 @@
-// NUXT_NOTIFICATIONS_ENABLED=false holds back the onboarding drip and the daily
-// bulk sync. The Free allowance email always sends, with the switch on or off.
-// Postmark is the one boundary faked here.
+// Two switches, each with one job. NUXT_ONBOARDING_DRIP_ENABLED=false holds
+// back the onboarding drip. NUXT_NOTIFICATIONS_ENABLED=false holds back the
+// daily bulk sync. The Free allowance email always sends, with either switch on
+// or off. Postmark is the one boundary faked here.
 import type { DatabaseSync } from 'node:sqlite'
 import { signWebhookPayload, WEBHOOK_SIGNATURE_HEADER } from '@gscdump/sdk/webhook'
 import { createApp, createError, defineEventHandler, getHeader, getRequestURL, readRawBody, toWebHandler } from 'h3'
@@ -41,9 +42,14 @@ const SECRET = 'whsec_test_secret'
 
 type ProDatabase = Parameters<typeof createUserWithPersonalTeam>[0]
 
-function runtimeConfig(notificationsEnabled: boolean) {
+interface Switches {
+  onboardingDripEnabled: boolean
+  notificationsEnabled: boolean
+}
+
+function runtimeConfig(switches: Switches) {
   return {
-    notificationsEnabled,
+    ...switches,
     postmark: { apiKey: 'pm-test' },
     gscdump: { webhookSecret: SECRET },
     session: { password: 'a-session-password-at-least-32-characters-long' },
@@ -133,9 +139,64 @@ function allowanceNotice() {
   }
 }
 
-describe('with NUXT_NOTIFICATIONS_ENABLED=false', () => {
+function dripRows() {
+  return sqlite.prepare('SELECT step_index AS stepIndex, status FROM drip_emails').all()
+}
+
+describe('with the onboarding drip on and notifications off', () => {
   beforeEach(() => {
-    vi.stubGlobal('useRuntimeConfig', () => runtimeConfig(false))
+    vi.stubGlobal('useRuntimeConfig', () => runtimeConfig({ onboardingDripEnabled: true, notificationsEnabled: false }))
+  })
+
+  it('enrols the user and sends the first onboarding drip email, with a one-click unsubscribe', async () => {
+    await onboardThenRunDripTwoHoursLater()
+
+    expect(dripRows()).toEqual([{ stepIndex: 1, status: 'active' }])
+    expect(postmark.sent).toEqual([expect.objectContaining({
+      From: 'harlan@harlanzw.com',
+      To: 'ada@example.test',
+      Subject: 'Why I built Request Indexing',
+      Headers: expect.arrayContaining([{ Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' }]),
+    })])
+  })
+
+  it('queues no daily bulk sync', async () => {
+    const result = await syncDaily.run!({ context: {} } as never)
+
+    expect(result).toEqual({ result: [], skipped: 'notifications disabled' })
+    expect(batchJobs).not.toHaveBeenCalled()
+  })
+})
+
+describe('with the onboarding drip off and notifications on', () => {
+  beforeEach(() => {
+    vi.stubGlobal('useRuntimeConfig', () => runtimeConfig({ onboardingDripEnabled: false, notificationsEnabled: true }))
+  })
+
+  it('enrols no onboarding drip and sends no drip email', async () => {
+    await onboardThenRunDripTwoHoursLater()
+
+    expect(dripRows()).toEqual([])
+    expect(postmark.sent).toEqual([])
+  })
+
+  it('queues one sync for each active Site, keyed by its id', async () => {
+    // The Google account behind a team_sites row is not under test here.
+    sqlite.exec('PRAGMA foreign_keys = OFF')
+    const [site] = await db.insert(sites).values({ teamId, property: 'sc-domain:example.com', active: true }).returning({ id: sites.id })
+    await db.insert(teamSites).values({ teamId, siteId: site!.id, googleAccountId: 1 })
+
+    await syncDaily.run!({ context: {} } as never)
+
+    expect(vi.mocked(batchJobs).mock.calls.map(([, , job]) => job)).toEqual([
+      { name: 'site/sync', siteId: site!.id, onFinish: { name: 'sites/sync-finished', payload: { siteId: site!.id } } },
+    ])
+  })
+})
+
+describe('with both switches off', () => {
+  beforeEach(() => {
+    vi.stubGlobal('useRuntimeConfig', () => runtimeConfig({ onboardingDripEnabled: false, notificationsEnabled: false }))
   })
 
   it('still sends the Free allowance email for a signed user.allowance.notice', async () => {
@@ -155,49 +216,5 @@ describe('with NUXT_NOTIFICATIONS_ENABLED=false', () => {
 
     expect(response).toEqual({ status: 200, body: { ok: true, notice: { _tag: 'UnknownUser' } } })
     expect(postmark.sent).toEqual([])
-  })
-
-  it('enrols no onboarding drip and sends no drip email', async () => {
-    await onboardThenRunDripTwoHoursLater()
-
-    expect(sqlite.prepare('SELECT count(*) AS n FROM drip_emails').get()).toEqual({ n: 0 })
-    expect(postmark.sent).toEqual([])
-  })
-
-  it('queues no daily bulk sync', async () => {
-    const result = await syncDaily.run!({ context: {} } as never)
-
-    expect(result).toEqual({ result: [], skipped: 'notifications disabled' })
-    expect(batchJobs).not.toHaveBeenCalled()
-  })
-})
-
-describe('with NUXT_NOTIFICATIONS_ENABLED=true', () => {
-  beforeEach(() => {
-    vi.stubGlobal('useRuntimeConfig', () => runtimeConfig(true))
-  })
-
-  it('sends the first onboarding drip email, with a one-click unsubscribe', async () => {
-    await onboardThenRunDripTwoHoursLater()
-
-    expect(postmark.sent).toEqual([expect.objectContaining({
-      From: 'harlan@harlanzw.com',
-      To: 'ada@example.test',
-      Subject: 'Why I built Request Indexing',
-      Headers: expect.arrayContaining([{ Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' }]),
-    })])
-  })
-
-  it('queues one sync for each active Site, keyed by its id', async () => {
-    // The Google account behind a team_sites row is not under test here.
-    sqlite.exec('PRAGMA foreign_keys = OFF')
-    const [site] = await db.insert(sites).values({ teamId, property: 'sc-domain:example.com', active: true }).returning({ id: sites.id })
-    await db.insert(teamSites).values({ teamId, siteId: site!.id, googleAccountId: 1 })
-
-    await syncDaily.run!({ context: {} } as never)
-
-    expect(vi.mocked(batchJobs).mock.calls.map(([, , job]) => job)).toEqual([
-      { name: 'site/sync', siteId: site!.id, onFinish: { name: 'sites/sync-finished', payload: { siteId: site!.id } } },
-    ])
   })
 })

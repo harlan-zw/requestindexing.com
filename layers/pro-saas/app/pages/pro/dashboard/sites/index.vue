@@ -4,6 +4,7 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { HELD_LABEL, holdMessage, SITE_LINK_REFUSED } from '#layers/pro-gsc/shared/entitlement-copy'
 import ProAbilityGate from '#layers/pro-saas/app/components/pro/team/ProAbilityGate.vue'
+import { useRemoveSite } from '#layers/pro-saas/app/composables/useRemoveSite'
 import { SITE_SYNC_LABELS } from '#layers/pro-saas/shared/site-sync'
 
 // The Site roster, ported from nuxtseo.com's `sites/index.vue` and cut to what
@@ -57,7 +58,7 @@ async function onSiteConnected() {
 
 const toast = useToast()
 const siteToRemove = ref<SiteRow | null>(null)
-const removing = ref(false)
+const { removeSite: removeSiteById, removing } = useRemoveSite()
 const confirmOpen = computed({
   get: () => siteToRemove.value !== null,
   set: (open: boolean) => {
@@ -85,26 +86,14 @@ async function removeSite() {
   const row = siteToRemove.value
   if (!row)
     return
-  removing.value = true
-  const result = await $fetch<{ success: boolean }>(`/api/sites/${row.siteId}`, { method: 'DELETE' })
-    .then(() => ({ _tag: 'Ok' as const }))
-    .catch((err: unknown) => ({ _tag: 'Err' as const, error: err }))
-  removing.value = false
-
+  const result = await removeSiteById(row.siteId)
   if (result._tag === 'Err') {
-    const e = result.error as { statusMessage?: string, data?: { statusMessage?: string } }
-    toast.add({
-      title: 'Site could not be removed',
-      description: e?.data?.statusMessage || e?.statusMessage || 'Try again in a moment.',
-      color: 'error',
-    })
+    toast.add({ title: 'Site could not be removed', description: result.message, color: 'error' })
     return
   }
 
   siteToRemove.value = null
   toast.add({ title: 'Site removed', description: `${row.label} is no longer connected.`, color: 'success' })
-  // The sidebar reads the same `sites` key, so one refresh updates both.
-  await refresh()
 }
 </script>
 

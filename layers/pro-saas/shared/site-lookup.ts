@@ -12,12 +12,15 @@
 
 import { errorStatusCode } from '#shared/sentry'
 
+/** The Sites list: every Site of the Team, with its sync status. */
+export const SITES_ROUTE = '/pro/dashboard/sites'
+
 /**
  * Where a Site page escapes to when its Site is gone: the Sites list, as
  * nuxtseo.com's `MISSING_SITE_PATH`. Nothing redirects away from it, so a
  * stale Site cannot start a redirect loop.
  */
-export const MISSING_SITE_PATH = '/pro/dashboard/sites'
+export const MISSING_SITE_PATH = SITES_ROUTE
 
 /** The `/api/pro/sites/:id` projection the dashboard pages read. */
 export interface SiteResource {
