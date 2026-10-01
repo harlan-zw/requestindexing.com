@@ -29,9 +29,12 @@ export function useNoSearchConsoleProperty(active: MaybeRefOrGetter<boolean>) {
     enabled,
   })
 
+  // `sitesLoaded` guards against marking a connected property as connectable.
+  // This page has no Site by definition, so there is nothing to wait for.
   return computed(() => enabled.value && projectPropertyPicker({
     queryStatus: status.value,
     data: data.value,
+    sitesLoaded: true,
     connectedDomains: NO_CONNECTED_DOMAINS,
   })._tag === 'NoProperties')
 }
