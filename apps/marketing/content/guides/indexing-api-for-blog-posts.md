@@ -6,7 +6,7 @@ navigation:
   icon: i-heroicons-exclamation-triangle
 icon: i-heroicons-exclamation-triangle
 publishedAt: "2026-03-04"
-updatedAt: "2026-09-15"
+updatedAt: "2026-10-01"
 readTime: "3 min"
 keywords:
   - indexing api for blog posts
@@ -41,6 +41,8 @@ This follows [Google's recrawl guidance](https://developers.google.com/search/do
 
 If you have many posts, use a sitemap instead of repeating this process for each one. Your publishing platform may already manage a sitemap; check its documentation before adding another integration.
 
+To see which posts Google returns in search, give that sitemap to the [bulk indexing checker](/tools/bulk-indexing-checker). It runs a `site:` search for each of the first 50 URLs. Past 50 posts, the [site indexing report](/tools/site-indexing-report) estimates how many results a `site:` search returns for your whole domain. Neither tool reads Search Console, so use URL Inspection for the status Google stored.
+
 ## Replace old sitemap ping scripts
 
 Some older tutorials send a request to `google.com/ping` whenever a sitemap changes. Google retired that endpoint; it returns `404`.
@@ -51,7 +53,7 @@ Submit the sitemap through Search Console or reference it in `robots.txt`. If yo
 
 If your script sent a notification for the apple-tree post and received `200 OK`, you still need to check what happened to the page. For a `URL_UPDATED` notification, Google says a successful response means it may try to recrawl the URL soon. Crawling and indexing remain unconfirmed.
 
-The API's metadata endpoint is also easy to misread. It reports when Google last received a notification, rather than the URL's indexing status. Both meanings are documented in [Google's API usage guide](https://developers.google.com/search/apis/indexing-api/v3/using-api).
+The API's metadata endpoint is also easy to misread. It reports when Google last received a notification, rather than the URL's indexing status. [Google's API usage guide](https://developers.google.com/search/apis/indexing-api/v3/using-api) documents both meanings.
 
 Use URL Inspection to check Google's stored index information. If you automate that check, the [URL Inspection API](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect) reads the version in Google's index. It does not test the live page or provide the manual tool's request-indexing action.
 
@@ -59,7 +61,9 @@ Use URL Inspection to check Google's stored index information. If you automate t
 
 No. A tool that sends Indexing API notifications still uses the same Google interface. Easier authentication or a bulk-submit button does not change which content Google supports.
 
-Before choosing an indexing tool, check what its button does. Does it send a notification, open Search Console, or read an inspection result?
+Before choosing an indexing tool, check what its button does. Does it send a notification, open Search Console, or read an inspection result? SEO Gets, for example, opens URL Inspection with the selected URL loaded, as the [SEO Gets comparison](/comparisons/vs-seo-gets) shows.
+
+Tag Parrot states that its service is closed. If you relied on it, [choose a replacement workflow by content type](/comparisons/vs-tagparrot).
 
 If your site also publishes eligible job listings or livestream pages, check those URLs separately from its blog. The [Google Indexing API guide](/google-indexing-api) explains that workflow and its prerequisites.
 

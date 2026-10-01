@@ -9,12 +9,12 @@ Read [COPY](../../COPY.md), [SOURCES](../../SOURCES.md), [VERIFIED-CLAIMS](../..
 - Reader: Developer evaluating the API.
 - Question: What does this API actually do?
 - Outcome: Choose the correct interface before building.
-- Claim IDs: GOOGLE-01 through GOOGLE-12. Source dates and qualifications remain in the shared ledger.
+- Claim IDs: GOOGLE-01 through GOOGLE-12, PRODUCT-06. Source dates and qualifications remain in the shared ledger.
 - Search evidence: no current measured demand. NuxtSEO unavailable; locale/Site unresolved. Old research is discovery only.
 - Contribution: A three-interface comparison distinguishes Indexing API notification, manual URL Inspection request, and URL Inspection API reading.
 - Progressive outline: Eligible use and approval; notification example; interpret200 and metadata; API versus inspection; prerequisites and deeper guide links.
 - Exclusions: unsupported content efficacy, ranking promises, undocumented detection signals, invented tests, unrelated roadmap, and unverified pricing.
-- Related articles, only at a natural decision: google-indexing-api-tutorial, google-indexing-api-node-js, indexing-api-for-blog-posts.
+- Related articles, only at a natural decision: google-indexing-api-tutorial, google-indexing-api-node-js, indexing-api-for-blog-posts, bulk-submit-urls-google-indexing-api, /tools, /comparisons.
 - Navigation: Google Indexing Guides; retain current route. Do not add Markdown H1 beneath the rendered title.
 - Dates: preserve publishedAt. Set updatedAt only after actual rewrite and review.
 - Visual plan: No screenshot required for this decision-focused article. Add only if a real control/result materially clarifies the task.
@@ -55,3 +55,18 @@ Structural pass: kept the common task first; removed repeated conclusions and ed
 - 'If you publish eligible job listings or livestream pages, the API can fit your publishing workflow.' → 'For eligible job listings or livestream pages, start with one notification.'
 - 'For the next step, use the' → 'Use the'
 Meaning recheck: claim scopes, URLs, dates, examples and execution limitations preserved. Vendor mechanism uncertainty and per-user tool denominator retained. Executable code unchanged. Independent humanized review was requested at this stage and subsequently approved.
+
+## History, 1 October 2026: Humanize and internal-link pass
+
+Writer: Claude agent, branch `docs/humanize-guides`, base Git revision `cebca00`. Factual scope unchanged. No code fence, figure, publishedAt or correction note changed. updatedAt set to 2026-10-01.
+Link targets come from the closed list of live routes. Google's retained URL Inspection evidence, as of 30 September 2026, reports the tools, comparisons and Node.js routes as not indexed, so this pass links them where the reader's next question lands there.
+Surface pass:
+- 'It supports pages with' → 'Eligible means a page with'.
+- 'This is a request body, not a runnable authenticated example.' → 'The body alone is only part of the call.' Removes the X-not-Y contrast.
+- 'The default publish allowance' → 'The default publish quota'. Google's term is quota, and allowance collides with the glossary's Free allowance.
+- Anchors 'the blog-post guide', 'setup tutorial', 'bulk guide' → 'what to use for blog posts instead', 'Indexing API setup tutorial', 'bulk requests with a result for each URL'.
+Structural pass: the opening and the interface table stay first. After the 200-response paragraph, one sentence answers the next question, whether Google returns the page in search. After the table, one sentence tells the reader what to ask of a third-party tool.
+Internal links added:
+- /tools, anchor 'free indexing tools'. PRODUCT-06.
+- /comparisons, anchor 'Indexly and SEO Gets comparisons'.
+Meaning recheck: supported types, receipt versus crawl and index, metadata meaning, prerequisites, quota scope and removal prerequisites are unchanged.

@@ -6,7 +6,7 @@ navigation:
   icon: i-heroicons-academic-cap
 icon: i-heroicons-academic-cap
 publishedAt: "2026-03-04"
-updatedAt: "2026-09-15"
+updatedAt: "2026-10-01"
 readTime: "5 min"
 keywords:
   - google indexing api tutorial
@@ -15,9 +15,9 @@ keywords:
   - indexing api service account
 ---
 
-Start with one eligible URL, such as a real job listing at `https://example.com/jobs/42`. Google supports the Indexing API for `JobPosting`, or `BroadcastEvent` embedded in `VideoObject`. Ordinary blog posts need [a different workflow](/indexing-api-for-blog-posts).
+Start with one eligible URL, such as a real job listing at `https://example.com/jobs/42`. Google supports the Indexing API for `JobPosting`, or `BroadcastEvent` embedded in `VideoObject`. Ordinary blog posts need [URL Inspection or a sitemap instead](/indexing-api-for-blog-posts).
 
-Google's default quota covers onboarding and testing. Additional approval is required for usage and resource provisioning; use the form linked from [Google's approval page](https://developers.google.com/search/apis/indexing-api/v3/quota-pricing).
+Google's default quota covers onboarding and testing. Usage and resource provisioning need additional approval; use the form linked from [Google's approval page](https://developers.google.com/search/apis/indexing-api/v3/quota-pricing).
 
 ## Set up credentials and property access
 
@@ -115,8 +115,8 @@ The example uses [GoogleAuth's credential discovery](https://github.com/googleap
 
 ## Read the response correctly
 
-`notification-accepted` is the script's label for a successful API response. It does not mean the page was indexed. Google may attempt a recrawl after receiving `URL_UPDATED`; [its usage documentation](https://developers.google.com/search/apis/indexing-api/v3/using-api) defines that response.
+`notification-accepted` is the script's label for a successful API response. It does not mean the page was indexed. Google may attempt a recrawl after receiving `URL_UPDATED`; [its usage documentation](https://developers.google.com/search/apis/indexing-api/v3/using-api) defines that response. To check the listing later, open it in Search Console's URL Inspection tool, or run a quick `site:` search for it with the [Google index checker](/tools/google-indexing-checker).
 
-On failure, the script prints the status, reasons, and message. Check those together: an ownership problem and an exhausted quota require different actions. The script disables automatic retries, so it does not repeatedly submit while you diagnose the problem.
+On failure, the script prints the status, reasons, and message. Read them together, because an ownership problem and an exhausted quota need different fixes. The script disables automatic retries, so it will not keep submitting while you diagnose the problem.
 
 Verification used the real client with intercepted HTTP responses. Credential exchange and live Google notifications remain untested. For metadata and error handling details, continue with the [Node.js guide](/google-indexing-api-node-js). For approval and rate limits, use the [quota guide](/google-indexing-api-quota).

@@ -6,7 +6,7 @@ navigation:
   icon: i-heroicons-book-open
 icon: i-heroicons-book-open
 publishedAt: "2026-03-04"
-updatedAt: "2026-09-15"
+updatedAt: "2026-10-01"
 readTime: "4 min"
 keywords:
   - google indexing api
@@ -16,9 +16,9 @@ keywords:
   - request indexing
 ---
 
-The Google Indexing API notifies Google when an eligible URL changes or disappears. It supports pages with `JobPosting`, or `BroadcastEvent` embedded in `VideoObject`. Ordinary website pages are outside that supported use. [Google's quickstart](https://developers.google.com/search/apis/indexing-api/v3/quickstart) defines that boundary.
+The Google Indexing API notifies Google when an eligible URL changes or disappears. Eligible means a page with `JobPosting`, or `BroadcastEvent` embedded in `VideoObject`. Ordinary website pages are outside that supported use, as [Google's quickstart](https://developers.google.com/search/apis/indexing-api/v3/quickstart) defines it.
 
-If you publish ordinary articles, start with [the blog-post guide](/indexing-api-for-blog-posts). For eligible job listings or livestream pages, start with one notification.
+If you publish ordinary articles, read [what to use for blog posts instead](/indexing-api-for-blog-posts). For eligible job listings or livestream pages, start with one notification.
 
 ## A notification for one job listing
 
@@ -31,9 +31,11 @@ Suppose you update a job listing at `https://example.com/jobs/42`. Your client s
 }
 ```
 
-This is a request body, not a runnable authenticated example. The [setup tutorial](/google-indexing-api-tutorial) covers the credentials and first call.
+The body alone is only part of the call. The [Indexing API setup tutorial](/google-indexing-api-tutorial) adds the credentials and sends it.
 
-A successful response means Google may attempt to recrawl the URL. It does not prove that a crawl happened or that Google indexed the page. The metadata endpoint reports notification history, so a recent timestamp there also cannot establish indexing. See [Google's request and response meanings](https://developers.google.com/search/apis/indexing-api/v3/using-api).
+A successful response means Google may attempt to recrawl the URL. It does not prove that a crawl happened or that Google indexed the page. The metadata endpoint reports notification history, so a recent timestamp there cannot establish indexing either. See [Google's request and response meanings](https://developers.google.com/search/apis/indexing-api/v3/using-api).
+
+To see whether Google returns the page in search, run a `site:` search for it with one of the [free indexing tools](/tools). They check one URL, a list of URLs, or a whole domain.
 
 ## Choose the correct Google interface
 
@@ -45,13 +47,15 @@ A successful response means Google may attempt to recrawl the URL. It does not p
 
 Google recommends [manual URL Inspection for a few URLs and sitemaps for many](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl). The [URL Inspection API](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect) has no live-test or request-indexing operation.
 
+When you evaluate an indexing tool, ask which of these interfaces its request button calls. The [Indexly and SEO Gets comparisons](/comparisons) check that against each vendor's documentation.
+
 ## Before you build
 
 Google's documented setup uses a Cloud project with the API enabled, a service account, Search Console ownership, and the `https://www.googleapis.com/auth/indexing` scope. The service account needs delegated ownership of the property. Cloud project permissions and Search Console ownership are separate. Follow the [prerequisites](https://developers.google.com/search/apis/indexing-api/v3/prereqs).
 
-The default publish allowance is 200 requests per day per project for onboarding and testing. Google requires additional approval for usage and resource provisioning. Check the [approval and quota page](https://developers.google.com/search/apis/indexing-api/v3/quota-pricing) before planning a production integration.
+The default publish quota is 200 requests per day per project for onboarding and testing. Google requires additional approval for usage and resource provisioning. Check the [approval and quota page](https://developers.google.com/search/apis/indexing-api/v3/quota-pricing) before planning a production integration.
 
-Use the [Node.js example](/google-indexing-api-node-js) to send one notification. Once that works for your eligible content, the [bulk guide](/bulk-submit-urls-google-indexing-api) explains multiple requests and per-URL results.
+To send one notification from code, start with the [Node.js example](/google-indexing-api-node-js). Once that works for your eligible content, move on to [bulk requests with a result for each URL](/bulk-submit-urls-google-indexing-api).
 
 ## When a page is removed
 

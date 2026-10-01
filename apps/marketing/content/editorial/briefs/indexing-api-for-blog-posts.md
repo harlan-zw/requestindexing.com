@@ -9,12 +9,12 @@ Read [COPY](../../COPY.md), [SOURCES](../../SOURCES.md), [VERIFIED-CLAIMS](../..
 - Reader: Blog publisher without API experience.
 - Question: Can I use the Indexing API for my blog?
 - Outcome: Decide correctly, then use a supported recrawl path for ordinary posts.
-- Claim IDs: GOOGLE-01, GOOGLE-05, GOOGLE-11, GOOGLE-12, GOOGLE-13. Source dates and qualifications remain in the shared ledger.
+- Claim IDs: GOOGLE-01, GOOGLE-05, GOOGLE-11, GOOGLE-12, GOOGLE-13, PRODUCT-06, VENDOR-03, VENDOR-04. Source dates and qualifications remain in the shared ledger.
 - Search evidence: no current measured demand. NuxtSEO unavailable; locale/Site unresolved. Old research is discovery only.
 - Contribution: A worked ordinary-post decision: inspect one URL, submit a sitemap for many, then interpret the stored index result without mistaking a notification for success.
 - Progressive outline: Answer no for ordinary blog posts; supported content boundary; example of a new post using inspection or sitemap; receipt versus indexing; remove unsupported risk predictions and deprecated ping.
 - Exclusions: unsupported content efficacy, ranking promises, undocumented detection signals, invented tests, unrelated roadmap, and unverified pricing.
-- Related articles, only at a natural decision: google-indexing-api, google-indexing-api-quota.
+- Related articles, only at a natural decision: google-indexing-api, google-indexing-api-quota, /tools/bulk-indexing-checker, /tools/site-indexing-report, /comparisons/vs-seo-gets, /comparisons/vs-tagparrot.
 - Navigation: Google Indexing Guides; retain current route. Do not add Markdown H1 beneath the rendered title.
 - Dates: preserve publishedAt. Set updatedAt only after actual rewrite and review.
 - Visual plan: URL Inspection status and Request indexing control detail, requested by the user. Explain the observed state and capture limitations in visible prose.
@@ -86,3 +86,17 @@ Native source3360×1874. Crop780×174CSS at4×density; export3120×696. No sourc
 Final additional-capture review: sources_reviewer accepted factual meaning, privacy, and desktop/mobile renders at 95/100. Root accepted the review.
 Article SHA256: `19c2c273a08ec8b16cb577671f0f37f56f572c2ab55c513c3552befd0ccd034f`.
 Build and focused ESLint pass. Both new exports preserve source pixels. Keyboard full-size links and 390px overflow checks pass.
+
+## History, 1 October 2026: Humanize and internal-link pass
+
+Writer: Claude agent, branch `docs/humanize-guides`, base Git revision `cebca00`. Factual scope unchanged. No code fence, figure, publishedAt or correction note changed. updatedAt set to 2026-10-01.
+Link targets come from the closed list of live routes. Google's retained URL Inspection evidence, as of 30 September 2026, reports the tools, comparisons and Node.js routes as not indexed, so this pass links them where the reader's next question lands there.
+Surface pass:
+- 'Both meanings are documented in Google's API usage guide.' → "Google's API usage guide documents both meanings."
+Structural pass: after the sitemap advice, one paragraph tells the reader with many posts how to check them: the bulk checker for up to 50 sitemap URLs, the site report past that, and what neither tool reads. The third-party section gains a concrete example in place of the bare question: SEO Gets opens URL Inspection (VENDOR-03). It also gains a pointer for readers replacing Tag Parrot (VENDOR-04). readTime stays three minutes.
+Internal links added:
+- /tools/bulk-indexing-checker, anchor 'bulk indexing checker'. PRODUCT-06.
+- /tools/site-indexing-report, anchor 'site indexing report'. PRODUCT-06.
+- /comparisons/vs-seo-gets, anchor 'SEO Gets comparison'.
+- /comparisons/vs-tagparrot, anchor 'choose a replacement workflow by content type'.
+Meaning recheck: the answer for ordinary posts, owner or full-user prerequisite, no-guarantee guidance, retired ping, lastmod guidance and receipt versus indexing are unchanged. No vendor claim goes past VENDOR-03 or VENDOR-04.

@@ -9,12 +9,12 @@ Read [COPY](../../COPY.md), [SOURCES](../../SOURCES.md), [VERIFIED-CLAIMS](../..
 - Reader: Developer with working single notification.
 - Question: How do I send multiple eligible notifications safely?
 - Outcome: Distinguish multipart batching from sequential sends and handle each result.
-- Claim IDs: GOOGLE-01, GOOGLE-02, GOOGLE-03, GOOGLE-05, GOOGLE-08, GOOGLE-10. Source dates and qualifications remain in the shared ledger.
+- Claim IDs: GOOGLE-01, GOOGLE-02, GOOGLE-03, GOOGLE-05, GOOGLE-08, GOOGLE-10, PRODUCT-06. Source dates and qualifications remain in the shared ledger.
 - Search evidence: no current measured demand. NuxtSEO unavailable; locale/Site unresolved. Old research is discovery only.
 - Contribution: A worked batch response explains independent inner results, contrasted with sequential calls and the missing cross-process budget boundary.
 - Progressive outline: Eligibility and actual available quota; ten URLs cost ten calls; multipart format versus simple sequential loop; inspect every part; execution order and durable shared budgeting caveats.
 - Exclusions: unsupported content efficacy, ranking promises, undocumented detection signals, invented tests, unrelated roadmap, and unverified pricing.
-- Related articles, only at a natural decision: google-indexing-api-node-js, google-indexing-api-quota.
+- Related articles, only at a natural decision: google-indexing-api-node-js, google-indexing-api-quota, /tools/bulk-indexing-checker.
 - Navigation: Google Indexing Guides; retain current route. Do not add Markdown H1 beneath the rendered title.
 - Dates: preserve publishedAt. Set updatedAt only after actual rewrite and review.
 - Visual plan: No screenshot required for this decision-focused article. Add only if a real control/result materially clarifies the task.
@@ -72,3 +72,16 @@ Structural pass: kept the common task first; removed repeated conclusions and ed
 Meaning recheck: claim scopes, URLs, dates, examples and execution limitations preserved. Vendor mechanism uncertainty and per-user tool denominator retained. Executable code unchanged. Independent humanized review was requested at this stage and subsequently approved.
 
 Writer mobile390 check after humanization: oneH1, document width390, no overflow. Full-page screenshot inspected, including wrapped code or comparison table. Private screenshot ri-batch-bulk-submit-urls-google-indexing-api.png; lead subsequently completed the collection route and viewport checks.
+
+## History, 1 October 2026: Humanize and internal-link pass
+
+Writer: Claude agent, branch `docs/humanize-guides`, base Git revision `cebca00`. Factual scope unchanged. No code fence, figure, publishedAt or correction note changed. updatedAt set to 2026-10-01.
+Link targets come from the closed list of live routes. Google's retained URL Inspection evidence, as of 30 September 2026, reports the tools, comparisons and Node.js routes as not indexed, so this pass links them where the reader's next question lands there.
+Surface pass:
+- 'approved allowance' → 'approved quota'; 'tool-specific allowances' → 'tool-specific limits'. Allowance collides with the glossary's Free allowance.
+- 'Automatic retries are disabled.' → 'The script disables automatic retries'.
+- 'No authenticated submissions were made.' → 'without any authenticated submission'.
+Structural pass: five short, evenly weighted sentences on failure handling became three, keeping each instruction. The ending keeps the receipt caveat, then points to a check of up to 50 URLs.
+Internal links added:
+- /tools/bulk-indexing-checker, anchor 'bulk indexing checker'. PRODUCT-06.
+Meaning recheck: sequential versus multipart, per-request counting, the static wire-format label, mixed results and shared accounting are unchanged.
