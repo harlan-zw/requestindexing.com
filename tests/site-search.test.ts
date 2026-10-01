@@ -8,7 +8,7 @@ function organic(url: string, title = `Title of ${url}`) {
 describe('matchSiteSearch', () => {
   it('reports a URL as not indexed when site: only returns another URL under its path', () => {
     const result = matchSiteSearch('https://example.com/blog', {
-      total: 1,
+      se_results_count: 1,
       items: [organic('https://example.com/blog/other')],
     })
 
@@ -17,7 +17,7 @@ describe('matchSiteSearch', () => {
 
   it('reports a URL as indexed when a later result is the URL itself', () => {
     const result = matchSiteSearch('https://example.com/blog', {
-      total: 2,
+      se_results_count: 2,
       items: [organic('https://example.com/blog/other'), organic('https://example.com/blog/', 'Blog')],
     })
 
@@ -41,7 +41,7 @@ describe('matchSiteSearch', () => {
     ['percent-encoding case', 'https://example.com/%d8%b3%d9%84/', 'https://example.com/%D8%B3%D9%84'],
     ['percent-encoding against Unicode', 'https://example.com/%d8%b3%d9%84', 'https://example.com/سل'],
   ])('matches a result that differs only by %s', (_, checked, returned) => {
-    expect(matchSiteSearch(checked, { total: 1, items: [organic(returned)] }).indexed).toBe(true)
+    expect(matchSiteSearch(checked, { se_results_count: 1, items: [organic(returned)] }).indexed).toBe(true)
   })
 
   it.each([
@@ -51,12 +51,12 @@ describe('matchSiteSearch', () => {
     ['path case', 'https://example.com/blog', 'https://example.com/Blog'],
     ['another subdomain', 'https://example.com/blog', 'https://docs.example.com/blog'],
   ])('does not match a result that differs by %s', (_, checked, returned) => {
-    expect(matchSiteSearch(checked, { total: 1, items: [organic(returned)] }).indexed).toBe(false)
+    expect(matchSiteSearch(checked, { se_results_count: 1, items: [organic(returned)] }).indexed).toBe(false)
   })
 
   it('ignores a non-organic result for the same URL', () => {
     const result = matchSiteSearch('https://example.com/blog', {
-      total: 1,
+      se_results_count: 1,
       items: [{ ...organic('https://example.com/blog'), type: 'video' }],
     })
 

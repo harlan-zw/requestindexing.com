@@ -255,7 +255,7 @@ export async function getDomainOverview(domain: string, ctx?: DataForSeoCallCont
   ], ctx)
 
   const siteResult = siteData?.tasks?.[0]?.result?.[0]
-  const estimatedIndexedPages = siteResult?.total || 0
+  const estimatedIndexedPages = siteResult?.se_results_count || 0
   const topOrganicPages = (siteResult?.items || [])
     .filter(item => item.type === 'organic')
     .slice(0, 10)
