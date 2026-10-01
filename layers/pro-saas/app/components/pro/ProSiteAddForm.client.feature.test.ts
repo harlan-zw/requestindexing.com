@@ -4,8 +4,9 @@ import ProSiteAddForm from './ProSiteAddForm.vue'
 
 // The form reads two routes. Each test sets what they answer.
 const reads = {
-  preview: ref<Record<string, unknown>>({ sites: [], siteAllowance: { _tag: 'Uncapped' } }),
-  properties: ref<Record<string, unknown>>({ connected: true, properties: [] }),
+  preview: ref<Record<string, unknown> | undefined>({ sites: [], siteAllowance: { _tag: 'Uncapped' } }),
+  properties: ref<Record<string, unknown> | undefined>({ connected: true, properties: [] }),
+  status: ref('success'),
 }
 const post = vi.fn()
 let toast: { add: ReturnType<typeof vi.fn> }
@@ -13,7 +14,7 @@ let toast: { add: ReturnType<typeof vi.fn> }
 Object.assign(globalThis, {
   useFetch: (url: string) => ({
     data: url === '/api/sites/preview' ? reads.preview : reads.properties,
-    status: ref('success'),
+    status: reads.status,
     refresh: vi.fn(async () => undefined),
   }),
   useUserSession: () => ({ session: ref({ gscEmail: 'agent@example.com' }) }),
@@ -22,11 +23,12 @@ Object.assign(globalThis, {
 
 const apps: ReturnType<typeof createApp>[] = []
 
-function mount(onBlocked = vi.fn()) {
+function mount(onBlocked = vi.fn(), { suspense = true } = {}) {
   const host = document.createElement('div')
   document.body.appendChild(host)
+  const form = () => h(ProSiteAddForm, { gscReturnTo: '/pro/dashboard/onboarding?step=sites', onBlocked })
   const app = createApp({
-    render: () => h(Suspense, null, { default: () => h(ProSiteAddForm, { gscReturnTo: '/pro/dashboard/onboarding?step=sites', onBlocked }) }),
+    render: () => suspense ? h(Suspense, null, { default: form }) : form(),
   })
   app.component('UButton', defineComponent({
     props: ['label', 'to', 'disabled', 'type', 'loading'],
@@ -71,6 +73,7 @@ async function flush() {
 beforeEach(() => {
   post.mockReset()
   reads.preview.value = { sites: [], siteAllowance: { _tag: 'Uncapped' } }
+  reads.status.value = 'success'
   toast = { add: vi.fn() }
   Object.assign(globalThis, { useToast: () => toast })
 })
@@ -82,6 +85,20 @@ afterEach(() => {
 })
 
 describe('connect a Site', () => {
+  // The 2026-10-01 replay: the Manage Sites modal showed an empty body for
+  // about 3 s. The form awaited both reads in setup, and a modal opened after
+  // load has no Suspense fallback to show meanwhile.
+  it('shows its loading text before either read answers, with no Suspense to wait on', async () => {
+    reads.preview.value = undefined
+    reads.properties.value = undefined
+    reads.status.value = 'pending'
+
+    const host = mount(vi.fn(), { suspense: false })
+    await flush()
+
+    expect(host.textContent).toContain('Reading your Search Console properties.')
+  })
+
   // The 2026-10-01 replay: a Google account with no property saw only an
   // address box, no reason, and no way past the step but typing something.
   it('tells an account with no property why, offers the fixes, and lets the wizard skip', async () => {

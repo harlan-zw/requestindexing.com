@@ -16,16 +16,20 @@ definePageMeta({
   description: 'Your Free allowance, counted for your account across every Site.',
 })
 
+// The realtime resync re-reads every Nuxt data key a few seconds after load.
+// `defer` joins a read already running instead of restarting it, and the
+// allowance stays on screen during a re-read. The 2026-10-01 replay once saw
+// "Loading your Free allowance" 8 s after a reload.
 const { data, status, refresh } = await useAsyncData(
   'pro:usage:free-allowance',
   () => $fetch<{ allowance: FreeAllowanceView }>('/api/pro/usage'),
-  { server: false },
+  { server: false, dedupe: 'defer' },
 )
 
 const allowance = computed<FreeAllowanceView | null>(() => data.value?.allowance ?? null)
 const meters = computed(() => allowance.value?._tag === 'Metered' ? meterRows(allowance.value.entitlements) : [])
 const failed = computed(() => status.value === 'error' || allowance.value?._tag === 'Unavailable')
-const pending = computed(() => status.value !== 'success' && status.value !== 'error')
+const pending = computed(() => !data.value && status.value !== 'error')
 </script>
 
 <template>

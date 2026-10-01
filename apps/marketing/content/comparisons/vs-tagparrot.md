@@ -32,7 +32,7 @@ Neither option means the URL will be indexed. Google's [usage guide](https://dev
 
 1. List the URLs you still publish, from your CMS or sitemap. Do not count on Tag Parrot account exports still being available.
 2. Separate ordinary pages from eligible Indexing API content.
-3. Inspect important URLs in Search Console before you decide what to request again. An old submission record says nothing about their status today. For a first pass over many URLs, the free [bulk indexing checker](/tools/bulk-indexing-checker) checks up to 50 at a time against Google search results.
+3. Inspect important URLs in Search Console before you decide what to request again. An old submission record says nothing about their status today. For a first pass over many URLs, the free [bulk indexing checker](/tools/bulk-indexing-checker) checks up to 10 at a time against Google search results.
 4. Choose a replacement for each task: sitemap maintenance, inspection reporting, or eligible API notifications.
 
 Request Indexing's [MIT licensed repository](https://github.com/harlan-zw/requestindexing.com/blob/main/LICENSE) gives you source access. This comparison does not verify a hosted retention guarantee, an import from Tag Parrot, or an automatic migration.
