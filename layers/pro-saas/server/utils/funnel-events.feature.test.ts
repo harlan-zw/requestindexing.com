@@ -13,7 +13,14 @@ vi.mock('#domain-events/server', () => ({
 }))
 
 // The Free allowance is gscdump's, and this file is about funnel milestones.
-const noAllowanceCap = { readSiteAllowance: async () => ({ _tag: 'Uncapped' as const }) }
+// An account that owns example.com in Search Console, with no allowance cap.
+const noAllowanceCap = {
+  readSiteAllowance: async () => ({ _tag: 'Uncapped' as const }),
+  readSearchConsoleProperties: async () => ({
+    _tag: 'Loaded' as const,
+    properties: [{ siteUrl: 'sc-domain:example.com', permissionLevel: 'siteOwner', registered: false }],
+  }),
+}
 
 interface ProEventRow {
   type: string

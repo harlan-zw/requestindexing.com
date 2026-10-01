@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
+
 const faqs = [
   {
     question: 'How many URLs can I check at once?',
-    answer: 'Up to 50. Paste them in, or give the tool a sitemap URL and it checks the first 50 URLs it finds there.',
+    answer: `Up to ${BULK_CHECK_URL_LIMIT}. Paste them in, or give the tool a sitemap URL and it checks the first ${BULK_CHECK_URL_LIMIT} URLs it finds there.`,
   },
   {
     question: 'Why are most of my pages not indexed?',
@@ -31,11 +33,15 @@ const faqs = [
 
 useToolSeo({
   title: 'Bulk Indexing Checker Tool',
-  description: 'Check whether Google has indexed up to 50 URLs at once. Paste a list or give it your sitemap, then export the results. Free, no signup.',
+  description: `Check whether Google has indexed up to ${BULK_CHECK_URL_LIMIT} URLs at once. Paste a list or give it your sitemap, then export the results. Free, no signup.`,
   faqs,
 })
 
 type InputMode = 'urls' | 'sitemap'
+
+type BulkCheckRow
+  = | { _tag: 'Checked', url: string, indexed: boolean, matchedUrl?: string, matchedTitle?: string }
+    | { _tag: 'NotChecked', url: string }
 
 const inputMode = ref<InputMode>('urls')
 const urlsInput = ref('')
@@ -43,23 +49,55 @@ const sitemapInput = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
 const result = ref<{
-  summary: { total: number, indexed: number, notIndexed: number, indexRate: number }
-  results: Array<{ url: string, indexed: boolean, matchedUrl?: string, matchedTitle?: string }>
+  summary: { total: number, indexed: number, notIndexed: number, notChecked: number, indexRate: number }
+  results: BulkCheckRow[]
   checkedAt: string
 } | null>(null)
 
 const sortBy = ref<'url' | 'status'>('status')
+
+type RowStatus = 'not-indexed' | 'not-checked' | 'indexed'
+const STATUS_ORDER: RowStatus[] = ['not-indexed', 'not-checked', 'indexed']
+
+function rowStatus(row: BulkCheckRow): RowStatus {
+  if (row._tag === 'NotChecked')
+    return 'not-checked'
+  return row.indexed ? 'indexed' : 'not-indexed'
+}
+
+const STATUS_ICON: Record<RowStatus, { name: string, class: string }> = {
+  'indexed': { name: 'i-heroicons-check-circle', class: 'text-emerald-500' },
+  'not-indexed': { name: 'i-heroicons-x-circle', class: 'text-red-500' },
+  'not-checked': { name: 'i-heroicons-minus-circle', class: 'text-[var(--ui-text-dimmed)]' },
+}
+
+const STATUS_CSV: Record<RowStatus, string> = {
+  'indexed': 'Indexed',
+  'not-indexed': 'Not Indexed',
+  'not-checked': 'Not Checked',
+}
 
 const sortedResults = computed(() => {
   if (!result.value)
     return []
   const items = [...result.value.results]
   if (sortBy.value === 'status')
-    items.sort((a, b) => Number(a.indexed) - Number(b.indexed))
+    items.sort((a, b) => STATUS_ORDER.indexOf(rowStatus(a)) - STATUS_ORDER.indexOf(rowStatus(b)))
   else
     items.sort((a, b) => a.url.localeCompare(b.url))
   return items
 })
+
+const notCheckedNotice = computed(() => {
+  const count = result.value?.summary.notChecked ?? 0
+  if (count === 0)
+    return null
+  return count === 1
+    ? 'Search data was unavailable for 1 URL, so it shows Not Checked. Check that URL again shortly.'
+    : `Search data was unavailable for ${count} URLs, so they show Not Checked. Check those URLs again shortly.`
+})
+
+const enteredUrlCount = computed(() => urlsInput.value.split('\n').filter(u => u.trim()).length)
 
 function runCheck() {
   loading.value = true
@@ -101,9 +139,9 @@ function runCheck() {
 function exportCsv() {
   if (!result.value)
     return
-  const header = 'URL,Status,Matched URL\n'
+  const header = 'URL,Status (estimate from a Google site: search),Matched URL\n'
   const rows = result.value.results
-    .map(r => `"${r.url}","${r.indexed ? 'Indexed' : 'Not Indexed'}","${r.matchedUrl || ''}"`)
+    .map(r => `"${r.url}","${STATUS_CSV[rowStatus(r)]}","${r._tag === 'Checked' ? r.matchedUrl || '' : ''}"`)
     .join('\n')
   const blob = new Blob([header + rows], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
@@ -124,7 +162,7 @@ function exportCsv() {
         <span class="text-blue-600 dark:text-blue-400">Checker</span>
       </h1>
       <p class="text-base sm:text-lg text-[var(--ui-text-muted)] max-w-xl mx-auto">
-        Check up to 50 URLs at once. Paste a list or give it your sitemap URL.
+        Check up to {{ BULK_CHECK_URL_LIMIT }} URLs at once. Paste a list or give it your sitemap URL.
       </p>
     </div>
 
@@ -162,12 +200,17 @@ function exportCsv() {
         <div v-if="inputMode === 'urls'">
           <UTextarea
             v-model="urlsInput"
-            placeholder="Paste URLs, one per line (max 50)&#10;&#10;https://example.com/page-1&#10;https://example.com/page-2&#10;https://example.com/page-3"
+            :placeholder="`Paste URLs, one per line (max ${BULK_CHECK_URL_LIMIT})\n\nhttps://example.com/page-1\nhttps://example.com/page-2\nhttps://example.com/page-3`"
             :rows="6"
             :disabled="loading"
           />
           <p class="text-xs text-[var(--ui-text-dimmed)] mt-1">
-            {{ urlsInput.split('\n').filter(u => u.trim()).length }} URLs entered (max 50)
+            <template v-if="enteredUrlCount > BULK_CHECK_URL_LIMIT">
+              {{ enteredUrlCount }} URLs entered. The tool checks the first {{ BULK_CHECK_URL_LIMIT }}.
+            </template>
+            <template v-else>
+              {{ enteredUrlCount }} URLs entered (max {{ BULK_CHECK_URL_LIMIT }})
+            </template>
           </p>
         </div>
 
@@ -181,7 +224,7 @@ function exportCsv() {
             :disabled="loading"
           />
           <p class="text-xs text-[var(--ui-text-dimmed)] mt-1">
-            First 50 URLs from the sitemap will be checked
+            The tool checks the first {{ BULK_CHECK_URL_LIMIT }} URLs in the sitemap.
           </p>
         </div>
 
@@ -210,6 +253,10 @@ function exportCsv() {
 
     <!-- Results -->
     <div v-if="result" class="max-w-4xl">
+      <p class="text-sm text-toned mb-3">
+        Each status is an estimate from a Google <span class="whitespace-nowrap"><code>site:</code> search</span> for that URL.
+      </p>
+
       <!-- Summary Cards -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <div class="p-4 rounded-xl bg-[var(--ui-bg-elevated)] border border-[var(--ui-border)] text-center">
@@ -265,6 +312,10 @@ function exportCsv() {
         </p>
       </div>
 
+      <p v-if="notCheckedNotice" class="mb-6 text-sm text-[var(--ui-text-muted)]">
+        {{ notCheckedNotice }}
+      </p>
+
       <!-- Results Table -->
       <div class="rounded-xl border border-[var(--ui-border)] overflow-hidden mb-6">
         <div class="flex items-center justify-between px-4 py-3 bg-[var(--ui-bg-elevated)] border-b border-[var(--ui-border)]">
@@ -298,17 +349,19 @@ function exportCsv() {
             class="flex items-center gap-3 px-4 py-3 text-sm hover:bg-[var(--ui-bg-elevated)]/50 transition-colors"
           >
             <UIcon
-              :name="item.indexed ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+              :name="STATUS_ICON[rowStatus(item)].name"
               class="size-4 shrink-0"
-              :class="item.indexed ? 'text-emerald-500' : 'text-red-500'"
+              :class="STATUS_ICON[rowStatus(item)].class"
             />
             <span class="flex-1 truncate font-mono text-xs text-[var(--ui-text-muted)]">
               {{ item.url }}
             </span>
-            <ToolsToolStatusBadge :status="item.indexed ? 'indexed' : 'not-indexed'" />
+            <ToolsToolStatusBadge :status="rowStatus(item)" />
           </div>
         </div>
       </div>
+
+      <ToolsToolInspectionCta class="mb-6" />
 
       <!-- CTA -->
       <div v-if="result.summary.notIndexed > 0" class="p-6 rounded-xl bg-gradient-to-br from-primary-50 to-emerald-50 dark:from-primary-900/20 dark:to-emerald-900/20 border border-primary-200 dark:border-primary-800">

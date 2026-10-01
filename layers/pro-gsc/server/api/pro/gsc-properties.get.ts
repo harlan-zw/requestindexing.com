@@ -3,26 +3,29 @@ import { GSC_STABLE_LATENCY_DAYS } from '@gscdump/sdk/gsc-constants'
 import { subDays } from 'date-fns'
 import { eq } from 'drizzle-orm'
 import { matchGscSite, normalizeRegistrationTarget, toIsoDate } from 'gscdump'
+import { getQuery } from 'h3'
 import { logger } from '~~/shared/server/logger'
 import { analyticsStatusToSyncStatus, findLifecycleSite, useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
+import { hasGscdumpConnection, readSearchConsoleProperties } from '#layers/pro-gsc/server/utils/search-console-properties'
 // TODO(pro-saas-cleanup): re-wire stats fetch when V1 site-signals lands.
 // The old `#layers/pro-saas/server/utils/site-signals` was deleted in Phase 1.
-import { googleAccounts, sites, users } from '#layers/pro-saas/server/database'
+import { sites, users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 
+// Messages ported from nuxtseo.com `layers/pro/gsc/server/utils/build-gsc-properties.ts`.
 export function lifecycleAccountError(status: string): GscPropertiesResponse['error'] | null {
   switch (status) {
     case 'db_provisioning':
-      return { reason: 'USER_PROVISIONING', message: 'Search Console data is still being prepared. Please try again shortly.' }
+      return { reason: 'USER_PROVISIONING', message: 'Request Indexing is preparing your Search Console data. Try again in a moment.' }
     case 'refresh_missing':
-      return { reason: 'MISSING_REFRESH_TOKEN', message: 'Google did not return a refresh token. Please reconnect Google Search Console.' }
+      return { reason: 'MISSING_REFRESH_TOKEN', message: 'Google could not keep this connection active. Reconnect Search Console.' }
     case 'scope_missing':
-      return { reason: 'ACCESS_TOKEN_SCOPE_INSUFFICIENT', message: 'Google Search Console permission not granted. Please re-authorize to grant access.' }
+      return { reason: 'ACCESS_TOKEN_SCOPE_INSUFFICIENT', message: 'Search Console access was not approved. Reconnect Google and allow Search Console access.' }
     case 'reauth_required':
-      return { reason: 'AUTH_EXPIRED', message: 'Google connection expired. Please reconnect your Google account.' }
+      return { reason: 'AUTH_EXPIRED', message: 'Your Google connection has expired. Reconnect Search Console.' }
     case 'disconnected':
     case 'oauth_received':
-      return { reason: 'GSCDUMP_NOT_CONNECTED', message: 'Google Search Console is not connected yet. Please reconnect your Google account.' }
+      return { reason: 'GSCDUMP_NOT_CONNECTED', message: 'Search Console is not connected yet. Reconnect Google to finish setup.' }
     default:
       return null
   }
@@ -33,10 +36,8 @@ export function lifecycleSyncStatus(site: PartnerLifecycleSite) {
 }
 
 export interface GscPropertiesResponse {
+  /** This app holds a gscdump connection for the caller. gscdump holds the Google grant. */
   connected: boolean
-  gscdumpRegistered?: boolean
-  gscEmail?: string | null
-  googleScopes?: string | null
   properties: Array<Record<string, unknown>>
   userSites?: Array<Record<string, unknown>>
   error?: { reason: string, message: string }
@@ -49,31 +50,21 @@ export interface GscPropertiesResponse {
   }
 }
 
-export default defineProApiHandler({ team: true }, async ({ team: ctx }): Promise<GscPropertiesResponse> => {
+// The picker's Refresh asks for `?refresh=1`: gscdump then reads Google live
+// instead of its stored copy of the list, as nuxtseo.com's
+// `/api/pro/gsc-available-properties?refresh=1` does.
+export default defineProApiHandler({ team: true }, async ({ event, team: ctx }): Promise<GscPropertiesResponse> => {
   const db = ctx.db
+  const refreshParam = getQuery(event).refresh
+  const refresh = refreshParam === '1' || refreshParam === 'true'
 
-  // V1: gsc connection state lives on `google_accounts` rows of type 'auth'
-  // (and 'indexing'). Pull both: existence implies "connected"; payload carries
-  // identity, tokens carry scopes.
   const [dbUser] = await db
     .select({
       gscdumpUserId: users.gscdumpUserId,
+      gscdumpApiKey: users.gscdumpApiKey,
     })
     .from(users)
     .where(eq(users.userId, ctx.caller.user.id))
-
-  const gscAccount = await db
-    .select()
-    .from(googleAccounts)
-    .where(eq(googleAccounts.userId, ctx.caller.user.id))
-    .get()
-
-  const gscConnected = !!gscAccount
-  const gscEmail = (gscAccount?.payload as { email?: string | null } | undefined)?.email ?? null
-  const googleScopes = gscAccount?.tokens?.scope ?? null
-
-  if (!gscConnected)
-    return { connected: false, properties: [] }
 
   // Every site the caller's current team owns. This used to list the caller's
   // own sites, so a teammate's site never appeared in the property matcher.
@@ -100,6 +91,12 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx }): Promis
       gscdumpSiteUrl: s.gscdumpSiteUrl,
     }))
 
+  // The connection is the gscdump user and key, the same predicate the session
+  // publishes. It used to be a `google_accounts` row, which the Search Console
+  // callback never writes, so most accounts read as not connected here.
+  if (!hasGscdumpConnection(dbUser))
+    return { connected: false, properties: [], userSites: siteDomains }
+
   if (import.meta.dev && dbUser?.gscdumpUserId === 'e2e-demo-user') {
     const properties = siteDomains.map(site => ({
       siteUrl: site.gscdumpSiteUrl || site.domain,
@@ -122,9 +119,6 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx }): Promis
 
     return {
       connected: true,
-      gscdumpRegistered: true,
-      gscEmail,
-      googleScopes,
       properties,
       userSites: siteDomains,
       stats: {
@@ -137,18 +131,6 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx }): Promis
     }
   }
 
-  // If no gscdump user ID, return basic info
-  if (!dbUser?.gscdumpUserId) {
-    return {
-      connected: true,
-      gscdumpRegistered: false,
-      gscEmail,
-      googleScopes,
-      properties: [],
-      userSites: siteDomains,
-    }
-  }
-
   // Fetch lifecycle first; picker data is only used to show unregistered GSC properties.
   const gscdump = useGscdumpClient()
   const lifecycle = await gscdump.getUserLifecycle(dbUser?.gscdumpUserId).catch((err) => {
@@ -158,12 +140,9 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx }): Promis
   if (!lifecycle) {
     return {
       connected: true,
-      gscdumpRegistered: true,
-      gscEmail,
-      googleScopes,
       properties: [],
       userSites: siteDomains,
-      error: { reason: 'GSCDUMP_ERROR', message: 'Could not fetch Search Console properties. Please try again or reconnect your Google account.' },
+      error: { reason: 'GSCDUMP_ERROR', message: 'Request Indexing could not read your Search Console properties. Try again shortly.' },
     }
   }
 
@@ -171,22 +150,26 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx }): Promis
   if (accountError) {
     return {
       connected: true,
-      gscdumpRegistered: true,
-      gscEmail,
-      googleScopes,
       properties: [],
       userSites: siteDomains,
       error: accountError,
     }
   }
 
-  const availableSitesRes = await gscdump.getAvailableSites(dbUser?.gscdumpUserId)
-    .catch((err) => {
-      const reason = err?.data?.reason || err?.data?.error?.reason
-      const status = err?.statusCode || err?.status || 500
-      logger.warn('[gsc-properties] gscdump available-sites error:', status, reason, err?.data?.message || err?.message)
-      return { sites: [] }
-    })
+  // A failed read is an error the reader sees, never an empty list. An empty
+  // list reads as "this Google account has no property", which is a different
+  // instruction.
+  const availableRead = await readSearchConsoleProperties(dbUser, () => gscdump, { refresh })
+  if (availableRead._tag !== 'Loaded') {
+    logger.warn('[gsc-properties] gscdump available-sites error:', availableRead._tag === 'Unavailable' ? availableRead.reason : availableRead._tag)
+    return {
+      connected: true,
+      properties: [],
+      userSites: siteDomains,
+      error: { reason: 'GSCDUMP_ERROR', message: 'Request Indexing could not read your Search Console properties. Try again.' },
+    }
+  }
+  const availableSitesRes = { sites: availableRead.properties }
 
   const seenLifecycleSiteIds = new Set<string>()
 
@@ -275,9 +258,6 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx }): Promis
 
   return {
     connected: true,
-    gscdumpRegistered: true,
-    gscEmail,
-    googleScopes,
     properties: propertiesWithStats,
     userSites: siteDomains,
     stats: {

@@ -41,7 +41,7 @@ This follows [Google's recrawl guidance](https://developers.google.com/search/do
 
 If you have many posts, use a sitemap instead of repeating this process for each one. Your publishing platform may already manage a sitemap; check its documentation before adding another integration.
 
-To see which posts Google returns in search, give that sitemap to the [bulk indexing checker](/tools/bulk-indexing-checker). It runs a `site:` search for each of the first 50 URLs. Past 50 posts, the [site indexing report](/tools/site-indexing-report) estimates how many results a `site:` search returns for your whole domain. Neither tool reads Search Console, so use URL Inspection for the status Google stored.
+To see which posts Google returns in search, give that sitemap to the [bulk indexing checker](/tools/bulk-indexing-checker). It runs a `site:` search for each of the first 10 URLs. Past 10 posts, the [site indexing report](/tools/site-indexing-report) estimates how many results a `site:` search returns for your whole domain. Neither tool reads Search Console, so use URL Inspection for the status Google stored.
 
 ## Replace old sitemap ping scripts
 

@@ -28,7 +28,7 @@ describe('useProSiteNav', () => {
 
     expect(sections.value.map(section => section.label)).toEqual(['Search Performance', 'Indexing'])
     expect(labelsOf(sections.value[0]!)).toEqual(['Overview', 'Queries', 'Pages', 'Countries'])
-    expect(labelsOf(sections.value[1]!)).toEqual(['Overview', 'Recovery', 'Sitemaps', 'URLs', 'Submit', 'IndexNow'])
+    expect(labelsOf(sections.value[1]!)).toEqual(['Overview', 'Recovery', 'Sitemaps', 'URLs', 'Submit to Google', 'IndexNow'])
     expect(footerLinks.value.map(link => link.label)).toEqual(['Site settings'])
   })
 
@@ -82,7 +82,7 @@ describe('useProSiteNav', () => {
       pending: integration => integration === 'gsc-connected' ? { tooltip: 'Waiting for Google Search Console' } : null,
     })
     const [overview] = sections.value[0]!.links
-    const submit = sections.value[1]!.links.find(link => link.label === 'Submit')!
+    const submit = sections.value[1]!.links.find(link => link.label === 'Submit to Google')!
 
     expect(overview!.pending).toBe(true)
     expect(overview!.pendingTooltip).toBe('Waiting for Google Search Console')

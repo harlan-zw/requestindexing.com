@@ -203,7 +203,10 @@ const recommendationColor = {
             {{ result.overview.estimatedIndexedPages.toLocaleString() }}
           </div>
           <div class="text-xs text-[var(--ui-text-muted)]">
-            Estimated Indexed Pages
+            Indexed Pages
+          </div>
+          <div class="text-xs text-toned mt-1">
+            Estimate from a Google <span class="whitespace-nowrap"><code>site:</code> search</span>
           </div>
         </div>
         <div class="p-4 rounded-xl bg-[var(--ui-bg-elevated)] border border-[var(--ui-border)] text-center">
@@ -223,6 +226,8 @@ const recommendationColor = {
           </div>
         </div>
       </div>
+
+      <ToolsToolInspectionCta class="mb-6" />
 
       <!-- Recommendations -->
       <div v-if="result.recommendations.length" class="mb-6">

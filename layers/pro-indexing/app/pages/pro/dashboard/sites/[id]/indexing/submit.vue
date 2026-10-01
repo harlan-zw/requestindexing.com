@@ -6,11 +6,12 @@ import type { IndexingGrant } from '#layers/pro-indexing/shared/contracts/indexi
 import { h } from 'vue'
 import { UiStatusBadge, UiUrlLabel } from '#components'
 import { useProGscdumpIndexingUrls } from '#layers/pro-gsc/app/composables/useProGscdump'
+import IndexingChannelsCard from '#layers/pro-indexing/app/internal/components/indexing/IndexingChannelsCard.vue'
 import { readIndexingGrantRefusal, resolveSubmitAction } from '#layers/pro-indexing/app/utils/indexing-grant'
 
 definePageMeta({
-  proTab: { feature: 'indexing', label: 'Submit', icon: 'i-ph-check-circle-duotone', order: 40 },
-  title: 'Submit for indexing',
+  proTab: { feature: 'indexing', label: 'Submit to Google', icon: 'i-ph-check-circle-duotone', order: 40 },
+  title: 'Submit to Google',
   icon: 'i-ph-check-circle-duotone',
 })
 
@@ -18,7 +19,7 @@ definePageMeta({
 // this account's pooled OAuth client. gscdump has no equivalent, so the server
 // contract stays exactly as it was; only the page around it follows the
 // indexing page conventions.
-const { siteId, siteName, gscdumpSiteId } = useSite('Submit for indexing')
+const { siteId, siteName, gscdumpSiteId } = useSite('Submit to Google')
 
 const toast = useToast()
 const route = useRoute()
@@ -180,8 +181,17 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
             Tell Google a page changed
           </h2>
           <p class="mt-2 max-w-2xl text-sm text-muted">
-            This sends one URL to Google's Indexing API. Google decides when to
-            crawl it, so expect a wait of hours to days.
+            This sends one URL to Google's Indexing API. Google decides whether
+            to crawl it, and when.
+          </p>
+          <!-- A warning, never a gate: the person decides which URLs to send.
+               Evidence: GOOGLE-01 in VERIFIED-CLAIMS.md. -->
+          <p class="mt-3 flex max-w-2xl gap-2 text-sm text-default">
+            <UiIcon name="warning" class="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
+            <span>
+              Google documents the Indexing API for job posting and livestream
+              pages only. Check your page type before you submit.
+            </span>
           </p>
         </div>
 
@@ -281,6 +291,10 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
           </div>
         </UiCard>
       </ProSecondaryGrid>
+    </ProPageZone>
+
+    <ProPageZone tier="secondary">
+      <IndexingChannelsCard current="google" :site-id="siteId" />
     </ProPageZone>
   </ProPageStates>
 </template>

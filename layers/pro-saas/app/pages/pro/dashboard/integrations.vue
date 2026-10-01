@@ -81,6 +81,10 @@ const gscStatusLine = computed(() => {
     case 'checking':
       return 'Checking'
     case 'ready': {
+      // Connected, with nothing to read. "0 of 0 properties synced" told the
+      // reader nothing about why no data arrives.
+      if (!state.stats.total)
+        return 'Connected. This Google account has no Search Console property.'
       const count = state.stats.readyToSync
         ? `${state.stats.synced} of ${state.stats.total} properties synced, ${state.stats.readyToSync} ready`
         : `${state.stats.synced} of ${state.stats.total} properties synced`
@@ -175,7 +179,21 @@ const bingActionLoading = computed(() => !!bingCard.value
             Impressions, clicks, and average position for every query and page Google serves. This is the
             data behind Search Performance and Indexing.
           </p>
-          <p v-if="gscState._tag === 'ready' && gscEmail" class="mt-2 text-sm break-words text-muted">
+          <template v-if="gscState._tag === 'ready' && !gscState.stats.total">
+            <p class="mt-2 text-sm break-words text-muted">
+              {{ gscEmail ? `${gscEmail} has no Search Console property.` : 'This Google account has no Search Console property.' }}
+              Add your site in Search Console and verify it. If a different Google account owns the property, connect that account.
+            </p>
+            <UiButton
+              :to="gscConnectHref"
+              external
+              purpose="secondary"
+              size="xs"
+              label="Connect another Google account"
+              class="mt-2 min-h-11 sm:min-h-0"
+            />
+          </template>
+          <p v-else-if="gscState._tag === 'ready' && gscEmail" class="mt-2 text-sm break-words text-muted">
             {{ gscEmail }} grants access to your properties.
           </p>
           <UiAlert
