@@ -5,8 +5,7 @@ heading, and route segment uses these terms and no synonyms.
 
 Engine terms belong to gscdump. `@gscdump/contracts` and the gscdump glossary win for protocol
 types, operation names, and source status values; this file never renames one. What it owns is
-the vocabulary of this app: accounts, teams, the site list, the dashboard, and the Google
-Indexing API submissions this app still runs itself.
+the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 
 ## Map
 
@@ -26,7 +25,7 @@ Indexing API submissions this app still runs itself.
 | Integration | no table; `/pro/dashboard/integrations` | External service the app reads from: Google Search Console per account, Bing per Site | Integration |
 | Link | gscdump Site binding; Bing `partner.sites.indexing.bing.link.create` | A Site has 0 or 1 link per Integration that reads it | link, linked |
 | funnel milestone | pro_events table | First-time record of one step toward an active account | (internal) |
-| Submission | indexing_jobs table | Site 1—N Submission, unique on (site, path, transport) | "Submit" |
+| Submission | gscdump Submission Receipt (`google_indexing_submissions`, gscdump.com ADR-0016) | Site 1—N Submission, unique on (site, idempotency key) in gscdump | "Submit" |
 | IndexNow | gscdump `partner.sites.indexing.indexnow.*`, IndexNow page | Site 0—1 verified key; notifies participating search engines, never Google | IndexNow |
 | Investigation | indexing_investigations table | Site 1—N Investigation, unique on (site, url, issue) | (not surfaced as a noun) |
 | Quota | usages table | Site 1—N daily counter, unique on (site, date, key) | "limit" |
@@ -112,7 +111,7 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 
 ### Submission
 
-**Is:** one Indexing API notification this app sent for one URL, and its outcome. Table `indexing_jobs`, keyed on `(site, path, transport)`.
+**Is:** one Indexing API notification sent for one URL, and its outcome. gscdump sends it and keeps the Submission Receipt (gscdump.com ADR-0016); this app keeps no copy.
 
 **Use for:** the act and the record. The control that starts it says **Submit**. The Site page and nav row that hold it say **Submit to Google**, so the row names the one search engine it reaches.
 
@@ -120,7 +119,7 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 
 **Exception:** a meta title may echo the searcher's own words, so the landing title says "Request Google Indexing". Searchers type "google index request". Body copy and controls keep Submit and Submission.
 
-**Casing:** `Submission` in prose, `submit` on a control, `indexing_jobs` in identifiers.
+**Casing:** `Submission` in prose, `submit` on a control, `googleSubmission` in identifiers.
 
 ### IndexNow
 

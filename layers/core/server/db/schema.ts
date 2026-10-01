@@ -54,10 +54,6 @@ export const users = sqliteTable('users', {
   analyticsRange: text('analytics_range', { mode: 'json' }),
   analyticsPeriod: text('analytics_period'),
 
-  // indexingTokens: text('indexing_tokens', { mode: 'json' }),
-  // indexingOAuthId: text('indexing_oauth_id'),
-  lastIndexingOAuthId: text('last_indexing_oauth_id'),
-
   // NOT NULL to match the live database, which migration 0000 created that way.
   // This was previously declared nullable, and drizzle's snapshot recorded it as
   // nullable too, so `drizzle-kit generate` saw no diff and never emitted a fix.
@@ -641,23 +637,6 @@ export const notificationOptouts = sqliteTable('notification_optouts', {
 // V1 net-new tables. The boundary that decides what lives here: docs/arch/README.md
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Cloudflare Queue mirror of submitted URLs. Distinct from generic `jobs`.
-export const indexingJobs = sqliteTable('indexing_jobs', {
-  indexingJobId: integer('indexing_job_id').primaryKey({ autoIncrement: true }),
-  siteId: text('site_id').notNull().references(() => sites.id, { onDelete: 'cascade' }),
-  path: text('path').notNull(),
-  transport: text('transport').notNull(), // 'google' | 'bing' | 'yandex' | 'naver' | 'seznam'
-  state: text('state').notNull().default('queued'), // 'queued' | 'submitted' | 'accepted' | 'rejected' | 'error'
-  attempts: integer('attempts').notNull().default(0),
-  lastError: text('last_error'),
-  submittedAt: integer('submitted_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-}, t => ({
-  siteStateIdx: index('indexing_jobs_site_state_idx').on(t.siteId, t.state),
-  sitePathTransportUnq: unique('indexing_jobs_site_path_transport_unique').on(t.siteId, t.path, t.transport),
-}))
-
 // User-tracked investigation status for an indexing issue on a URL. Purely a
 // status/note tracker, not a live inspection: recorded when a user marks an
 // issue as investigated/fixed/false-positive/etc. Live inspection goes through
@@ -725,10 +704,6 @@ export const feedbackRelations = relations(feedback, ({ one }) => ({
   user: one(users, { fields: [feedback.userId], references: [users.userId] }),
 }))
 
-export const indexingJobsRelations = relations(indexingJobs, ({ one }) => ({
-  site: one(sites, { fields: [indexingJobs.siteId], references: [sites.id] }),
-}))
-
 export const indexingInvestigationsRelations = relations(indexingInvestigations, ({ one }) => ({
   site: one(sites, { fields: [indexingInvestigations.siteId], references: [sites.id] }),
 }))
@@ -757,8 +732,6 @@ export type Feedback = typeof feedback.$inferSelect
 export type NewFeedback = typeof feedback.$inferInsert
 export type DripEmail = typeof dripEmails.$inferSelect
 export type NotificationOptout = typeof notificationOptouts.$inferSelect
-export type IndexingJob = typeof indexingJobs.$inferSelect
-export type NewIndexingJob = typeof indexingJobs.$inferInsert
 export type IndexingInvestigation = typeof indexingInvestigations.$inferSelect
 export type NewIndexingInvestigation = typeof indexingInvestigations.$inferInsert
 export type NewUser = typeof users.$inferInsert

@@ -6,10 +6,6 @@
  * When `NUXT_SESSION_PASSWORD` is missing, the Worker boots fine and then
  * every signed-in request dies inside iron-webcrypto with `Empty password`,
  * an error that names neither the cause nor the fix.
- *
- * `NUXT_OAUTH_POOL` and `NUXT_OAUTH_PRIVATE_POOL` stay out of this list: they
- * are JSON read straight from the environment, not runtime config paths, so
- * the deploy script remains their only check.
  */
 export interface RequiredConfigSecret {
   /** Dot path on the runtime config object, e.g. `session.password`. */

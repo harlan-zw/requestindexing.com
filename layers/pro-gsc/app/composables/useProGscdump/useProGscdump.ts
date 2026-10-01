@@ -195,12 +195,22 @@ export function useProGscdump() {
     )
   }
 
+  // Google Submissions are created server side with the partner key. The
+  // browser only reads their receipts.
+  function listSiteGoogleSubmissionReceipts(input: GscdumpV1OperationInput<'partner.sites.indexing.google.submissions.list'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.google.submissions.list'>['data']>(
+      () => createV1Client().listSiteGoogleSubmissionReceipts(input),
+      silent,
+    )
+  }
+
   return {
     getSiteIndexNowConnection,
     configureSiteIndexNowConnection,
     verifySiteIndexNowConnection,
     submitSiteIndexNow,
     listSiteIndexNowSubmissionReceipts,
+    listSiteGoogleSubmissionReceipts,
     createSitemapAction,
     getCanonicalMismatches,
     getSiteAnalysis,

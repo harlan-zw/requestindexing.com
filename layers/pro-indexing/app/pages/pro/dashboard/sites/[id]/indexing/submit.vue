@@ -1,13 +1,18 @@
 <script lang="ts" setup>
+import type { GoogleSubmissionReceiptV1 } from '@gscdump/contracts/v1'
+import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import type { UiTableColumn } from '#layers/design-system/app/shared/table'
 import type { GscdumpIndexingUrl } from '#layers/pro-gsc/shared/gscdump-api'
 import type { IndexingGrantRefusal } from '#layers/pro-indexing/app/utils/indexing-grant'
 import type { IndexingGrant } from '#layers/pro-indexing/shared/contracts/indexing-grant'
+import { GOOGLE_SUBMISSION_SITE_DAILY_LIMIT } from '@gscdump/contracts/v1'
+import { nanoid } from 'nanoid'
 import { h } from 'vue'
 import { UiStatusBadge, UiUrlLabel } from '#components'
 import { useProGscdumpIndexingUrls } from '#layers/pro-gsc/app/composables/useProGscdump'
+import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
 import IndexingChannelsCard from '#layers/pro-indexing/app/internal/components/indexing/IndexingChannelsCard.vue'
-import { readIndexingGrantRefusal, resolveSubmitAction } from '#layers/pro-indexing/app/utils/indexing-grant'
+import { describeReceipt, describeSubmissionRefusal, readIndexingGrantRefusal, readSubmissionRefusal, resolveSubmitAction } from '#layers/pro-indexing/app/utils/indexing-grant'
 
 definePageMeta({
   proTab: { feature: 'indexing', label: 'Submit to Google', icon: 'i-ph-check-circle-duotone', order: 40 },
@@ -15,11 +20,13 @@ definePageMeta({
   icon: 'i-ph-check-circle-duotone',
 })
 
-// The product's namesake action: hand a URL to Google's Indexing API through
-// this account's pooled OAuth client. gscdump has no equivalent, so the server
-// contract stays exactly as it was; only the page around it follows the
-// indexing page conventions.
-const { siteId, siteName, gscdumpSiteId } = useSite('Submit to Google')
+// The product's namesake action: hand one URL to Google's Indexing API.
+// gscdump holds the grant, applies the limits and keeps the receipts
+// (gscdump.com ADR-0016); this page explains them.
+const { siteId, siteName, gscdumpSiteId, site } = useSite('Submit to Google')
+const { isAdmin } = useCaller()
+const teamPolicy = useTeamPolicy(() => site.value?.teamId)
+const canWrite = computed(() => isAdmin.value || teamPolicy.can('write-data'))
 
 const toast = useToast()
 const route = useRoute()
@@ -38,7 +45,7 @@ const submitting = ref(false)
 
 type SubmitState
   = | { _tag: 'Idle' }
-    | { _tag: 'Ok', url: string, status: string }
+    | { _tag: 'Ok', receipt: GoogleSubmissionReceiptV1 }
     | { _tag: 'Err', message: string }
 
 const lastSubmit = ref<SubmitState>({ _tag: 'Idle' })
@@ -53,10 +60,30 @@ function parseAbsoluteUrl(value: string): URL | null {
   }
 }
 
-// Submission sends with the account's own Indexing API grant, which the
-// Search Console connect never writes. Without it the only action that can
-// work is the grant, so it takes the Submit button's place.
+// Submission sends with the Indexing API grant, which the Search Console
+// connect never writes. Without it the only action that can work is the
+// grant, so it takes the Submit button's place.
 const { data: grant, error: grantError } = useFetch<IndexingGrant>('/api/indexing/auth', { key: 'indexing-grant' })
+// The grant asks the person to read what the API is for before Google asks
+// for consent. Overuse can make Google block it for every user.
+const intentConfirmed = ref(false)
+
+const engineId = computed(() => gscdumpSiteId.value ?? undefined)
+const receipts = useGscdumpQuery<GscdumpV1OperationResponse<'partner.sites.indexing.google.submissions.list'>['data']>(
+  () => `google-submissions:${engineId.value ?? ''}`,
+  engineId,
+  (siteId, client) => client.listSiteGoogleSubmissionReceipts({ params: { siteId }, query: { limit: 20, offset: 0 } }, true),
+  [],
+)
+const receiptRows = computed(() => receipts.data.value?.submissionReceipts ?? [])
+
+// The Pacific day is the one gscdump counts the daily limit in.
+const pacificDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' })
+const submissionsLeft = computed(() => {
+  const today = pacificDay.format(new Date())
+  const usedToday = receiptRows.value.filter(receipt => pacificDay.format(new Date(receipt.createdAt)) === today).length
+  return Math.max(0, GOOGLE_SUBMISSION_SITE_DAILY_LIMIT - usedToday)
+})
 const grantRefusal = ref<IndexingGrantRefusal | null>(null)
 const submitAction = computed(() => resolveSubmitAction({
   grant: grant.value ?? null,
@@ -86,9 +113,9 @@ async function submitForIndexing() {
   }
 
   submitting.value = true
-  const result = await $fetch<{ status: string, url: string }>(`/api/indexing/${encodeURIComponent(target.toString())}`, {
+  const result = await $fetch<GoogleSubmissionReceiptV1>(`/api/sites/${siteId.value}/indexing/google-submissions`, {
     method: 'POST',
-    query: { siteId: siteId.value },
+    body: { url: target.toString(), idempotencyKey: nanoid() },
   })
     .then(response => ({ _tag: 'Ok' as const, response }))
     .catch((error: unknown) => ({ _tag: 'Err' as const, error }))
@@ -102,19 +129,26 @@ async function submitForIndexing() {
       lastSubmit.value = { _tag: 'Idle' }
       return
     }
-    const message = errorMessage(result.error)
+    const refused = readSubmissionRefusal(result.error)
+    const message = refused ? describeSubmissionRefusal(refused) : errorMessage(result.error)
     lastSubmit.value = { _tag: 'Err', message }
-    toast.add({ title: 'Submission failed', description: message, color: 'error' })
+    toast.add({ title: 'URL not submitted', description: message, color: 'error' })
     return
   }
 
-  const notice = result.response.status === 'already-submitted'
-    ? { title: 'Already submitted', status: 'Google was already told about this URL in the last 48 hours.' }
-    : { title: 'URL submitted', status: 'Google was told this URL changed. Indexing can still take a few days.' }
-  lastSubmit.value = { _tag: 'Ok', url: target.toString(), status: notice.status }
-  toast.add({ title: notice.title, description: notice.status, color: 'success' })
-  void refreshHistory()
+  const receipt = result.response
+  if (receipt._tag === 'rejected' && receipt.reason === 'reauthorization-required')
+    grantRefusal.value = 'rejected'
+  lastSubmit.value = { _tag: 'Ok', receipt }
+  toast.add({ title: receipt._tag === 'accepted' ? 'Notification accepted' : 'URL not accepted', description: describeReceipt(receipt), color: receipt._tag === 'accepted' ? 'success' : 'error' })
+  void receipts.refresh()
 }
+
+const receiptLabels: Record<GoogleSubmissionReceiptV1['_tag'], string> = { accepted: 'Accepted', rejected: 'Refused', failed: 'No answer' }
+function receiptStatus(receipt: GoogleSubmissionReceiptV1) {
+  return receipt._tag === 'accepted' ? 'success' as const : 'error' as const
+}
+const timeFormatter = new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' })
 
 const dateFormatter = new Intl.DateTimeFormat('en', { dateStyle: 'medium' })
 
@@ -190,7 +224,7 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
             <UiIcon name="warning" class="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
             <span>
               Google documents the Indexing API for job posting and livestream
-              pages only. Check your page type before you submit.
+              pages only. For other pages, Google may ignore the notification.
             </span>
           </p>
         </div>
@@ -207,11 +241,12 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
           </UFormField>
           <UiButton
             v-if="submitAction._tag === 'GrantAccess'"
-            :to="submitAction.to"
+            :to="intentConfirmed ? submitAction.to : undefined"
             external
             purpose="cta"
             icon="key"
             class="min-h-11"
+            :disabled="!intentConfirmed"
           >
             Grant Indexing API access
           </UiButton>
@@ -220,12 +255,27 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
             type="submit"
             purpose="cta"
             :loading="submitting"
-            :disabled="!url.trim() || submitAction._tag === 'Checking'"
+            :disabled="!url.trim() || submitAction._tag === 'Checking' || !canWrite || submissionsLeft === 0"
             class="min-h-11"
           >
             Submit URL
           </UiButton>
         </form>
+
+        <div v-if="submitAction._tag === 'GrantAccess'" class="mt-4 max-w-2xl space-y-3 rounded-md border border-default p-4 text-sm">
+          <p class="text-default">
+            Submit a page only when it is new or changed and is not indexed yet.
+            If people overuse the Indexing API, Google can block it for every
+            Request Indexing user.
+          </p>
+          <UCheckbox v-model="intentConfirmed" label="I will submit only pages I own that are new or changed." />
+        </div>
+        <p v-else-if="engineId && canWrite" class="mt-3 text-sm text-muted">
+          {{ submissionsLeft }} of {{ GOOGLE_SUBMISSION_SITE_DAILY_LIMIT }} Google Submissions left today for this Site.
+        </p>
+        <p v-else-if="engineId" class="mt-3 text-sm text-muted">
+          Your Team role allows viewing only.
+        </p>
 
         <p v-if="submitAction._tag === 'GrantAccess' && submitAction.cause === 'rejected'" class="mt-3 text-sm text-error">
           Google no longer accepts this app's Indexing API access. This app did not send the URL. Grant access again, then submit the URL.
@@ -236,9 +286,35 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
         <p v-else-if="lastSubmit._tag === 'Err'" class="mt-3 text-sm text-error">
           {{ lastSubmit.message }}
         </p>
-        <p v-else-if="lastSubmit._tag === 'Ok'" class="mt-3 text-sm text-muted">
-          {{ lastSubmit.status }}
+        <p v-else-if="lastSubmit._tag === 'Ok'" class="mt-3 text-sm" :class="lastSubmit.receipt._tag === 'accepted' ? 'text-muted' : 'text-error'">
+          {{ describeReceipt(lastSubmit.receipt) }}
         </p>
+      </UiCard>
+    </ProPageZone>
+
+    <ProPageZone v-if="engineId" tier="secondary">
+      <UiCard title="Your Submissions" size="sm">
+        <p v-if="receipts.error.value" class="text-sm text-error">
+          Your Submissions could not load. Retry to read the latest outcomes.
+        </p>
+        <UiSkeleton v-else-if="receipts.status.value === 'pending' && !receipts.data.value" :lines="3" :base="240" :range="80" />
+        <p v-else-if="!receiptRows.length" class="text-sm text-muted">
+          No Submissions yet. Each URL you submit appears here with Google's answer.
+        </p>
+        <ul v-else class="divide-y divide-default">
+          <li v-for="receipt in receiptRows" :key="receipt.id" class="py-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <UiUrlLabel :url="receipt.url" class="max-w-md" />
+              <div class="flex items-center gap-3">
+                <UiStatusBadge :status="receiptStatus(receipt)" :label="receiptLabels[receipt._tag]" size="sm" />
+                <time :datetime="receipt.createdAt" class="text-sm tabular-nums text-muted">{{ timeFormatter.format(new Date(receipt.createdAt)) }}</time>
+              </div>
+            </div>
+            <p v-if="receipt._tag !== 'accepted'" class="mt-1 text-sm text-muted">
+              {{ describeReceipt(receipt) }}
+            </p>
+          </li>
+        </ul>
       </UiCard>
     </ProPageZone>
 
@@ -287,7 +363,7 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
           <div class="space-y-2 text-sm text-muted">
             <p>A Submission tells Google that the page is new or changed. Google decides whether to index it.</p>
             <p>Indexing status comes from the Search Console URL Inspection API, re-checked on a schedule.</p>
-            <p>If you submit the same URL twice within 48 hours, Google gets only the first notification.</p>
+            <p>Each Site can send {{ GOOGLE_SUBMISSION_SITE_DAILY_LIMIT }} Submissions a day. After Google accepts a URL, you can submit it again after 7 days.</p>
           </div>
         </UiCard>
       </ProSecondaryGrid>
