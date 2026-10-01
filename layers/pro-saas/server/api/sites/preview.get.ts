@@ -9,7 +9,8 @@ import { between, date, daysAgo, gsc, page, today } from 'gscdump/query'
 import { useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
 import { readOptionalUserEntitlements } from '#layers/pro-gsc/server/utils/user-entitlements'
 import { siteAllowanceOf } from '#layers/pro-gsc/shared/free-allowance'
-import { sites, users } from '#layers/pro-saas/server/database'
+import { sites } from '#layers/pro-saas/server/database'
+import { readCallerGscdumpUserId } from '#layers/pro-saas/server/utils/caller-rows'
 import { defineProApiHandler, getProLogger } from '#layers/pro-saas/server/utils/handler'
 import { teamsCallerCan } from '#layers/pro-saas/shared/policies/team-policy'
 import { isNearRetentionLimit, lifecycleOf, lifecycleSiteFor, readOptionalUserLifecycle, syncStatusFor } from '../../utils/site-lifecycle'
@@ -25,16 +26,8 @@ export default defineProApiHandler({}, async ({ db, caller, event }) => {
     eq(sites.ownerId, caller.user.id),
     inArray(sites.teamId, teamsCallerCan(caller, 'manage-sites')),
   )
-  const ownedSites = await db.select().from(sites).where(and(
-    caller.currentTeamId
-      ? or(eq(sites.teamId, caller.currentTeamId), createdByCaller)
-      : createdByCaller,
-    eq(sites.active, true),
-  )).all()
-
-  const [user] = await db.select({ gscdumpUserId: users.gscdumpUserId })
-    .from(users)
-    .where(eq(users.userId, caller.user.id))
+  // The caller batch already read the user row, so this costs no D1 round trip.
+  const gscdumpUserId = await readCallerGscdumpUserId(event, db, caller.user.id)
 
   // The client is built inside the read, so a caller gscdump does not know and
   // a partner key that will not build both land on the stored sync status
@@ -42,9 +35,18 @@ export default defineProApiHandler({}, async ({ db, caller, event }) => {
   // case open: `useGscdumpClient` throws before any promise exists, and the
   // onboarding "Connect your sites" step then read the caller's existing sites
   // as zero and could not be finished.
-  const [lifecycleRead, entitlementsRead] = await Promise.all([
-    readOptionalUserLifecycle(user?.gscdumpUserId, useGscdumpClient),
-    readOptionalUserEntitlements(user?.gscdumpUserId, useGscdumpClient),
+  //
+  // The Sites read does not depend on gscdump, so it runs beside the two
+  // gscdump reads. Connect a Site waits on this route and the property list.
+  const [ownedSites, lifecycleRead, entitlementsRead] = await Promise.all([
+    db.select().from(sites).where(and(
+      caller.currentTeamId
+        ? or(eq(sites.teamId, caller.currentTeamId), createdByCaller)
+        : createdByCaller,
+      eq(sites.active, true),
+    )).all(),
+    readOptionalUserLifecycle(gscdumpUserId, useGscdumpClient),
+    readOptionalUserEntitlements(gscdumpUserId, useGscdumpClient),
   ])
   if (lifecycleRead._tag === 'Unavailable')
     getProLogger(event).warn('[sites/preview] gscdump lifecycle unavailable:', lifecycleRead.reason)
