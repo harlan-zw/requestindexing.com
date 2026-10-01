@@ -10,6 +10,8 @@ import ProOverviewOnboardingCard from '#layers/pro-gsc/app/components/overview/P
 import ProOverviewSitesColumn from '#layers/pro-gsc/app/components/overview/ProOverviewSitesColumn.vue'
 import ProOverviewSnapshot from '#layers/pro-gsc/app/components/overview/ProOverviewSnapshot.vue'
 import { useProOverviewReads } from '#layers/pro-gsc/app/composables/useProOverviewReads'
+import ProNoPropertyNotice from '#layers/pro-saas/app/components/pro/ProNoPropertyNotice.vue'
+import { useNoSearchConsoleProperty } from '#layers/pro-saas/app/composables/useNoSearchConsoleProperty'
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 
 // The Team home, rebuilt on nuxtseo.com's overview through gscdump.com's
@@ -42,6 +44,10 @@ const gscNotConnected = computed(() => resolveGscConnection({
   accountStatus: session.value?.gscdumpAccountStatus ?? null,
   error: route.query.error,
 })._tag === 'NotConnected')
+
+// No Site, and a Google account with no Search Console property: Connect a
+// Site can only say so, so the home says it first (2026-10-01 replay, N6).
+const noProperty = useNoSearchConsoleProperty(() => !sites.value.length)
 
 const range = overviewReadRange()
 // A redirecting page reads nothing: the Site page owns that Site's reads.
@@ -92,6 +98,10 @@ useJobListener('sites/sync-finished', async ({ siteId }) => {
     <div v-else-if="status === 'pending' && !data" aria-busy="true" aria-label="Loading Sites">
       <UiLoadingState :rows="3" />
     </div>
+
+    <UiCard v-else-if="!sites.length && noProperty">
+      <ProNoPropertyNotice heading-tag="h2" :email="session?.gscEmail ?? null" gsc-return-to="/pro/dashboard" />
+    </UiCard>
 
     <ProOverviewOnboardingCard v-else-if="!sites.length" step="connect-site" />
 

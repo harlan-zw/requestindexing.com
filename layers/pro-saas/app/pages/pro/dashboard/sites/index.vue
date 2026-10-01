@@ -3,7 +3,10 @@ import type { SiteHoldReason } from '@gscdump/contracts'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { HELD_LABEL, holdMessage, SITE_LINK_REFUSED } from '#layers/pro-gsc/shared/entitlement-copy'
+import { NO_PROPERTY_DETAIL_OUTSIDE_LIST, noPropertyTitle } from '#layers/pro-gsc/shared/no-property-copy'
+import ProNoPropertyActions from '#layers/pro-saas/app/components/pro/ProNoPropertyActions.vue'
 import ProAbilityGate from '#layers/pro-saas/app/components/pro/team/ProAbilityGate.vue'
+import { useNoSearchConsoleProperty } from '#layers/pro-saas/app/composables/useNoSearchConsoleProperty'
 import { useRemoveSite } from '#layers/pro-saas/app/composables/useRemoveSite'
 import { SITE_SYNC_LABELS } from '#layers/pro-saas/shared/site-sync'
 
@@ -46,6 +49,11 @@ const rows = computed<SiteRow[]>(() => (data.value?.sites ?? []).map(site => ({
 })))
 
 const loading = computed(() => status.value === 'pending' && !data.value)
+
+// No Site, and a Google account with no Search Console property: the connect
+// modal can only say so, so the page says it first (2026-10-01 replay, N6).
+const { session } = useUserSession()
+const noProperty = useNoSearchConsoleProperty(() => !loading.value && !error.value && !rows.value.length)
 
 // nuxtseo.com's "Add sites" modal: the same form as the Connect a Site page,
 // opened in place. The Google grant returns to this page.
@@ -115,6 +123,16 @@ async function removeSite() {
     <div v-if="loading" class="space-y-2" aria-label="Loading Sites">
       <UiSkeleton v-for="index in 4" :key="index" class="h-14 w-full rounded-lg" />
     </div>
+
+    <!-- No Site, and no Search Console property to connect one from. -->
+    <UiEmptyState
+      v-else-if="noProperty"
+      icon="globe"
+      :title="noPropertyTitle(session?.gscEmail)"
+      :description="NO_PROPERTY_DETAIL_OUTSIDE_LIST"
+    >
+      <ProNoPropertyActions align="center" gsc-return-to="/pro/dashboard/sites" />
+    </UiEmptyState>
 
     <UiEmptyState
       v-else-if="!rows.length && !error"

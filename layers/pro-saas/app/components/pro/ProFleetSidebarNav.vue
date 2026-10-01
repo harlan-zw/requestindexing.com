@@ -89,7 +89,7 @@ const siteLinks = computed<FleetSiteLink[]>(() => sites.map((site) => {
         <UiSkeleton v-for="n in 3" :key="n" type="block" class="h-7 w-full rounded" />
       </div>
       <p v-else-if="!siteLinks.length" class="px-1 text-sm text-muted">
-        No sites yet.
+        No Sites yet.
       </p>
       <UiNavList
         v-else

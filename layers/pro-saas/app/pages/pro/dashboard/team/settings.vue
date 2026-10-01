@@ -39,7 +39,7 @@ const sites = computed<SitesPreview>(() => preview.value?._tag === 'Ready' ? pre
     <!-- A read-only summary. Manage Sites connects and removes Sites. -->
     <div>
       <h2 class="mb-2 text-sm font-medium text-highlighted">
-        Tracked sites
+        Tracked Sites
       </h2>
       <ul v-if="sites.length" class="divide-y divide-default rounded-md ring ring-default">
         <li v-for="site in sites" :key="site.siteId" class="flex items-center gap-2 px-3 py-2">
@@ -48,11 +48,11 @@ const sites = computed<SitesPreview>(() => preview.value?._tag === 'Ready' ? pre
         </li>
       </ul>
       <p v-else class="text-sm text-muted">
-        This team tracks no sites yet.
+        This Team tracks no Sites yet.
       </p>
     </div>
     <p class="text-sm text-muted">
-      To change which sites this team tracks, go to
+      To change which Sites this Team tracks, go to
       <NuxtLink to="/pro/dashboard/sites" class="text-primary underline">
         Manage Sites
       </NuxtLink>.

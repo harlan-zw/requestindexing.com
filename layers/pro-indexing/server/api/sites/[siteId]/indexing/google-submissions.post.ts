@@ -11,7 +11,7 @@ export default defineProApiHandler(async (event) => {
   const access = await requireTeamSite(event, { ability: 'write-data' })
   const body = await readValidatedBody(event, googleSubmitV1Schema.parse)
   if (!access.site.gscdumpSiteId)
-    throw createError({ statusCode: 409, statusMessage: 'Connect this site to Search Console before you submit a URL.' })
+    throw createError({ statusCode: 409, statusMessage: 'Connect this Site to Search Console before you submit a URL.' })
   const response = await createGscdumpPublicV1Client(event)
     .createSiteGoogleSubmission({ params: { siteId: access.site.gscdumpSiteId }, body })
     .catch(toGoogleSubmissionError)

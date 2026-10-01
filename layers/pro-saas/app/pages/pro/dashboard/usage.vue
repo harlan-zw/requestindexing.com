@@ -5,7 +5,7 @@
 // nuxtseo.com shows its account usage from the user menu too ("Billing &
 // Usage"); this app has no billing, so the page is Usage alone.
 //
-// The per-Site "API Usage" tab keeps the local Indexing API Quota.
+// Google Submissions show their daily limit on each Site's Submit to Google page.
 import type { FreeAllowanceView } from '#layers/pro-gsc/shared/free-allowance'
 import { FREE_ALLOWANCE_HEADING, FREE_ALLOWANCE_NONE, FREE_ALLOWANCE_READ_FAILURE, meterRows } from '#layers/pro-gsc/shared/entitlement-copy'
 

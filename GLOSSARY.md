@@ -40,7 +40,7 @@ Collisions: the product's submission history and Google's indexing state are dif
 
 The Google Indexing API and IndexNow are separate channels. The Indexing API notifies Google only. IndexNow notifies Bing and other participating search engines, and Google is not one of them. Never call one channel by the other's name. Never imply that an IndexNow receipt says anything about Google.
 
-Quota and Free allowance are different ceilings. Quota is a local daily counter on one Site. The Free allowance is gscdump's ceiling on one account's Sites, Preserved rows, and URL Inspections. Never use one word for the other.
+Quota and Free allowance are different ceilings. Quota is Google's daily Indexing API ceiling for one Cloud project, which gscdump counts. The Free allowance is gscdump's ceiling on one account's Sites, Preserved rows, and URL Inspections. Never use one word for the other.
 
 ## Terms
 

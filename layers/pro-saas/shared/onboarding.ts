@@ -44,7 +44,7 @@ export type OnboardingStep = typeof ONBOARDING_STEPS[number]
 
 export const ONBOARDING_STEP_LABELS: Record<OnboardingStep, string> = {
   connect: 'Connect Google',
-  sites: 'Connect sites',
+  sites: 'Connect Sites',
   sync: 'Start syncing',
 }
 
@@ -277,7 +277,7 @@ export function resolveOnboardingCompletion(input: OnboardingCompletionInput): O
     return {
       _tag: 'Blocked',
       reason: 'no_sites',
-      message: 'Connect at least one site before you finish setup.',
+      message: 'Connect at least one Site before you finish setup.',
     }
   }
 

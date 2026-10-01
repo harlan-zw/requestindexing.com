@@ -28,7 +28,7 @@ describe('dataForSEO requests', () => {
 
   it('adds attribution at the provider transport boundary', async () => {
     const fetchMock = vi.fn(async (_url: string, _options: { body: Array<{ tag: string }> }) => ({
-      tasks: [{ result: [{ se_results_count: 0, items: [] }] }],
+      tasks: [{ status_code: 20000, status_message: 'Ok.', result: [{ se_results_count: 0, items: [] }] }],
     }))
     await checkUrlIndexed('https://docs.example.com/guide', {
       budgetMicros: 0,
@@ -85,7 +85,7 @@ describe('getDomainOverview', () => {
     // DataForSEO names the count `se_results_count`. Reading a `total` field,
     // which the API never sends, made every Site Indexing Report show zero.
     const providerFetch = vi.fn(async (url: string) => url.includes('/serp/')
-      ? { tasks: [{ result: [{ se_results_count: 1234, items: [] }] }] }
+      ? { tasks: [{ status_code: 20000, status_message: 'Ok.', result: [{ se_results_count: 1234, items: [] }] }] }
       : { tasks: [{ result: [{ items: [] }] }] })
 
     const overview = await getDomainOverview('example.com', {

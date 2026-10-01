@@ -24,7 +24,7 @@ async function onToggleBrowserAnalyzer(next: boolean) {
       toast.add({
         title: next ? 'Browser analyzer enabled' : 'Browser analyzer disabled',
         description: next
-          ? 'Eligible sites will load analytics directly in your browser. Reload other tabs to apply.'
+          ? 'Eligible Sites will load analytics directly in your browser. Reload other tabs to apply.'
           : 'All analytics will run on the server. Reload other tabs to apply.',
         color: 'success',
       })

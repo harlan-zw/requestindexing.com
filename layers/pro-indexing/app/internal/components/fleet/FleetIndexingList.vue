@@ -112,7 +112,7 @@ const indexingErrorDescription = computed(() => {
   const failed = failedIndexingSites.value
   return failed.length === 1
     ? `${failed[0]!.name} could not load. Retry the indexing read.`
-    : `${failed.length} sites could not load. Retry the indexing reads.`
+    : `${failed.length} Sites could not load. Retry the indexing reads.`
 })
 
 function retryFailedIndexing() {
@@ -243,7 +243,7 @@ function unindexedPanelRows(siteId: string): MetricPanelRow[] {
     rows.push({ label: '28d change', trend: summary.change28d })
   const share = indexedShare(readFor(siteId), aggregateIndexed.value)
   if (share != null)
-    rows.push({ label: '% of all sites', value: `${share}%`, divider: true })
+    rows.push({ label: '% of all Sites', value: `${share}%`, divider: true })
   return rows
 }
 function indexedPanelRows(siteId: string): MetricPanelRow[] {
@@ -256,7 +256,7 @@ function indexedPanelRows(siteId: string): MetricPanelRow[] {
   ]
   const share = indexedShare(readFor(siteId), aggregateIndexed.value)
   if (share != null)
-    rows.push({ label: '% of all sites', value: `${share}%`, divider: true })
+    rows.push({ label: '% of all Sites', value: `${share}%`, divider: true })
   return rows
 }
 function errorPanelRows(siteId: string): MetricPanelRow[] {

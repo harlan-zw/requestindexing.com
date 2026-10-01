@@ -71,11 +71,11 @@ export function describeSubmissionRefusal(refusal: GoogleSubmissionRefusal): str
         ? 'Grant Indexing API access, then submit the URL.'
         : 'Google no longer accepts this access. Grant access again, then submit the URL.'
     case 'url_outside_site':
-      return 'The URL must be on this site.'
+      return 'The URL must be on this Site.'
     case 'cooling_down':
       return `Google accepted this URL on ${formatDay(refusal.lastAcceptedAt)}. You can submit it again on ${formatDay(refusal.availableAt)}.`
     case 'site_daily_limit':
-      return `This site used its ${refusal.limit} Google Submissions for today. The daily limit resets at midnight Pacific Time.`
+      return `This Site used its ${refusal.limit} Google Submissions for today. The daily limit resets at midnight Pacific Time.`
     case 'project_quota_spent':
       return 'Request Indexing used its Google quota for today. The quota resets at midnight Pacific Time.'
   }

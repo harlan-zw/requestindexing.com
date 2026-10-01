@@ -53,7 +53,7 @@ export default defineProApiHandler({
       throw refusalError(result.refusal)
     case 'AlreadyConnected':
       throw new ProError('conflict', {
-        message: 'That site is already connected.',
+        message: 'That Site is already connected.',
         details: { siteId: result.site.publicId },
       })
     case 'Ok':
