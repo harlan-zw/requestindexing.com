@@ -38,6 +38,7 @@ Goal: a new person signs up, completes onboarding, connects a Site, and learns w
 2. Sign up with Google. Record each redirect and each consent screen.
 3. Complete onboarding. Capture each step. Record any step that asks for a choice the person cannot make yet.
 4. Connect a Site. Use the least sensitive Site the identity owns. Capture the Search Console property list.
+   If the identity owns no property, capture the empty state. Check that it says why and what to do next.
 5. Watch the first sync from queued to complete. Sample the early, middle, and final states. Compare the visible progress with gscdump lifecycle data when you can read it.
 6. Open Overview, Indexing, Sitemaps, and one URL. Reload each page once to catch first-render errors. Check the sidebar.
 7. Answer the job. Pick one URL that is not indexed. Capture whether the product says why and what to do.
@@ -52,6 +53,7 @@ Goal: the same person gets an indexing answer inside a coding agent, with no doc
 2. Check that every command in the copied prompt exists in the current CLI. Use `--help`, never memory.
 3. Give the prompt to a sub-agent with an isolated `HOME` under `~/scratch/ri-replay/agent-home`. The sub-agent follows the prompt only. It does not read this repository or the gscdump source.
 4. Record each command, its exit code, and its duration. The run passes only when it ends with an indexing summary for a connected Site.
+   If the identity has no Site, the run passes when the agent says so clearly and names the next step.
 5. Check the MCP path once. Add `https://gscdump.com/mcp` with the key in the `x-api-key` header, list the tools, and call one read tool.
 6. Check the Claude.ai connector path once. It signs in at gscdump.com with the same Google account. Confirm that it shows the same Sites. If it shows a waitlist or no Sites, record a finding.
 7. Revoke the key on Developers. Confirm that the CLI and MCP now fail with a clear error.
