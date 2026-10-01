@@ -34,7 +34,6 @@ export {
   teamSites,
   teamUser,
   telemetryEvents,
-  usages,
   userIdentities,
   users,
   userSites,

@@ -36,7 +36,8 @@ const RELOCATED_PAGES: Record<string, string> = {
   'sitemaps': 'indexing/sitemaps',
   'web-indexing': 'indexing/submit',
   'settings': 'settings',
-  'usages': 'usages',
+  // The Usage page counted Google Submissions. gscdump keeps them now, on Submit to Google.
+  'usages': 'indexing/submit',
 }
 
 export type LegacyDashboardRoute

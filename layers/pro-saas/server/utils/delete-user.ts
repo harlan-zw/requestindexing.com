@@ -43,7 +43,6 @@ import {
   teamSites,
   teamUser,
   telemetryEvents,
-  usages,
   userIdentities,
   users,
   userSites,
@@ -248,11 +247,6 @@ export async function deleteUserData(event: H3Event, opts: DeleteUserOptions): P
         : db.delete(jobBatches).where(eq(jobBatches.userId, userId)),
     },
     // ── Owned-site children ──────────────────────────────────────────────
-    {
-      table: 'usages',
-      count: () => hasSites() ? scalar(db, sql`select count(*) as c from usages where site_id in ${siteList()}`) : Promise.resolve(0),
-      run: () => hasSites() ? db.delete(usages).where(inArray(usages.siteId, siteIds)) : Promise.resolve(),
-    },
     {
       table: 'indexing_investigations',
       count: () => hasSites() ? scalar(db, sql`select count(*) as c from indexing_investigations where site_id in ${siteList()}`) : Promise.resolve(0),

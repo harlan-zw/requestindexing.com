@@ -28,7 +28,7 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 | Submission | gscdump Submission Receipt (`google_indexing_submissions`, gscdump.com ADR-0016) | Site 1—N Submission, unique on (site, idempotency key) in gscdump | "Submit" |
 | IndexNow | gscdump `partner.sites.indexing.indexnow.*`, IndexNow page | Site 0—1 verified key; notifies participating search engines, never Google | IndexNow |
 | Investigation | indexing_investigations table | Site 1—N Investigation, unique on (site, url, issue) | (not surfaced as a noun) |
-| Quota | usages table | Site 1—N daily counter, unique on (site, date, key) | "limit" |
+| Quota | gscdump `google_indexing_quota_daily` (gscdump.com ADR-0016) | Cloud project 1—N Pacific-day counter, kept by gscdump | "quota" |
 | Free allowance | gscdump `partner.users.entitlements.get` | Billing owner 1—1 per usage pool; gscdump sets and enforces it | Free allowance |
 | Held | gscdump lifecycle site `hold` | Site 0—1 hold reason, before its first import | Held |
 | API key | gscdump `partner.users.api_keys.*`, Developers page | User 1—N, at most 10; gscdump stores them, this app stores none | API key |
@@ -40,7 +40,7 @@ Collisions: the product's submission history and Google's indexing state are dif
 
 The Google Indexing API and IndexNow are separate channels. The Indexing API notifies Google only. IndexNow notifies Bing and other participating search engines, and Google is not one of them. Never call one channel by the other's name. Never imply that an IndexNow receipt says anything about Google.
 
-Quota and Free allowance are different ceilings. Quota is a local daily counter on one Site. The Free allowance is gscdump's ceiling on one account's Sites, Preserved rows, and URL Inspections. Never use one word for the other.
+Quota and Free allowance are different ceilings. Quota is Google's daily Indexing API ceiling for one Cloud project, which gscdump counts. The Free allowance is gscdump's ceiling on one account's Sites, Preserved rows, and URL Inspections. Never use one word for the other.
 
 ## Terms
 
@@ -143,13 +143,13 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 
 ### Quota
 
-**Is:** the counter for a metered action against a Site on a date. Table `usages`, keyed on `(site, date, key)`.
+**Is:** Google's daily Indexing API publish quota for Request Indexing's Cloud project. gscdump counts it and refuses with `project_quota_spent` when it is gone. The per-Site cap of 5 Submissions a day is the **daily limit**, which gscdump also applies.
 
-**Use for:** the daily Indexing API ceiling and any other per-Site counter.
+**Use for:** the project-wide ceiling in copy that explains a `project_quota_spent` refusal.
 
 **Never:** credit, Free allowance, limit (bare), usage (as the customer word for the ceiling).
 
-**Casing:** `Quota` in prose, `usages` in identifiers.
+**Casing:** `quota` in prose, `projectQuota` in identifiers.
 
 ### Free allowance
 
