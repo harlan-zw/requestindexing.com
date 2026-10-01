@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
+
 const { loggedIn, user } = useUserSession()
 
 useSeoMeta({
@@ -78,7 +80,7 @@ const marketingTools = [
   },
   {
     title: 'Bulk Indexing Checker',
-    description: 'Paste up to 50 URLs or a sitemap, check them in one run, and export the results as CSV.',
+    description: `Paste up to ${BULK_CHECK_URL_LIMIT} URLs or a sitemap, check them in one run, and export the results as CSV.`,
     icon: 'i-heroicons-queue-list',
     to: '/tools/bulk-indexing-checker',
   },
