@@ -9,7 +9,8 @@ import { analyticsStatusToSyncStatus, findLifecycleSite, useGscdumpClient } from
 import { hasGscdumpConnection, readSearchConsoleProperties } from '#layers/pro-gsc/server/utils/search-console-properties'
 // TODO(pro-saas-cleanup): re-wire stats fetch when V1 site-signals lands.
 // The old `#layers/pro-saas/server/utils/site-signals` was deleted in Phase 1.
-import { sites, users } from '#layers/pro-saas/server/database'
+import { sites } from '#layers/pro-saas/server/database'
+import { readCallerGscdumpConnection } from '#layers/pro-saas/server/utils/caller-rows'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 
 // Messages ported from nuxtseo.com `layers/pro/gsc/server/utils/build-gsc-properties.ts`.
@@ -58,46 +59,45 @@ export default defineProApiHandler({ team: true }, async ({ event, team: ctx }):
   const refreshParam = getQuery(event).refresh
   const refresh = refreshParam === '1' || refreshParam === 'true'
 
-  const [dbUser] = await db
-    .select({
-      gscdumpUserId: users.gscdumpUserId,
-      gscdumpApiKey: users.gscdumpApiKey,
-    })
-    .from(users)
-    .where(eq(users.userId, ctx.caller.user.id))
+  // The caller batch already read the user row, so the connection costs no
+  // D1 round trip here.
+  const dbUser = await readCallerGscdumpConnection(event, db, ctx.caller.user.id)
 
   // Every site the caller's current team owns. This used to list the caller's
   // own sites, so a teammate's site never appeared in the property matcher.
-  const userSites = await db
-    .select({
-      id: sites.id,
-      url: sites.property,
-      name: sites.property,
-      gscdumpSiteId: sites.gscdumpSiteId,
-      gscdumpSiteUrl: sites.gscdumpSiteUrl,
-    })
-    .from(sites)
-    .where(eq(sites.teamId, ctx.team.teamId))
+  async function readTeamSites() {
+    const userSites = await db
+      .select({
+        id: sites.id,
+        url: sites.property,
+        name: sites.property,
+        gscdumpSiteId: sites.gscdumpSiteId,
+        gscdumpSiteUrl: sites.gscdumpSiteUrl,
+      })
+      .from(sites)
+      .where(eq(sites.teamId, ctx.team.teamId))
 
-  // Build domain lookup for matching
-  const siteDomains = userSites
-    .filter(s => s.url)
-    .map(s => ({
-      siteId: s.id,
-      siteName: s.name,
-      siteUrl: s.url!,
-      domain: normalizeRegistrationTarget(s.url!) ?? s.url!,
-      gscdumpSiteId: s.gscdumpSiteId,
-      gscdumpSiteUrl: s.gscdumpSiteUrl,
-    }))
+    // Build domain lookup for matching
+    return userSites
+      .filter(s => s.url)
+      .map(s => ({
+        siteId: s.id,
+        siteName: s.name,
+        siteUrl: s.url!,
+        domain: normalizeRegistrationTarget(s.url!) ?? s.url!,
+        gscdumpSiteId: s.gscdumpSiteId,
+        gscdumpSiteUrl: s.gscdumpSiteUrl,
+      }))
+  }
 
   // The connection is the gscdump user and key, the same predicate the session
   // publishes. It used to be a `google_accounts` row, which the Search Console
   // callback never writes, so most accounts read as not connected here.
   if (!hasGscdumpConnection(dbUser))
-    return { connected: false, properties: [], userSites: siteDomains }
+    return { connected: false, properties: [], userSites: await readTeamSites() }
 
-  if (import.meta.dev && dbUser?.gscdumpUserId === 'e2e-demo-user') {
+  if (import.meta.dev && dbUser.gscdumpUserId === 'e2e-demo-user') {
+    const siteDomains = await readTeamSites()
     const properties = siteDomains.map(site => ({
       siteUrl: site.gscdumpSiteUrl || site.domain,
       permissionLevel: 'siteOwner',
@@ -131,12 +131,23 @@ export default defineProApiHandler({ team: true }, async ({ event, team: ctx }):
     }
   }
 
-  // Fetch lifecycle first; picker data is only used to show unregistered GSC properties.
+  // The Team's Sites, the lifecycle, and the property list do not depend on
+  // each other, so all three run at once. They used to run one after the
+  // other: the 2026-10-01 replay measured 4.0 to 6.2 s per read, with the
+  // lifecycle at 0.9 to 1.4 s and the list at about 1.6 s. An account error
+  // from the lifecycle still decides the answer below, whatever the list says.
   const gscdump = useGscdumpClient()
-  const lifecycle = await gscdump.getUserLifecycle(dbUser?.gscdumpUserId).catch((err) => {
-    logger.warn('[gsc-properties] gscdump lifecycle error:', err?.data?.message || err?.message)
-    return null
-  })
+  const [siteDomains, lifecycle, availableRead] = await Promise.all([
+    readTeamSites(),
+    gscdump.getUserLifecycle(dbUser.gscdumpUserId).catch((err) => {
+      logger.warn('[gsc-properties] gscdump lifecycle error:', err?.data?.message || err?.message)
+      return null
+    }),
+    // A failed read is an error the reader sees, never an empty list. An empty
+    // list reads as "this Google account has no property", which is a
+    // different instruction.
+    readSearchConsoleProperties(dbUser, () => gscdump, { refresh }),
+  ])
   if (!lifecycle) {
     return {
       connected: true,
@@ -156,10 +167,6 @@ export default defineProApiHandler({ team: true }, async ({ event, team: ctx }):
     }
   }
 
-  // A failed read is an error the reader sees, never an empty list. An empty
-  // list reads as "this Google account has no property", which is a different
-  // instruction.
-  const availableRead = await readSearchConsoleProperties(dbUser, () => gscdump, { refresh })
   if (availableRead._tag !== 'Loaded') {
     logger.warn('[gsc-properties] gscdump available-sites error:', availableRead._tag === 'Unavailable' ? availableRead.reason : availableRead._tag)
     return {

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { projectPropertyPicker, propertyPickerBlocksConnect } from './property-picker'
 
 function loaded(data: PropertyPickerInput['data'], connectedDomains: string[] = []): PropertyPickerInput {
-  return { queryStatus: 'success', data, connectedDomains: new Set(connectedDomains) }
+  return { queryStatus: 'success', data, sitesLoaded: true, connectedDomains: new Set(connectedDomains) }
 }
 
 describe('projectPropertyPicker', () => {
@@ -67,13 +67,31 @@ describe('projectPropertyPicker', () => {
   })
 
   it('reads a failed request as a failed read, never as no properties', () => {
-    expect(projectPropertyPicker({ queryStatus: 'error', data: null, connectedDomains: new Set() })._tag).toBe('Failed')
+    expect(projectPropertyPicker({ queryStatus: 'error', data: null, sitesLoaded: true, connectedDomains: new Set() })._tag).toBe('Failed')
   })
 
   it('blocks nothing while the list loads', () => {
-    const state = projectPropertyPicker({ queryStatus: 'pending', data: null, connectedDomains: new Set() })
+    const state = projectPropertyPicker({ queryStatus: 'pending', data: null, sitesLoaded: true, connectedDomains: new Set() })
 
     expect(state).toEqual({ _tag: 'Loading' })
     expect(propertyPickerBlocksConnect(state)).toBe(false)
+  })
+
+  // The 2026-10-01 replay: the realtime resync re-read the list about 3 s
+  // after load, and the picker went back to "Reading your Search Console
+  // properties." until the second read landed, 10 to 13 s in all.
+  it('keeps the last answer on screen while a re-read runs', () => {
+    const state = projectPropertyPicker({ ...loaded({ connected: true, properties: [] }), queryStatus: 'pending' })
+
+    expect(state).toEqual({ _tag: 'NoProperties' })
+  })
+
+  it('stays loading until the Team\'s Sites answer, so a connected property never shows as connectable', () => {
+    const state = projectPropertyPicker({
+      ...loaded({ connected: true, properties: [{ siteUrl: 'sc-domain:example.com', permissionLevel: 'siteOwner' }] }),
+      sitesLoaded: false,
+    })
+
+    expect(state).toEqual({ _tag: 'Loading' })
   })
 })

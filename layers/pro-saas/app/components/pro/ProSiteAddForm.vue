@@ -50,18 +50,28 @@ interface SitesPreviewResponse {
 const toast = useToast()
 const { session } = useUserSession()
 
-const { data: preview, refresh: refreshSites, status: sitesStatus } = await useFetch<SitesPreviewResponse>('/api/sites/preview', {
+// Both reads are lazy, as on nuxtseo.com, so they start together and the
+// form renders its loading text at once. Awaited, they ran one after the
+// other, and the Manage Sites modal stayed empty until both answered.
+//
+// `defer`: a background refresh (the realtime resync) joins a read already
+// running instead of cancelling and restarting it. A re-read the user or a
+// connect asks for passes `cancel`, so it always starts fresh.
+const { data: preview, refresh: refreshSites, status: sitesStatus } = useFetch<SitesPreviewResponse>('/api/sites/preview', {
   key: 'site-add-form-sites',
   server: false,
-  default: (): SitesPreviewResponse => ({ sites: [], siteAllowance: { _tag: 'Unknown' } }),
+  lazy: true,
+  dedupe: 'defer',
 })
 
 // gscdump answers from its stored copy of the Google list. The Refresh button
 // asks for a live read once, for a property the user added a moment ago.
 const liveRead = ref(false)
-const { data: gsc, refresh: refreshGsc, status: gscStatus } = await useFetch<PropertyPickerResponse>('/api/pro/gsc-properties', {
+const { data: gsc, refresh: refreshGsc, status: gscStatus } = useFetch<PropertyPickerResponse>('/api/pro/gsc-properties', {
   key: 'site-add-form-gsc-properties',
   server: false,
+  lazy: true,
+  dedupe: 'defer',
   query: { refresh: computed(() => liveRead.value ? '1' : undefined) },
   watch: false,
 })
@@ -69,14 +79,18 @@ const { data: gsc, refresh: refreshGsc, status: gscStatus } = await useFetch<Pro
 async function refreshProperties() {
   liveRead.value = true
   try {
-    await refreshGsc()
+    await refreshGsc({ dedupe: 'cancel' })
   }
   finally {
     liveRead.value = false
   }
 }
 
-const sitesPending = computed(() => sitesStatus.value !== 'success' && sitesStatus.value !== 'error')
+async function rereadAfterConnect() {
+  await Promise.all([refreshSites({ dedupe: 'cancel' }), refreshGsc({ dedupe: 'cancel' })])
+}
+
+const sitesLoaded = computed(() => preview.value != null || sitesStatus.value === 'error')
 
 const connectedSites = computed(() => preview.value?.sites ?? [])
 // nuxtseo.com shows the count against its cap and stops the form at the cap.
@@ -94,14 +108,15 @@ const allowanceFullNotice = computed(() => atLimit.value && cappedAllowance.valu
 
 const connectedDomains = computed(() => new Set(connectedSites.value.map(s => s.domain).filter(Boolean) as string[]))
 
-// The Search Console section as one tagged state. A list still loading for the
-// Team's Sites stays loading, so a property already connected never flashes
-// in as connectable.
+// The Search Console section as one tagged state.
 const picker = computed(() => projectPropertyPicker({
-  queryStatus: sitesPending.value ? 'pending' : gscStatus.value,
+  queryStatus: gscStatus.value,
   data: gsc.value,
+  sitesLoaded: sitesLoaded.value,
   connectedDomains: connectedDomains.value,
 }))
+// A re-read keeps the list on screen, so the Refresh button carries the wait.
+const listReading = computed(() => picker.value._tag === 'Loading' || gscStatus.value === 'pending')
 
 watch([atLimit, picker], ([full, state]) => {
   if (full || propertyPickerBlocksConnect(state))
@@ -158,7 +173,7 @@ async function connect(value: string, source: 'field' | 'list') {
   try {
     const { site } = await $fetch<{ site: { id: string, domain: string | null } }>('/api/pro/sites', { method: 'POST', body: { url: parsed.origin } })
     url.value = ''
-    await Promise.all([refreshSites(), refreshGsc()])
+    await rereadAfterConnect()
     toast.add({ title: `Connected ${parsed.domain}`, color: 'success' })
     emit('connected', { siteId: site.id, domain: site.domain })
   }
@@ -173,7 +188,7 @@ async function connect(value: string, source: 'field' | 'list') {
     emit('blocked')
     // A refusal means the allowance or the property list moved since the page
     // loaded. Re-read both so the list and the count match what gscdump said.
-    await Promise.all([refreshSites(), refreshGsc()])
+    await rereadAfterConnect()
   }
   finally {
     submitting.value = null
@@ -215,8 +230,8 @@ async function connect(value: string, source: 'field' | 'list') {
           class="min-h-11 shrink-0"
           label="Refresh list"
           aria-label="Refresh your Search Console properties"
-          :loading="picker._tag === 'Loading'"
-          :disabled="picker._tag === 'Loading'"
+          :loading="listReading"
+          :disabled="listReading"
           data-testid="gsc-refresh"
           @click="refreshProperties()"
         />
