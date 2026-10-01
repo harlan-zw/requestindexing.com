@@ -98,9 +98,6 @@ const tools = [
               >
                 {{ tool.title }}
               </h2>
-              <UBadge v-if="tool.featured" color="primary" variant="subtle" size="sm">
-                Most used
-              </UBadge>
             </div>
             <p
               class="text-toned leading-relaxed mb-5 max-w-xl" :class="[
@@ -187,7 +184,7 @@ const tools = [
     <UPageSection :ui="{ container: 'max-w-4xl' }">
       <UPageCTA
         title="Need to fix indexing at scale?"
-        description="Request Indexing sends your eligible pages straight to Google's Indexing API. Free, open-source, and set up in under a minute."
+        description="Request Indexing sends your eligible pages straight to Google's Indexing API. Free and open source."
         variant="subtle"
         :links="[
           { label: 'Get Started Free', to: '/pro/onboarding', color: 'primary', size: 'xl', trailingIcon: 'i-heroicons-arrow-right' },

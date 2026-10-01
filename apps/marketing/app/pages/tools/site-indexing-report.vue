@@ -6,23 +6,36 @@ const faqs = [
   },
   {
     question: 'Why is Google not indexing my website?',
-    answer: 'Common causes: robots.txt blocking crawlers, noindex tags, low content quality that leads to "Crawled - currently not indexed", duplicate content, slow pages, missing sitemaps, and low domain authority. Google\'s Gary Illyes has said "the general quality of the site" strongly affects how many pages get indexed.',
+    answer: 'Common causes: robots.txt blocking crawlers, noindex tags, low content quality that leads to "Crawled - currently not indexed", duplicate content, slow pages, missing sitemaps, and low domain authority. Gary Illyes of Google said "the general quality of the site" can matter a lot to how many URLs Search Console lists as crawled but not indexed.',
+    sources: [
+      { label: 'Gary Illyes at SERP Conf 2024', to: 'https://www.youtube.com/watch?v=DJVaGCZLmt8' },
+    ],
   },
   {
     question: 'How many pages should be indexed?',
-    answer: 'There is no universal target. A study of 16 million pages found only 37.08% were fully indexed. Every page you want indexed should serve a purpose and offer something unique, because low-quality pages can drag down your overall indexing rate.',
+    answer: 'There is no universal target. In IndexCheckr\'s study of 16 million pages that its users track, 37.08% were indexed. Every page you want indexed should serve a purpose and offer something unique, because low-quality pages can drag down your overall indexing rate.',
+    sources: [
+      { label: 'IndexCheckr indexing study', to: 'https://indexcheckr.com/resources/google-indexing' },
+    ],
   },
   {
     question: 'Does site speed affect indexing?',
-    answer: 'Yes. Google completed its move to mobile-first indexing in late 2024. Pages that render slowly or have poor Core Web Vitals may be crawled less often. Botify found that Googlebot never crawls 58% of pages on large retail sites.',
+    answer: 'It can reduce crawling. Google\'s crawl budget guide says that when a site slows down or returns server errors, Google crawls less. Google wrote the guide mainly for large sites, such as sites with 1 million or more pages that change weekly.',
+    sources: [
+      { label: 'Google crawl budget guide', to: 'https://developers.google.com/crawling/docs/crawl-budget' },
+    ],
   },
   {
     question: 'How long does it take Google to index a new site?',
-    answer: 'IndexCheckr\'s study of 16 million pages found an average of 27.4 days to first indexing. New sites with low authority may wait much longer. Google\'s Indexing API covers job posting and livestream pages only, and a successful notification means Google may recrawl the URL soon, with no timeline.',
+    answer: 'Google says crawling can take anywhere from a few days to a few weeks after you request it. IndexCheckr reports that pages its users track took an average of 27.4 days to be indexed, counted from when tracking started. Google\'s Indexing API covers job posting and livestream pages only, and a successful notification means Google may recrawl the URL soon, with no timeline.',
+    sources: [
+      { label: 'Google Search Central', to: 'https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl' },
+      { label: 'IndexCheckr indexing study', to: 'https://indexcheckr.com/resources/google-indexing' },
+    ],
   },
   {
     question: 'What is a good index health score?',
-    answer: 'The health score combines indexed pages, organic traffic, and ranking keywords. 80 or above means indexing looks healthy. Below 50 points to real problems. The recommendations under the score say where to start.',
+    answer: 'The score starts at 50. It adds 20 when a site: search finds indexed pages, 15 when estimated organic traffic is above 100, and 15 when the domain ranks for more than 10 keywords. A score of 80 or above shows in green. The recommendations under the score say where to start.',
   },
 ]
 
@@ -306,13 +319,17 @@ const recommendationColor = {
             </h3>
             <ul class="space-y-2 text-[var(--ui-text-muted)]">
               <li>
-                <strong>Quality threshold:</strong> Google's Gary Illyes: "The general quality of the site, that can matter a lot of how many of these crawled but not indexed you see in search console."
+                <strong>Quality threshold:</strong> Gary Illyes of Google, at <NuxtLink to="https://www.youtube.com/watch?v=DJVaGCZLmt8" target="_blank" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+                  SERP Conf 2024
+                </NuxtLink> in Sofia: "The general quality of the site, that can matter a lot of how many of these crawled but not indexed you see in search console."
               </li>
               <li>
-                <strong>Duplicate elimination:</strong> "We crawl the page and then we decide to not index it because there's already a version of that or an extremely similar version available in our index."
+                <strong>Duplicate elimination:</strong> Illyes in the same Q&amp;A: "We crawl the page and then we decide to not index it because there's already a version of that or an extremely similar version of that content available in our index."
               </li>
               <li>
-                <strong>Crawl budget:</strong> 58% of pages on large retail sites are never crawled (Botify). Gary Illyes says 90% of sites do not need to worry about it.
+                <strong>Crawl budget:</strong> Illyes estimated that "probably over 90% of sites on the internet" do not need to worry about it, on <NuxtLink to="https://search-off-the-record.libsyn.com/transcript-for-should-i-worry-about-crawl-budget" target="_blank" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+                  Search Off the Record
+                </NuxtLink> in August 2022.
               </li>
             </ul>
           </div>
@@ -322,19 +339,25 @@ const recommendationColor = {
             </h3>
             <ul class="space-y-2 text-[var(--ui-text-muted)]">
               <li>
-                <strong>37.08%</strong> of pages achieve full indexing across 16M pages (IndexCheckr)
+                <strong>37.08%</strong> of the 16 million pages in <NuxtLink to="https://indexcheckr.com/resources/google-indexing" target="_blank" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+                  IndexCheckr's indexing study
+                </NuxtLink> were indexed
               </li>
               <li>
-                <strong>27.4 days</strong> average time to first indexing
+                <strong>27.4 days</strong> average time to be indexed in the same study, counted from when tracking started
               </li>
               <li>
-                <strong>130 days</strong> retention benchmark before pages risk deindexing
+                <strong>21.29%</strong> of 310,705 pages tracked in the same study were deindexed
               </li>
               <li>
-                <strong>21.29%</strong> of indexed pages eventually get deindexed
+                <strong>130 days</strong> without a crawl: <NuxtLink to="https://indexinginsight.com/blog/the-130-day-indexing-rule" target="_blank" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+                  Indexing Insight
+                </NuxtLink> found a 99% chance that the page is not indexed, across 1.4 million pages on 18 sites
               </li>
               <li>
-                Mobile-first indexing is absolute since late 2024
+                After 5 July 2024, Google crawls every site with <NuxtLink to="https://developers.google.com/search/blog/2024/06/mobile-indexing-vlast-final-final.doc" target="_blank" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+                  Googlebot Smartphone
+                </NuxtLink> for Search. Content that a mobile device cannot reach cannot be indexed.
               </li>
             </ul>
           </div>
