@@ -4,7 +4,7 @@ import { resolve } from 'path'
 import { globbySync } from 'globby'
 import { externalCheckin } from './shared/checkin-external'
 import { CLOUDFLARE_REQUIRED_SECRETS } from './shared/cloudflare'
-import { runtimeOnlyRouteRules } from './shared/routes'
+import { redirectRouteRules, runtimeOnlyRouteRules } from './shared/routes'
 import { SENTRY_DSN } from './shared/sentry'
 
 const tokens: Partial<OAuthPoolToken>[] = process.env.NUXT_OAUTH_POOL ? JSON.parse(process.env.NUXT_OAUTH_POOL) : []
@@ -240,13 +240,7 @@ export default defineNuxtConfig({
   routeRules: {
     ...runtimeOnlyRouteRules(),
     '/_alt/**': { robots: false, prerender: false },
-    // The legacy sign-up door. `/pro/onboarding` is the one entry now, so the
-    // old path keeps its inbound links and search results alive.
-    '/get-started': { redirect: { to: '/pro/onboarding', statusCode: 301 } },
-    // The Site picker moved under the Sites roster, matching nuxtseo.com.
-    '/pro/dashboard/team/sites': { redirect: { to: '/pro/dashboard/sites/connect', statusCode: 301 } },
-    // The all-sites indexing page moved to nuxtseo.com's route.
-    '/pro/dashboard/web-indexing': { redirect: { to: '/pro/dashboard/indexing', statusCode: 301 } },
+    ...redirectRouteRules(),
     // `/dashboard/**` and `/account/**` are 301'd to the one tree by
     // `layers/pro-saas/server/middleware/00-legacy-dashboard.ts`. A route rule
     // can only swap the prefix, and several of those pages moved further.

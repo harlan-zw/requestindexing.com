@@ -35,3 +35,34 @@ export function runtimeOnlyRouteRules(): Record<string, { prerender: false }> {
     RUNTIME_ONLY_ROUTE_PREFIXES.map(prefix => [`${prefix}/**`, { prerender: false }]),
   )
 }
+
+/**
+ * Moved paths, old path to new path. Each one answers with a real 301.
+ *
+ * A prerendered redirect is written to disk as a `<meta http-equiv="refresh">`
+ * page, and Cloudflare serves that file with HTTP 200 before the worker runs.
+ * Crawlers then read the old path as a live page with no title, no viewport,
+ * and no content. So every redirect here stays out of the prerender, even
+ * when the crawler finds a link to it.
+ */
+export const PERMANENT_REDIRECTS = {
+  // The legacy sign-up door. `/pro/onboarding` is the one entry now, so the
+  // old path keeps its inbound links and search results alive.
+  '/get-started': '/pro/onboarding',
+  // The Site picker moved under the Sites roster, matching nuxtseo.com.
+  '/pro/dashboard/team/sites': '/pro/dashboard/sites/connect',
+  // The all-sites indexing page moved to nuxtseo.com's route.
+  '/pro/dashboard/web-indexing': '/pro/dashboard/indexing',
+} as const satisfies Record<string, string>
+
+interface RedirectRouteRule {
+  redirect: { to: string, statusCode: 301 }
+  prerender: false
+}
+
+/** 301 route rules for every moved path, each kept out of the prerender. */
+export function redirectRouteRules(redirects: Record<string, string> = PERMANENT_REDIRECTS): Record<string, RedirectRouteRule> {
+  return Object.fromEntries(
+    Object.entries(redirects).map(([from, to]) => [from, { redirect: { to, statusCode: 301 }, prerender: false }]),
+  )
+}
