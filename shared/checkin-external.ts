@@ -25,7 +25,7 @@ Match \`CHECKIN_DEPLOYMENT\` to active Worker version metadata, not the latest C
       id: 'site.operations',
       prompt: `Check the existing admin jobs and OAuth endpoints when a result needs details.
 Review gscdump connectivity and webhook evidence before attributing indexing failures to this site.
-Never turn on NUXT_NOTIFICATIONS_ENABLED during check-in. It releases the welcome email and the bulk sync. Preserve the current runtime gate.
+Never turn on NUXT_NOTIFICATIONS_ENABLED during check-in. It releases the onboarding drip emails and the bulk sync. Preserve the current runtime gate.
 An intentional pause is reported as evidence, not an outage. The Free allowance email is never paused.
 No system-health email exists. Do not create one or send test messages.
 

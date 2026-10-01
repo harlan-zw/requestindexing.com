@@ -41,6 +41,7 @@ The rule that decides where code goes: if a capability could live in gscdump, it
 | Analytics queries and the archive | gscdump |
 | Free allowance, Meters, held Sites, and their refusals | gscdump |
 | The words a refusal, a hold, or an allowance email uses | this app |
+| The onboarding drip and its unsubscribe | this app |
 | Accounts, teams, site list, session | this app |
 | Dashboard UI and the job-to-be-done | this app |
 | Google Indexing API submission and its quota | this app, for now |
@@ -66,6 +67,7 @@ D1 holds only what gscdump does not: identity and the local mirror needed to ren
 - `indexing_jobs` for Google Indexing API submissions
 - `indexing_investigations` for per-URL status notes
 - `usages` for quota counters
+- `drip_emails` for the onboarding drip, and `notification_optouts` for the email categories an address unsubscribed from
 
 Site and account state is a cache, never the record. The webhook receiver mirrors sync status onto `sites`, then the onboarding reconcile re-reads authoritative lifecycle from gscdump.
 

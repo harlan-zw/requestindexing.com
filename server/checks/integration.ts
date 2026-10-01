@@ -14,6 +14,9 @@ export default defineCheck<IntegrationState>({
       return unavailable('gscdump credentials are incomplete.')
     // NUXT_NOTIFICATIONS_ENABLED=false pauses exactly these two. The Free
     // allowance email sends either way, so the evidence names what it pauses.
+    // The welcome email is the first step of the onboarding drip, so
+    // `welcomeEmailPaused` covers every drip step. The key keeps its name
+    // because the daily-checkin Skill reads it.
     return pass({ configured: true, welcomeEmailPaused: !event.notificationsEnabled, dailySyncPaused: !event.notificationsEnabled })
   },
 })

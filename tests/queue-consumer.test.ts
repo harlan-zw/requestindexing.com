@@ -57,7 +57,7 @@ function makeJob(overrides: Partial<Job> = {}): Job {
     batchId: null,
     userId: null,
     siteId: null,
-    payload: { _task: 'users/send-welcome-email' },
+    payload: { _task: 'sites/setup' },
     attempts: 3,
     maxAttempts: 3,
     reservedAt: null,
@@ -130,7 +130,7 @@ describe('queue-consumer permanent-failure logging', () => {
     expect(entry).toBeDefined()
     expect(entry!.level).toBe('error')
     expect(entry!.error?.message).toBe('boom')
-    expect(entry!.ctx).toMatchObject({ jobId: 'job-1', taskName: 'users/send-welcome-email', attempt: 3 })
+    expect(entry!.ctx).toMatchObject({ jobId: 'job-1', taskName: 'sites/setup', attempt: 3 })
     expect(msg.ack).toHaveBeenCalled()
   })
 

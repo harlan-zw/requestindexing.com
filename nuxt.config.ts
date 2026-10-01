@@ -281,7 +281,7 @@ export default defineNuxtConfig({
         triggers: {
           // Every cron in `scheduledTasks` below must be listed here too, or
           // Cloudflare never fires it.
-          crons: ['0 0 * * *', '30 * * * *'],
+          crons: ['0 0 * * *', '30 * * * *', '*/10 * * * *'],
         },
         vars: {
           NUXT_PUBLIC_BASE_URL: 'https://requestindexing.com',
@@ -292,8 +292,8 @@ export default defineNuxtConfig({
           // sign-in at all.
           NUXT_OAUTH_GOOGLE_CLIENT_ID: process.env.NUXT_OAUTH_GOOGLE_CLIENT_ID
             || '32479086022-b2upoo15sfpo0fpmgdgi95fh6oths219.apps.googleusercontent.com',
-          // Kill switch for the welcome email and the daily site-sync fan-out.
-          // Set to 'false' while migrating legacy data, so no welcome email is
+          // Kill switch for the onboarding drip and the daily site-sync fan-out.
+          // Set to 'false' while migrating legacy data, so no drip email is
           // sent and no bulk sync is queued. The Free allowance email ignores
           // this switch and always sends.
           NUXT_NOTIFICATIONS_ENABLED: process.env.NUXT_NOTIFICATIONS_ENABLED || 'false',
@@ -334,6 +334,9 @@ export default defineNuxtConfig({
       // Links sites whose property was verified, or whose grant was repaired
       // in gscdump, after the user last connected Google.
       '30 * * * *': ['reconcile-gscdump-onboarding'],
+      // Every 10 minutes, as on nuxtseo.com. Sends the due onboarding drip
+      // steps. NUXT_NOTIFICATIONS_ENABLED=false holds every one.
+      '*/10 * * * *': ['email:process-drips'],
     },
     imports: {
       // See the root `imports` block: the design-system layer turns auto-imports
@@ -408,7 +411,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     checkinToken: '',
-    // Gates the welcome email and the daily sync fan-out. The Free allowance
+    // Gates the onboarding drip and the daily sync fan-out. The Free allowance
     // email always sends. Override with NUXT_NOTIFICATIONS_ENABLED.
     notificationsEnabled: true,
     key: '', // .env NUXT_KEY

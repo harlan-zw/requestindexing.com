@@ -33,6 +33,8 @@ Indexing API submissions this app still runs itself.
 | Held | gscdump lifecycle site `hold` | Site 0—1 hold reason, before its first import | Held |
 | API key | gscdump `partner.users.api_keys.*`, Developers page | User 1—N, at most 10; gscdump stores them, this app stores none | API key |
 | Hosted mode | gscdump CLI `--mode hosted` | CLI access mode that reads the gscdump.com record; the other mode is Local | Hosted mode |
+| onboarding drip | drip_emails table, `onboarded` sequence | User 0—1 row per sequence; three emails after onboarding | (internal) |
+| Product updates | notification_optouts, category `lifecycle` | Address 0—1 opt-out per category | product updates |
 
 Collisions: the product's submission history and Google's indexing state are different evidence. Never imply one proves the other.
 
@@ -174,6 +176,16 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 **Never:** Cloud, cloud mode, the cloud. Since `@gscdump/cli` 4.3.0 the CLI rejects `--mode cloud`.
 
 **Casing:** `Hosted mode` in prose, `--mode hosted` as the flag.
+
+### Product updates
+
+**Is:** the optional emails Request Indexing sends. Today these are the three onboarding emails from Harlan. One unsubscribe stops all of them. The stored category is `lifecycle`, the name nuxtseo.com uses, and nuxtseo.com labels it Product updates.
+
+**Use for:** the unsubscribe pages, and any control that turns these emails on or off.
+
+**Never:** newsletter, marketing emails, or lifecycle in prose. Never for an email about the account, such as a Free allowance email. Those always send and carry no unsubscribe link.
+
+**Casing:** lowercase in prose; `Product updates` at the start of a heading or a label.
 
 ## Banned
 

@@ -2,7 +2,7 @@ import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { RequiredNonNullable } from '~~/layers/core/app/types/util'
 import type { GoogleOAuthUser } from '~~/layers/core/server/app/utils/auth'
 import { relations, sql } from 'drizzle-orm'
-import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
+import { index, integer, primaryKey, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
 import { customAlphabet } from 'nanoid'
 // TODO(v1): google-auth-library not directly installed; using inline minimal types.
 interface TokenInfo { scopes?: string[], expiry_date?: number }
@@ -603,6 +603,40 @@ export const feedback = sqliteTable('feedback', {
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 })
 
+// One row per address and drip sequence, ported from nuxtseo.com. The
+// scheduled sender reads the due rows, sends the current step, then moves the
+// row to the next step or completes it. The unique pair makes enrolment
+// idempotent: a second enrolment finds the row and changes nothing.
+export const dripEmails = sqliteTable('drip_emails', {
+  dripEmailId: integer('drip_email_id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull().references(() => users.userId, { onDelete: 'cascade' }),
+  email: text('email').notNull(),
+  sequence: text('sequence').notNull(),
+  stepIndex: integer('step_index').notNull().default(0),
+  status: text('status', { enum: ['active', 'completed', 'cancelled'] }).notNull().default('active'),
+  nextSendAt: integer('next_send_at', { mode: 'timestamp' }).notNull(),
+  lastSentAt: integer('last_sent_at', { mode: 'timestamp' }),
+  completedAt: integer('completed_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, t => ({
+  emailSequenceUnq: unique('drip_emails_email_sequence_unique').on(t.email, t.sequence),
+  statusNextSendIdx: index('drip_emails_status_next_send_idx').on(t.status, t.nextSendAt),
+}))
+
+// The stored email preference, ported from nuxtseo.com's opt-out ledger. One
+// row blocks one category for one address. It has no user foreign key, so an
+// unsubscribe outlives the account it came from. `recipient_key` is the
+// lowercased address. `'*'` in `channel` or `category` matches every value.
+export const notificationOptouts = sqliteTable('notification_optouts', {
+  recipientKey: text('recipient_key').notNull(),
+  channel: text('channel').notNull(),
+  category: text('category').notNull().default('*'),
+  optoutAt: integer('optout_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  source: text('source'),
+}, t => ({
+  pk: primaryKey({ columns: [t.recipientKey, t.channel, t.category] }),
+}))
+
 // ─────────────────────────────────────────────────────────────────────────────
 // V1 net-new tables. The boundary that decides what lives here: docs/arch/README.md
 // ─────────────────────────────────────────────────────────────────────────────
@@ -721,6 +755,8 @@ export type Notification = typeof notifications.$inferSelect
 export type NewNotification = typeof notifications.$inferInsert
 export type Feedback = typeof feedback.$inferSelect
 export type NewFeedback = typeof feedback.$inferInsert
+export type DripEmail = typeof dripEmails.$inferSelect
+export type NotificationOptout = typeof notificationOptouts.$inferSelect
 export type IndexingJob = typeof indexingJobs.$inferSelect
 export type NewIndexingJob = typeof indexingJobs.$inferInsert
 export type IndexingInvestigation = typeof indexingInvestigations.$inferSelect

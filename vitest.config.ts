@@ -1,6 +1,21 @@
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig, defineProject } from 'vitest/config'
+
+// Nitro's `raw` rollup plugin imports a server `.md` file as its text, which
+// is how the drip email templates load. Vite would parse the file as
+// JavaScript, so a test gets the same text from this plugin.
+function rawMarkdown() {
+  return {
+    name: 'raw-markdown',
+    enforce: 'pre' as const,
+    load(id: string) {
+      if (id.endsWith('.md'))
+        return `export default ${JSON.stringify(readFileSync(id, 'utf8'))}`
+    },
+  }
+}
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url))
 
@@ -37,6 +52,7 @@ export default defineConfig({
   test: {
     projects: [
       defineProject({
+        plugins: [rawMarkdown()],
         test: {
           name: 'unit',
           environment: 'node',
@@ -47,7 +63,7 @@ export default defineConfig({
         resolve: { alias: alias() },
       }),
       defineProject({
-        plugins: [vue()],
+        plugins: [vue(), rawMarkdown()],
         test: {
           name: 'feature',
           environment: 'node',
