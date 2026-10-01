@@ -113,6 +113,8 @@ Quota and Free allowance are different ceilings. Quota is a local daily counter 
 
 **Never:** request, push, ping, or index (as a verb). A Submission is a notification Google accepted, never evidence that a page is indexed. The Banned table below holds that line.
 
+**Exception:** a meta title may echo the searcher's own words, so the landing title says "Request Google Indexing". Searchers type "google index request". Body copy and controls keep Submit and Submission.
+
 **Casing:** `Submission` in prose, `submit` on a control, `indexing_jobs` in identifiers.
 
 ### Investigation
