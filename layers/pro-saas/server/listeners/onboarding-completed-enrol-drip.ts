@@ -11,7 +11,7 @@ export default defineListener({
   handle: async ({ event, userId }: EventPayload<'pro:onboarding:completed'>) => {
     await enrolOnboardingDrip({
       db: useDrizzle(event),
-      notificationsEnabled: useRuntimeConfig(event).notificationsEnabled,
+      onboardingDripEnabled: useRuntimeConfig(event).onboardingDripEnabled,
       now: new Date(),
     }, userId)
   },

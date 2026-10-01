@@ -12,7 +12,7 @@ export default defineTask({
     const result = await processDueDrips({
       db: useDrizzle(),
       now: new Date(),
-      notificationsEnabled: config.notificationsEnabled,
+      onboardingDripEnabled: config.onboardingDripEnabled,
       send: sendEmail,
       baseUrl: config.public.baseUrl,
       secret: config.session.password,

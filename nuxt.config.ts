@@ -305,11 +305,14 @@ export default defineNuxtConfig({
           // sign-in at all.
           NUXT_OAUTH_GOOGLE_CLIENT_ID: process.env.NUXT_OAUTH_GOOGLE_CLIENT_ID
             || '32479086022-b2upoo15sfpo0fpmgdgi95fh6oths219.apps.googleusercontent.com',
-          // Kill switch for the onboarding drip and the daily site-sync fan-out.
-          // Set to 'false' while migrating legacy data, so no drip email is
-          // sent and no bulk sync is queued. The Free allowance email ignores
-          // this switch and always sends.
+          // Kill switch for the daily site-sync fan-out. Set to 'false' while
+          // migrating legacy data, so no bulk sync is queued. The Free
+          // allowance email ignores this switch and always sends.
           NUXT_NOTIFICATIONS_ENABLED: process.env.NUXT_NOTIFICATIONS_ENABLED || 'false',
+          // Switch for the onboarding drip: enrolment and the scheduled
+          // sender. A build without the env var deploys it off. The deploy
+          // workflow sets it, so production reads its value from there.
+          NUXT_ONBOARDING_DRIP_ENABLED: process.env.NUXT_ONBOARDING_DRIP_ENABLED || 'false',
         },
         durable_objects: {
           bindings: [
@@ -348,7 +351,7 @@ export default defineNuxtConfig({
       // in gscdump, after the user last connected Google.
       '30 * * * *': ['reconcile-gscdump-onboarding'],
       // Every 10 minutes, as on nuxtseo.com. Sends the due onboarding drip
-      // steps. NUXT_NOTIFICATIONS_ENABLED=false holds every one.
+      // steps. NUXT_ONBOARDING_DRIP_ENABLED=false holds every one.
       '*/10 * * * *': ['email:process-drips'],
     },
     imports: {
@@ -424,9 +427,12 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     checkinToken: '',
-    // Gates the onboarding drip and the daily sync fan-out. The Free allowance
-    // email always sends. Override with NUXT_NOTIFICATIONS_ENABLED.
+    // Gates the daily sync fan-out. The Free allowance email always sends.
+    // Override with NUXT_NOTIFICATIONS_ENABLED.
     notificationsEnabled: true,
+    // Gates the onboarding drip: enrolment and the scheduled sender. Off
+    // unless NUXT_ONBOARDING_DRIP_ENABLED turns it on.
+    onboardingDripEnabled: false,
     key: '', // .env NUXT_KEY
     session: {
       password: '',
