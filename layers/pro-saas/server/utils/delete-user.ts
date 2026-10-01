@@ -18,6 +18,7 @@ import { and, eq, inArray, notInArray, or, sql } from 'drizzle-orm'
 import { dispatchEvent } from '#domain-events/server'
 import {
   adminEvents,
+  dripEmails,
   failedJobs,
   feedback,
   googleAccounts,
@@ -162,6 +163,13 @@ export async function deleteUserData(event: H3Event, opts: DeleteUserOptions): P
       table: 'notifications',
       count: () => scalar(db, sql`select count(*) as c from notifications where user_id = ${userId}`),
       run: () => db.delete(notifications).where(eq(notifications.userId, userId)),
+    },
+    {
+      // Ends the onboarding drip. `notification_optouts` stays, as on
+      // nuxtseo.com: an unsubscribe outlives the account.
+      table: 'drip_emails',
+      count: () => scalar(db, sql`select count(*) as c from drip_emails where user_id = ${userId}`),
+      run: () => db.delete(dripEmails).where(eq(dripEmails.userId, userId)),
     },
     {
       table: 'feedback',

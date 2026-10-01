@@ -1,16 +1,17 @@
-// NUXT_NOTIFICATIONS_ENABLED=false holds back the welcome email and the daily
+// NUXT_NOTIFICATIONS_ENABLED=false holds back the onboarding drip and the daily
 // bulk sync. The Free allowance email always sends, with the switch on or off.
 // Postmark is the one boundary faked here.
 import type { DatabaseSync } from 'node:sqlite'
 import { signWebhookPayload, WEBHOOK_SIGNATURE_HEADER } from '@gscdump/sdk/webhook'
 import { createApp, createError, defineEventHandler, getHeader, getRequestURL, readRawBody, toWebHandler } from 'h3'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sites, teamSites } from '~~/layers/core/server/db/schema'
-import sendWelcomeEmail from '~~/layers/core/server/jobs/users/send-welcome-email'
 import syncDaily from '~~/layers/core/server/tasks/sync.daily'
 import { batchJobs } from '~~/layers/core/server/utils/event-service'
 import gscdumpWebhook from '~~/layers/pro-gsc/server/api/webhooks/gscdump.post'
 import { migratedDatabase, proDatabase } from '~~/tests/support/migrated-d1'
+import enrolDripListener from '#layers/pro-saas/server/listeners/onboarding-completed-enrol-drip'
+import processDrips from '#layers/pro-saas/server/tasks/email/process-drips'
 import { createUserWithPersonalTeam } from '#layers/pro-saas/server/utils/create-user-with-personal-team'
 
 const postmark = vi.hoisted(() => {
@@ -41,7 +42,13 @@ const SECRET = 'whsec_test_secret'
 type ProDatabase = Parameters<typeof createUserWithPersonalTeam>[0]
 
 function runtimeConfig(notificationsEnabled: boolean) {
-  return { notificationsEnabled, postmark: { apiKey: 'pm-test' }, gscdump: { webhookSecret: SECRET } }
+  return {
+    notificationsEnabled,
+    postmark: { apiKey: 'pm-test' },
+    gscdump: { webhookSecret: SECRET },
+    session: { password: 'a-session-password-at-least-32-characters-long' },
+    public: { baseUrl: 'https://requestindexing.com' },
+  }
 }
 
 function memoryStorage() {
@@ -82,6 +89,22 @@ beforeEach(async () => {
   vi.stubGlobal('readRawBody', readRawBody)
   vi.stubGlobal('getHeader', getHeader)
   vi.stubGlobal('getRequestURL', getRequestURL)
+})
+
+const ONBOARDED_AT = new Date('2026-10-01T00:00:00.000Z')
+
+// The listener and the task read the clock, so the test moves it: onboarding
+// finishes, then the sender runs two hours later.
+async function onboardThenRunDripTwoHoursLater() {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(ONBOARDED_AT)
+  await enrolDripListener.handle({ event: { context: {} }, userId, teamId } as never, {} as never)
+  vi.setSystemTime(new Date(ONBOARDED_AT.getTime() + 2 * 60 * 60 * 1000))
+  await processDrips.run!({ context: {} } as never)
+}
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 async function deliver(envelope: Record<string, unknown>) {
@@ -134,9 +157,10 @@ describe('with NUXT_NOTIFICATIONS_ENABLED=false', () => {
     expect(postmark.sent).toEqual([])
   })
 
-  it('sends no welcome email', async () => {
-    await sendWelcomeEmail.handle({ userId }, { db } as never)
+  it('enrols no onboarding drip and sends no drip email', async () => {
+    await onboardThenRunDripTwoHoursLater()
 
+    expect(sqlite.prepare('SELECT count(*) AS n FROM drip_emails').get()).toEqual({ n: 0 })
     expect(postmark.sent).toEqual([])
   })
 
@@ -153,13 +177,14 @@ describe('with NUXT_NOTIFICATIONS_ENABLED=true', () => {
     vi.stubGlobal('useRuntimeConfig', () => runtimeConfig(true))
   })
 
-  it('sends the welcome email', async () => {
-    await sendWelcomeEmail.handle({ userId }, { db } as never)
+  it('sends the first onboarding drip email, with a one-click unsubscribe', async () => {
+    await onboardThenRunDripTwoHoursLater()
 
     expect(postmark.sent).toEqual([expect.objectContaining({
+      From: 'harlan@harlanzw.com',
       To: 'ada@example.test',
-      Bcc: 'harlan@harlanzw.com',
-      Subject: 'Welcome to Request Indexing',
+      Subject: 'Why I built Request Indexing',
+      Headers: expect.arrayContaining([{ Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' }]),
     })])
   })
 

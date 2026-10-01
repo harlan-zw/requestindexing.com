@@ -11,7 +11,6 @@ import { getCFQueue } from './jobs'
 // ============================================
 
 export interface EventContextMap {
-  'app:user:created': { env: Record<string, unknown>, userId: number }
   'app:site:created': { env: Record<string, unknown>, siteId: string, userId: number, permissionLevel?: string }
   'app:team:sites-selected': { env: Record<string, unknown>, teamId: number }
   'app:job:completed': { env: Record<string, unknown>, jobId: string, taskName: string, siteId?: string, userId?: number, durationMs: number }

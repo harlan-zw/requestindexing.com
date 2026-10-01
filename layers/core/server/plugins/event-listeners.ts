@@ -31,13 +31,6 @@ function listeners<T extends keyof NitroRuntimeHooks>(
 
 export default defineNitroPlugin(async (nitro) => {
   nitro.hooks.addHooks({
-    ...listeners('app:user:created', [
-      'users/send-welcome-email',
-    ], ctx => ({
-      payload: { userId: ctx.userId },
-      opts: {},
-    })),
-
     ...listeners('app:team:sites-selected', [
       'teams/sync-selected',
     ], ctx => ({

@@ -2,7 +2,7 @@
 // has always used. Every send honours the dev skip.
 //
 // This helper does not check the NUXT_NOTIFICATIONS_ENABLED kill switch. The
-// welcome email job checks it before it calls here. The Free allowance email
+// onboarding drip checks it before it calls here. The Free allowance email
 // must always send, so it does not check the switch.
 
 export interface OutgoingEmail {
@@ -10,6 +10,8 @@ export interface OutgoingEmail {
   subject: string
   textBody: string
   bcc?: string
+  /** Extra MIME headers, such as `List-Unsubscribe`. */
+  headers?: Record<string, string>
 }
 
 export type EmailSendResult
@@ -31,6 +33,9 @@ export async function sendEmail(message: OutgoingEmail): Promise<EmailSendResult
     Subject: message.subject,
     TextBody: message.textBody,
     ...(message.bcc ? { Bcc: message.bcc } : {}),
+    ...(message.headers
+      ? { Headers: Object.entries(message.headers).map(([Name, Value]) => ({ Name, Value })) }
+      : {}),
   })
   return { _tag: 'Sent' }
 }

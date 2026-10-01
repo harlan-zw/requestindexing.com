@@ -5,14 +5,10 @@ import type { JobDefinition, JobHandler, QueueName } from './_types'
 import sitesSetup from './sites/setup'
 import sitesSyncFinished from './sites/sync-finished'
 import teamsSyncSelected from './teams/sync-selected'
-import usersSendWelcomeEmail from './users/send-welcome-email'
 
 type RegisteredJob = { [K in TaskName]: JobDefinition<K> }[TaskName]
 
 export const jobs: RegisteredJob[] = [
-  // Users
-  usersSendWelcomeEmail,
-
   // Sites
   sitesSetup,
   sitesSyncFinished,

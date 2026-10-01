@@ -11,6 +11,7 @@
 
 export {
   adminEvents,
+  dripEmails,
   failedJobs,
   feedback,
   googleAccounts,
@@ -19,6 +20,7 @@ export {
   indexingJobs,
   jobBatches,
   jobs,
+  notificationOptouts,
   notifications,
   proEvents,
   runtimeErrors,

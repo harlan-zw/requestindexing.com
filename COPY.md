@@ -38,6 +38,7 @@ claims more than the marketing site does today. See Truth rules.
 | Errors | What broke, why it matters, how to fix. Never blame the reader | three parts, in that order |
 | Quota and limits | State the number and who tracks it | "We respect Google's 200/day publish quota so you don't have to track it yourself." |
 | Free allowance refusals and holds | State the number, what did not happen, and the next step inside this app | "You have connected all 3 Sites in your Free allowance. Remove a Site to connect another." |
+| Onboarding emails from Harlan | First person, plain text, one next step per email, signed Harlan. Templates in `layers/pro-saas/server/emails/` | "If something is unclear or broken, reply to this email. It comes straight to me." |
 
 **Headings are sentence case, meta titles are title case.** Both ship today and the split is
 deliberate: a meta title competes in a search result, a heading does not.

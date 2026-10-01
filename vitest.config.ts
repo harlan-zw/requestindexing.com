@@ -1,6 +1,21 @@
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig, defineProject } from 'vitest/config'
+
+// `nuxt.config.ts` serves each drip email template as a `#emails/...` virtual
+// module holding the Markdown text. The alias below points those ids at the
+// files, and this plugin loads a `.md` file as its text.
+function rawMarkdown() {
+  return {
+    name: 'raw-markdown',
+    enforce: 'pre' as const,
+    load(id: string) {
+      if (id.endsWith('.md'))
+        return `export default ${JSON.stringify(readFileSync(id, 'utf8'))}`
+    },
+  }
+}
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url))
 
@@ -29,6 +44,7 @@ function alias() {
     { find: '#imports', replacement: fileURLToPath(new URL('./tests/setup/nuxt-imports.ts', import.meta.url)) },
     { find: '#components', replacement: fileURLToPath(new URL('./tests/setup/nuxt-components.ts', import.meta.url)) },
     { find: /^#layers\/(.*)$/, replacement: `${ROOT}layers/$1` },
+    { find: /^#emails\/(.*)$/, replacement: `${ROOT}layers/pro-saas/server/emails/$1.md` },
     { find: '~~', replacement: ROOT },
   ]
 }
@@ -37,6 +53,7 @@ export default defineConfig({
   test: {
     projects: [
       defineProject({
+        plugins: [rawMarkdown()],
         test: {
           name: 'unit',
           environment: 'node',
@@ -47,7 +64,7 @@ export default defineConfig({
         resolve: { alias: alias() },
       }),
       defineProject({
-        plugins: [vue()],
+        plugins: [vue(), rawMarkdown()],
         test: {
           name: 'feature',
           environment: 'node',

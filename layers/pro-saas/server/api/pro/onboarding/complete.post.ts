@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
+import { dispatchEvent } from '#domain-events/server'
 import { sites, users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 import { emitFirstProEvent } from '#layers/pro-saas/server/utils/pro-events'
@@ -52,6 +53,13 @@ export default defineProApiHandler({ team: true, body: bodySchema }, async ({ db
     await emitFirstProEvent(db, caller.user.id, 'onboarding_completed', {
       teamId: ctx.team.teamId,
       sites: decision.sites,
+    })
+
+    // Enrols the onboarding drip, whose first step is the welcome email.
+    await dispatchEvent('pro:onboarding:completed', {
+      event,
+      userId: caller.user.id,
+      teamId: ctx.team.teamId,
     })
   }
 
