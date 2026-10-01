@@ -7,14 +7,19 @@
 // before either side can go.
 //
 // Cross-system side-effects (gscdump partner DELETE, admin audit log) live in
-// `pro:user:deleting` (pre, critical) and `pro:user:deleted` (post,
-// best-effort) listeners per ADR-0007.
+// `pro:user:deleting` (pre) and `pro:user:deleted` (post) listeners per
+// ADR-0007. Both are best-effort, as on nuxtseo.com: a failed listener is
+// logged by the domain-event observer, lands in `warnings`, and the delete
+// goes on. The Google tokens this app stores are revoked here, before their
+// rows go (`revoke-google-tokens.ts`).
 //
 // Pass `dryRun: true` to count rows that would be deleted without mutating.
 // Returns a per-table summary suitable for storing in an audit log.
 
 import type { H3Event } from 'h3'
+import type { GoogleTokenRevocation, RevokeGoogleToken } from './revoke-google-tokens'
 import { and, eq, inArray, notInArray, or, sql } from 'drizzle-orm'
+import { logError } from '~~/shared/logging'
 import { dispatchEvent } from '#domain-events/server'
 import {
   adminEvents,
@@ -45,10 +50,13 @@ import {
   userSites,
 } from '../database'
 import { getProLogger } from './handler'
+import { revokeStoredGoogleTokens } from './revoke-google-tokens'
 
 export interface DeleteUserOptions {
   userId: number
   dryRun?: boolean
+  /** Revokes one Google OAuth token. Production passes gscdump's `revokeOAuthTokenResult`. */
+  revokeGoogleToken: RevokeGoogleToken
 }
 
 export interface DeleteUserResult {
@@ -62,6 +70,8 @@ export interface DeleteUserResult {
     gscdumpUserId: string | null
   } | null
   deleted: Record<string, number>
+  /** The Google tokens this app stored. A grant gscdump holds is never in here. */
+  googleTokens: GoogleTokenRevocation | { _tag: 'DryRun' }
   /** True only if the users row was actually removed (or dryRun was set). */
   ok: boolean
   warnings: string[]
@@ -79,6 +89,7 @@ export async function deleteUserData(event: H3Event, opts: DeleteUserOptions): P
       dryRun,
       user: null,
       deleted: {},
+      googleTokens: { _tag: 'NoneStored' },
       ok: true, // already gone — treat as success so callers can move on
       warnings: ['User not found'],
     }
@@ -100,16 +111,37 @@ export async function deleteUserData(event: H3Event, opts: DeleteUserOptions): P
   const primaryIdentity = sortedIdentities[0] ?? null
   const primaryEmail = primaryIdentity?.email ?? user.email ?? ''
 
-  // Pre-hook: critical listeners (e.g. gscdump partner DELETE) run BEFORE
-  // rows are purged so they can read the canonical row state. A throw here
-  // aborts the delete entirely — the caller surfaces it as 5xx.
+  // Read before anything changes, so a failed read leaves the account whole.
+  const storedGoogleTokens = await db.select({ tokens: googleAccounts.tokens })
+    .from(googleAccounts)
+    .where(eq(googleAccounts.userId, userId))
+    .all()
+
+  // Pre-hook: listeners (e.g. gscdump partner DELETE) run BEFORE rows are
+  // purged so they can read the canonical row state. They are isolated: a
+  // failure is reported in `warnings` and does not stop the delete.
   if (!dryRun) {
-    await dispatchEvent('pro:user:deleting', {
+    const report = await dispatchEvent('pro:user:deleting', {
       event,
       userId,
       email: primaryEmail,
       gscdumpUserId: user.gscdumpUserId ?? null,
     })
+    for (const listener of report.isolatedFailures)
+      warnings.push(`pro:user:deleting listener failed: ${listener}`)
+  }
+
+  // Deleting a `google_accounts` row deletes the only copy of its token, and
+  // with it the only way to revoke the grant. Revoke first. A failure does not
+  // stop the delete: the person asked to leave, and the delete copy already
+  // sends them to their Google Account to remove access.
+  const googleTokens = dryRun
+    ? { _tag: 'DryRun' as const }
+    : await revokeStoredGoogleTokens(storedGoogleTokens.map(row => row.tokens), opts.revokeGoogleToken)
+  if (googleTokens._tag === 'Failed') {
+    for (const reason of googleTokens.reasons)
+      warnings.push(`revoke Google token: ${reason}`)
+    logError('account.google_revoke_failed', new Error(googleTokens.reasons.join('; ')), { userId, revoked: googleTokens.revoked })
   }
 
   // Pre-resolve teams the user owns so cascading children can be scoped explicitly.
@@ -416,6 +448,7 @@ export async function deleteUserData(event: H3Event, opts: DeleteUserOptions): P
       gscdumpUserId: user.gscdumpUserId,
     },
     deleted,
+    googleTokens,
     ok,
     warnings,
   }
