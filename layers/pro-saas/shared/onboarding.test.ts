@@ -5,12 +5,14 @@ import {
   canSkipOnboardingSites,
   gscScopeMissingRedirect,
   ONBOARDING_ROUTE,
+  ONBOARDING_STEPS,
   onboardingStepIndex,
   parseOnboardingCompletedFlag,
   parseOnboardingStep,
   resolveGscConnection,
   resolveOnboardingCompletion,
   resolveOnboardingGate,
+  resolveOnboardingNav,
   resolveOnboardingResumeStep,
 } from './onboarding'
 
@@ -115,6 +117,28 @@ describe('canSkipOnboardingSites', () => {
 
   it('hides the skip once a site exists, because Continue works', () => {
     expect(canSkipOnboardingSites({ hasSites: true, connectBlocked: true })).toBe(false)
+  })
+})
+
+describe('resolveOnboardingNav', () => {
+  it('offers only the skip on the connect step before a grant', () => {
+    // Connect drives the advance here, so a Continue beside it read as a
+    // second Connect (UX replay A13).
+    for (const gsc of [NOT_CONNECTED, SCOPE_MISSING])
+      expect(resolveOnboardingNav('connect', gsc)).toEqual({ skipLabel: 'Skip for now', showNext: false })
+  })
+
+  it('offers only Continue on the connect step once Search Console is connected', () => {
+    expect(resolveOnboardingNav('connect', CONNECTED)).toEqual({ skipLabel: undefined, showNext: true })
+  })
+
+  it('never renders the skip and the advance button side by side', () => {
+    for (const step of ONBOARDING_STEPS) {
+      for (const gsc of [CONNECTED, NOT_CONNECTED, SCOPE_MISSING]) {
+        const nav = resolveOnboardingNav(step, gsc)
+        expect([nav.skipLabel !== undefined, nav.showNext].filter(Boolean)).toHaveLength(1)
+      }
+    }
   })
 })
 
