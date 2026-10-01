@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agentPromptSite } from './agent-prompt-site'
+import { agentPromptGate, agentPromptSite } from './agent-prompt-site'
 
 const LINKED = { siteId: 'ri_1', domain: 'example.com', property: 'sc-domain:example.com', gscdumpSiteId: 's_abc', syncStatus: 'synced', hold: null } as const
 
@@ -21,5 +21,19 @@ describe('agentPromptSite', () => {
   it('skips a held Site for a linked one', () => {
     const held = { ...LINKED, gscdumpSiteId: 's_held', hold: 'size_pending' } as const
     expect(agentPromptSite([held, { ...LINKED, domain: null, property: 'https://other.dev/' }])).toEqual({ gscdumpSiteId: 's_abc', host: 'https://other.dev/' })
+  })
+})
+
+describe('agentPromptGate', () => {
+  it('asks for Search Console before anything else', () => {
+    expect(agentPromptGate({ gscConnected: false, sites: [LINKED] })).toEqual({ _tag: 'SearchConsoleRequired' })
+  })
+
+  it('asks for a Site when Search Console is connected and no Site can be read', () => {
+    expect(agentPromptGate({ gscConnected: true, sites: [] })).toEqual({ _tag: 'SiteRequired' })
+  })
+
+  it('offers the prompt for the first readable Site', () => {
+    expect(agentPromptGate({ gscConnected: true, sites: [LINKED] })).toEqual({ _tag: 'Ready', site: { gscdumpSiteId: 's_abc', host: 'example.com' } })
   })
 })

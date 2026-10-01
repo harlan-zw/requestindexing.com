@@ -8,6 +8,7 @@ const fixture = vi.hoisted(() => ({
   proFetch: vi.fn(),
   copied: [] as string[],
   sites: [] as Record<string, unknown>[],
+  gscConnected: true,
 }))
 
 vi.mock('~~/layers/core/app/composables/fetch', () => ({
@@ -27,6 +28,7 @@ Object.assign(globalThis, {
   useRoute: () => ({ query: {} }),
   navigateTo: vi.fn(),
   useProFetch: () => fixture.proFetch,
+  useUserSession: () => ({ session: ref({ gscConnected: fixture.gscConnected }) }),
   useFetch: async () => ({
     data: ref({ _tag: 'Ready', keys: [] }),
     status: ref('success'),
@@ -42,7 +44,7 @@ const apps: ReturnType<typeof createApp>[] = []
 function passthrough(tag: string, props: string[] = []) {
   return defineComponent({
     props,
-    setup: (_props, { slots }) => () => h(tag, slots.default?.()),
+    setup: (received: Record<string, unknown>, { slots }) => () => h(tag, [received.title as string | undefined, slots.default?.()]),
   })
 }
 
@@ -89,6 +91,7 @@ beforeEach(() => {
   fixture.proFetch.mockReset()
   fixture.copied = []
   fixture.sites = [LINKED_SITE]
+  fixture.gscConnected = true
 })
 
 afterEach(() => {
@@ -122,6 +125,17 @@ describe('developers page', () => {
     expect(button(host, 'Copy agent setup prompt')).toBeUndefined()
     const connect = [...host.querySelectorAll('a')].find(link => link.textContent?.includes('Connect a Site'))
     expect(connect?.getAttribute('href')).toBe('/pro/dashboard/sites/connect')
+    expect(fixture.proFetch).not.toHaveBeenCalled()
+  })
+
+  // The gate reads the session's Search Console connection, the value
+  // Integrations and the sidebar read, not a definition of its own.
+  it('asks for Search Console first when the session has no connection', async () => {
+    fixture.gscConnected = false
+    const host = await mount()
+
+    expect(button(host, 'Copy agent setup prompt')).toBeUndefined()
+    expect(host.textContent).toContain('Connect Search Console first')
     expect(fixture.proFetch).not.toHaveBeenCalled()
   })
 })

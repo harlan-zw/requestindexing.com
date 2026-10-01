@@ -3,7 +3,7 @@ import type { CreatedDeveloperApiKey, DeveloperApiKey, DeveloperApiKeysState } f
 import type { SetupMethod } from '#layers/pro-gsc/shared/developer-setup'
 import { useClipboard } from '@vueuse/core'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
-import { agentPromptSite } from '#layers/pro-gsc/shared/agent-prompt-site'
+import { agentPromptGate } from '#layers/pro-gsc/shared/agent-prompt-site'
 import { DEVELOPER_API_KEY_LABEL_MAX } from '#layers/pro-gsc/shared/developer-api-keys'
 import { buildAgentSetupPrompt, buildSetupSteps, presentApiKey } from '#layers/pro-gsc/shared/developer-setup'
 import { CONNECT_SITE_ROUTE } from '#layers/pro-saas/shared/onboarding'
@@ -94,9 +94,13 @@ const { data: sitesData } = await fetchSites()
 const keys = computed<DeveloperApiKey[]>(() => keysState.value?._tag === 'Ready' ? keysState.value.keys : [])
 const firstSite = computed(() => sitesData.value?.sites.find(site => site.gscdumpSiteId) ?? null)
 const firstSiteId = computed(() => firstSite.value?.gscdumpSiteId ?? null)
-// The Site the agent setup prompt reads. Null means the prompt has nothing to
-// read, so the page names the step that comes first instead of offering it.
-const promptSite = computed(() => agentPromptSite(sitesData.value?.sites ?? []))
+// Whether the agent setup prompt has anything to read. When it has not, the
+// page names the step that comes first instead of offering the prompt.
+const { session } = useUserSession()
+const promptGate = computed(() => agentPromptGate({
+  gscConnected: !!session.value?.gscConnected,
+  sites: sitesData.value?.sites ?? [],
+}))
 
 // The newest raw key this visit created, from the form or from the agent setup
 // prompt. It lives only in this ref. The manual steps read only this ref: the
@@ -194,9 +198,10 @@ function copyValue(value: string) {
 }
 
 async function copyAgentSetupPrompt() {
-  const site = promptSite.value
-  if (preparingPrompt.value || !site)
+  const gate = promptGate.value
+  if (preparingPrompt.value || gate._tag !== 'Ready')
     return
+  const site = gate.site
   preparingPrompt.value = true
   const reused = agentKey.value
   // Safari allows a clipboard write only during the click, and the key request
@@ -435,7 +440,7 @@ async function copyAgentSetupPrompt() {
           The first copy creates an API key named {{ AGENT_SETUP_KEY_LABEL }}.
         </p>
         <UiButton
-          v-if="keysState?._tag === 'Ready' && promptSite"
+          v-if="keysState?._tag === 'Ready' && promptGate._tag === 'Ready'"
           purpose="secondary"
           icon="copy"
           class="mt-3 min-h-11"
@@ -444,6 +449,16 @@ async function copyAgentSetupPrompt() {
         >
           Copy agent setup prompt
         </UiButton>
+        <UiEmptyState
+          v-else-if="keysState?._tag === 'Ready' && promptGate._tag === 'SearchConsoleRequired'"
+          class="mt-3"
+          icon="key"
+          title="Connect Search Console first"
+          description="The prompt reads the data that Request Indexing syncs from Search Console. Connect Search Console, then connect a Site."
+          compact
+        >
+          <ConnectSearchConsoleButton />
+        </UiEmptyState>
         <UiEmptyState
           v-else-if="keysState?._tag === 'Ready'"
           class="mt-3"

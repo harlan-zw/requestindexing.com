@@ -24,3 +24,24 @@ export function agentPromptSite(sites: readonly AgentPromptCandidate[]): AgentPr
   const site = sites.find(candidate => !!candidate.gscdumpSiteId && candidate.syncStatus !== 'refused' && !candidate.hold)
   return site?.gscdumpSiteId ? { gscdumpSiteId: site.gscdumpSiteId, host: site.domain ?? site.property } : null
 }
+
+export type AgentPromptGate
+  /** Search Console is not connected, so gscdump holds nothing to read. */
+  = | { _tag: 'SearchConsoleRequired' }
+  /** Connected, with no Site the prompt can read. */
+    | { _tag: 'SiteRequired' }
+    | { _tag: 'Ready', site: AgentPromptSite }
+
+/**
+ * Whether the Developers page offers the agent setup prompt.
+ *
+ * `gscConnected` is the session's Search Console connection, the one value
+ * Integrations, the sidebar, and the feature locks read. The page adds no
+ * definition of its own.
+ */
+export function agentPromptGate(input: { gscConnected: boolean, sites: readonly AgentPromptCandidate[] }): AgentPromptGate {
+  if (!input.gscConnected)
+    return { _tag: 'SearchConsoleRequired' }
+  const site = agentPromptSite(input.sites)
+  return site ? { _tag: 'Ready', site } : { _tag: 'SiteRequired' }
+}
