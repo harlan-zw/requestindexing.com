@@ -6,13 +6,10 @@ definePageMeta({
 
 const { data: users, status: usersStatus } = useLazyFetch('/api/admin/users')
 const { data: sites, status: sitesStatus } = useLazyFetch('/api/admin/sites')
-const { data: oauth, status: oauthStatus } = useLazyFetch('/api/admin/oauth')
 const { data: jobsData, status: jobsStatus } = useLazyFetch('/api/admin/jobs')
 
 const userCount = computed(() => users.value?.length ?? 0)
 const siteCount = computed(() => sites.value?.length ?? 0)
-const oauthPoolCount = computed(() => oauth.value?.usage?.length ?? 0)
-const oauthFreeLabel = computed(() => oauth.value?.free?.label ?? '-')
 
 const jobStats = computed(() => {
   const allJobs = jobsData.value?.jobs ?? []
@@ -27,7 +24,6 @@ const jobStats = computed(() => {
 const cards = computed(() => [
   { label: 'Users', value: userCount.value, icon: 'i-lucide-users', to: '/admin/users', loading: usersStatus.value === 'pending' },
   { label: 'Active Sites', value: siteCount.value, icon: 'i-lucide-globe', to: '/admin/sites', loading: sitesStatus.value === 'pending' },
-  { label: 'OAuth Clients', value: oauthPoolCount.value, icon: 'i-lucide-key-round', to: '/admin/oauth', loading: oauthStatus.value === 'pending' },
   { label: 'Jobs (recent)', value: jobStats.value.total, icon: 'i-lucide-list-checks', to: '/admin/jobs', loading: jobsStatus.value === 'pending' },
 ])
 </script>
@@ -39,7 +35,7 @@ const cards = computed(() => [
     </h1>
 
     <!-- Overview Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
       <NuxtLink v-for="card in cards" :key="card.label" :to="card.to">
         <UCard variant="subtle" class="hover:bg-[var(--ui-bg-elevated)] transition-colors">
           <div class="flex items-center gap-3">
@@ -101,18 +97,6 @@ const cards = computed(() => [
           </p>
         </div>
       </div>
-    </UCard>
-
-    <!-- OAuth Pool -->
-    <UCard v-if="oauthStatus !== 'pending' && oauth?.free" variant="subtle" class="mt-4">
-      <template #header>
-        <h2 class="font-semibold">
-          OAuth Pool
-        </h2>
-      </template>
-      <p class="text-sm text-muted">
-        Next free client: <span class="font-medium text-highlighted">{{ oauthFreeLabel }}</span>
-      </p>
     </UCard>
   </div>
 </template>

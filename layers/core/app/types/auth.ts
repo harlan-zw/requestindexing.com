@@ -10,25 +10,11 @@ export interface UserOAuthToken {
   id_token: string
 }
 
-export interface OAuthPoolPayload {
-  id: string
-  users: string[]
-}
-
-export interface OAuthPoolToken {
-  id: string
-  client_id: string
-  client_secret: string
-  label: string
-}
-
 // export interface User {
 //   email: string
 //   userId: string
 //   access?: 'pro'
 //   picture: string
-//   indexingOAuthId?: string
-//   lastIndexingOAuthId?: string
 //   analyticsRange?: { start: Date, end: Date }
 //   analyticsPeriod?: 'all' | '30d' | string
 //   // onboarding
@@ -41,7 +27,6 @@ export interface UserSession {
   user: UserSelect
   // used when redirecting to Indexing API OAuth
   googleIndexingAuth?: {
-    indexingOAuthId: string
     /** Same-origin dashboard path, parsed by `safeAuthRedirect`. */
     returnTo: string
     state: string
@@ -51,7 +36,6 @@ export interface UserSession {
 declare module '#auth-utils' {
   interface UserSession {
     googleIndexingAuth?: {
-      indexingOAuthId: string
       returnTo: string
       state: string
     }

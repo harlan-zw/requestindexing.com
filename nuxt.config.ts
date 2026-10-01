@@ -1,4 +1,3 @@
-import type { OAuthPoolToken } from './layers/core/app/types'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import process from 'node:process'
 import { resolve } from 'path'
@@ -7,8 +6,6 @@ import { externalCheckin } from './shared/checkin-external'
 import { CLOUDFLARE_REQUIRED_SECRETS } from './shared/cloudflare'
 import { redirectRouteRules, runtimeOnlyRouteRules } from './shared/routes'
 import { SENTRY_DSN } from './shared/sentry'
-
-const tokens: Partial<OAuthPoolToken>[] = process.env.NUXT_OAUTH_POOL ? JSON.parse(process.env.NUXT_OAUTH_POOL) : []
 
 // read all the folders at the server/app path
 const recursiveServerAppFolders = globbySync('**/*', {
@@ -103,10 +100,6 @@ export default defineNuxtConfig({
     'nuxt-skew-protection',
     '@nuxt/scripts',
     'nitro-cloudflare-dev',
-    (_, nuxt) => {
-      nuxt.options.nitro!.virtual = nuxt.options.nitro!.virtual || {}
-      nuxt.options.nitro.virtual['#app/token-pool.mjs'] = `export const tokens = ${JSON.stringify(tokens)}`
-    },
     '@nuxt/fonts',
     '@sentry/nuxt/module',
     '@harlan-zw/nuxt-sentry',
@@ -305,6 +298,10 @@ export default defineNuxtConfig({
           // sign-in at all.
           NUXT_OAUTH_GOOGLE_CLIENT_ID: process.env.NUXT_OAUTH_GOOGLE_CLIENT_ID
             || '32479086022-b2upoo15sfpo0fpmgdgi95fh6oths219.apps.googleusercontent.com',
+          // The Indexing API client of the dedicated Cloud project (gscdump.com
+          // ADR-0016). Public like the sign-in client id. Empty until the
+          // project exists, and then Submit says access is not set up.
+          NUXT_GOOGLE_INDEXING_CLIENT_ID: process.env.NUXT_GOOGLE_INDEXING_CLIENT_ID || '',
           // Kill switch for the daily site-sync fan-out. Set to 'false' while
           // migrating legacy data, so no bulk sync is queued. The Free
           // allowance email ignores this switch and always sends.
@@ -472,8 +469,12 @@ export default defineNuxtConfig({
         bing: true,
       },
     },
-    indexing: {
-      maxUsersPerOAuth: 100,
+    // One OAuth client in a Cloud project that serves only the Indexing API
+    // scope. gscdump refreshes the grant with the same client and sends every
+    // Submission through it (gscdump.com ADR-0016).
+    googleIndexing: {
+      clientId: '',
+      clientSecret: '',
     },
   },
 })

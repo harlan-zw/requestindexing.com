@@ -28,7 +28,6 @@ import {
   feedback,
   googleAccounts,
   indexingInvestigations,
-  indexingJobs,
   jobBatches,
   jobs,
   notifications,
@@ -253,11 +252,6 @@ export async function deleteUserData(event: H3Event, opts: DeleteUserOptions): P
       table: 'usages',
       count: () => hasSites() ? scalar(db, sql`select count(*) as c from usages where site_id in ${siteList()}`) : Promise.resolve(0),
       run: () => hasSites() ? db.delete(usages).where(inArray(usages.siteId, siteIds)) : Promise.resolve(),
-    },
-    {
-      table: 'indexing_jobs',
-      count: () => hasSites() ? scalar(db, sql`select count(*) as c from indexing_jobs where site_id in ${siteList()}`) : Promise.resolve(0),
-      run: () => hasSites() ? db.delete(indexingJobs).where(inArray(indexingJobs.siteId, siteIds)) : Promise.resolve(),
     },
     {
       table: 'indexing_investigations',

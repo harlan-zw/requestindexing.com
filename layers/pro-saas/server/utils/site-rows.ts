@@ -1,7 +1,6 @@
 import { and, eq, inArray, ne, or } from 'drizzle-orm'
 import {
   indexingInvestigations,
-  indexingJobs,
   sites,
   teamSites,
   usages,
@@ -21,7 +20,6 @@ export async function purgeSiteChildren(db: Db, siteIds: readonly string[]): Pro
   await db.delete(usages).where(inArray(usages.siteId, ids))
   await db.delete(userSites).where(inArray(userSites.siteId, ids))
   await db.delete(teamSites).where(inArray(teamSites.siteId, ids))
-  await db.delete(indexingJobs).where(inArray(indexingJobs.siteId, ids))
   await db.delete(indexingInvestigations).where(inArray(indexingInvestigations.siteId, ids))
 }
 

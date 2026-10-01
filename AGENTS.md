@@ -22,7 +22,8 @@ New Markdown at the repository root is an error. Identity and filters only.
 - **If a capability could live in gscdump, it does.** This app holds accounts, teams, the
   site list, and the dashboard. Sync, retention, inspection, sitemaps, and submission belong
   to the engine, and arrive here by upgrading the protocol pin, not by building them again.
-  The one live exception is Google Indexing API submission; `docs/arch/README.md` says why.
+  Google Indexing API submission moved there too (gscdump.com ADR-0016). This app runs the
+  Google consent with its one dedicated client and hands the grant over; it keeps no token.
 - **Local site and account rows are a cache, never the record.** The webhook receiver mirrors
   state onto `sites`; authoritative lifecycle is re-read from gscdump. Never make a decision
   that matters from the mirror alone.

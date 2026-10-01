@@ -19,7 +19,7 @@ definePageMeta({
 })
 
 const { session } = useUserSession()
-// The stored grant the submit route sends with. `session.googleIndexingAuth`
+// The Indexing API grant gscdump sends Submissions with. `session.googleIndexingAuth`
 // is the in-flight OAuth state instead: set before Google asks for consent,
 // gone after the next sign-in, and kept after a revoke.
 const { data: indexingGrant, error: indexingGrantError, refresh: refreshIndexingGrant } = useFetch<IndexingGrant>('/api/indexing/auth', { key: 'indexing-grant' })
@@ -187,8 +187,11 @@ async function deleteAccount() {
           </UButton>
         </template>
         <USkeleton v-else-if="!indexingGrant" class="h-5 w-2/3" />
-        <template v-else-if="indexingGrant._tag === 'Granted'">
-          <p class="mb-3 text-sm break-words text-muted">
+        <template v-else-if="indexingGrant._tag !== 'missing'">
+          <p v-if="indexingGrant._tag === 'reauthorization-required'" class="mb-3 text-sm break-words text-muted">
+            Google no longer accepts this app's Indexing API access. To grant access again, open the Submit to Google page of a Site.
+          </p>
+          <p v-else class="mb-3 text-sm break-words text-muted">
             <template v-if="indexingGrant.googleEmail">
               {{ indexingGrant.googleEmail }} gave this app access to the Indexing API.
             </template>

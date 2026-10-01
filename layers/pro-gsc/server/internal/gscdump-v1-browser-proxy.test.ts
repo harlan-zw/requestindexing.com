@@ -89,6 +89,23 @@ describe('resolveGscdumpV1ProxyOperation', () => {
     expect(operation && selectGscdumpV1ProxyTarget(operation, 'u_me')).toMatchObject({ _tag: 'site', siteId: 's_site-1' })
   })
 
+  it('reads Google Submission receipts through site ownership checks', () => {
+    const operation = resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/indexing/google/submissions')
+    expect(operation?.operation.id).toBe('partner.sites.indexing.google.submissions.list')
+    expect(operation && selectGscdumpV1ProxyTarget(operation, 'u_me')).toMatchObject({ _tag: 'site', siteId: 's_site-1' })
+  })
+
+  // Creating a Google Submission and handing over a grant take the partner
+  // key, so the browser never reaches them with its own user key.
+  it.each([
+    ['POST', 'sites/s_site-1/indexing/google/submissions'],
+    ['GET', 'users/u_me/indexing/google/grant'],
+    ['PATCH', 'users/u_me/indexing/google/grant'],
+    ['DELETE', 'users/u_me/indexing/google/grant'],
+  ])('rejects %s %s', (method, path) => {
+    expect(resolveGscdumpV1ProxyOperation(method, 'partner', path)).toBeNull()
+  })
+
   it('rejects a path with no matching operation', () => {
     expect(resolveGscdumpV1ProxyOperation('GET', 'partner', 'users/u_1')).toBeNull()
   })

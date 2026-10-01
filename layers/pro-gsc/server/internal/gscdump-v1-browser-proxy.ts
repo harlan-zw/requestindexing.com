@@ -48,6 +48,8 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.verifySiteIndexNowConnection },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.submitSiteIndexNow },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexNowSubmissionReceipts },
+  // Google Submissions are created server side with the partner key; the browser only reads receipts.
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteGoogleSubmissionReceipts },
   { surface: protocol.surfaces.realtime, operation: protocol.surfaces.realtime.operations.createTicket },
 ] as const
 

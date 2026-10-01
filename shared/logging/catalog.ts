@@ -75,9 +75,6 @@ export const LOG_CATALOG = {
   'email.send_failed': 'transactional email send failed; user does not see it but it should have shipped',
 
   // Google Indexing API
-  'indexing.job_record_failed': 'indexing_jobs tracking row insert/update failed after a successful Google Indexing API submission',
-  'indexing.usage_record_failed': 'usages counter increment failed after a successful Google Indexing API submission',
-  'indexing.revoke_failed': 'Google token revoke call failed during indexing OAuth disconnect; local grant was still removed',
 
   // Account deletion
   'account.google_revoke_failed': 'Google did not revoke a stored token during account deletion; the token row is deleted, so the grant stays until the person removes it in their Google Account',

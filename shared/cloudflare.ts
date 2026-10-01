@@ -11,8 +11,12 @@ export const CLOUDFLARE_REQUIRED_SECRETS = [
   'NUXT_GSCDUMP_WEBHOOK_SECRET',
   'NUXT_KEY',
   'NUXT_OAUTH_GOOGLE_CLIENT_SECRET',
-  'NUXT_OAUTH_POOL',
-  'NUXT_OAUTH_PRIVATE_POOL',
   'NUXT_POSTMARK_API_KEY',
   'NUXT_SESSION_PASSWORD',
+]
+
+// Secrets the deploy uploads only when they are set. The Worker boots without
+// them, and the feature that reads one says it is not set up.
+export const CLOUDFLARE_OPTIONAL_SECRETS = [
+  'NUXT_GOOGLE_INDEXING_CLIENT_SECRET',
 ]

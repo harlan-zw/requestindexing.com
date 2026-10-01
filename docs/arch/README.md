@@ -37,16 +37,16 @@ The rule that decides where code goes: if a capability could live in gscdump, it
 | GSC sync, quota budgets, retention past 16 months | gscdump |
 | Indexing inspection, coverage, transitions | gscdump |
 | Sitemap discovery, drift, submission | gscdump |
-| Multi-engine submission (IndexNow, Bing) | gscdump, when it ships |
+| Multi-engine submission (IndexNow, Bing, Google Indexing API) | gscdump |
 | Analytics queries and the archive | gscdump |
 | Free allowance, Meters, held Sites, and their refusals | gscdump |
 | The words a refusal, a hold, or an allowance email uses | this app |
 | The onboarding drip and its unsubscribe | this app |
 | Accounts, teams, site list, session | this app |
 | Dashboard UI and the job-to-be-done | this app |
-| Google Indexing API submission and its quota | this app, for now |
+| Google consent for the Indexing API grant | this app, then handed to gscdump |
 
-The last row is the one live exception. Submission to Google's Indexing API runs here because it predates gscdump's submission surface. When gscdump ships multi-engine submission, this moves and `indexing_jobs` goes with it.
+Google Indexing API submission moved to gscdump under gscdump.com ADR-0016. This app runs the consent with one OAuth client in a Cloud project that serves only the Indexing API scope, then hands the refresh token to gscdump and keeps no copy. Creating a Submission and handing over a grant take the partner key, so they go through this app's server routes; the browser proxy only reads receipts.
 
 ## Packages
 
@@ -64,7 +64,6 @@ D1 holds only what gscdump does not: identity and the local mirror needed to ren
 
 - `users`, `teams`, `team_memberships`, `team_invitations`, `user_identities`, `google_accounts`, `google_oauth_clients`
 - `sites`, `team_sites`, `user_sites` with `gscdump_site_id` as the join key
-- `indexing_jobs` for Google Indexing API submissions
 - `indexing_investigations` for per-URL status notes
 - `usages` for quota counters
 - `drip_emails` for the onboarding drip, and `notification_optouts` for the email categories an address unsubscribed from

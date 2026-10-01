@@ -26,10 +26,6 @@ const links: NavigationMenuItem[] = [{
   icon: 'i-lucide-globe',
   to: '/admin/sites',
 }, {
-  label: 'OAuth Clients',
-  icon: 'i-lucide-key-round',
-  to: '/admin/oauth',
-}, {
   label: 'Jobs',
   icon: 'i-lucide-list-checks',
   to: '/admin/jobs',
