@@ -49,4 +49,14 @@ id = "9ba09cd123b948f6835f5d20b2d97f6c"
 binding = "CACHE"
 id = "9aa5f0d4250c45ffa75d7bed3646ea30"
 
+# Per-minute limit for the free /tools routes, read by `checkFreeToolRateLimit`.
+# The code skips the check when the binding is absent, so without this block
+# only the daily KV limit applies. Namespace ids are unique per account, and
+# nuxtseo.com holds 1001 to 1005 and 2001 to 2005. The limit matches
+# nuxtseo.com's own free tools.
+[[ratelimits]]
+name = "RL_FREE_TOOLS"
+namespace_id = "3001"
+simple = { limit = 20, period = 60 }
+
 # Rest of config (crons, vars, etc.) is in nuxt.config.ts

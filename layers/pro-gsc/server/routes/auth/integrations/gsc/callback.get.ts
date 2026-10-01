@@ -1,3 +1,4 @@
+import type { GscdumpKeyProbe } from '#layers/pro-gsc/server/utils/gscdump-key-repair'
 import { eq } from 'drizzle-orm'
 import { exchangeAuthCodeResult, introspectAccessTokenResult } from 'gscdump'
 import { logger } from '~~/shared/server/logger'
@@ -95,20 +96,22 @@ export default defineEventHandler(async (event) => {
 
   // V1: GSC tokens live on `google_accounts` (type='auth' or 'indexing'),
   // not on the users row. Pull the existing auth row to backfill the refresh
-  // token if Google didn't return a new one this round.
-  const [existingUser] = await db
-    .select({
-      gscdumpUserId: schema.users.gscdumpUserId,
-      gscdumpApiKey: schema.users.gscdumpApiKey,
-    })
-    .from(schema.users)
-    .where(eq(schema.users.userId, session.user.id))
-
-  const existingAuthAccount = await db
-    .select()
-    .from(schema.googleAccounts)
-    .where(eq(schema.googleAccounts.userId, session.user.id))
-    .get()
+  // token if Google didn't return a new one this round. The two reads do not
+  // depend on each other, so they share one wait on D1.
+  const [[existingUser], existingAuthAccount] = await Promise.all([
+    db
+      .select({
+        gscdumpUserId: schema.users.gscdumpUserId,
+        gscdumpApiKey: schema.users.gscdumpApiKey,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.userId, session.user.id)),
+    db
+      .select()
+      .from(schema.googleAccounts)
+      .where(eq(schema.googleAccounts.userId, session.user.id))
+      .get(),
+  ])
 
   const existingRefreshToken = (existingAuthAccount?.tokens as { refresh_token?: string | null } | undefined)?.refresh_token ?? null
   // Use new refresh token if provided, otherwise keep existing
@@ -120,6 +123,8 @@ export default defineEventHandler(async (event) => {
   // A key minted moments ago needs no probe, and probing one while the user's
   // database is still provisioning would read as a rejection.
   let mintedThisRequest = false
+  // The stored key's probe, when it ran beside the token update.
+  let keyProbe: GscdumpKeyProbe | null = null
   let gscdumpSyncFailed = false
   let gscdumpSyncReason: string | null = null
   let gscdumpSyncMessage: string | null = null
@@ -132,20 +137,33 @@ export default defineEventHandler(async (event) => {
     }
 
     if (gscdumpUserId) {
+      const existingGscdumpUserId = gscdumpUserId
       // Existing user — update tokens (also validates GSC scope and returns sites)
       // Retry once on failure since gscdump may have transient issues
-      let updated: Awaited<ReturnType<typeof gscdump.updateUserTokens>> | null = null
       let lastError: unknown = null
-      for (const attempt of [1, 2]) {
-        updated = await gscdump.updateUserTokens(gscdumpUserId, tokenParams).catch((error: unknown) => {
-          lastError = error
-          const details = errorDetails(error)
-          logger.warn(`[google auth] gscdump token update failed (attempt ${attempt}):`, details.message, details.reason)
-          return null
-        })
-        if (updated)
-          break
+      const updateTokens = async () => {
+        for (const attempt of [1, 2]) {
+          const result = await gscdump.updateUserTokens(existingGscdumpUserId, tokenParams).catch((error: unknown) => {
+            lastError = error
+            const details = errorDetails(error)
+            logger.warn(`[google auth] gscdump token update failed (attempt ${attempt}):`, details.message, details.reason)
+            return null
+          })
+          if (result)
+            return result
+        }
+        return null
       }
+      // The probe asks only whether the stored key still authenticates, so it
+      // does not wait on the token update. Sampled reconnects ran them one
+      // after the other: the update took 2.2 to 4.9 s, then the probe 0.5 to
+      // 1.2 s more.
+      const storedKey = gscdumpApiKey
+      const [updated, probe] = await Promise.all([
+        updateTokens(),
+        storedKey ? probeGscdumpUserKey(event, existingGscdumpUserId, storedKey) : Promise.resolve<GscdumpKeyProbe>('skipped'),
+      ])
+      keyProbe = probe
       if (updated) {
         logger.log('[google auth] gscdump tokens updated:', gscdumpUserId, `${updated.sites.length} GSC properties accessible`)
         // This response carries no credential — `updateUserTokens` returns only
@@ -195,9 +213,9 @@ export default defineEventHandler(async (event) => {
     // partner, so re-minting here cannot disturb another partner's credential
     // for the same person.
     if (gscdumpUserId && !mintedThisRequest) {
-      const probe = gscdumpApiKey
+      const probe = keyProbe ?? (gscdumpApiKey
         ? await probeGscdumpUserKey(event, gscdumpUserId, gscdumpApiKey)
-        : 'skipped'
+        : 'skipped')
 
       if (shouldRepairGscdumpKey({ storedKey: gscdumpApiKey ?? null, probe })) {
         logger.warn('[google auth] gscdump credential needs repair:', gscdumpUserId, `probe=${probe}`)
@@ -235,40 +253,49 @@ export default defineEventHandler(async (event) => {
   // and the GSC integration uses gsc_user_id / gsc_email (Phase 4a rename).
   // Persist gscdump identity columns on the users row; token material is
   // stored on `google_accounts` via the upstream OAuth callback flow.
-  await db.update(schema.users)
-    .set({
-      ...(gscdumpUserId && { gscdumpUserId }),
-      ...(gscdumpApiKey && { gscdumpApiKey }),
-      updatedAt: Date.now(),
-    })
-    .where(eq(schema.users.userId, session.user.id))
-    .catch((error: unknown) => {
-      logger.error('[google auth] db update failed:', errorDetails(error).message)
-    })
+  // The credential write must land before the redirect: the next page reads
+  // the connection from it. The team read does not depend on it, so the two
+  // share one wait on D1.
+  // The sealed cookie's `currentTeamId` outlives a removal from that team, so
+  // the team this callback acts on and reseals comes from the database.
+  const [, currentTeam] = await Promise.all([
+    db.update(schema.users)
+      .set({
+        ...(gscdumpUserId && { gscdumpUserId }),
+        ...(gscdumpApiKey && { gscdumpApiKey }),
+        updatedAt: Date.now(),
+      })
+      .where(eq(schema.users.userId, session.user.id))
+      .catch((error: unknown) => {
+        logger.error('[google auth] db update failed:', errorDetails(error).message)
+      }),
+    readCurrentTeam(db, session.user.id),
+  ])
 
-  await emitFirstProEvent(db, session.user.id, 'gsc_connected', {
+  // The funnel milestone gates nothing on the next page, so it runs after the
+  // response.
+  event.waitUntil(emitFirstProEvent(db, session.user.id, 'gsc_connected', {
     email: googleUser?.email ?? null,
-  }).catch((error: unknown) => logger.error('[google auth] proEvent emit failed:', errorDetails(error).message))
+  }).catch((error: unknown) => logger.error('[google auth] proEvent emit failed:', errorDetails(error).message)))
 
   // Reconcile gscdump-dependent side effects asynchronously. User database
   // provisioning can lag OAuth; this waits in the background and avoids turning
   // a healthy provisioning state into a callback warning.
-  // The sealed cookie's `currentTeamId` outlives a removal from that team, so
-  // the team this callback acts on and reseals comes from the database.
-  const currentTeam = await readCurrentTeam(db, session.user.id)
-
   if (gscdumpUserId) {
-    // The grant just changed, so a cached `scope_missing` from the old one
-    // must not greet the user on the page they return to. Only a fresh
-    // lifecycle read may say what the new grant is.
-    await forgetGscdumpAccountStatus(gscdumpUserId)
-      .catch((error: unknown) => logger.error('[google auth] cached gscdump account status not cleared:', errorDetails(error).message))
-    // A reconnect is the user acting on a refused Site, so the reconcile below
-    // may ask gscdump about it once more.
-    await releaseRefusedSites(db, {
-      teamIds: currentTeam ? [currentTeam.teamId] : [],
-      ownerId: session.user.id,
-    }).catch((error: unknown) => logger.error('[google auth] refused Sites not released:', errorDetails(error).message))
+    const connectedGscdumpUserId = gscdumpUserId
+    await Promise.all([
+      // The grant just changed, so a cached `scope_missing` from the old one
+      // must not greet the user on the page they return to. Only a fresh
+      // lifecycle read may say what the new grant is.
+      forgetGscdumpAccountStatus(connectedGscdumpUserId)
+        .catch((error: unknown) => logger.error('[google auth] cached gscdump account status not cleared:', errorDetails(error).message)),
+      // A reconnect is the user acting on a refused Site, so the reconcile below
+      // may ask gscdump about it once more.
+      releaseRefusedSites(db, {
+        teamIds: currentTeam ? [currentTeam.teamId] : [],
+        ownerId: session.user.id,
+      }).catch((error: unknown) => logger.error('[google auth] refused Sites not released:', errorDetails(error).message)),
+    ])
     scheduleGscdumpOnboardingReconcile(event, {
       userId: session.user.id,
       gscdumpUserId,

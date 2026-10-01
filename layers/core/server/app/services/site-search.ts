@@ -7,7 +7,8 @@ export interface SerpResult {
 }
 
 export interface SerpTaskResult {
-  total?: number
+  /** Google's estimate of all results for the query. The API has no `total` field. */
+  se_results_count?: number
   items?: SerpResult[]
 }
 
@@ -88,7 +89,7 @@ function siteSearchKey(raw: string): string | null {
  * must have run: `parseSerpTask` keeps a task error away from this verdict.
  */
 export function matchSiteSearch(url: string, serp: SerpTaskResult): IndexCheckResult {
-  const totalSiteResults = serp?.total || 0
+  const totalSiteResults = serp?.se_results_count || 0
   const key = siteSearchKey(url)
   const match = key === null
     ? undefined

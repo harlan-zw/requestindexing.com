@@ -271,7 +271,7 @@ export async function getDomainOverview(domain: string, ctx?: DataForSeoCallCont
   // Estimated indexed pages from a site: search. A task error throws, so a
   // search that never ran cannot report zero pages.
   const siteResult = await siteSearch(domain, 100, ctx)
-  const estimatedIndexedPages = siteResult?.total || 0
+  const estimatedIndexedPages = siteResult?.se_results_count || 0
   const topOrganicPages = (siteResult?.items || [])
     .filter(item => item.type === 'organic')
     .slice(0, 10)

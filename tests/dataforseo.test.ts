@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { checkUrlIndexed, checkUrlsIndexed, tagDataForSeoTasks } from '../layers/core/server/app/services/dataforseo'
+import { checkUrlIndexed, checkUrlsIndexed, getDomainOverview, tagDataForSeoTasks } from '../layers/core/server/app/services/dataforseo'
 import { DATAFORSEO_RETRY_OPTIONS, DATAFORSEO_UNAVAILABLE_MESSAGE } from '../shared/dataforseo'
 
 function callContext() {
@@ -77,5 +77,22 @@ describe('dataForSEO requests', () => {
     })
 
     await expect(outcome).rejects.toMatchObject({ statusCode: 401 })
+  })
+})
+
+describe('getDomainOverview', () => {
+  it('reads the indexed page estimate from the SERP result count', async () => {
+    // DataForSEO names the count `se_results_count`. Reading a `total` field,
+    // which the API never sends, made every Site Indexing Report show zero.
+    const providerFetch = vi.fn(async (url: string) => url.includes('/serp/')
+      ? { tasks: [{ status_code: 20000, status_message: 'Ok.', result: [{ se_results_count: 1234, items: [] }] }] }
+      : { tasks: [{ result: [{ items: [] }] }] })
+
+    const overview = await getDomainOverview('example.com', {
+      ...callContext(),
+      providerFetch: providerFetch as unknown as typeof $fetch,
+    })
+
+    expect(overview.estimatedIndexedPages).toBe(1234)
   })
 })
