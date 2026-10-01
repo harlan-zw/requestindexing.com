@@ -6,15 +6,22 @@ const faqs = [
   },
   {
     question: 'Why is my page not showing in Google?',
-    answer: 'Common reasons: the page is too new (indexing takes 27.4 days on average), low content quality that leads to "Crawled - currently not indexed", robots.txt blocking crawlers, a noindex tag, duplicate content, or low domain authority. Confirm the status with this checker, then fix the cause and request indexing in URL Inspection.',
+    answer: 'Common reasons: the page is too new, low content quality that leads to "Crawled - currently not indexed", robots.txt blocking crawlers, a noindex tag, duplicate content, or low domain authority. Confirm the status with this checker, then fix the cause and request indexing in URL Inspection.',
   },
   {
     question: 'How long does Google take to index a new page?',
-    answer: 'IndexCheckr studied 16 million pages and found an average of 27.4 days to index. High-authority sites may see indexing within hours, while new or low-authority sites can wait weeks or months. The Google Indexing API only covers job posting and livestream pages, and a successful notification means Google may recrawl the URL soon. It sets no timeline.',
+    answer: 'Google says crawling can take anywhere from a few days to a few weeks after you request it. IndexCheckr reports that pages its users track took an average of 27.4 days to be indexed, counted from when tracking started. The Google Indexing API only covers job posting and livestream pages, and a successful notification means Google may recrawl the URL soon. It sets no timeline.',
+    sources: [
+      { label: 'Google Search Central', to: 'https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl' },
+      { label: 'IndexCheckr indexing study', to: 'https://indexcheckr.com/resources/google-indexing' },
+    ],
   },
   {
     question: 'What\'s the difference between "Discovered" and "Crawled" not indexed?',
-    answer: '"Discovered - currently not indexed" means Google knows your URL exists but has not crawled it yet, often because of crawl budget or low predicted quality. "Crawled - currently not indexed" means Google visited the page and chose not to index it. Gary Illyes has said this is often down to "dupe elimination" or "the general quality of the site."',
+    answer: '"Discovered - currently not indexed" means Google knows your URL exists but has not crawled it yet, often because of crawl budget or low predicted quality. "Crawled - currently not indexed" means Google visited the page and chose not to index it. Gary Illyes of Google named "dupe elimination" and "the general quality of the site" as two possible causes.',
+    sources: [
+      { label: 'Gary Illyes at SERP Conf 2024', to: 'https://www.youtube.com/watch?v=DJVaGCZLmt8' },
+    ],
   },
   {
     question: 'How does this tool check indexing status?',
@@ -261,11 +268,16 @@ function checkIndex() {
             <h3 class="font-medium text-[var(--ui-text-highlighted)] mb-1">
               Key Statistics
             </h3>
+            <p class="text-[var(--ui-text-muted)] mb-2">
+              From <NuxtLink to="https://indexcheckr.com/resources/google-indexing" target="_blank" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+                IndexCheckr's indexing study
+              </NuxtLink> of 16 million pages that its users track, updated 28 February 2025:
+            </p>
             <ul class="space-y-1 text-[var(--ui-text-muted)]">
-              <li><strong>61.94%</strong> of pages are not indexed (IndexCheckr, 16M pages)</li>
-              <li><strong>27.4 days</strong> average time to index</li>
-              <li><strong>29.37%</strong> of submitted URLs end up indexed</li>
-              <li><strong>21.29%</strong> deindexing rate for previously indexed pages</li>
+              <li><strong>61.94%</strong> were on an indexed domain but were not indexed themselves</li>
+              <li><strong>27.4 days</strong> average time to be indexed, counted from when tracking started</li>
+              <li><strong>29.37%</strong> of 33,930 unindexed pages were indexed after submission to indexing tools</li>
+              <li><strong>21.29%</strong> of 310,705 tracked pages were deindexed</li>
             </ul>
           </div>
         </div>
