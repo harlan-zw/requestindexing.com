@@ -46,7 +46,7 @@ describe('mapLegacyDashboardRoute', () => {
     expect(mapLegacyDashboardRoute('/dashboard/site/kv1109/sitemaps')).toEqual({ _tag: 'SiteRedirect', slug: 'kv1109', page: 'indexing/sitemaps' })
     expect(mapLegacyDashboardRoute('/dashboard/site/kv1109/web-indexing')).toEqual({ _tag: 'SiteRedirect', slug: 'kv1109', page: 'indexing/submit' })
     expect(mapLegacyDashboardRoute('/dashboard/site/kv1109/settings')).toEqual({ _tag: 'SiteRedirect', slug: 'kv1109', page: 'settings' })
-    expect(mapLegacyDashboardRoute('/dashboard/site/kv1109/usages')).toEqual({ _tag: 'SiteRedirect', slug: 'kv1109', page: 'usages' })
+    expect(mapLegacyDashboardRoute('/dashboard/site/kv1109/usages')).toEqual({ _tag: 'SiteRedirect', slug: 'kv1109', page: 'indexing/submit' })
   })
 
   it('sends the account page to its place in the one tree', () => {

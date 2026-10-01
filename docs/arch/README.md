@@ -65,7 +65,6 @@ D1 holds only what gscdump does not: identity and the local mirror needed to ren
 - `users`, `teams`, `team_memberships`, `team_invitations`, `user_identities`, `google_accounts`, `google_oauth_clients`
 - `sites`, `team_sites`, `user_sites` with `gscdump_site_id` as the join key
 - `indexing_investigations` for per-URL status notes
-- `usages` for quota counters
 - `drip_emails` for the onboarding drip, and `notification_optouts` for the email categories an address unsubscribed from
 
 Site and account state is a cache, never the record. The webhook receiver mirrors sync status onto `sites`, then the onboarding reconcile re-reads authoritative lifecycle from gscdump.

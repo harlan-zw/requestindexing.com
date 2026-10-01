@@ -158,8 +158,8 @@ export async function deleteTeam(
     .where(eq(users.currentTeamId, ctx.team.teamId))
 
   // `sites.team_id` is ON DELETE RESTRICT, so the team's sites go first or the
-  // team delete below fails. Child rows (`team_sites`, `user_sites`, usages,
-  // indexing rows) go before the sites, since D1 runs no cascades.
+  // team delete below fails. Child rows (`team_sites`, `user_sites`,
+  // Investigations) go before the sites, since D1 runs no cascades.
   await purgeTeamSites(ctx.db, ctx.team.teamId)
   await ctx.db.delete(teams).where(eq(teams.teamId, ctx.team.teamId))
 

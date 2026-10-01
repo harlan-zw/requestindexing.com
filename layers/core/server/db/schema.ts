@@ -192,18 +192,6 @@ export const sites = sqliteTable('sites', {
 export type SiteInsert = typeof sites.$inferInsert
 export type SiteSelect = typeof sites.$inferSelect
 
-// TODO siteUsages (need to figure out billing but more granular is better)
-export const usages = sqliteTable('usages', {
-  siteId: text('site_id').notNull().references(() => sites.id),
-  date: text('date').notNull(),
-  key: text('key').notNull(),
-  usage: integer('usage').notNull().default(0),
-}, (t) => {
-  return {
-    unq: unique().on(t.siteId, t.date, t.key),
-  }
-})
-
 // allow users to hide sites within a team dashboard, also track their permission level to a site
 export const userSites = sqliteTable('user_sites', {
   userId: integer('user_id').notNull().references(() => users.userId),

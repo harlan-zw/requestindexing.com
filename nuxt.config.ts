@@ -458,9 +458,6 @@ export default defineNuxtConfig({
     },
     public: {
       baseUrl: 'https://requestindexing.com',
-      indexing: {
-        usageLimitPerUser: 15,
-      },
       // Nav rows a flag can switch off. `bing` covers both Bing surfaces and
       // the Integrations card. gscdump 4.8.0 ships the partner operations they
       // read, so it is on; set NUXT_PUBLIC_FEATURES_BING=false to hide them.
