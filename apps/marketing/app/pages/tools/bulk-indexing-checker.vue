@@ -6,7 +6,10 @@ const faqs = [
   },
   {
     question: 'Why are most of my pages not indexed?',
-    answer: 'IndexCheckr studied 16 million pages and found 61.94% were not indexed by Google. Common causes are low content quality, duplicate content, thin pages, crawl budget limits on large sites, and low domain authority.',
+    answer: 'IndexCheckr studied 16 million pages that its users track. 61.94% of them were on an indexed domain but were not indexed themselves. Common causes are low content quality, duplicate content, thin pages, crawl budget limits on large sites, and low domain authority.',
+    sources: [
+      { label: 'IndexCheckr indexing study', to: 'https://indexcheckr.com/resources/google-indexing' },
+    ],
   },
   {
     question: 'How do I submit all unindexed URLs to Google?',
@@ -18,7 +21,11 @@ const faqs = [
   },
   {
     question: 'How long does bulk indexing take?',
-    answer: 'IndexCheckr measured an average of 27.4 days for a page to be indexed. The Indexing API covers job posting and livestream pages only. A successful notification means Google may recrawl the URL soon, and Google still applies its quality filters, so crawling and indexing are not guaranteed.',
+    answer: 'Google says crawling can take anywhere from a few days to a few weeks after you request it. IndexCheckr reports that pages its users track took an average of 27.4 days to be indexed, counted from when tracking started. The Indexing API covers job posting and livestream pages only. A successful notification means Google may recrawl the URL soon, and Google still applies its quality filters, so crawling and indexing are not guaranteed.',
+    sources: [
+      { label: 'Google Search Central', to: 'https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl' },
+      { label: 'IndexCheckr indexing study', to: 'https://indexcheckr.com/resources/google-indexing' },
+    ],
   },
 ]
 
@@ -252,7 +259,9 @@ function exportCsv() {
           />
         </div>
         <p v-if="result.summary.indexRate < 50" class="text-xs text-[var(--ui-text-muted)] mt-2">
-          Benchmark: only 37% of pages achieve full indexing across 16M pages studied (IndexCheckr).
+          For comparison, 37.08% of the 16 million pages in <NuxtLink to="https://indexcheckr.com/resources/google-indexing" target="_blank" class="underline underline-offset-2 hover:text-[var(--ui-text-highlighted)] transition-colors">
+            IndexCheckr's indexing study
+          </NuxtLink> were indexed.
         </p>
       </div>
 

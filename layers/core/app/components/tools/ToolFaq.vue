@@ -2,6 +2,7 @@
 interface FAQ {
   question: string
   answer: string
+  sources?: { label: string, to: string }[]
 }
 
 withDefaults(defineProps<{
@@ -70,6 +71,17 @@ withDefaults(defineProps<{
           <div class="pl-16 pr-6 pb-5 pt-1">
             <p class="text-[var(--ui-text-muted)] text-sm leading-relaxed">
               {{ faq.answer }}
+            </p>
+            <p v-if="faq.sources?.length" class="text-[var(--ui-text-muted)] text-sm mt-2">
+              {{ faq.sources.length > 1 ? 'Sources:' : 'Source:' }}
+              <template v-for="(source, i) in faq.sources" :key="source.to">
+                <template v-if="i > 0">
+                  ·
+                </template>
+                <NuxtLink :to="source.to" target="_blank" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+                  {{ source.label }}
+                </NuxtLink>
+              </template>
             </p>
           </div>
         </div>
