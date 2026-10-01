@@ -6,7 +6,7 @@ navigation:
   icon: i-simple-icons-nodedotjs
 icon: i-simple-icons-nodedotjs
 publishedAt: "2026-03-04"
-updatedAt: "2026-09-15"
+updatedAt: "2026-10-01"
 readTime: "5 min"
 keywords:
   - google indexing api node js
@@ -17,7 +17,7 @@ keywords:
 
 Use Google's `googleapis` client to send one `URL_UPDATED` notification from a server-side Node.js script. The example uses Node.js 24 and `googleapis` 181.0.0.
 
-Before running it against Google, complete the [service-account setup](/google-indexing-api-tutorial), including delegated property ownership and approval. Only eligible `JobPosting` pages or `BroadcastEvent` embedded in `VideoObject` are supported. See [Google's quickstart](https://developers.google.com/search/apis/indexing-api/v3/quickstart).
+Before running it against Google, complete the [service-account setup](/google-indexing-api-tutorial), including delegated property ownership and approval. Google supports only eligible `JobPosting` pages, or `BroadcastEvent` embedded in `VideoObject`; see [Google's quickstart](https://developers.google.com/search/apis/indexing-api/v3/quickstart).
 
 ## Install and run
 
@@ -69,9 +69,9 @@ The library reads the credential file through `GOOGLE_APPLICATION_CREDENTIALS`. 
 
 ## What the output means
 
-A successful response produces `notification-accepted`. That label reports receipt, not a crawl or an indexed page. If you store the result, keep that receipt separate from indexing status.
+A successful response produces `notification-accepted`. That label reports receipt only. It says nothing about a crawl or an indexed page, so if you store the result, keep the receipt apart from indexing status.
 
-The failure path prints the HTTP status and Google's structured reasons when available. It sets a nonzero exit code so a calling job can detect failure. Automatic retries are disabled in this small example; decide what to retry after identifying the failure.
+The failure path prints the HTTP status and, when Google returns them, its structured reasons. It also sets a nonzero exit code so a calling job can detect the failure. This small example disables automatic retries: find the cause first, then decide what to retry.
 
 A `429` does not identify the exhausted limit by itself, and a `403` is not always an ownership error. Compare the reason and message with [Google's error reference](https://developers.google.com/search/apis/indexing-api/v3/core-errors) and the [quota guide](/google-indexing-api-quota).
 
@@ -84,9 +84,9 @@ const { data } = await indexing.urlNotifications.getMetadata({ url })
 console.log(data)
 ```
 
-This is an additional snippet, not a second standalone file. Metadata describes the last notification Google received for that URL. It does not establish index status. [Google's usage guide](https://developers.google.com/search/apis/indexing-api/v3/using-api) documents the distinction.
+The snippet depends on that client and `url`, so it will not run on its own. Metadata describes the last notification Google received for that URL. It does not establish index status. [Google's usage guide](https://developers.google.com/search/apis/indexing-api/v3/using-api) documents the distinction.
 
-For index information, use the separate [URL Inspection API](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect) and its [Search Console authorization scope](https://gscdump.com/learn-google-search-console/api/authentication). Adding a metadata call to this script does not turn it into an indexing checker.
+For index information, use the separate [URL Inspection API](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect) and its [Search Console authorization scope](https://gscdump.com/learn-google-search-console/api/authentication). For a one-off check without code, the [Google index checker](/tools/google-indexing-checker) runs a `site:` search for a single URL and reports whether it returns a result.
 
 ## When you have several URLs
 

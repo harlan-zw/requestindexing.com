@@ -6,7 +6,7 @@ navigation:
   icon: i-heroicons-arrow-up-tray
 icon: i-heroicons-arrow-up-tray
 publishedAt: "2026-03-04"
-updatedAt: "2026-09-15"
+updatedAt: "2026-10-01"
 readTime: "6 min"
 keywords:
   - bulk submit urls google indexing api
@@ -17,7 +17,7 @@ keywords:
 
 For several eligible URLs, start with a sequential sender that records each response. Multipart batching is another option when reducing HTTP connections matters. In either case, Google counts the individual API requests.
 
-The Indexing API supports `JobPosting`, or `BroadcastEvent` embedded in `VideoObject`. Complete [the single-request setup](/google-indexing-api-tutorial) and check your project's approved allowance before sending a list. Google describes the default quota as onboarding and testing capacity in its [approval documentation](https://developers.google.com/search/apis/indexing-api/v3/quota-pricing).
+The Indexing API supports `JobPosting`, or `BroadcastEvent` embedded in `VideoObject`. Complete [the single-request setup](/google-indexing-api-tutorial) and check your project's approved quota before sending a list. Google describes the default quota as onboarding and testing capacity in its [approval documentation](https://developers.google.com/search/apis/indexing-api/v3/quota-pricing).
 
 ## Start with separate requests
 
@@ -74,7 +74,7 @@ for (const url of urls) {
 node submit-many.mjs urls.txt
 ```
 
-The loop continues after a failure so each input receives a result. For a large job, stop when a shared access or quota problem affects the remaining URLs. Diagnose the cause before retrying. Automatic retries are disabled. You must plan shared quota accounting separately.
+The loop keeps going after a failure, so every input gets a result. On a large job, stop the run when a shared access or quota problem affects the remaining URLs, and diagnose the cause before you retry. The script disables automatic retries and keeps no shared quota count; plan that accounting separately.
 
 ## Multipart batches use a different wire format
 
@@ -112,6 +112,6 @@ For a synthetic example, job 42 receives `200` while job 43 receives a quota err
 
 Do not depend on input order to predict which requests consume the remaining quota. Inspect each response and retain its URL or correlation identifier. The sequential example's intercepted test includes one success and one quota failure; it checks those results stay distinct.
 
-Before scaling up, decide how all workers sharing a Google Cloud project will account for requests. A counter inside one script misses other workers and resets when the process restarts. The [quota guide](/google-indexing-api-quota) separates project limits, reset times, and tool-specific allowances.
+Before scaling up, decide how all workers sharing a Google Cloud project will account for requests. A counter inside one script misses other workers and resets when the process restarts. The [quota guide](/google-indexing-api-quota) separates project limits, reset times, and tool-specific limits.
 
-The executable example was checked with Node.js 24.18.0 and intercepted Google client requests. No authenticated submissions were made. A successful notification still does not prove crawling or indexing.
+The executable example was checked with Node.js 24.18.0 and intercepted Google client requests, without any authenticated submission. A successful notification still does not prove crawling or indexing. To see which URLs Google returns in search later, paste up to 50 of them into the [bulk indexing checker](/tools/bulk-indexing-checker), which runs a `site:` search for each one.

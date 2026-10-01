@@ -9,12 +9,12 @@ Read [COPY](../../COPY.md), [SOURCES](../../SOURCES.md), [VERIFIED-CLAIMS](../..
 - Reader: JavaScript developer with reviewed prerequisites.
 - Question: How do I notify Google from Node.js?
 - Outcome: Run a small scoped client and interpret its result.
-- Claim IDs: GOOGLE-01 through GOOGLE-10. Source dates and qualifications remain in the shared ledger.
+- Claim IDs: GOOGLE-01 through GOOGLE-10, PRODUCT-06. Source dates and qualifications remain in the shared ledger.
 - Search evidence: no current measured demand. NuxtSEO unavailable; locale/Site unresolved. Old research is discovery only.
 - Contribution: A small runnable Node.js client with captured mock responses demonstrates payload and error interpretation without claiming live Google access.
 - Progressive outline: Prerequisites; current library installation; one eligible URL example; metadata distinction; structured failure handling; link bulk workflow.
 - Exclusions: unsupported content efficacy, ranking promises, undocumented detection signals, invented tests, unrelated roadmap, and unverified pricing.
-- Related articles, only at a natural decision: google-indexing-api-tutorial, bulk-submit-urls-google-indexing-api.
+- Related articles, only at a natural decision: google-indexing-api-tutorial, bulk-submit-urls-google-indexing-api, /tools/google-indexing-checker.
 - Navigation: Google Indexing Guides; retain current route. Do not add Markdown H1 beneath the rendered title.
 - Dates: preserve publishedAt. Set updatedAt only after actual rewrite and review.
 - Visual plan: No screenshot required for this decision-focused article. Add only if a real control/result materially clarifies the task.
@@ -67,3 +67,17 @@ Structural pass: kept the common task first; removed repeated conclusions and ed
 Meaning recheck: claim scopes, URLs, dates, examples and execution limitations preserved. Vendor mechanism uncertainty and per-user tool denominator retained. Executable code unchanged. Independent humanized review was requested at this stage and subsequently approved.
 
 Writer mobile390 check after humanization: oneH1, document width390, no overflow. Full-page screenshot inspected, including wrapped code or comparison table. Private screenshot ri-batch-google-indexing-api-node-js.png; lead subsequently completed the collection route and viewport checks.
+
+## History, 1 October 2026: Humanize and internal-link pass
+
+Writer: Claude agent, branch `docs/humanize-guides`, base Git revision `cebca00`. Factual scope unchanged. No code fence, figure, publishedAt or correction note changed. updatedAt set to 2026-10-01.
+Link targets come from the closed list of live routes. Google's retained URL Inspection evidence, as of 30 September 2026, reports the tools, comparisons and Node.js routes as not indexed, so this pass links them where the reader's next question lands there.
+Surface pass:
+- 'Only eligible `JobPosting` pages or ... are supported.' → 'Google supports only eligible `JobPosting` pages, or ...'. Names the actor.
+- 'That label reports receipt, not a crawl or an indexed page.' → 'That label reports receipt only. It says nothing about a crawl or an indexed page'. Removes the X-not-Y contrast.
+- 'Automatic retries are disabled in this small example' → 'This small example disables automatic retries'.
+- 'This is an additional snippet, not a second standalone file.' → 'The snippet depends on that client and `url`, so it will not run on its own.'
+Structural pass: removed 'Adding a metadata call to this script does not turn it into an indexing checker.', which repeated the paragraph above. A pointer to a check without code replaces it.
+Internal links added:
+- /tools/google-indexing-checker, anchor 'Google index checker'. PRODUCT-06.
+Meaning recheck: versions, credential handling, receipt versus indexing, failure output, metadata meaning and execution limits are unchanged. The executable fences are byte-identical, so the earlier harness evidence still applies to them.

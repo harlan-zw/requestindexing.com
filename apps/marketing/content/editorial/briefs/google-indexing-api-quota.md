@@ -14,7 +14,7 @@ Read [COPY](../../COPY.md), [SOURCES](../../SOURCES.md), [VERIFIED-CLAIMS](../..
 - Contribution: A ten-notification example shows why one HTTP batch still uses ten project requests, while app and Google reset clocks stay separate.
 - Progressive outline: Identify interface; quota table scoped to project; Pacific reset example with timezone caveat; approval form; diagnose reason; batching arithmetic; no invented failure charging.
 - Exclusions: unsupported content efficacy, ranking promises, undocumented detection signals, invented tests, unrelated roadmap, and unverified pricing.
-- Related articles, only at a natural decision: bulk-submit-urls-google-indexing-api, google-indexing-api-tutorial.
+- Related articles, only at a natural decision: bulk-submit-urls-google-indexing-api, google-indexing-api-tutorial, google-indexing-api-node-js, /comparisons/vs-indexly.
 - Navigation: Google Indexing Guides; retain current route. Do not add Markdown H1 beneath the rendered title.
 - Dates: preserve publishedAt. Set updatedAt only after actual rewrite and review.
 - Visual plan: No screenshot required for this decision-focused article. Add only if a real control/result materially clarifies the task.
@@ -54,3 +54,17 @@ Structural pass: kept the common task first; removed repeated conclusions and ed
 - 'This guide does not establish whether each possible failure consumes quota.' → 'The sources checked here do not establish a charging rule for every possible failure.'
 - "Likewise, a script's local counter only knows about its own run." → "A script's local counter only knows about its own run."
 Meaning recheck: claim scopes, URLs, dates, examples and execution limitations preserved. Vendor mechanism uncertainty and per-user tool denominator retained. Executable code unchanged. Independent humanized review was requested at this stage and subsequently approved.
+
+## History, 1 October 2026: Humanize and internal-link pass
+
+Writer: Claude agent, branch `docs/humanize-guides`, base Git revision `cebca00`. Factual scope unchanged. No code fence, figure, publishedAt or correction note changed. updatedAt set to 2026-10-01.
+Link targets come from the closed list of live routes. Google's retained URL Inspection evidence, as of 30 September 2026, reports the tools, comparisons and Node.js routes as not indexed, so this pass links them where the reader's next question lands there.
+Surface pass:
+- 'allowance' → 'quota' for Google's limits, and → 'limit' for a tool's own limit, in the meta description and five prose places. Allowance collides with the glossary's Free allowance. The dated correction note keeps its original wording.
+- 'Batching reduces connection overhead; it does not multiply your publish allowance.' → 'Batching saves HTTP connections. Your publish quota stays the same.' Removes the X-not-Y contrast.
+- "Google's core errors reference is the starting point." → "Start with Google's core errors reference."
+Structural pass: merged two sentences that both said no charging rule is established into one. The error section now points to the example that prints the three fields it asks the reader to read. The tool-limit section ends with one sentence on checking both limits when comparing tools.
+Internal links added:
+- /google-indexing-api-node-js, anchor 'Node.js example'.
+- /comparisons/vs-indexly, anchor 'compare Request Indexing with Indexly'.
+Meaning recheck: quota numbers, Pacific reset, batch arithmetic, approval and revocation warning, error diagnosis and the per-user app limit (PRODUCT-03) are unchanged.

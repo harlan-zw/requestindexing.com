@@ -9,12 +9,12 @@ Read [COPY](../../COPY.md), [SOURCES](../../SOURCES.md), [VERIFIED-CLAIMS](../..
 - Reader: Developer new to Google Cloud.
 - Question: How do I send the first eligible notification?
 - Outcome: Configure service-account access and understand a first response.
-- Claim IDs: GOOGLE-01 through GOOGLE-07, GOOGLE-10. Source dates and qualifications remain in the shared ledger.
+- Claim IDs: GOOGLE-01 through GOOGLE-07, GOOGLE-10, GOOGLE-11, PRODUCT-06. Source dates and qualifications remain in the shared ledger.
 - Search evidence: no current measured demand. NuxtSEO unavailable; locale/Site unresolved. Old research is discovery only.
 - Contribution: One eligible job URL flows from delegated ownership through a scoped request into a carefully interpreted response.
 - Progressive outline: Eligibility and approval; Cloud project/API; service account; delegated property owner; scoped auth; first notification; response and troubleshooting.
 - Exclusions: unsupported content efficacy, ranking promises, undocumented detection signals, invented tests, unrelated roadmap, and unverified pricing.
-- Related articles, only at a natural decision: google-indexing-api-quota, google-indexing-api-node-js.
+- Related articles, only at a natural decision: google-indexing-api-quota, google-indexing-api-node-js, /tools/google-indexing-checker.
 - Navigation: Google Indexing Guides; retain current route. Do not add Markdown H1 beneath the rendered title.
 - Dates: preserve publishedAt. Set updatedAt only after actual rewrite and review.
 - Visual plan: Cloud API status, service-account form, and Search Console owner-permission detail captured. Coordinator owns capture.
@@ -98,3 +98,17 @@ Meaning check: all menu actions, final Create step, download behavior, and crede
 Final additional-capture review: sources_reviewer accepted factual meaning, privacy, and desktop/mobile renders at 95/100. Root accepted the review.
 Article SHA256: `6120e380c26472f32073ca4b5716b91eaf921018ea00a28a9e18418c60aa78c8`.
 Build and focused ESLint pass. Both new exports preserve source pixels. Keyboard full-size links and 390px overflow checks pass.
+
+## History, 1 October 2026: Humanize and internal-link pass
+
+Writer: Claude agent, branch `docs/humanize-guides`, base Git revision `cebca00`. Factual scope unchanged. No code fence, figure, publishedAt or correction note changed. updatedAt set to 2026-10-01.
+Link targets come from the closed list of live routes. Google's retained URL Inspection evidence, as of 30 September 2026, reports the tools, comparisons and Node.js routes as not indexed, so this pass links them where the reader's next question lands there.
+Surface pass:
+- 'Additional approval is required for usage and resource provisioning' → 'Usage and resource provisioning need additional approval'.
+- 'Check those together: ... require different actions.' → 'Read them together, because ... need different fixes.'
+- 'it does not repeatedly submit' → 'it will not keep submitting'.
+- Anchor 'a different workflow' → 'URL Inspection or a sitemap instead'.
+Structural pass: the response section gains one sentence on how to check the listing later: URL Inspection first (GOOGLE-11), then the Google index checker.
+Internal links added:
+- /tools/google-indexing-checker, anchor 'Google index checker'. PRODUCT-06.
+Meaning recheck: setup steps, figures and captions, credential storage, Search Console ownership, receipt versus indexing and execution limits are unchanged.
