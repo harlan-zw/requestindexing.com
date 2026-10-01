@@ -108,6 +108,24 @@ jobs:
 
       - run: pnpm deploy
 
+      # Sentry shows "No deploys found" until a deploy is recorded against the
+      # release, so already-fixed checks cannot cite a production deploy. The
+      # build names the release `head_sha`; this marker must name the same
+      # version. `environment` is what records the deploy. `set_commits` is
+      # skipped because this checkout is shallow (depth 1): `--auto` cannot
+      # find the previous release commit. `SENTRY_AUTH_TOKEN` comes from the
+      # job-level env above.
+      - name: Record the Sentry deploy
+        timeout-minutes: 5
+        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
+        with:
+          environment: production
+          release: ${{ github.event.workflow_run.head_sha || github.sha }}
+          projects: request-indexing
+          set_commits: skip
+        env:
+          SENTRY_ORG: harlan-zw
+
       # Reuse the deploy build. Reporting errors must not change deployment status.
       - name: Report Nuxt DX budget
         id: dx_budget
