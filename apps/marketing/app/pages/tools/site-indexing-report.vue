@@ -2,33 +2,33 @@
 const faqs = [
   {
     question: 'How do I check if Google has indexed my entire site?',
-    answer: 'You can use the site: search operator (e.g., site:example.com) to see an estimated count of indexed pages, check Google Search Console\'s Page Indexing Report for exact numbers, or use this tool for a comprehensive domain-level report.',
+    answer: 'A site: search (for example, site:example.com) gives an estimated count of indexed pages. Search Console\'s Page Indexing report gives exact numbers. This tool gives you a domain-level report without signing in.',
   },
   {
     question: 'Why is Google not indexing my website?',
-    answer: 'Common causes include: robots.txt blocking crawlers, noindex tags on pages, low content quality triggering "Crawled - currently not indexed" status, duplicate content, slow page speed, missing sitemaps, and low domain authority. Google\'s Gary Illyes has stated that "the general quality of the site" significantly affects how many pages get indexed.',
+    answer: 'Common causes: robots.txt blocking crawlers, noindex tags, low content quality that leads to "Crawled - currently not indexed", duplicate content, slow pages, missing sitemaps, and low domain authority. Google\'s Gary Illyes has said "the general quality of the site" strongly affects how many pages get indexed.',
   },
   {
     question: 'How many pages should be indexed?',
-    answer: 'There\'s no universal target. A study of 16 million pages found that only 37.08% achieve full indexing. Focus on quality over quantity — every indexed page should serve a purpose and provide unique value. Low-quality pages can actually hurt your overall indexing rate.',
+    answer: 'There is no universal target. A study of 16 million pages found only 37.08% were fully indexed. Every page you want indexed should serve a purpose and offer something unique, because low-quality pages can drag down your overall indexing rate.',
   },
   {
     question: 'Does site speed affect indexing?',
-    answer: 'Yes. Google completed its mobile-first indexing transition in late 2024. Pages that are slow to render or have poor Core Web Vitals may be crawled less frequently. Additionally, 58% of pages on large retail sites are never crawled by Googlebot according to Botify.',
+    answer: 'Yes. Google completed its move to mobile-first indexing in late 2024. Pages that render slowly or have poor Core Web Vitals may be crawled less often. Botify found that Googlebot never crawls 58% of pages on large retail sites.',
   },
   {
     question: 'How long does it take Google to index a new site?',
-    answer: 'According to IndexCheckr\'s study of 16M pages, the average time to first indexing is 27.4 days. New sites with low authority may wait significantly longer. Submitting via Google\'s Indexing API can reduce discovery-to-index time to hours.',
+    answer: 'IndexCheckr\'s study of 16 million pages found an average of 27.4 days to first indexing. New sites with low authority may wait much longer. Google\'s Indexing API covers job posting and livestream pages only, and a successful notification means Google may recrawl the URL soon, with no timeline.',
   },
   {
     question: 'What is a good index health score?',
-    answer: 'Our health score is based on indexed pages, organic traffic, and ranking keywords. A score above 80 indicates strong indexing health. Below 50 suggests significant issues that need attention. Use the recommendations provided to improve your score.',
+    answer: 'The health score combines indexed pages, organic traffic, and ranking keywords. 80 or above means indexing looks healthy. Below 50 points to real problems. The recommendations under the score say where to start.',
   },
 ]
 
 useToolSeo({
   title: 'Site Indexing Report Tool',
-  description: 'Get a free indexing health report for any domain: estimated indexed pages, organic traffic, ranking keywords, and tips to improve Google indexing.',
+  description: 'Free indexing report for any domain: estimated indexed pages, organic traffic, ranking keywords, and what to fix first for Google indexing.',
   faqs,
 })
 
@@ -104,7 +104,7 @@ const recommendationColor = {
         <span class="text-amber-600 dark:text-amber-400">Report</span>
       </h1>
       <p class="text-base sm:text-lg text-[var(--ui-text-muted)] max-w-xl mx-auto">
-        Get a full indexing health report for any domain. See indexed pages, organic metrics, and actionable recommendations.
+        Get an indexing report for any domain: estimated indexed pages, organic traffic, ranking keywords, and recommendations.
       </p>
     </div>
 
@@ -272,7 +272,7 @@ const recommendationColor = {
               Improve Your Indexing
             </h3>
             <p class="text-sm text-[var(--ui-text-muted)] mb-3">
-              Connect your Google Search Console to Request Indexing for detailed coverage data and one-click URL submission via the Indexing API.
+              Connect Google Search Console to Request Indexing for per-URL coverage data and one-click Indexing API submission for eligible pages.
             </p>
             <div class="flex flex-wrap gap-3">
               <UButton to="/pro/onboarding" color="primary" trailing-icon="i-heroicons-arrow-right">
@@ -312,7 +312,7 @@ const recommendationColor = {
                 <strong>Duplicate elimination:</strong> "We crawl the page and then we decide to not index it because there's already a version of that or an extremely similar version available in our index."
               </li>
               <li>
-                <strong>Crawl budget:</strong> 58% of pages on large retail sites are never crawled (Botify). Though Gary Illyes says 90% of sites don't need to worry about it.
+                <strong>Crawl budget:</strong> 58% of pages on large retail sites are never crawled (Botify). Gary Illyes says 90% of sites do not need to worry about it.
               </li>
             </ul>
           </div>
@@ -339,6 +339,13 @@ const recommendationColor = {
             </ul>
           </div>
         </div>
+        <p class="text-sm text-[var(--ui-text-muted)] mt-6">
+          Missing pages you expected in Google? Check those URLs with the <NuxtLink to="/tools/bulk-indexing-checker" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+            bulk indexing checker
+          </NuxtLink>, then <NuxtLink to="/indexing-api-for-blog-posts" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+            request indexing with URL Inspection or a sitemap
+          </NuxtLink>.
+        </p>
       </div>
     </div>
 
@@ -353,15 +360,15 @@ const recommendationColor = {
       <div class="flex flex-wrap justify-center gap-2">
         <UButton to="/tools/google-indexing-checker" variant="ghost" size="sm">
           <UIcon name="i-heroicons-magnifying-glass" class="size-4 mr-1" />
-          Single URL Check
+          Google Index Checker
         </UButton>
         <UButton to="/tools/bulk-indexing-checker" variant="ghost" size="sm">
           <UIcon name="i-heroicons-queue-list" class="size-4 mr-1" />
-          Bulk Checker
+          Bulk Indexing Checker
         </UButton>
         <UButton to="/guides" variant="ghost" size="sm">
           <UIcon name="i-heroicons-book-open" class="size-4 mr-1" />
-          Indexing Guides
+          Google Indexing API Guides
         </UButton>
       </div>
     </div>

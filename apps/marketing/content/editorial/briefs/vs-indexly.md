@@ -53,3 +53,20 @@ Structural pass: kept the common task first; removed repeated conclusions and ed
 - 'Choose based on the work you need to do, rather than an assumed difference in indexing speed.' → 'Start with the functions your team needs.'
 - 'We omit numeric prices because the inspected pages did not establish an ISO currency consistently.' → 'Check the billing interval and included features before choosing a plan.'
 Meaning recheck: claim scopes, URLs, dates, examples and execution limitations preserved. Vendor mechanism uncertainty and per-user tool denominator retained. Executable code unchanged. Independent humanized review was requested at this stage and subsequently approved.
+
+## History, 1 October 2026: Humanize and internal links
+
+Writer: agent sweep over the comparisons and public marketing pages, in one pull request with the home page CTR fix.
+Base: `origin/main` at `cebca00`. No vendor page was re-checked; every "checked 15 September 2026" statement keeps its date and scope.
+`updatedAt` moved to 2026-10-01 because the prose changed. There is no `publishedAt` in the front matter to preserve.
+Surface pass: "This comparison checks ... It does not report authenticated tests" became first person ("We compared ... We did not sign in to test either service"). "functions" became "features" throughout, one word for one thing. Three "does not establish" hedges became plain verbs ("did not confirm", "does not show").
+Structural pass:
+- 'Request Indexing is an open-source option for a narrower workflow: viewing indexing information and sending Google Indexing API notifications.' → 'Request Indexing covers less ground. It shows indexing information, sends Google Indexing API notifications, and publishes its source.'
+- 'That is an application policy, not evidence that Google indexed the URL.' → 'That window is an application policy. It tells you nothing about whether Google indexed the URL.' Removes a "not X" contrast.
+- 'Check which plan includes the functions you need; a platform-wide feature list does not establish availability on every plan.' → 'The feature list describes the whole platform, so check which plan includes each feature you need.'
+- 'A vendor's support for a CMS does not establish which submission mechanism it uses or expand Google's API scope.' → two sentences: what CMS support shows, then what it cannot show or change.
+Internal links:
+- Added: table row "Will a notification prove indexing?" → `/tools/google-indexing-checker`, anchor "Google Index Checker". The row already told the reader to check index status separately; the link gives the step.
+- Anchor changes: `/indexing-api-for-blog-posts` "the supported alternatives" → "the supported alternatives for blog posts"; `/google-indexing-api` "API guide" → "Indexing API guide"; `/google-indexing-api-quota` keeps "the quota guide".
+Meaning recheck: claim IDs, vendor URLs, the 15 September 2026 check dates, the correction note, and every qualification kept. No new claim beyond VERIFIED-CLAIMS.md. Google Index Checker and bulk indexing checker descriptions match their implementations (Google search results through DataForSEO, 50 URL cap).
+Independent sources_reviewer approval of this revision is not recorded here. The pull request carries the review.

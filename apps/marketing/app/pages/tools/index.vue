@@ -21,7 +21,7 @@ useSchemaOrg([
 const tools = [
   {
     title: 'Google Index Checker',
-    description: 'Check if a single URL is indexed by Google. Instantly see whether your page appears in search results.',
+    description: 'Check whether Google has indexed one URL. The checker looks for the page in Google search results.',
     icon: 'i-heroicons-magnifying-glass',
     to: '/tools/google-indexing-checker',
     tags: ['Single URL', 'Instant', 'No signup'],
@@ -29,14 +29,14 @@ const tools = [
   },
   {
     title: 'Bulk Indexing Checker',
-    description: 'Audit up to 50 URLs at once. Paste a list or connect your sitemap, then export the report as CSV.',
+    description: 'Check up to 50 URLs at once. Paste a list or give it your sitemap, then export the results as CSV.',
     icon: 'i-heroicons-queue-list',
     to: '/tools/bulk-indexing-checker',
     tags: ['Bulk', 'Sitemap', 'CSV'],
   },
   {
     title: 'Site Indexing Report',
-    description: 'Full indexing health report for any domain. Estimated indexed pages, keyword coverage, and actionable recommendations.',
+    description: 'An indexing report for any domain: estimated indexed pages, ranking keywords, and recommendations.',
     icon: 'i-heroicons-document-chart-bar',
     to: '/tools/site-indexing-report',
     tags: ['Domain audit', 'Health score', 'Recommendations'],
@@ -59,7 +59,7 @@ const tools = [
             <span class="block italic text-primary">without the signup.</span>
           </h1>
           <p class="text-toned text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-            Three single-purpose tools to check, audit, and diagnose your Google indexing. No account, no email, no tracking — just answers.
+            Three single-purpose tools to check, audit, and diagnose your Google indexing. No account, no email, no tracking.
           </p>
         </section>
       </UContainer>
@@ -152,7 +152,7 @@ const tools = [
               Spot-check URLs
             </div>
             <p class="text-muted text-sm leading-relaxed">
-              Start with the single-URL checker. Confirm indexed status in seconds.
+              Start with the single-URL checker to see whether one page is in Google.
             </p>
           </div>
           <div>
@@ -163,7 +163,7 @@ const tools = [
               Audit your site
             </div>
             <p class="text-muted text-sm leading-relaxed">
-              Run bulk + site report to see where coverage is leaking across the whole property.
+              Run the bulk checker and the site report to find where coverage leaks across the property.
             </p>
           </div>
           <div>
@@ -174,7 +174,9 @@ const tools = [
               Automate submission
             </div>
             <p class="text-muted text-sm leading-relaxed">
-              When spot-checks aren't enough, sign up and push URLs through the Indexing API.
+              When spot-checks stop being enough, sign up and submit job posting or livestream URLs through the Indexing API. For other pages, <NuxtLink to="/indexing-api-for-blog-posts" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+                request indexing with URL Inspection or a sitemap
+              </NuxtLink>.
             </p>
           </div>
         </div>
@@ -185,7 +187,7 @@ const tools = [
     <UPageSection :ui="{ container: 'max-w-4xl' }">
       <UPageCTA
         title="Need to fix indexing at scale?"
-        description="Request Indexing submits your pages directly to Google's Indexing API. Free, open-source, and set up in under a minute."
+        description="Request Indexing sends your eligible pages straight to Google's Indexing API. Free, open-source, and set up in under a minute."
         variant="subtle"
         :links="[
           { label: 'Get Started Free', to: '/pro/onboarding', color: 'primary', size: 'xl', trailingIcon: 'i-heroicons-arrow-right' },

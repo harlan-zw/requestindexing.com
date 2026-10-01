@@ -60,6 +60,10 @@ const links = [
     label: 'Resources',
     children: [
       {
+        label: 'Comparisons',
+        to: '/comparisons',
+      },
+      {
         label: 'Docs',
         to: 'https://github.com/harlan-zw/requestindexing.com',
         target: '_blank',

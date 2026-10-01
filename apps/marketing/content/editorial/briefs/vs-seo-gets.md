@@ -57,3 +57,20 @@ Structural pass: kept the common task first; removed repeated conclusions and ed
 Meaning recheck: claim scopes, URLs, dates, examples and execution limitations preserved. Vendor mechanism uncertainty and per-user tool denominator retained. Executable code unchanged. Independent humanized review was requested at this stage and subsequently approved.
 
 Writer mobile390 check after humanization: oneH1, document width390, no overflow. Full-page screenshot inspected, including wrapped code or comparison table. Private screenshot ri-batch-vs-seo-gets.png; lead subsequently completed the collection route and viewport checks.
+
+## History, 1 October 2026: Humanize and internal links
+
+Writer: agent sweep over the comparisons and public marketing pages, in one pull request with the home page CTR fix.
+Base: `origin/main` at `cebca00`. No vendor page was re-checked; every "checked 15 September 2026" statement keeps its date and scope.
+`updatedAt` moved to 2026-10-01 because the prose changed. There is no `publishedAt` in the front matter to preserve.
+Surface pass: "worth considering" → "worth a look"; "Five-year storage belongs to an add-on; it is not included merely because you connected a property" → "Five-year storage is an add-on, so connecting a property does not include it". "examine" → "look at". "does not establish" → "did not confirm".
+Structural pass:
+- 'The first difference to check is what happens after you click the request button.' → 'Start with what happens after you click each product's request button.'
+- 'No authenticated service comparison was performed.' → 'We did not run a signed-in comparison of the two services.' Names the actor.
+- 'Use the [blog-post guide] to choose the interface before comparing convenience.' → 'Read [which Google interface fits a blog post] before you compare convenience.'
+- 'For teams reviewing several properties ...' → 'If you manage several properties ...' Direct address.
+Internal links:
+- No new target. The page already linked the three guides it relies on: `/indexing-api-for-blog-posts`, `/google-indexing-api-quota`, `/google-indexing-api`.
+- Anchor changes: "blog-post guide" → "which Google interface fits a blog post"; "the quota guide" → "which quota applies to you"; "API overview" → "Indexing API guide".
+Meaning recheck: claim IDs, vendor URLs, the 15 September 2026 check dates, the correction note, and every qualification kept. No new claim beyond VERIFIED-CLAIMS.md. Google Index Checker and bulk indexing checker descriptions match their implementations (Google search results through DataForSEO, 50 URL cap).
+Independent sources_reviewer approval of this revision is not recorded here. The pull request carries the review.

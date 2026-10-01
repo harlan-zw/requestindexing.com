@@ -2,29 +2,29 @@
 const faqs = [
   {
     question: 'How do I check if Google indexed my page?',
-    answer: 'You can use the site: search operator (e.g., site:example.com/page), Google Search Console\'s URL Inspection tool, or this free checker. The site: operator shows if Google has the page in its index, while URL Inspection gives detailed coverage state information.',
+    answer: 'Use the site: search operator (for example, site:example.com/page), Search Console\'s URL Inspection tool, or this free checker. The site: operator shows whether Google has the page in its index. URL Inspection adds the detailed coverage state.',
   },
   {
     question: 'Why is my page not showing in Google?',
-    answer: 'Common reasons include: the page is too new (average indexing takes 27.4 days), low content quality causing "Crawled - currently not indexed" status, robots.txt blocking crawlers, a noindex tag, duplicate content, or low domain authority. Use this checker to confirm, then follow our fix guides.',
+    answer: 'Common reasons: the page is too new (indexing takes 27.4 days on average), low content quality that leads to "Crawled - currently not indexed", robots.txt blocking crawlers, a noindex tag, duplicate content, or low domain authority. Confirm the status with this checker, then fix the cause and request indexing in URL Inspection.',
   },
   {
     question: 'How long does Google take to index a new page?',
-    answer: 'According to a study of 16 million pages by IndexCheckr, the average time to index is 27.4 days. High-authority sites may see indexing within hours, while new or low-authority sites can wait weeks or months. Using the Google Indexing API can reduce this to hours.',
+    answer: 'IndexCheckr studied 16 million pages and found an average of 27.4 days to index. High-authority sites may see indexing within hours, while new or low-authority sites can wait weeks or months. The Google Indexing API only covers job posting and livestream pages, and a successful notification means Google may recrawl the URL soon. It sets no timeline.',
   },
   {
     question: 'What\'s the difference between "Discovered" and "Crawled" not indexed?',
-    answer: '"Discovered - currently not indexed" means Google knows your URL exists but hasn\'t crawled it yet, often due to crawl budget or low predicted quality. "Crawled - currently not indexed" means Google visited the page but decided not to index it — as Gary Illyes explained, this is often due to "dupe elimination" or "the general quality of the site."',
+    answer: '"Discovered - currently not indexed" means Google knows your URL exists but has not crawled it yet, often because of crawl budget or low predicted quality. "Crawled - currently not indexed" means Google visited the page and chose not to index it. Gary Illyes has said this is often down to "dupe elimination" or "the general quality of the site."',
   },
   {
     question: 'How does this tool check indexing status?',
-    answer: 'This tool uses the site: search operator via an API to check if Google has your URL in its search results. If your URL appears in the results, it\'s indexed. For more detailed status information (like "Discovered" vs "Crawled" not indexed), connect your Google Search Console account.',
+    answer: 'This tool runs a site: search through an API to see whether your URL is in Google\'s search results. If it appears, it is indexed. For the detailed status, such as "Discovered" or "Crawled" but not indexed, connect your Google Search Console account.',
   },
 ]
 
 useToolSeo({
   title: 'Google Index Checker',
-  description: 'Free tool to check if your URL is indexed by Google. Instantly verify your page appears in search results and get tips to fix indexing issues.',
+  description: 'Free tool to check whether Google has indexed your URL. See if the page appears in search results, and what to do if it does not.',
   faqs,
 })
 
@@ -73,7 +73,7 @@ function checkIndex() {
         <span class="text-primary">Checker</span>
       </h1>
       <p class="text-base sm:text-lg text-[var(--ui-text-muted)] max-w-xl mx-auto">
-        Check if your page is indexed by Google. Enter a URL to verify it appears in search results.
+        Is your page in Google? Enter a URL to see whether it appears in search results.
       </p>
     </div>
 
@@ -170,7 +170,7 @@ function checkIndex() {
                   Submit via Indexing API
                 </h3>
                 <p class="text-sm text-[var(--ui-text-muted)] mb-3">
-                  Request Google to index this page now using the Indexing API. Average indexing time drops from weeks to hours.
+                  Is this a job posting or livestream page? Request Indexing can send Google an Indexing API notification for it. Google decides whether to recrawl.
                 </p>
                 <UButton to="/pro/onboarding" size="sm" color="primary">
                   Get Started Free
@@ -183,13 +183,13 @@ function checkIndex() {
               <UIcon name="i-heroicons-book-open" class="size-5 text-blue-500 shrink-0 mt-0.5" />
               <div>
                 <h3 class="font-semibold text-[var(--ui-text-highlighted)] mb-1">
-                  Learn Why Pages Aren't Indexed
+                  Blog Post or Product Page?
                 </h3>
                 <p class="text-sm text-[var(--ui-text-muted)] mb-3">
-                  Understand the common causes and fixes for indexing problems.
+                  Google recommends URL Inspection for a few URLs and a sitemap for many.
                 </p>
-                <UButton to="/google-indexing-api" size="sm" variant="outline" color="neutral">
-                  Read Guide
+                <UButton to="/indexing-api-for-blog-posts" size="sm" variant="outline" color="neutral">
+                  Read the URL Inspection steps
                 </UButton>
               </div>
             </div>
@@ -204,10 +204,10 @@ function checkIndex() {
                   Check More URLs
                 </h3>
                 <p class="text-sm text-[var(--ui-text-muted)] mb-3">
-                  Audit your entire site's indexing status with our bulk checker.
+                  Check up to 50 URLs, or the first 50 in a sitemap, with the bulk checker.
                 </p>
                 <UButton to="/tools/bulk-indexing-checker" size="sm" variant="outline" color="neutral">
-                  Bulk Check
+                  Open the bulk checker
                 </UButton>
               </div>
             </div>
@@ -220,10 +220,10 @@ function checkIndex() {
                   Full Site Report
                 </h3>
                 <p class="text-sm text-[var(--ui-text-muted)] mb-3">
-                  Get a complete indexing health report for your domain.
+                  See estimated indexed pages and recommendations for the whole domain.
                 </p>
                 <UButton to="/tools/site-indexing-report" size="sm" variant="outline" color="neutral">
-                  Site Report
+                  Run a site report
                 </UButton>
               </div>
             </div>
@@ -250,11 +250,11 @@ function checkIndex() {
               The Indexing Pipeline
             </h3>
             <ol class="list-decimal list-inside space-y-1 text-[var(--ui-text-muted)]">
-              <li><strong>Discovery</strong> — Google finds your URL via sitemap or links</li>
-              <li><strong>Pre-crawl scoring</strong> — Quality prediction before visiting</li>
-              <li><strong>Crawl</strong> — Googlebot visits and renders your page</li>
-              <li><strong>Post-crawl scoring</strong> — Content quality assessment</li>
-              <li><strong>Indexation</strong> — Page added to serving index</li>
+              <li><strong>Discovery:</strong> Google finds your URL through a sitemap or links</li>
+              <li><strong>Pre-crawl scoring:</strong> Google predicts quality before it visits</li>
+              <li><strong>Crawl:</strong> Googlebot visits and renders your page</li>
+              <li><strong>Post-crawl scoring:</strong> Google assesses the content quality</li>
+              <li><strong>Indexation:</strong> the page joins the serving index</li>
             </ol>
           </div>
           <div>
@@ -269,6 +269,13 @@ function checkIndex() {
             </ul>
           </div>
         </div>
+        <p class="text-sm text-[var(--ui-text-muted)] mt-6">
+          Not indexed? For an ordinary page, <NuxtLink to="/indexing-api-for-blog-posts" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+            request indexing with URL Inspection or a sitemap
+          </NuxtLink>. For a job posting or livestream page, the <NuxtLink to="/google-indexing-api" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+            Indexing API guide
+          </NuxtLink> explains what a notification can and cannot tell you.
+        </p>
       </div>
     </div>
 
@@ -283,15 +290,15 @@ function checkIndex() {
       <div class="flex flex-wrap justify-center gap-2">
         <UButton to="/tools/bulk-indexing-checker" variant="ghost" size="sm">
           <UIcon name="i-heroicons-queue-list" class="size-4 mr-1" />
-          Bulk Checker
+          Bulk Indexing Checker
         </UButton>
         <UButton to="/tools/site-indexing-report" variant="ghost" size="sm">
           <UIcon name="i-heroicons-document-chart-bar" class="size-4 mr-1" />
-          Site Report
+          Site Indexing Report
         </UButton>
         <UButton to="/guides" variant="ghost" size="sm">
           <UIcon name="i-heroicons-book-open" class="size-4 mr-1" />
-          Indexing Guides
+          Google Indexing API Guides
         </UButton>
       </div>
     </div>

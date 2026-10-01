@@ -29,14 +29,14 @@ useSeoMeta({
 defineOgImage('Page', {
   headline: 'Guides',
   title: 'Google Indexing API Guides',
-  description: 'Tutorials, code examples, and best practices.',
+  description: 'Supported content, setup, Node.js examples, and quotas.',
 })
 
 useSchemaOrg([
   defineWebPage({
     '@type': 'CollectionPage',
     'name': 'Google Indexing API Guides',
-    'description': 'Learn how to use the Google Indexing API with step-by-step tutorials, code examples, and best practices.',
+    'description': 'Choose the supported Google indexing method, configure service-account access, and send eligible notifications with Node.js.',
   }),
 ])
 
@@ -80,6 +80,13 @@ const iconMap: Record<string, string> = {
           </template>
         </UPageCard>
       </UPageGrid>
+      <p class="text-toned max-w-3xl">
+        Want to know first whether a page is indexed? The <NuxtLink to="/tools" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+          free indexing checkers
+        </NuxtLink> answer that without an account. Choosing a tool? Read <NuxtLink to="/comparisons" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+          how Request Indexing compares with Indexly and SEO Gets
+        </NuxtLink>.
+      </p>
     </UPageSection>
   </div>
 </template>

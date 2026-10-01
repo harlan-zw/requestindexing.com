@@ -2,29 +2,29 @@
 const faqs = [
   {
     question: 'How many URLs can I check at once?',
-    answer: 'You can check up to 50 URLs at once, either by pasting them directly or by providing a sitemap URL. The tool will parse your sitemap and check each URL\'s indexing status.',
+    answer: 'Up to 50. Paste them in, or give the tool a sitemap URL and it checks the first 50 URLs it finds there.',
   },
   {
     question: 'Why are most of my pages not indexed?',
-    answer: 'According to a study of 16 million pages by IndexCheckr, 61.94% of pages are not indexed by Google. Common causes include low content quality, duplicate content, thin pages, crawl budget limitations on large sites, and low domain authority.',
+    answer: 'IndexCheckr studied 16 million pages and found 61.94% were not indexed by Google. Common causes are low content quality, duplicate content, thin pages, crawl budget limits on large sites, and low domain authority.',
   },
   {
     question: 'How do I submit all unindexed URLs to Google?',
-    answer: 'You can use Google\'s Indexing API to submit up to 200 URLs per day. The API supports batch requests of up to 100 URLs per HTTP call. Request Indexing makes this easy with a one-click interface — just connect your Google Search Console and submit.',
+    answer: 'For ordinary pages, submit a sitemap in Search Console, and use URL Inspection for a few important URLs. Google\'s Indexing API is only for job posting and livestream pages. Its default quota is 200 publish requests a day per project, and one batch call holds up to 100 requests, each counted against that quota. Request Indexing sends those notifications from its dashboard once you connect Google.',
   },
   {
     question: 'Is there a limit to indexing requests per day?',
-    answer: 'Google Search Console\'s "Request Indexing" button is limited to 10-15 URLs per day. The Indexing API has a quota of 200 publish requests per day per project, with batch requests counting each URL individually. The getMetadata endpoint allows 180 requests per minute.',
+    answer: 'Search Console\'s Request indexing button has a quota, but Google publishes no number for it, and repeating a request does not speed up crawling. The Indexing API allows 200 publish requests a day per project by default, and every request inside a batch counts. Metadata reads are limited to 180 a minute.',
   },
   {
     question: 'How long does bulk indexing take?',
-    answer: 'Natural indexing averages 27.4 days per page. Using the Google Indexing API can reduce this to hours for many pages. However, Google still applies quality filters — the API notifies Google to prioritize crawling, but doesn\'t guarantee indexing.',
+    answer: 'IndexCheckr measured an average of 27.4 days for a page to be indexed. The Indexing API covers job posting and livestream pages only. A successful notification means Google may recrawl the URL soon, and Google still applies its quality filters, so crawling and indexing are not guaranteed.',
   },
 ]
 
 useToolSeo({
   title: 'Bulk Indexing Checker Tool',
-  description: 'Check indexing status for up to 50 URLs at once. Paste URLs or provide your sitemap to audit Google index coverage in bulk. Free, no signup required.',
+  description: 'Check whether Google has indexed up to 50 URLs at once. Paste a list or give it your sitemap, then export the results. Free, no signup.',
   faqs,
 })
 
@@ -117,7 +117,7 @@ function exportCsv() {
         <span class="text-blue-600 dark:text-blue-400">Checker</span>
       </h1>
       <p class="text-base sm:text-lg text-[var(--ui-text-muted)] max-w-xl mx-auto">
-        Check indexing status for up to 50 URLs at once. Paste a list or provide your sitemap URL.
+        Check up to 50 URLs at once. Paste a list or give it your sitemap URL.
       </p>
     </div>
 
@@ -307,13 +307,13 @@ function exportCsv() {
           <UIcon name="i-heroicons-bolt" class="size-6 text-primary shrink-0 mt-0.5" />
           <div>
             <h3 class="font-semibold text-[var(--ui-text-highlighted)] mb-1">
-              {{ result.summary.notIndexed }} pages need indexing
+              {{ result.summary.notIndexed }} pages not indexed
             </h3>
             <p class="text-sm text-[var(--ui-text-muted)] mb-3">
-              Submit your unindexed pages directly to Google's Indexing API. The API can process 200 URLs per day with batch requests of up to 100.
+              Job posting or livestream pages? Request Indexing can send Google Indexing API notifications for them, up to Google's default 200 publish requests a day. For other pages, submit a sitemap in Search Console.
             </p>
             <UButton to="/pro/onboarding" color="primary" trailing-icon="i-heroicons-arrow-right">
-              Submit to Google Now
+              Get Started Free
             </UButton>
           </div>
         </div>
@@ -324,6 +324,27 @@ function exportCsv() {
     <div v-if="!result && !loading && !error" class="text-center py-12 text-[var(--ui-text-muted)]">
       <UIcon name="i-heroicons-queue-list" class="size-12 mx-auto mb-3 opacity-30" />
       <p>Paste URLs or enter a sitemap to check bulk indexing status</p>
+    </div>
+
+    <!-- Reading the result -->
+    <div class="max-w-4xl mt-12">
+      <div class="p-6 rounded-xl bg-[var(--ui-bg-elevated)] border border-[var(--ui-border)]">
+        <h2 class="text-lg font-semibold text-[var(--ui-text-highlighted)] mb-3">
+          Reading Your Results
+        </h2>
+        <p class="text-sm text-[var(--ui-text-muted)] mb-3">
+          Indexed means the URL appeared in Google search results when the tool checked. For URLs that did not, the next step depends on the page. Google recommends a sitemap for many ordinary pages, and <NuxtLink to="/indexing-api-for-blog-posts" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+            URL Inspection for a few important ones
+          </NuxtLink>.
+        </p>
+        <p class="text-sm text-[var(--ui-text-muted)]">
+          Job posting and livestream URLs can go through the Indexing API instead. The <NuxtLink to="/bulk-submit-urls-google-indexing-api" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+            bulk submission guide
+          </NuxtLink> shows how to send them and keep a result for each URL, and the <NuxtLink to="/google-indexing-api-quota" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+            quota guide
+          </NuxtLink> covers the daily limits.
+        </p>
+      </div>
     </div>
 
     <!-- FAQ -->
@@ -337,15 +358,15 @@ function exportCsv() {
       <div class="flex flex-wrap justify-center gap-2">
         <UButton to="/tools/google-indexing-checker" variant="ghost" size="sm">
           <UIcon name="i-heroicons-magnifying-glass" class="size-4 mr-1" />
-          Single URL Check
+          Google Index Checker
         </UButton>
         <UButton to="/tools/site-indexing-report" variant="ghost" size="sm">
           <UIcon name="i-heroicons-document-chart-bar" class="size-4 mr-1" />
-          Site Report
+          Site Indexing Report
         </UButton>
-        <UButton to="/bulk-submit-urls-google-indexing-api" variant="ghost" size="sm">
+        <UButton to="/guides" variant="ghost" size="sm">
           <UIcon name="i-heroicons-book-open" class="size-4 mr-1" />
-          Bulk Submission Guide
+          Google Indexing API Guides
         </UButton>
       </div>
     </div>

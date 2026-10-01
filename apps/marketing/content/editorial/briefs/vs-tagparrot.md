@@ -53,3 +53,21 @@ Structural pass: kept the common task first; removed repeated conclusions and ed
 - 'A notification queue, an indexing-status report, and a manual Search Console request are different workflows.' → 'Do you need to send notifications or find out which pages are indexed?'
 - 'Rebuild from information you control' → 'Plan the replacement'
 Meaning recheck: claim scopes, URLs, dates, examples and execution limitations preserved. Vendor mechanism uncertainty and per-user tool denominator retained. Executable code unchanged. Independent humanized review was requested at this stage and subsequently approved.
+
+## History, 1 October 2026: Humanize and internal links
+
+Writer: agent sweep over the comparisons and public marketing pages, in one pull request with the home page CTR fix.
+Base: `origin/main` at `cebca00`. No vendor page was re-checked; every "checked 15 September 2026" statement keeps its date and scope.
+`updatedAt` moved to 2026-10-01 because the prose changed. There is no `publishedAt` in the front matter to preserve.
+Surface pass: "does not expand its supported content" → "does not widen what the API supports"; "Make a list of" → "List"; "Do not assume Tag Parrot account exports remain available" → "Do not count on Tag Parrot account exports still being available"; "An old submission record does not establish their current status" → "An old submission record says nothing about their status today".
+Structural pass:
+- 'Do you need to send notifications or find out which pages are indexed?' → 'Do you need to send notifications, or to find out which pages are indexed?'
+- 'You must be an owner or full user of the property to request indexing manually.' → condition first: 'To request indexing by hand, you must be an owner or full user of the property.'
+- 'Request Indexing's [implemented notification endpoint] provides a direct Google Indexing API path. It checks recent notification metadata and applies an app limit before sending.' → 'sends Google Indexing API notifications directly. Before it sends one, it checks recent notification metadata and applies its own app limit.'
+- 'Neither option establishes that a URL will be indexed.' → 'Neither option means the URL will be indexed.'
+Internal links:
+- Added: `/google-indexing-api-quota`, anchor "quota guide", after the app limit sentence. The brief's related list names only the blog-post guide and the tutorial; the quota guide is added because the paragraph relies on the per-user app limit (PRODUCT-03), and that guide's "A tool can impose another limit" section explains it.
+- Added: checklist step 3 → `/tools/bulk-indexing-checker`, anchor "bulk indexing checker", as a first pass over many URLs before Search Console inspection. The step still sends the reader to Search Console for stored status.
+- Anchor change: `/indexing-api-for-blog-posts` "the blog-post guide" → "what to use for blog posts instead".
+Meaning recheck: claim IDs, vendor URLs, the 15 September 2026 check dates, the correction note, and every qualification kept. No new claim beyond VERIFIED-CLAIMS.md. Google Index Checker and bulk indexing checker descriptions match their implementations (Google search results through DataForSEO, 50 URL cap).
+Independent sources_reviewer approval of this revision is not recorded here. The pull request carries the review.
