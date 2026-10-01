@@ -116,6 +116,18 @@ describe('connect a Site', () => {
     expect(onBlocked).toHaveBeenCalled()
   })
 
+  // The 2026-10-01 replay, N8: a screen reader heard "Refresh your Search
+  // Console properties" for a button that reads "Refresh list" (WCAG 2.5.3).
+  it('names Refresh list by the words it shows', async () => {
+    const host = mount()
+    await flush()
+
+    const refresh = host.querySelector<HTMLElement>('[data-testid="gsc-refresh"]')!
+    const visible = refresh.textContent!.trim()
+    expect(visible).toBe('Refresh list')
+    expect(refresh.getAttribute('aria-label') ?? visible).toContain(visible)
+  })
+
   it('lists the verified properties of the account, one Connect each', async () => {
     reads.properties.value = {
       connected: true,

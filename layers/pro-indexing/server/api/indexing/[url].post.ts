@@ -165,7 +165,7 @@ export default defineEventHandler(async (event) => {
     .where(and(eq(teamMemberships.teamId, site.teamId), eq(teamMemberships.userId, user.userId)))
     .get())
   if (!isTeamMember) {
-    throw createError({ statusCode: 403, statusMessage: 'You do not have access to this site' })
+    throw createError({ statusCode: 403, statusMessage: 'You do not have access to this Site' })
   }
 
   const account = usableIndexingAccount(await db.query.googleAccounts.findFirst({

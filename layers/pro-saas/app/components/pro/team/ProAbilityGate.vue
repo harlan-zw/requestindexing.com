@@ -5,7 +5,7 @@ const props = defineProps<{
   ability: Ability
   /**
    * - `tooltip` (default): render slot disabled with a tooltip explaining the limitation.
-   *   Use for primary mutations (Connect site, Invite member) — preserves discoverability.
+   *   Use for primary mutations (Connect a Site, Invite member). It keeps them discoverable.
    * - `hide`: render nothing. Use for destructive actions (delete team, transfer) and
    *   anywhere the slot would read as "broken UI" if disabled.
    */
@@ -20,8 +20,8 @@ const allowed = computed(() => policy.can(props.ability))
 const defaultTooltips: Record<Ability, string> = {
   'manage-team': 'Only admins can change team settings',
   'manage-members': 'Only admins can manage members',
-  'manage-sites': 'Your role can\'t add or edit sites — ask an admin',
-  'write-data': 'Your role is read-only — ask an admin to make changes',
+  'manage-sites': 'Your role cannot connect or edit Sites. Ask an admin.',
+  'write-data': 'Your role is read-only. Ask an admin to make changes.',
   'read-data': 'You don\'t have access to this data',
   'transfer-ownership': 'Only the team owner can transfer ownership',
   'delete-team': 'Only the team owner can delete the team',

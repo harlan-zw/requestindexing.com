@@ -120,7 +120,7 @@ function bucketTo(issueType: string): string {
       <UiAlert
         v-else-if="hasEvidence && status === 'success' && totalRejected === 0"
         status="success"
-        title="Google is not refusing pages on this site"
+        title="Google is not refusing pages on this Site"
         description="Search Console reports no pages in the crawled-not-indexed, discovered-not-indexed, or soft-404 buckets."
       />
 

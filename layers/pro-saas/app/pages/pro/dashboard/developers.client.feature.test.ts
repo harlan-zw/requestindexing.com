@@ -9,6 +9,8 @@ const fixture = vi.hoisted(() => ({
   copied: [] as string[],
   sites: [] as Record<string, unknown>[],
   gscConnected: true,
+  /** What `/api/pro/gsc-properties` answers. */
+  properties: [] as Record<string, unknown>[],
 }))
 
 vi.mock('~~/layers/core/app/composables/fetch', () => ({
@@ -28,7 +30,11 @@ Object.assign(globalThis, {
   useRoute: () => ({ query: {} }),
   navigateTo: vi.fn(),
   useProFetch: () => fixture.proFetch,
-  useUserSession: () => ({ session: ref({ gscConnected: fixture.gscConnected }) }),
+  useUserSession: () => ({ session: ref({ gscConnected: fixture.gscConnected, gscEmail: 'agent@example.com' }) }),
+  useLazyFetch: () => ({
+    data: ref({ connected: true, properties: fixture.properties }),
+    status: ref('success'),
+  }),
   useFetch: async () => ({
     data: ref({ _tag: 'Ready', keys: [] }),
     status: ref('success'),
@@ -62,6 +68,14 @@ async function mount() {
       ? h('a', { href: props.to }, slots.default?.())
       : h('button', { type: props.type || 'button', onClick: () => emit('click') }, slots.default?.()),
   }))
+  app.component('UButton', defineComponent({
+    props: ['to', 'label'],
+    setup: props => () => h('a', { href: props.to }, props.label),
+  }))
+  app.component('ULink', defineComponent({
+    props: ['to'],
+    setup: (props, { slots }) => () => h('a', { href: props.to }, slots.default?.()),
+  }))
   app.component('NuxtLink', defineComponent({
     props: ['to'],
     setup: (props, { slots }) => () => h('a', { href: props.to }, slots.default?.()),
@@ -92,6 +106,7 @@ beforeEach(() => {
   fixture.copied = []
   fixture.sites = [LINKED_SITE]
   fixture.gscConnected = true
+  fixture.properties = [{ siteUrl: 'sc-domain:example.com', permissionLevel: 'siteOwner' }]
 })
 
 afterEach(() => {
@@ -126,6 +141,31 @@ describe('developers page', () => {
     const connect = [...host.querySelectorAll('a')].find(link => link.textContent?.includes('Connect a Site'))
     expect(connect?.getAttribute('href')).toBe('/pro/dashboard/sites/connect')
     expect(fixture.proFetch).not.toHaveBeenCalled()
+  })
+
+  // The 2026-10-01 replay, N6: with no property, Connect a Site could only
+  // say so after a wait. The page now says it, with the fixes Connect a Site
+  // offers, and the Google grant returns here.
+  it('names the missing Search Console property in place of Connect a Site when no Site exists', async () => {
+    fixture.sites = []
+    fixture.properties = []
+    const host = await mount()
+
+    expect(host.textContent).toContain('agent@example.com has no Search Console property')
+    const links = [...host.querySelectorAll('a')]
+    expect(links.find(link => link.textContent?.includes('Connect a Site'))).toBeUndefined()
+    expect(links.find(link => link.textContent === 'Connect another Google account')?.getAttribute('href'))
+      .toBe('/auth/integrations/gsc/connect?returnTo=%2Fpro%2Fdashboard%2Fdevelopers')
+    expect(links.map(link => link.textContent?.trim())).toEqual(expect.arrayContaining(['Open Search Console', 'How to verify a site']))
+  })
+
+  it('keeps Connect a Site when the account has a property to connect', async () => {
+    fixture.sites = []
+    const host = await mount()
+
+    expect(host.textContent).not.toContain('has no Search Console property')
+    expect([...host.querySelectorAll('a')].find(link => link.textContent?.includes('Connect a Site'))?.getAttribute('href'))
+      .toBe('/pro/dashboard/sites/connect')
   })
 
   // The gate reads the session's Search Console connection, the value

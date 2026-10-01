@@ -29,7 +29,7 @@ export async function fetchSites() {
             color: 'error',
           })
         }
-        else { toast.add({ id: 'unauthorized-error', title: 'Error fetching sites', description: res.error?.message, color: 'error' }) }
+        else { toast.add({ id: 'unauthorized-error', title: 'Error fetching Sites', description: res.error?.message, color: 'error' }) }
       },
     })
   }, {

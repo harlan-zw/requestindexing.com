@@ -129,7 +129,7 @@ useSeoMeta({
         </li>
         <li class="flex gap-2">
           <UIcon name="i-lucide-check" class="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />
-          <span>You choose which Search Console sites to sync.</span>
+          <span>You choose which Search Console properties to sync.</span>
         </li>
         <li class="flex gap-2">
           <UIcon name="i-lucide-shield-check" class="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />

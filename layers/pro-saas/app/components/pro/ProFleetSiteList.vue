@@ -156,7 +156,7 @@ const gridStyle = computed(() => gridCols ? { gridTemplateColumns: gridCols } : 
         <UiIcon v-else name="layers" class="size-4 text-dimmed" aria-hidden="true" />
       </div>
       <div class="flex items-baseline gap-2 min-w-0">
-        <span class="text-sm font-semibold text-default truncate">All sites</span>
+        <span class="text-sm font-semibold text-default truncate">All Sites</span>
         <span class="text-xs text-dimmed tabular-nums shrink-0">{{ sites.length }}</span>
       </div>
       <slot name="aggregate-row" />
@@ -181,7 +181,7 @@ const gridStyle = computed(() => gridCols ? { gridTemplateColumns: gridCols } : 
           <UiIcon name="chevron-right" class="size-4 transition-transform" :class="{ 'rotate-90': aggregateExpanded }" />
         </button>
         <UiIcon v-else name="layers" class="size-4 text-dimmed shrink-0" aria-hidden="true" />
-        <span class="text-sm font-semibold text-default truncate">All sites</span>
+        <span class="text-sm font-semibold text-default truncate">All Sites</span>
         <span class="text-xs text-dimmed tabular-nums shrink-0">{{ sites.length }}</span>
       </div>
       <div class="flex items-center gap-3 shrink-0">

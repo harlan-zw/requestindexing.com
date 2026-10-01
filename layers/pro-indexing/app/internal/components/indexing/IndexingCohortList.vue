@@ -38,14 +38,14 @@ const verdict = computed(() => {
     // comparison that never ran.
     return state.tested === 0
       ? `${spread}, and no group of pages is large enough to compare.`
-      : `No part of this site indexes worse than the rest. ${spread}, spread evenly.`
+      : `No part of this Site indexes worse than the rest. ${spread}, spread evenly.`
   }
   // The hero already states the worst cohort as the page's primary diagnosis.
   // Restating it here would tell the same story twice on one screen, so this
   // line frames what the list IS. HOW it was ranked is method, and method rides
   // the dimmed coverage line below rather than the verdict.
   const count = state.cells.length
-  return `${count === 1 ? 'One part' : `${count} parts`} of this site index worse than the rest.`
+  return `${count === 1 ? 'One part' : `${count} parts`} of this Site index worse than the rest.`
 })
 
 /**

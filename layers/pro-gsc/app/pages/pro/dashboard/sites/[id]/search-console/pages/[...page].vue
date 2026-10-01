@@ -62,7 +62,7 @@ const pagesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-co
   <UiAlert
     v-if="siteStatus === 'error'"
     status="error"
-    title="Failed to load site data."
+    title="Failed to load Site data."
   >
     <template #action>
       <UiButton size="xs" purpose="secondary" :to="pagesHref">

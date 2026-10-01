@@ -13,16 +13,19 @@ import ProDateRangePicker from '#layers/pro-gsc/app/components/pro/ProDateRangeP
 import { periodToDateRange } from '#layers/pro-gsc/app/composables/useGscPeriod'
 import { useProGscFilters } from '#layers/pro-gsc/app/composables/useProGscFilters'
 import { useProUrlSyncedFilter } from '#layers/pro-gsc/app/composables/useProUrlSyncedFilter'
+import { NO_PROPERTY_DETAIL_OUTSIDE_LIST, noPropertyTitle } from '#layers/pro-gsc/shared/no-property-copy'
 import { useFleetIndexing } from '#layers/pro-indexing/app/composables/useFleetIndexing'
 import FleetIndexingList from '#layers/pro-indexing/app/internal/components/fleet/FleetIndexingList.vue'
+import ProNoPropertyActions from '#layers/pro-saas/app/components/pro/ProNoPropertyActions.vue'
 import { FLEET_VIEW_OPTIONS, useFleetSiteListLayout } from '#layers/pro-saas/app/composables/useFleetSiteListLayout'
+import { useNoSearchConsoleProperty } from '#layers/pro-saas/app/composables/useNoSearchConsoleProperty'
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 
 definePageMeta({
   layout: 'pro-dashboard',
   title: 'Indexing',
   icon: 'i-ph-list-checks-duotone',
-  description: 'See the indexing status of every connected site.',
+  description: 'See the indexing status of every connected Site.',
 })
 
 useSeoMeta({ title: 'Indexing' })
@@ -54,6 +57,10 @@ const gscConnected = computed(() => resolveGscConnection({
   accountStatus: session.value?.gscdumpAccountStatus ?? null,
   error: null,
 })._tag !== 'NotConnected')
+
+// No Site, and a Google account with no Search Console property: Connect a
+// Site can only say so, so this page says it first (2026-10-01 replay, N6).
+const noProperty = useNoSearchConsoleProperty(() => !sitesLoading.value && !hasSites.value && !sitesError.value)
 
 // The same shared Search Console period the Site pages read. Compare is
 // hidden: indexing draws no previous-period overlay.
@@ -140,11 +147,21 @@ const { gridLayout, gridExpanded } = useFleetSiteListLayout(() => sites.value.le
       </div>
     </div>
 
+    <!-- No Site, and no Search Console property to connect one from. -->
+    <UiEmptyState
+      v-else-if="noProperty"
+      icon="search"
+      :title="noPropertyTitle(session?.gscEmail)"
+      :description="NO_PROPERTY_DETAIL_OUTSIDE_LIST"
+    >
+      <ProNoPropertyActions align="center" gsc-return-to="/pro/dashboard/indexing" />
+    </UiEmptyState>
+
     <!-- No Sites yet: coverage starts with a connected Site. -->
     <UiEmptyState
       v-else
       icon="search"
-      title="No sites to track yet"
+      title="No Sites to track yet"
       description="Connect a Site and its Google index coverage (indexed pages, errors, and trends) shows up here for all your Sites."
     >
       <UiButton :to="CONNECT_SITE_PATH" purpose="cta" icon="add">
