@@ -20,7 +20,7 @@ These exact strings. Do not paraphrase them per page.
 | Tagline | Get your pages indexed. | README, `VISION.md`, social card headline |
 | Landing H1 | Get your pages indexed in 48 hours. | `apps/marketing/app/pages/index.vue` only. See Open questions: the timeframe is a claim |
 | Site description | Monitor and request Google indexing for your pages | `nuxt.config.ts` site description, which feeds every page's meta description |
-| Landing meta description | Free, open-source tool to request Google indexing for your pages via the Indexing API. Track status and view Search Console data. | the landing page only |
+| Landing meta description | Request Google indexing for your pages, then see which URLs Google has indexed, which it has not, and the reason it gives. Free and open source. | the landing page only |
 
 **The short pitch adds a second half in long form.** `README.md` and `VISION.md` both follow the
 tagline with "Search Console data and multi-engine submission, in one small app." That sentence
@@ -31,7 +31,7 @@ claims more than the marketing site does today. See Truth rules.
 | Context | Register | Example |
 | --- | --- | --- |
 | Landing H1 and section headings | Sentence case, outcome not feature | "From Search Console to indexed in four steps" |
-| Meta title | Title case | "Get Your Pages Indexed on Google Fast" |
+| Meta title | Title case, the search intent first | "Request Google Indexing for Your Pages" |
 | Body copy | Technical but friendly, second person | "Submit any URL from your dashboard with one click." |
 | Button labels | Verb-object | "Get Started", "Request Indexing", "View Code". Never "OK", "Submit", "Click here" |
 | Empty states | Acknowledge, explain the value, give the action | "Search Console keeps data for the last 16 months" then the quote then the CTA |

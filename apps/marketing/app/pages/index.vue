@@ -2,25 +2,25 @@
 const { loggedIn, user } = useUserSession()
 
 useSeoMeta({
-  title: 'Get Your Pages Indexed on Google Fast',
-  description: 'Free, open-source tool to request Google indexing for your pages via the Indexing API. Track status and view Search Console data.',
+  title: 'Request Google Indexing for Your Pages',
+  description: 'Request Google indexing for your pages, then see which URLs Google has indexed, which it has not, and the reason it gives. Free and open source.',
 })
 
 const faqItems = [
   {
     label: 'Does it actually work?',
     icon: 'i-heroicons-bolt',
-    content: 'It does not guarantee to have all of your URLs indexed quicker, but it does, on average, speed up the process.',
+    content: 'It sends the notification and shows you what Google reports afterwards. A successful Indexing API notification means Google may recrawl the URL soon. Google still decides whether and when to crawl and index the page.',
   },
   {
     label: 'Will I be penalized for using this?',
     icon: 'i-heroicons-shield-check',
-    content: 'Nope! These are public APIs managed by Google. We just make it easier to use them.',
+    content: 'Request Indexing calls Google\'s public APIs with your own OAuth grant and stays inside Google\'s published quotas. Google supports the Indexing API for job posting and livestream pages, so check your content type before you submit.',
   },
   {
     label: 'Can I see the code?',
     icon: 'i-heroicons-code-bracket',
-    content: 'Sure! The entire project is open-source and available on GitHub under the MIT license. Build your own version if you like.',
+    content: 'Yes. The whole project is on GitHub under the MIT license. Read it, fork it, or build your own version.',
   },
 ]
 
@@ -43,48 +43,48 @@ const walkthroughSteps = [
     num: '01',
     eyebrow: 'Connect',
     title: 'Sign in with your Google account',
-    description: 'One-click OAuth. We read your Search Console properties — never write, never share.',
-    bullets: ['Read-only access to Search Console', 'Revoke any time from your Google account', 'Tokens encrypted at rest'],
+    description: 'One OAuth sign-in. We read your Search Console data, and the one change we make there is a sitemap submission.',
+    bullets: ['Search Console read access, plus sitemap submission', 'Revoke any time from your Google account', 'Tokens encrypted at rest'],
   },
   {
     num: '02',
     eyebrow: 'Sync',
     title: 'See every site in one place',
-    description: 'All your verified properties, indexing rate, and Search Console metrics — no tab-switching.',
-    bullets: ['Aggregate across every property you own', 'Filter by domain, path, or status', 'Historical data preserved past Google\'s 16 months'],
+    description: 'Every verified property in one list, with its indexing rate and Search Console metrics. No more switching tabs.',
+    bullets: ['Totals across every property you own', 'Filter by domain, path, or status', 'History kept past Google\'s 16 months'],
   },
   {
     num: '03',
     eyebrow: 'Submit',
-    title: 'Push URLs to the Indexing API',
+    title: 'Submit URLs to the Indexing API',
     description: 'Submit any URL from your dashboard with one click. We respect Google\'s 200/day publish quota so you don\'t have to track it yourself.',
-    bullets: ['New and updated URLs', 'Google\'s 200/day quota respected automatically', 'Duplicate submissions skipped for 48 hours'],
+    bullets: ['New and updated URLs', 'Duplicate submissions skipped for 48 hours', 'Google supports the API for job posting and livestream pages'],
   },
   {
     num: '04',
     eyebrow: 'Track',
-    title: 'Watch the status flip to indexed',
-    description: 'We poll the getMetadata endpoint and update your dashboard. No more refreshing Search Console.',
-    bullets: ['Live status per URL', 'Coverage over time, not just a snapshot', 'Retained past Google\'s 16-month window'],
+    title: 'See what Google does next',
+    description: 'Your dashboard shows the index status Google reports for each URL, read through gscdump. No more refreshing Search Console.',
+    bullets: ['Status per URL', 'Coverage over time', 'Indexed, not indexed, and the reason Google gives'],
   },
 ]
 
 const marketingTools = [
   {
     title: 'Google Index Checker',
-    description: 'Instantly check if a single URL is indexed. No signup, no account.',
+    description: 'Check whether Google has indexed one URL. No account needed.',
     icon: 'i-heroicons-magnifying-glass',
     to: '/tools/google-indexing-checker',
   },
   {
     title: 'Bulk Indexing Checker',
-    description: 'Paste up to 50 URLs or a sitemap. Audit your coverage in one run and export CSV.',
+    description: 'Paste up to 50 URLs or a sitemap, check them in one run, and export the results as CSV.',
     icon: 'i-heroicons-queue-list',
     to: '/tools/bulk-indexing-checker',
   },
   {
     title: 'Site Indexing Report',
-    description: 'Full health report for any domain — estimated indexed pages, keyword coverage, recommendations.',
+    description: 'A report for any domain: estimated indexed pages, ranking keywords, and recommendations.',
     icon: 'i-heroicons-document-chart-bar',
     to: '/tools/site-indexing-report',
   },
@@ -182,17 +182,17 @@ const marketingTools = [
     </div>
 
     <div class="bg-default pt-20">
-      <!-- Features — editorial bento -->
+      <!-- Features: editorial bento -->
       <section class="max-w-7xl mx-auto px-6 lg:px-8 py-16 sm:py-24">
         <div class="max-w-3xl mb-12 lg:mb-16">
           <span class="text-xs text-primary font-semibold uppercase tracking-[0.2em] mb-5 block">
-            Why it works
+            What it does
           </span>
           <h2 class="font-title text-4xl sm:text-5xl lg:text-6xl font-semibold text-default tracking-[-0.035em] leading-[1.02]">
             Indexing shouldn't be <span class="italic text-primary">luck</span>.
           </h2>
           <p class="text-toned text-lg sm:text-xl mt-6 max-w-2xl leading-relaxed">
-            Three levers most SEO tools leave on the table: direct API submission, unified multi-site visibility, and retention that outlasts Google's 16-month window.
+            Submit to the Indexing API from your dashboard, see every Search Console property side by side, and keep your history after Google drops it at 16 months.
           </p>
         </div>
 
@@ -206,15 +206,17 @@ const marketingTools = [
                 Indexing API
               </div>
               <h3 class="font-title text-2xl sm:text-3xl font-semibold text-default tracking-[-0.02em] mb-3 leading-[1.1]">
-                Submit directly. Skip the queue.
+                Notify Google directly.
               </h3>
               <p class="text-toned leading-relaxed max-w-xl mb-8">
-                Google's Indexing API notifies the crawler immediately. New pages and updated content get picked up in hours, not weeks of hoping Discover stumbles on your sitemap.
+                A successful Indexing API notification tells Google it may recrawl the URL soon. Google supports the API for job posting and livestream pages. Publishing an ordinary blog post? <NuxtLink to="/indexing-api-for-blog-posts" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+                  Request indexing with URL Inspection or a sitemap
+                </NuxtLink> instead.
               </p>
               <div class="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
                 <span class="inline-flex items-center gap-2 text-default">
                   <UIcon name="i-heroicons-check-circle" class="size-4 text-primary" />
-                  <span class="font-medium">200 requests/day</span>
+                  <span class="font-medium">200 publish requests/day</span>
                 </span>
                 <span class="inline-flex items-center gap-2 text-default">
                   <UIcon name="i-heroicons-check-circle" class="size-4 text-primary" />
@@ -248,7 +250,7 @@ const marketingTools = [
             <p class="text-toned text-sm leading-relaxed">
               Search Console only shows the last <NuxtLink to="https://gscdump.com/learn-google-search-console/limits/16-month-data-retention" target="_blank" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
                 16 months
-              </NuxtLink>, and older days age out every day. We keep it as long as you need, searchable and exportable.
+              </NuxtLink> of data, and older days age out every day. Request Indexing keeps your history past that window, searchable and exportable.
             </p>
           </div>
 
@@ -280,7 +282,7 @@ const marketingTools = [
       <UPageSection
         headline="How it works"
         title="From Search Console to indexed in four steps"
-        description="Connect your Google account once, submit URLs to the Indexing API, and watch Google pick them up. No dark arts, no waiting for Discover to find your page."
+        description="Connect your Google account once, submit URLs to the Indexing API, and see what Google reports for each one. No dark arts."
         :ui="{ container: 'max-w-7xl', title: 'font-title' }"
       >
         <div class="mt-12 lg:mt-16 grid gap-14 lg:gap-24">
@@ -340,7 +342,7 @@ const marketingTools = [
                       </button>
                     </div>
                     <p class="text-xs text-muted">
-                      Read-only access to Search Console
+                      Search Console access, plus sitemap submission
                     </p>
                   </div>
                 </div>
@@ -430,7 +432,7 @@ const marketingTools = [
                     </div>
                   </div>
                   <div class="px-5 py-3 bg-muted/60 border-t border-default flex items-center justify-between">
-                    <span class="text-xs text-muted">Average: 5h 14m from submit to indexed</span>
+                    <span class="text-xs text-muted">Index status from URL Inspection</span>
                     <UIcon name="i-heroicons-bolt-solid" class="size-3.5 text-primary" />
                   </div>
                 </div>
@@ -444,7 +446,7 @@ const marketingTools = [
       <UPageSection
         headline="Free tools"
         title="Check indexing without signing up"
-        description="Three single-purpose tools for when you just need an answer. No account, no email, no tracking."
+        description="Three single-purpose tools for a quick answer. No account, no email, no tracking."
         :ui="{ container: 'max-w-7xl', title: 'font-title' }"
       >
         <UPageGrid>
@@ -462,12 +464,12 @@ const marketingTools = [
         </UPageGrid>
         <div class="flex justify-center mt-8">
           <UButton to="/tools" variant="ghost" color="neutral" trailing-icon="i-heroicons-arrow-right">
-            View all tools
+            View all free indexing tools
           </UButton>
         </div>
       </UPageSection>
 
-      <!-- Learn Section — featured + supporting -->
+      <!-- Learn section: featured + supporting -->
       <section class="max-w-7xl mx-auto px-6 lg:px-8 py-16 sm:py-24">
         <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-12 lg:mb-16">
           <div class="max-w-2xl">
@@ -504,7 +506,7 @@ const marketingTools = [
                 The complete Google Indexing API guide
               </h3>
               <p class="text-toned leading-relaxed max-w-md">
-                How the API works, authentication, quotas, error codes, plus working code samples in curl, TypeScript, and Python. One read, production-ready.
+                What the API supports, what a notification response means, when Google requires approval, and how it differs from URL Inspection.
               </p>
             </div>
             <div class="relative flex items-center gap-2 mt-8 text-primary font-medium">
@@ -523,7 +525,7 @@ const marketingTools = [
               Step-by-step tutorial
             </h3>
             <p class="text-toned text-sm leading-relaxed mb-4">
-              Set up a GCP project, create a service account, connect to Search Console, and make your first API call.
+              Create a Google Cloud project and service account, give it Search Console ownership, and send your first eligible notification.
             </p>
             <div class="flex items-center gap-1.5 text-sm text-primary font-medium">
               Follow tutorial
@@ -541,7 +543,7 @@ const marketingTools = [
               Node.js implementation
             </h3>
             <p class="text-toned text-sm leading-relaxed mb-4">
-              Error handling, batch requests, retry logic, and production-ready patterns you can drop into your deploy pipeline.
+              Send one URL_UPDATED notification with googleapis, read the failures, and tell notification metadata apart from index status.
             </p>
             <div class="flex items-center gap-1.5 text-sm text-primary font-medium">
               See the code
@@ -559,7 +561,7 @@ const marketingTools = [
               Bulk URL submission
             </h3>
             <p class="text-toned text-sm leading-relaxed mb-4">
-              Submit hundreds of URLs a day within Google's quota. Batching, throttling, and failure recovery patterns.
+              Send eligible URLs one request at a time, see how multipart batches differ, and keep a result for every URL.
             </p>
             <div class="flex items-center gap-1.5 text-sm text-primary font-medium">
               Read pattern
@@ -577,7 +579,7 @@ const marketingTools = [
               Quota & rate limits
             </h3>
             <p class="text-toned text-sm leading-relaxed mb-4">
-              The 200 requests/day cap, the 180 req/min getMetadata limit, and how to stay under both without throttling errors.
+              200 publish requests a day, 180 metadata reads a minute, the Pacific Time reset, and how a tool's own limit differs.
             </p>
             <div class="flex items-center gap-1.5 text-sm text-primary font-medium">
               Read limits
@@ -585,9 +587,15 @@ const marketingTools = [
             </div>
           </NuxtLink>
         </div>
+
+        <p class="text-toned mt-8 max-w-2xl">
+          Weighing another tool? Read <NuxtLink to="/comparisons" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+            how Request Indexing compares with Indexly and SEO Gets
+          </NuxtLink> or what replaces the closed Tag Parrot.
+        </p>
       </section>
 
-      <!-- Data Retention — pull quote dominant -->
+      <!-- Data retention: pull quote dominant -->
       <section class="relative py-16 sm:py-24">
         <div class="max-w-7xl mx-auto px-6 lg:px-8 grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
           <div class="lg:col-span-5">
@@ -598,17 +606,17 @@ const marketingTools = [
               Google is deleting<br>your data.
             </h2>
             <p class="text-toned text-lg leading-relaxed mb-8 max-w-md">
-              After 16 months, your Search Console history is gone. Seasonal patterns, year-over-year comparisons, the whole picture &mdash; wiped.
+              After 16 months, your Search Console history is gone: seasonal patterns, year-over-year comparisons, all of it.
             </p>
             <div class="space-y-4">
               <div class="flex items-start gap-3">
                 <UIcon name="i-heroicons-archive-box" class="size-5 text-primary mt-0.5 shrink-0" />
                 <div>
                   <div class="text-default font-semibold mb-0.5">
-                    Retain forever
+                    Keep it past 16 months
                   </div>
                   <div class="text-muted text-sm">
-                    Your data is kept for as long as you need it. Export anytime.
+                    Request Indexing keeps your history after Google drops it. Export it any time.
                   </div>
                 </div>
               </div>
@@ -703,7 +711,7 @@ const marketingTools = [
       <!-- CTA -->
       <UPageSection :ui="{ container: 'max-w-4xl' }">
         <UPageCTA
-          title="Start indexing your pages today"
+          title="Find out which of your pages Google has indexed"
           description="Free, open-source, and takes less than a minute to set up."
           variant="subtle"
           :links="[
