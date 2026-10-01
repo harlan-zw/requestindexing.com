@@ -2,8 +2,8 @@
 const { loggedIn, user } = useUserSession()
 
 useSeoMeta({
-  title: 'Get Your Pages Indexed on Google Fast',
-  description: 'Free, open-source tool to request Google indexing for your pages via the Indexing API. Track status and view Search Console data.',
+  title: 'Request Google Indexing for Your Pages',
+  description: 'Request Google indexing for your pages, then see which URLs Google has indexed, which it has not, and the reason it gives. Free and open source.',
 })
 
 const faqItems = [
