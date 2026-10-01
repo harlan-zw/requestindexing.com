@@ -52,7 +52,7 @@ export default defineProApiHandler({
       .orderBy(googleAccounts.googleAccountId)
       .get()
     if (!account)
-      throw new ProError('validation_failed', { message: 'Connect a Google account before selecting sites' })
+      throw new ProError('validation_failed', { message: 'Connect a Google account before selecting Sites' })
     googleAccountId = account.id
   }
 

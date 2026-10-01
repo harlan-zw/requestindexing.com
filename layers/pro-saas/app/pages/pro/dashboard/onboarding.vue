@@ -186,7 +186,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
           </li>
           <li class="flex gap-2">
             <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-            Submit missing pages through the Indexing API.
+            Submit to Google. Google documents the Indexing API for job posting and livestream pages only.
           </li>
           <li class="flex gap-2">
             <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
@@ -208,12 +208,12 @@ useSeoMeta({ title: 'Set up Request Indexing' })
     <section v-else-if="step === 'sites'" class="space-y-5">
       <UiAuthHeading
         size="md"
-        title="Connect your sites"
+        title="Connect your Sites"
         description="Choose a property from your Search Console. Request Indexing reads each Site from its property."
       />
       <ProSiteAddForm :gsc-return-to="returnToSites" @changed="siteCount = $event" @blocked="sitesBlocked = true" />
       <p v-if="canSkipSites" class="flex flex-wrap items-center gap-x-1 text-sm text-muted">
-        Can't connect your site right now?
+        Can't connect your Site right now?
         <UButton
           variant="link"
           color="neutral"

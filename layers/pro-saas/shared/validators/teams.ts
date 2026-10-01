@@ -13,7 +13,7 @@ export const teamTransferOwnershipSchema = z.object({ newOwnerUserId: z.string()
 // Sites the caller already has onto the Team, so it creates no Site and the
 // Free allowance does not apply. gscdump owns that ceiling and refuses a new
 // Site when it registers.
-export const teamSelectedSitesSchema = z.array(z.string().min(1)).max(100, 'Too many sites in one request')
+export const teamSelectedSitesSchema = z.array(z.string().min(1)).max(100, 'Too many Sites in one request')
 export const teamSitesUpdateSchema = z.object({
   backupsEnabled: z.boolean().optional(),
   selectedSites: teamSelectedSitesSchema.default([]),

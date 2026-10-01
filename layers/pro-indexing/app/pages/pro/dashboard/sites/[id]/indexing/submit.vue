@@ -250,7 +250,7 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
             compact
             icon="link"
             title="No indexing history yet"
-            description="Connect this site to Search Console to see whether Google crawled a URL you submitted."
+            description="Connect this Site to Search Console to see whether Google crawled a URL you submitted."
           />
           <UiEmptyState
             v-else-if="historyError"

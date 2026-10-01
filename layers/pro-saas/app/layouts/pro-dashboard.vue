@@ -196,8 +196,8 @@ function onPageError(error: unknown) {
       <UiEmptyState
         v-if="siteStatus === 'error'"
         icon="error"
-        title="This site could not be loaded"
-        description="The request for this site failed. Nothing here is out of date; the read did not come back."
+        title="This Site could not be loaded"
+        description="The request for this Site failed. Nothing here is out of date; the read did not come back."
       >
         <UButton color="primary" @click="$router.go(0)">
           Try again

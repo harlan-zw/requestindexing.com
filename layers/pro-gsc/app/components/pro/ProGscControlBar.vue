@@ -190,7 +190,7 @@ const SHOW_AS_BY_DIMENSION: Record<GscDimension, ShowAsOption[]> = {
   // Dates' second rep is the per-site table: the same portfolio totals decomposed
   // by site, sortable, with a pinned "All sites" row. "By site" names what it is
   // (the old "Scoreboard" named a vibe the unsortable table didn't earn).
-  dates: [{ value: 'graph', label: 'Trend', icon: 'chart' }, { value: 'table', label: 'By site', icon: 'table' }],
+  dates: [{ value: 'graph', label: 'Trend', icon: 'chart' }, { value: 'table', label: 'By Site', icon: 'table' }],
   // Query/Page: Ranked entities, or Trend = that dimension's count ranked over time.
   query: [{ value: 'graph', label: 'Ranked', icon: 'i-lucide-list-ordered' }, { value: 'table', label: 'Trend', icon: 'chart' }],
   page: [{ value: 'graph', label: 'Ranked', icon: 'i-lucide-list-ordered' }, { value: 'table', label: 'Trend', icon: 'chart' }],

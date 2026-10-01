@@ -384,7 +384,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
     <UiAlert
       v-if="siteStatus === 'error'"
       status="error"
-      title="Failed to load site data."
+      title="Failed to load Site data."
     >
       <template #action>
         <UButton size="xs" color="neutral" variant="subtle" to="/pro/dashboard">

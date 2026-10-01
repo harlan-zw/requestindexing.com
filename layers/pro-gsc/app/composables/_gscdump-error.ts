@@ -33,7 +33,7 @@ function messageFor(kind: PartnerErrorKind, message: string): string {
     case 'permission':
       return 'Search Console permission is missing. Please reconnect your account.'
     case 'not-found':
-      return 'Data not found. The site may not be synced yet.'
+      return 'Data not found. The Site may not be synced yet.'
     case 'provisioning':
       return 'Search Console data is still being prepared.'
     case 'rate-limit':

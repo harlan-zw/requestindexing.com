@@ -33,7 +33,7 @@ export default defineProApiHandler({ body: bodySchema }, async ({ db, caller, bo
     ability: 'write-data',
   })._tag === 'Err')
   if (refused)
-    throw createError({ statusCode: 403, message: 'Not authorized to disconnect this site' })
+    throw createError({ statusCode: 403, message: 'Not authorized to disconnect this Site' })
 
   const gscdump = useGscdumpClient()
 

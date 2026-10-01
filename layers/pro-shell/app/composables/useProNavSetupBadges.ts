@@ -35,7 +35,7 @@ export function useProNavSetupBadges() {
     ? null
     : {
         verb: 'Connect',
-        tooltip: 'Connect Google Search Console to load this site\'s search data',
+        tooltip: 'Connect Google Search Console to load this Site\'s search data',
       })
 
   // Stubs. nuxtseo.com resolves these from modules this app does not carry:

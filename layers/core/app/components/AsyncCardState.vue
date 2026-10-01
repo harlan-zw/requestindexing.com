@@ -75,7 +75,7 @@ function errorMessage(error: unknown): string {
   if (statusCode === 401 || statusCode === 403)
     return 'Your session has expired. Sign in again to see this data.'
   if (statusCode === 404)
-    return `No ${props.label} exists for this site yet.`
+    return `No ${props.label} exists for this Site yet.`
   return props.errorMessage ?? `The ${props.label} could not load.`
 }
 

@@ -4,6 +4,7 @@ import type { PropertyPickerResponse } from '#layers/pro-gsc/shared/property-pic
 import { siteAllowanceReached, siteAllowanceSummary } from '#layers/pro-gsc/shared/entitlement-copy'
 import { projectPropertyPicker, propertyPickerBlocksConnect } from '#layers/pro-gsc/shared/property-picker'
 import { parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
+import ProNoPropertyNotice from './ProNoPropertyNotice.vue'
 
 // Connect a Site from the caller's Search Console properties.
 //
@@ -115,9 +116,6 @@ watch(connectedSites, sites => emit('changed', sites.length), { immediate: true 
 const showAddressField = computed(() => picker.value._tag === 'Properties' || picker.value._tag === 'AllConnected')
 
 const gscConnectUrl = computed(() => `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent(gscReturnTo)}`)
-const noPropertiesTitle = computed(() => session.value?.gscEmail
-  ? `${session.value.gscEmail} has no Search Console property`
-  : 'This Google account has no Search Console property')
 
 const url = ref('')
 const submitting = ref<string | null>(null)
@@ -214,7 +212,6 @@ async function connect(value: string, source: 'field' | 'list') {
           icon="i-heroicons-arrow-path"
           class="min-h-11 shrink-0"
           label="Refresh list"
-          aria-label="Refresh your Search Console properties"
           :loading="picker._tag === 'Loading'"
           :disabled="picker._tag === 'Loading'"
           data-testid="gsc-refresh"
@@ -256,37 +253,8 @@ async function connect(value: string, source: 'field' | 'list') {
 
       <ProAlert v-else-if="picker._tag === 'Failed'" color="warning" title="Your Search Console properties could not load" :description="picker.message" />
 
-      <div v-else-if="picker._tag === 'NoProperties'" class="space-y-3 rounded-lg border border-dashed border-default p-4" data-testid="gsc-empty-state">
-        <div class="space-y-1">
-          <p class="text-sm font-medium text-highlighted break-words">
-            {{ noPropertiesTitle }}
-          </p>
-          <p class="text-sm text-muted">
-            Add your site in Search Console and verify it, then refresh this list. If a different Google account owns the property, connect that account.
-          </p>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <UButton
-            to="https://search.google.com/search-console"
-            target="_blank"
-            rel="noopener"
-            external
-            color="neutral"
-            variant="subtle"
-            trailing-icon="i-heroicons-arrow-top-right-on-square"
-            class="min-h-11"
-            label="Open Search Console"
-          />
-          <UButton :to="gscConnectUrl" external color="neutral" variant="ghost" class="min-h-11" label="Connect another Google account" />
-        </div>
-        <ULink
-          to="https://support.google.com/webmasters/answer/9008080"
-          target="_blank"
-          rel="noopener"
-          class="inline-flex items-center gap-1 text-sm text-muted underline"
-        >
-          How to verify a site
-        </ULink>
+      <div v-else-if="picker._tag === 'NoProperties'" class="rounded-lg border border-dashed border-default p-4" data-testid="gsc-empty-state">
+        <ProNoPropertyNotice :email="session?.gscEmail ?? null" :gsc-return-to="gscReturnTo" in-list />
       </div>
 
       <p v-else-if="picker._tag === 'AllConnected'" class="text-sm text-muted">
