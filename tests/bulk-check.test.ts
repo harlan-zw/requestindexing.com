@@ -9,6 +9,11 @@ function organic(url: string) {
   return { type: 'organic', url, title: `Title of ${url}`, description: '', position: 1 }
 }
 
+/** A Live SERP task that ran, as DataForSEO sends it. */
+function searched(serp: unknown) {
+  return { status_code: 20000, status_message: 'Ok.', result: [serp] }
+}
+
 function checkedUrl(options: ProviderOptions): string {
   return options.body[0]!.keyword.slice('site:'.length)
 }
@@ -44,7 +49,7 @@ describe('checkUrlsIndexed', () => {
     const providerFetch = vi.fn(async (_url: string, options: ProviderOptions) => {
       const url = checkedUrl(options)
       await sleep(delays[url] ?? 0)
-      return { tasks: options.body.map(() => ({ result: [serps[url]] })) }
+      return { tasks: options.body.map(() => searched(serps[url])) }
     })
 
     const rows = await checkUrlsIndexed(Object.keys(serps), callContext(providerFetch))
@@ -70,7 +75,7 @@ describe('checkUrlsIndexed', () => {
       mostInFlight = Math.max(mostInFlight, inFlight)
       await sleep(5)
       inFlight--
-      return { tasks: [{ result: [{ se_results_count: 0, items: [] }] }] }
+      return { tasks: [searched({ se_results_count: 0, items: [] })] }
     })
     const urls = Array.from({ length: 10 }, (_, index) => `https://example.com/${index}`)
 
@@ -86,7 +91,7 @@ describe('checkUrlsIndexed', () => {
       const url = checkedUrl(options)
       if (url === 'https://example.com/b')
         throw providerFailure(520)
-      return { tasks: [{ result: [{ se_results_count: 1, items: [organic(url)] }] }] }
+      return { tasks: [searched({ se_results_count: 1, items: [organic(url)] })] }
     }
 
     const rows = await checkUrlsIndexed(
@@ -99,6 +104,42 @@ describe('checkUrlsIndexed', () => {
       { _tag: 'NotChecked', url: 'https://example.com/b' },
       expect.objectContaining({ _tag: 'Checked', url: 'https://example.com/c', indexed: true }),
     ])
+  })
+
+  it('marks a URL as not checked when DataForSEO answers 200 but its task ran no search', async () => {
+    const providerFetch = async (_url: string, options: ProviderOptions) => {
+      const url = checkedUrl(options)
+      if (url === 'https://example.com/b')
+        return { status_code: 20000, tasks: [{ status_code: 50000, status_message: 'Internal Error.', result: null }] }
+      return { status_code: 20000, tasks: [searched({ se_results_count: 1, items: [organic(url)] })] }
+    }
+
+    const rows = await checkUrlsIndexed(
+      ['https://example.com/a', 'https://example.com/b', 'https://example.com/c'],
+      callContext(providerFetch),
+    )
+
+    expect(rows).toEqual([
+      expect.objectContaining({ _tag: 'Checked', url: 'https://example.com/a', indexed: true }),
+      { _tag: 'NotChecked', url: 'https://example.com/b' },
+      expect.objectContaining({ _tag: 'Checked', url: 'https://example.com/c', indexed: true }),
+    ])
+  })
+
+  it('keeps the task status on the 503 when no URL was searched', async () => {
+    const outcome = checkUrlsIndexed(
+      ['https://example.com/a', 'https://example.com/b'],
+      callContext(async () => ({
+        status_code: 20000,
+        tasks: [{ status_code: 40210, status_message: 'Insufficient Funds.', result: null }],
+      })),
+    )
+
+    await expect(outcome).rejects.toMatchObject({
+      statusCode: 503,
+      message: DATAFORSEO_UNAVAILABLE_MESSAGE,
+      cause: { message: expect.stringContaining('40210 Insufficient Funds.') },
+    })
   })
 
   it('answers with a 503 when the provider is down for every URL', async () => {
