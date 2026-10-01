@@ -137,8 +137,8 @@ export function canAdvanceOnboardingStep(step: OnboardingStep, signals: Onboardi
 export interface SitesSkipInput {
   hasSites: boolean
   /**
-   * A connect attempt failed on this step, or the Free allowance is full so
-   * no attempt can start.
+   * Nothing on this step can connect: the property list offers no verified
+   * property, a connect attempt failed, or the Free allowance is full.
    */
   connectBlocked: boolean
 }

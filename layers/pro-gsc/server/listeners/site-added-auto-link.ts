@@ -9,7 +9,7 @@ export default defineListener({
   name: 'gsc.site-added-auto-link',
   event: 'pro:site:added',
   execution: { _tag: 'sync', failure: 'isolate' },
-  handle: async ({ event, siteId, url, userId }: EventPayload<'pro:site:added'>) => {
+  handle: async ({ event, siteId, url, userId, gscProperty }: EventPayload<'pro:site:added'>) => {
     const db = useDrizzle(event)
     const user = await db.select({ gscdumpUserId: users.gscdumpUserId }).from(users).where(eq(users.userId, userId)).get()
     if (!user?.gscdumpUserId)
@@ -19,7 +19,9 @@ export default defineListener({
       gscdumpUserId: user.gscdumpUserId,
       siteId,
       origin: url,
-      availableSites: event.context.gscAvailableSites,
+      // The connect route already matched a verified property in the caller's
+      // own list. Link that one; without it, autoLinkGsc reads the list again.
+      ...(gscProperty && { preferredSiteUrl: gscProperty.siteUrl, availableSites: [gscProperty] }),
     })
     // The connect route already refused a full Free allowance before the Site
     // existed. A refusal here is a race past that check, or a property the

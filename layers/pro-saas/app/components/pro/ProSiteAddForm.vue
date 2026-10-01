@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import type { SiteAllowance } from '#layers/pro-gsc/shared/free-allowance'
+import type { PropertyPickerResponse } from '#layers/pro-gsc/shared/property-picker'
 import { siteAllowanceReached, siteAllowanceSummary } from '#layers/pro-gsc/shared/entitlement-copy'
+import { projectPropertyPicker, propertyPickerBlocksConnect } from '#layers/pro-gsc/shared/property-picker'
 import { parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
 
-// Connect a site by address. Search Console properties are offered as
-// one-click suggestions, not as the only way in: an account with no verified
-// property used to reach this screen with nothing to pick and no way forward.
+// Connect a Site from the caller's Search Console properties.
+//
+// nuxtseo.com's `gsc` entry mode (`apps/pro/app/components/pro/ProSiteAddForm.vue`):
+// the list comes from gscdump, with a Refresh that reads Google live, a
+// reconnect state, a failed read, and a state for an account with no property.
+// nuxtseo.com also takes any typed address, because its Sites have value
+// without Search Console. A Site here has none, so the server refuses an
+// address no verified property covers, and the address field is only for a
+// subdomain of a listed property.
 //
 // Three pages render it: the onboarding wizard, Connect a Site, and the
 // Manage Sites modal. `gscReturnTo` is required because the Google grant must
@@ -20,8 +28,9 @@ const emit = defineEmits<{
   /** One Site connected. */
   connected: [site: { siteId: string, domain: string | null }]
   /**
-   * A connect attempt failed, or the Free allowance is full so none can
-   * start. The wizard reveals its skip on this, as nuxtseo.com does.
+   * Nothing can connect right now: no property, no Google connection, a failed
+   * read, a refused attempt, or a full Free allowance. The wizard reveals its
+   * skip on this, as nuxtseo.com does.
    */
   blocked: []
 }>()
@@ -38,21 +47,8 @@ interface SitesPreviewResponse {
   siteAllowance: SiteAllowance
 }
 
-interface GscProperty {
-  siteUrl: string
-  permissionLevel: string
-  matchingSite: { siteId: string } | null
-}
-
-interface GscPropertiesResponse {
-  connected: boolean
-  /** True once gscdump holds the caller's Search Console account. */
-  gscdumpRegistered?: boolean
-  properties: GscProperty[]
-  error?: { reason: string, message: string }
-}
-
 const toast = useToast()
+const { session } = useUserSession()
 
 const { data: preview, refresh: refreshSites, status: sitesStatus } = await useFetch<SitesPreviewResponse>('/api/sites/preview', {
   key: 'site-add-form-sites',
@@ -60,17 +56,26 @@ const { data: preview, refresh: refreshSites, status: sitesStatus } = await useF
   default: (): SitesPreviewResponse => ({ sites: [], siteAllowance: { _tag: 'Unknown' } }),
 })
 
-const { data: gsc, refresh: refreshGsc, status: gscStatus } = await useFetch<GscPropertiesResponse>('/api/pro/gsc-properties', {
+// gscdump answers from its stored copy of the Google list. The Refresh button
+// asks for a live read once, for a property the user added a moment ago.
+const liveRead = ref(false)
+const { data: gsc, refresh: refreshGsc, status: gscStatus } = await useFetch<PropertyPickerResponse>('/api/pro/gsc-properties', {
   key: 'site-add-form-gsc-properties',
   server: false,
-  default: () => ({ connected: false, properties: [] }),
+  query: { refresh: computed(() => liveRead.value ? '1' : undefined) },
+  watch: false,
 })
 
-// `status` is `idle` during SSR and `pending` on the client's first tick, and
-// rendering the loading line off the raw status made the server emit a comment
-// where the client emitted a div. One "not resolved yet" predicate keeps both
-// sides agreeing through hydration.
-const gscPending = computed(() => gscStatus.value !== 'success' && gscStatus.value !== 'error')
+async function refreshProperties() {
+  liveRead.value = true
+  try {
+    await refreshGsc()
+  }
+  finally {
+    liveRead.value = false
+  }
+}
+
 const sitesPending = computed(() => sitesStatus.value !== 'success' && sitesStatus.value !== 'error')
 
 const connectedSites = computed(() => preview.value?.sites ?? [])
@@ -83,44 +88,42 @@ const cappedAllowance = computed(() => {
   return allowance?._tag === 'Capped' ? allowance : null
 })
 const atLimit = computed(() => !!cappedAllowance.value && cappedAllowance.value.used >= cappedAllowance.value.allowance)
-// One notice for a full allowance, above both ways to connect. Every Connect
+// One notice for a full allowance, above every way to connect. Every Connect
 // control is disabled under it, so no click can fail with the same message.
 const allowanceFullNotice = computed(() => atLimit.value && cappedAllowance.value ? siteAllowanceReached(cappedAllowance.value.allowance) : null)
 
-watch(atLimit, (full) => {
-  if (full)
+const connectedDomains = computed(() => new Set(connectedSites.value.map(s => s.domain).filter(Boolean) as string[]))
+
+// The Search Console section as one tagged state. A list still loading for the
+// Team's Sites stays loading, so a property already connected never flashes
+// in as connectable.
+const picker = computed(() => projectPropertyPicker({
+  queryStatus: sitesPending.value ? 'pending' : gscStatus.value,
+  data: gsc.value,
+  connectedDomains: connectedDomains.value,
+}))
+
+watch([atLimit, picker], ([full, state]) => {
+  if (full || propertyPickerBlocksConnect(state))
     emit('blocked')
 }, { immediate: true })
 
 watch(connectedSites, sites => emit('changed', sites.length), { immediate: true })
 
-const connectedDomains = computed(() => new Set(connectedSites.value.map(s => s.domain).filter(Boolean) as string[]))
-
-/** Search Console properties that are not connected yet, deduped by domain. */
-const suggestions = computed(() => {
-  const seen = new Set<string>()
-  const out: { siteUrl: string, domain: string, verified: boolean }[] = []
-  for (const property of gsc.value?.properties ?? []) {
-    const parsed = parseSiteUrlInput(property.siteUrl)
-    if (parsed._tag === 'Err')
-      continue
-    if (connectedDomains.value.has(parsed.domain) || seen.has(parsed.domain))
-      continue
-    seen.add(parsed.domain)
-    out.push({
-      siteUrl: property.siteUrl,
-      domain: parsed.domain,
-      verified: property.permissionLevel !== 'siteUnverifiedUser',
-    })
-  }
-  return out
-})
+// The address field serves a subdomain of a listed property. Shown to an
+// account with no property, it invites an address the server must refuse.
+const showAddressField = computed(() => picker.value._tag === 'Properties' || picker.value._tag === 'AllConnected')
 
 const gscConnectUrl = computed(() => `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent(gscReturnTo)}`)
+const noPropertiesTitle = computed(() => session.value?.gscEmail
+  ? `${session.value.gscEmail} has no Search Console property`
+  : 'This Google account has no Search Console property')
 
 const url = ref('')
 const submitting = ref<string | null>(null)
-const inlineError = ref('')
+// A refusal shows where the attempt started: under the field for a typed
+// address, above the list for a row.
+const connectError = ref<{ source: 'field' | 'list', message: string } | null>(null)
 
 const typedError = computed(() => {
   if (!url.value.trim())
@@ -131,20 +134,23 @@ const typedError = computed(() => {
 
 // A refusal that raced the page says what the notice above already says once
 // the re-read lands; show it in one place only.
-const fieldError = computed(() => {
-  if (inlineError.value && inlineError.value !== allowanceFullNotice.value)
-    return inlineError.value
-  return typedError.value || undefined
-})
+function visibleError(source: 'field' | 'list'): string | undefined {
+  const error = connectError.value
+  if (error?.source === source && error.message !== allowanceFullNotice.value)
+    return error.message
+  return undefined
+}
+const fieldError = computed(() => visibleError('field') || typedError.value || undefined)
+const listError = computed(() => visibleError('list'))
 
-async function connect(value: string) {
+async function connect(value: string, source: 'field' | 'list') {
   if (submitting.value || atLimit.value)
     return
-  inlineError.value = ''
+  connectError.value = null
 
   const parsed = parseSiteUrlInput(value)
   if (parsed._tag === 'Err') {
-    inlineError.value = parsed.message
+    connectError.value = { source, message: parsed.message }
     return
   }
 
@@ -157,14 +163,17 @@ async function connect(value: string) {
     emit('connected', { siteId: site.id, domain: site.domain })
   }
   catch (err: unknown) {
-    // The API error envelope carries the reader-facing message, including this
-    // app's copy for a Free allowance refusal.
+    // The API error envelope carries the reader-facing message: this app's
+    // copy for a property refusal or a Free allowance refusal.
     const message = (err as { data?: { data?: { message?: unknown } } } | null)?.data?.data?.message
-    inlineError.value = typeof message === 'string' && message ? message : 'Could not connect that site.'
+    connectError.value = {
+      source,
+      message: typeof message === 'string' && message ? message : 'Request Indexing could not connect that site. Try again.',
+    }
     emit('blocked')
-    // A refusal means the allowance moved since the page loaded. Re-read it so
-    // the count and the disabled state match what gscdump just said.
-    await refreshSites()
+    // A refusal means the allowance or the property list moved since the page
+    // loaded. Re-read both so the list and the count match what gscdump said.
+    await Promise.all([refreshSites(), refreshGsc()])
   }
   finally {
     submitting.value = null
@@ -192,58 +201,111 @@ async function connect(value: string) {
 
     <ProAlert v-if="allowanceFullNotice" color="warning" :title="allowanceFullNotice" />
 
-    <form class="space-y-2" @submit.prevent="connect(url)">
-      <UFormField label="Site address" :error="fieldError">
-        <div class="flex flex-col gap-2 sm:flex-row">
-          <UInput
-            v-model="url"
-            placeholder="example.com"
-            autocapitalize="off"
-            autocorrect="off"
-            spellcheck="false"
-            class="w-full"
-            :disabled="atLimit"
-          />
-          <UButton
-            type="submit"
-            size="lg"
-            class="min-h-11 shrink-0"
-            label="Connect"
-            :loading="!!submitting"
-            :disabled="!url.trim() || !!typedError || atLimit"
-          />
-        </div>
-      </UFormField>
-      <p v-if="cappedAllowance && !atLimit && !fieldError" class="text-xs text-muted">
-        {{ siteAllowanceSummary(cappedAllowance.used, cappedAllowance.allowance) }}
+    <section class="space-y-3" aria-labelledby="site-add-form-properties">
+      <div class="flex items-center justify-between gap-2">
+        <h2 id="site-add-form-properties" class="text-sm font-semibold text-highlighted">
+          Your Search Console properties
+        </h2>
+        <UButton
+          v-if="picker._tag !== 'NotConnected' && picker._tag !== 'Reconnect'"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          icon="i-heroicons-arrow-path"
+          class="min-h-11 shrink-0"
+          label="Refresh list"
+          aria-label="Refresh your Search Console properties"
+          :loading="picker._tag === 'Loading'"
+          :disabled="picker._tag === 'Loading'"
+          data-testid="gsc-refresh"
+          @click="refreshProperties()"
+        />
+      </div>
+
+      <ProAlert v-if="listError" color="error" :title="listError" />
+
+      <p v-if="picker._tag === 'Loading'" class="text-sm text-muted" role="status" aria-live="polite">
+        Reading your Search Console properties.
       </p>
-    </form>
 
-    <div v-if="gscPending" class="text-sm text-muted" role="status" aria-live="polite">
-      Reading your Search Console properties.
-    </div>
+      <div v-else-if="picker._tag === 'NotConnected'" class="space-y-3 rounded-lg border border-dashed border-default p-4" data-testid="gsc-not-connected">
+        <div class="space-y-1">
+          <p class="text-sm font-medium text-highlighted">
+            Connect Google Search Console
+          </p>
+          <p class="text-sm text-muted">
+            Request Indexing lists your Search Console properties here after you connect Google.
+          </p>
+        </div>
+        <UButton :to="gscConnectUrl" external color="primary" icon="i-simple-icons-google" class="min-h-11" label="Connect Google" />
+      </div>
 
-    <div v-else-if="gsc?.error" class="space-y-2">
-      <ProAlert color="warning" :title="gsc.error.message" />
-      <UButton :to="gscConnectUrl" external color="neutral" variant="subtle" class="min-h-11" label="Reconnect Google" />
-    </div>
+      <div v-else-if="picker._tag === 'Provisioning'" class="space-y-1 rounded-lg border border-dashed border-default p-4" role="status">
+        <p class="text-sm font-medium text-highlighted">
+          Search Console setup is in progress
+        </p>
+        <p class="text-sm text-muted">
+          {{ picker.message }}
+        </p>
+      </div>
 
-    <div v-else-if="suggestions.length" class="space-y-2">
-      <h2 class="text-sm font-semibold text-highlighted">
-        From your Search Console
-      </h2>
-      <ul class="space-y-2">
+      <div v-else-if="picker._tag === 'Reconnect'" class="space-y-2">
+        <ProAlert color="warning" :title="picker.message" />
+        <UButton :to="gscConnectUrl" external color="neutral" variant="subtle" class="min-h-11" label="Reconnect Google" />
+      </div>
+
+      <ProAlert v-else-if="picker._tag === 'Failed'" color="warning" title="Your Search Console properties could not load" :description="picker.message" />
+
+      <div v-else-if="picker._tag === 'NoProperties'" class="space-y-3 rounded-lg border border-dashed border-default p-4" data-testid="gsc-empty-state">
+        <div class="space-y-1">
+          <p class="text-sm font-medium text-highlighted break-words">
+            {{ noPropertiesTitle }}
+          </p>
+          <p class="text-sm text-muted">
+            Add your site in Search Console and verify it, then refresh this list. If a different Google account owns the property, connect that account.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <UButton
+            to="https://search.google.com/search-console"
+            target="_blank"
+            rel="noopener"
+            external
+            color="neutral"
+            variant="subtle"
+            trailing-icon="i-heroicons-arrow-top-right-on-square"
+            class="min-h-11"
+            label="Open Search Console"
+          />
+          <UButton :to="gscConnectUrl" external color="neutral" variant="ghost" class="min-h-11" label="Connect another Google account" />
+        </div>
+        <ULink
+          to="https://support.google.com/webmasters/answer/9008080"
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center gap-1 text-sm text-muted underline"
+        >
+          How to verify a site
+        </ULink>
+      </div>
+
+      <p v-else-if="picker._tag === 'AllConnected'" class="text-sm text-muted">
+        Every property in this Google account is already connected. Add another site in Search Console, then refresh this list.
+      </p>
+
+      <ul v-else class="space-y-2">
         <li
-          v-for="s in suggestions"
-          :key="s.siteUrl"
+          v-for="property in picker.properties"
+          :key="property.siteUrl"
           class="flex items-center gap-3 rounded-lg border border-default px-3 py-2"
+          data-testid="gsc-property"
         >
           <div class="min-w-0 flex-1">
             <div class="truncate text-sm text-highlighted">
-              {{ s.domain }}
+              {{ property.domain }}
             </div>
-            <div v-if="!s.verified" class="text-xs text-warning">
-              Not verified in Search Console yet.
+            <div v-if="!property.verified" class="text-xs text-warning">
+              Not verified for this Google account. Verify it in Search Console, then refresh this list.
             </div>
           </div>
           <UButton
@@ -252,21 +314,42 @@ async function connect(value: string) {
             size="sm"
             class="min-h-11 shrink-0"
             label="Connect"
-            :loading="submitting === s.domain"
-            :disabled="atLimit || !!submitting"
-            @click="connect(s.siteUrl)"
+            :aria-label="`Connect ${property.domain}`"
+            :loading="submitting === property.domain"
+            :disabled="!property.verified || atLimit || !!submitting"
+            @click="connect(property.siteUrl, 'list')"
           />
         </li>
       </ul>
-    </div>
+    </section>
 
-    <!-- Only true once something is connected. A brand new account reaches this
-         branch with nothing connected and no property to suggest, and read
-         "everything is already connected" as a reason to stop typing. -->
-    <p v-else-if="!sitesPending && gsc?.gscdumpRegistered && connectedSites.length" class="text-sm text-muted">
-      Every Search Console property you can reach is already connected. Add one in
-      <a class="underline" href="https://search.google.com/search-console" target="_blank" rel="noopener">Google Search Console</a>,
-      then reload this step.
+    <form v-if="showAddressField" class="space-y-2" @submit.prevent="connect(url, 'field')">
+      <UFormField label="Site address" help="For a subdomain of one of your properties, type its address." :error="fieldError">
+        <div class="flex flex-col gap-2 sm:flex-row">
+          <UInput
+            v-model="url"
+            placeholder="blog.example.com"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            class="w-full"
+            :disabled="atLimit"
+          />
+          <UButton
+            type="submit"
+            color="primary"
+            size="lg"
+            class="min-h-11 shrink-0"
+            label="Connect"
+            :loading="!!submitting && !!url.trim()"
+            :disabled="!url.trim() || !!typedError || atLimit || !!submitting"
+          />
+        </div>
+      </UFormField>
+    </form>
+
+    <p v-if="cappedAllowance && !atLimit" class="text-xs text-muted">
+      {{ siteAllowanceSummary(cappedAllowance.used, cappedAllowance.allowance) }}
     </p>
   </div>
 </template>

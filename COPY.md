@@ -148,6 +148,32 @@ These assets apply to Site connection, held Sites, URL Inspection refusals, the 
 
 The daily URL Inspection pool of one Site is a different limit. Its refusal keeps its own rate-limit message and never says Free allowance.
 
+## Connect a Site assets
+
+These assets apply to the property list on onboarding step 2, Connect a Site, and Manage Sites.
+A Site connects only from a verified Search Console property in the reader's own Google account.
+`{domain}` is the address the reader chose. `{email}` is the Google account of the Search Console grant.
+`layers/pro-gsc/shared/site-property.ts` holds the refusals; `ProSiteAddForm.vue` holds the list states.
+
+| Asset | String |
+| --- | --- |
+| Step and page description | Choose a property from your Search Console. Request Indexing reads each Site from its property. |
+| List heading | Your Search Console properties |
+| Refresh action | Refresh list |
+| No Google connection | Request Indexing lists your Search Console properties here after you connect Google. |
+| No property, title | {email} has no Search Console property |
+| No property, detail | Add your site in Search Console and verify it, then refresh this list. If a different Google account owns the property, connect that account. |
+| No property, actions | Open Search Console · Connect another Google account · How to verify a site |
+| Every property connected | Every property in this Google account is already connected. Add another site in Search Console, then refresh this list. |
+| Unverified property | Not verified for this Google account. Verify it in Search Console, then refresh this list. |
+| Address field help | For a subdomain of one of your properties, type its address. |
+| Refused, not connected | Connect Google Search Console before you connect a Site. Request Indexing reads each Site from its Search Console property. |
+| Refused, no property | This Google account has no Search Console property, so {domain} is not connected. Add the site in Search Console, or connect a different Google account. |
+| Refused, not owned | No Search Console property in this Google account covers {domain}. Add the site in Search Console, or connect the Google account that owns it. |
+| Refused, unverified | The Search Console property for {domain} is not verified for this Google account. Verify it in Search Console, then try again. |
+| Refused, read failed | Request Indexing could not read your Search Console properties, so {domain} is not connected. Try again in a minute. |
+| Integrations, no property | Connected. This Google account has no Search Console property. |
+
 ## Banned language
 
 Harlan's global writing rules already apply and are not repeated here: no em dashes, never the
