@@ -4,7 +4,8 @@
 // per request and reuse the same derivation.
 import type { PartnerLifecycleResponse, PartnerLifecycleSite } from '#layers/pro-gsc/shared/gscdump-api'
 import { getOldestGscDate } from 'gscdump'
-import { analyticsStatusToSyncStatus, findLifecycleSite } from '#layers/pro-gsc/server/utils/gscdump-client'
+import { findLifecycleSite } from '#layers/pro-gsc/server/utils/gscdump-client'
+import { analyticsSyncStatus } from '#layers/pro-gsc/shared/analytics-sync'
 
 /** `refused`: gscdump refused to register the Site; it waits for the user. */
 export type SiteSyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error' | 'refused'
@@ -17,7 +18,7 @@ export function lifecycleSiteFor(lifecycle: PartnerLifecycleResponse | null, gsc
 
 export function syncStatusFor(lifecycleSite: PartnerLifecycleSite | null, fallback: SiteSyncStatus | null): SiteSyncStatus {
   if (lifecycleSite)
-    return analyticsStatusToSyncStatus(lifecycleSite.analytics.status)
+    return analyticsSyncStatus(lifecycleSite.analytics)
   return fallback ?? 'pending'
 }
 

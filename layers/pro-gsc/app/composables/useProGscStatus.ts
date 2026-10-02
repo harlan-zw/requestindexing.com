@@ -1,6 +1,7 @@
 import type { SiteHoldReason } from '@gscdump/contracts'
 import type { PartnerLifecycleSite } from '../../shared/gscdump-api'
 import { lifecycleSiteToSyncStatus } from '@gscdump/sdk/lifecycle'
+import { analyticsSyncStatus } from '#layers/pro-gsc/shared/analytics-sync'
 import { useProSiteInjection } from '#layers/pro-saas/app/composables/useProSiteInjection'
 
 interface TableProgress {
@@ -46,7 +47,6 @@ interface GscSyncStatus {
   hold: SiteHoldReason | null
 }
 
-const MIN_DAYS_FOR_DATA = 60
 const POLL_INTERVAL_SYNCING = 5000
 const POLL_INTERVAL_SLOW = 60000
 const DEMO_GSCDUMP_SITE_ID = 's_9dnsyZ8vVZNlH8'
@@ -124,8 +124,8 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
         return null
       const analyticsStatus = lifecycleSite.analytics.status
       const lifecycleStatus = lifecycleSiteToSyncStatus(lifecycleSite)
-      const syncStatus = lifecycleStatus.syncStatus
-      const activeAnalytics = ['queued', 'preparing', 'syncing'].includes(analyticsStatus)
+      const syncStatus = analyticsSyncStatus(lifecycleSite.analytics)
+      const activeAnalytics = ['queued', 'preparing', 'syncing', 'queryable_live', 'queryable_partial'].includes(analyticsStatus)
       const activeSitemaps = ['discovering', 'syncing'].includes(lifecycleSite.sitemaps.status)
       const activeIndexing = ['discovering', 'checking', 'waiting_for_sitemaps'].includes(lifecycleSite.indexing.status)
       return {
@@ -138,9 +138,9 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
         progress: lifecycleStatus.progress,
         daysSynced: lifecycleStatus.daysSynced,
         daysAvailable: lifecycleStatus.daysAvailable,
-        isSyncing: lifecycleStatus.isSyncing || activeSitemaps || activeIndexing,
+        isSyncing: activeAnalytics || activeSitemaps || activeIndexing,
         hasData: lifecycleStatus.hasData,
-        isComplete: lifecycleStatus.hasData && !activeAnalytics,
+        isComplete: lifecycleStatus.isComplete,
         phase: syncStatus === 'error' ? 'error' : activeIndexing ? 'indexing' : activeAnalytics || activeSitemaps ? 'syncing' : 'complete',
         totalRowsSynced: lifecycleStatus.daysSynced,
         hasMinimumData: lifecycleStatus.hasData,
@@ -253,7 +253,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
       gscdumpSiteUrl: site.value.gscdumpSiteUrl,
       syncStatus: syncData.value.syncStatus,
       permissionLost: !!syncData.value.permissionLost,
-      syncProgress: { percent: syncData.value.progress, completed: 0, total: 0 },
+      syncProgress: { percent: syncData.value.progress, completed: syncData.value.daysSynced, total: syncData.value.daysAvailable },
       oldestDate: syncData.value.oldestDateSynced,
       newestDate: syncData.value.newestDateSynced,
       lastSyncAt: syncData.value.lastSyncAt,
@@ -314,15 +314,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
     return Math.ceil((newest.getTime() - oldest.getTime()) / (1000 * 60 * 60 * 24))
   })
 
-  const hasMinimumData = computed(() => {
-    if (!data.value?.connected)
-      return false
-    if (data.value.hasMinimumData)
-      return true
-    if (data.value.syncStatus === 'synced')
-      return true
-    return daysSynced.value >= MIN_DAYS_FOR_DATA
-  })
+  const hasMinimumData = computed(() => !!data.value?.connected && data.value.queryable)
 
   const isFullySynced = computed(() => {
     if (!data.value)
