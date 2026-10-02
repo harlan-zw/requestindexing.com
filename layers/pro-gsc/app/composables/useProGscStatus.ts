@@ -122,10 +122,9 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
       const lifecycleSite = res.site
       if (!lifecycleSite)
         return null
-      const analyticsStatus = lifecycleSite.analytics.status
       const lifecycleStatus = lifecycleSiteToSyncStatus(lifecycleSite)
       const syncStatus = analyticsSyncStatus(lifecycleSite.analytics)
-      const activeAnalytics = ['queued', 'preparing', 'syncing', 'queryable_live', 'queryable_partial'].includes(analyticsStatus)
+      const activeAnalytics = syncStatus === 'pending' || syncStatus === 'syncing'
       const activeSitemaps = ['discovering', 'syncing'].includes(lifecycleSite.sitemaps.status)
       const activeIndexing = ['discovering', 'checking', 'waiting_for_sitemaps'].includes(lifecycleSite.indexing.status)
       return {

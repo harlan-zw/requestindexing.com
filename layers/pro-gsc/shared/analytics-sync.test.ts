@@ -15,6 +15,15 @@ describe('analytics sync status', () => {
     expect(analyticsSyncStatus(analytics('ready', true, 100))).toBe('synced')
   })
 
+  it('keeps settled readable sources synced when there is no outstanding work', () => {
+    const source = analytics('queryable_live', true, 100)
+    source.progress = { percent: 100, completed: 668, failed: 0, total: 668 }
+    expect(analyticsSyncStatus(source)).toBe('synced')
+    source.status = 'queryable_partial'
+    source.progress = { percent: 100, completed: 667, failed: 1, total: 668 }
+    expect(analyticsSyncStatus(source)).toBe('synced')
+  })
+
   it('keeps queued and failed imports distinct from readable data', () => {
     expect(analyticsSyncStatus(analytics('queued', false))).toBe('pending')
     expect(analyticsSyncStatus(analytics('failed', false))).toBe('error')

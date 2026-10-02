@@ -33,7 +33,7 @@ definePageMeta({
   icon: 'i-lucide-layout-dashboard',
 })
 
-const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, isLifecycleSettled, hold, gscData } = useSite('Search Console')
+const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, isLifecycleSettled, hold, gscData, gscStatusError, refreshGscStatus } = useSite('Search Console')
 const analyticsSiteId = computed(() => isLifecycleSettled.value && isReady.value && !hold.value ? gscdumpSiteId.value ?? undefined : undefined)
 const { session } = useUserSession()
 
@@ -394,13 +394,21 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
       </template>
     </UiAlert>
 
+    <UiAlert v-else-if="gscStatusError && !isReady" status="error" title="Search Console sync status could not load.">
+      <template #action>
+        <UiButton purpose="secondary" @click="refreshGscStatus()">
+          Retry
+        </UiButton>
+      </template>
+    </UiAlert>
+
     <template v-else>
       <!-- The shared control strip owns period, comparison, search type, chart
            metrics and the Brand and Questions facets. Country and Device stay
            off: a per-Site breakdown cannot cross-filter by them. -->
       <ProGscSurfaceBar v-if="searchState._tag === 'Ready'" surface="overview" :site-id="siteId" />
 
-      <UiAlert v-if="isProcessing && gscData?.syncProgress" status="info" :title="`Syncing ${Math.round(gscData.syncProgress.percent)}%`">
+      <UiAlert v-if="gscData?.syncStatus === 'syncing' && gscData.syncProgress" status="info" :title="`Syncing ${Math.round(gscData.syncProgress.percent)}%`">
         {{ gscData.syncProgress.completed }} of {{ gscData.syncProgress.total }} Search Console tasks completed.
       </UiAlert>
 
