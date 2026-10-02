@@ -296,7 +296,7 @@ function formatDate(value: string) {
         <p v-if="receipts.error.value" class="text-base text-error">
           Submission receipts could not load. Retry to read the latest outcomes.
         </p>
-        <UiSkeleton v-else-if="receipts.status.value === 'pending' && !receipts.data.value" :lines="3" :base="240" :range="80" />
+        <UiSkeleton v-else-if="(receipts.status.value === 'idle' || receipts.status.value === 'pending') && !receipts.data.value" :lines="3" :base="240" :range="80" />
         <div v-else-if="!receipts.data.value?.submissionReceipts.length">
           <p class="text-base text-default">
             No submission receipts yet
