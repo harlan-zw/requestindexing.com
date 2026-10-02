@@ -71,6 +71,8 @@ export interface TrustGateInput {
   lastDownloadedAt: string | null
   /** A `sitemap.changed` collapse detected in-window — corroboration for `broken`. */
   sitemapCollapsed: boolean
+  /** A contributing feed failed during URL collection. */
+  sitemapFetchError: string | null
   now: Date
 }
 
@@ -103,11 +105,25 @@ export function computeTrustGate(i: TrustGateInput): TrustGate {
     return { state: 'no_sitemap', reason: 'No sitemap found at /sitemap.xml.' }
 
   const inspected = i.inspectedCount ?? i.totalUrls ?? 0
+  const staleDownload = i.lastDownloadedAt != null && daysSince(i.lastDownloadedAt, i.now) >= STALE_DOWNLOAD_DAYS
+  const corroborated = staleDownload || i.sitemapCollapsed
+
+  // A failed first collection needs action even when no inspection exists.
+  if (inspected <= 0 && i.sitemapFetchError)
+    return { state: 'broken', reason: 'Sitemap URL collection failed. Review the sitemap errors.' }
+  if (inspected <= 0 && corroborated && live && (live.status === 'timeout' || live.status === 'error')) {
+    return {
+      state: 'broken',
+      reason: live.status === 'timeout'
+        ? 'Sitemap is timing out, so indexing cannot be confirmed.'
+        : 'Sitemap is unreachable, so indexing cannot be confirmed.',
+    }
+  }
   if (i.sitemapsPending && inspected <= 0)
     return { state: 'pending', reason: 'Sitemap is submitted and waiting for Google to parse it.' }
 
   if (inspected <= 0)
-    return { state: 'pending', reason: 'Google has not inspected any URLs yet.' }
+    return { state: 'pending', reason: 'URL Inspection data has not been collected yet.' }
 
   // Syncing / first import — neutral, never error chrome. 'partial' is a healthy
   // mid-sampling state (it has data), so only non-working statuses are pending.
@@ -115,8 +131,6 @@ export function computeTrustGate(i: TrustGateInput): TrustGate {
     return { state: 'pending', reason: 'Search Console data is still syncing.' }
 
   // Corroboration for the red gate: a stale GSC download OR an in-window collapse.
-  const staleDownload = i.lastDownloadedAt != null && daysSince(i.lastDownloadedAt, i.now) >= STALE_DOWNLOAD_DAYS
-  const corroborated = staleDownload || i.sitemapCollapsed
 
   // Live probe FAILED (timeout, or non-404 error).
   if (live && (live.status === 'timeout' || live.status === 'error')) {
