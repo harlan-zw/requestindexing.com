@@ -82,6 +82,7 @@ const totalRejected = computed(() => buckets.value.reduce((sum, bucket) => sum +
 // state is its own branch.
 const isConnected = computed(() => Boolean(gscdumpSiteId.value))
 const hasEvidence = computed(() => Boolean(diagnostics.value))
+const inspectedCount = computed(() => diagnostics.value?.meta.inspectedCount ?? diagnostics.value?.summary.totalUrls ?? 0)
 const clustersLoading = computed(() =>
   !urlsData.value && !urlsError.value && (urlsStatus.value === 'idle' || urlsStatus.value === 'pending'),
 )
@@ -118,10 +119,23 @@ function bucketTo(issueType: string): string {
       </UiAlert>
 
       <UiAlert
-        v-else-if="hasEvidence && status === 'success' && totalRejected === 0"
+        v-else-if="hasEvidence && status === 'success' && inspectedCount === 0"
+        status="info"
+        title="No URL Inspection results yet"
+        description="Recovery needs inspected URLs to show refusal reasons. Open URLs to check the inspection status."
+      >
+        <template #action>
+          <UiButton purpose="secondary" :to="urlsRoute">
+            View URLs
+          </UiButton>
+        </template>
+      </UiAlert>
+
+      <UiAlert
+        v-else-if="hasEvidence && status === 'success' && inspectedCount > 0 && totalRejected === 0"
         status="success"
-        title="Google is not refusing pages on this Site"
-        description="Search Console reports no pages in the crawled-not-indexed, discovered-not-indexed, or soft-404 buckets."
+        title="No refusal reasons in the inspected URLs"
+        description="The inspected URLs have no crawled-not-indexed, discovered-not-indexed, or soft-404 reasons. Other URLs may have different results."
       />
 
       <div v-else-if="buckets.length" class="flex flex-col gap-4">
@@ -161,6 +175,9 @@ function bucketTo(issueType: string): string {
       </div>
 
       <UiCard v-else size="sm">
+        <p class="mb-3 text-mini text-dimmed">
+          Reading URL Inspection results. Refusal reasons appear after this read finishes.
+        </p>
         <UiSkeleton :lines="3" :base="220" :range="60" />
       </UiCard>
     </ProPageZone>
