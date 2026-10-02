@@ -265,7 +265,7 @@ Google's own step, so these strings say add for a property and connect for a Sit
 | Record actions | Get DNS record · Get meta tag |
 | DNS step | 1. Add this TXT record at your DNS provider |
 | DNS fields | Type · Name · Value |
-| DNS steps | Sign in where you manage DNS for {domain}. This is often the company where you bought the domain. · Add a TXT record with the name and value above. If the name field does not accept {domain}, type @. · Save the record. A DNS change can take minutes or hours to go live. |
+| DNS steps | Sign in where you manage DNS for {domain}. This is often the company where you bought the domain. · Add a TXT record with the name and value above. If your provider appends the DNS zone name, enter only the part before that zone. For replay.example.com in the example.com zone, enter replay. Use @ only when {domain} is the DNS zone itself. · Save the record. A DNS change can take minutes or hours to go live. |
 | Meta tag step | 1. Add this tag to the head of your home page, then deploy |
 | Verify step | 2. Verify ownership |
 | Verify step, detail | When the record is live, select Verify ownership. If you leave now, Request Indexing keeps the record, and you can verify it later. |
