@@ -127,6 +127,13 @@
       "when": 1790874675683,
       "tag": "0018_drop_usages",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1790908889266,
+      "tag": "0019_gsc_property_verifications",
+      "breakpoints": true
     }
   ]
 }

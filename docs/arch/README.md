@@ -45,6 +45,8 @@ The rule that decides where code goes: if a capability could live in gscdump, it
 | Accounts, teams, site list, session | this app |
 | Dashboard UI and the job-to-be-done | this app |
 | Google consent for the Indexing API grant | this app, then handed to gscdump |
+| Adding and verifying a Search Console property | gscdump, through `partner.users.verification.token.create` and `partner.users.sites.verify.create` |
+| Google consent for the verify step-up (`siteverification`), and the pending verification record | this app |
 
 Google Indexing API submission moved to gscdump under gscdump.com ADR-0016. This app runs the consent with one OAuth client in a Cloud project that serves only the Indexing API scope, then hands the refresh token to gscdump and keeps no copy. Creating a Submission and handing over a grant take the partner key, so they go through this app's server routes; the browser proxy only reads receipts.
 
@@ -66,6 +68,7 @@ D1 holds only what gscdump does not: identity and the local mirror needed to ren
 - `sites`, `team_sites`, `user_sites` with `gscdump_site_id` as the join key
 - `indexing_investigations` for per-URL status notes
 - `drip_emails` for the onboarding drip, and `notification_optouts` for the email categories an address unsubscribed from
+- `gsc_property_verifications` for an Add and verify record the user minted and has not verified yet, one per user and domain
 
 Site and account state is a cache, never the record. The webhook receiver mirrors sync status onto `sites`, then the onboarding reconcile re-reads authoritative lifecycle from gscdump.
 
@@ -73,6 +76,7 @@ Site and account state is a cache, never the record. The webhook receiver mirror
 
 - **Partner API**: `layers/pro-gsc/server/utils/gscdump-origin.ts` builds the v1 client from a server-held key.
 - **Browser**: no key reaches the client. `layers/pro-gsc/server/api/_gscdump/[surface]/v1/[...path].ts` proxies a closed allowlist of operations with team-scoped ownership checks.
+  Add and verify is not on that list: its two operations take the partner key and a gscdump user id, so `/api/pro/gsc-verification/*` calls them from the server, as nuxtseo.com does.
 - **Webhooks**: `layers/pro-gsc/server/api/webhooks/gscdump.post.ts` verifies the HMAC, dedupes by delivery id, and treats deliveries as invalidation signals. The one exception is `user.allowance.notice`: gscdump sends no email to a partner's user, so this app sends its own.
 - **Realtime**: tickets minted through the same proxy; the socket only ever says state changed.
 

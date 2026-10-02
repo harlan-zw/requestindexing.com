@@ -11,6 +11,22 @@ const reads = {
 const post = vi.fn()
 let toast: { add: ReturnType<typeof vi.fn> }
 
+// The Add and verify dialog has its own test. Here it is the action it offers,
+// and the address it starts from.
+vi.mock('#layers/pro-gsc/app/components/pro/ProGscAddVerify.vue', async () => {
+  const { defineComponent, h } = await import('vue')
+  return {
+    default: defineComponent({
+      props: ['domain', 'label'],
+      setup: props => () => h('button', { 'type': 'button', 'data-add-verify': props.domain ?? '' }, props.label ?? 'Add and verify'),
+    }),
+  }
+})
+
+function addVerifyDomains(host: HTMLElement): string[] {
+  return [...host.querySelectorAll('[data-add-verify]')].map(el => el.getAttribute('data-add-verify')!)
+}
+
 Object.assign(globalThis, {
   useFetch: (url: string) => ({
     data: url === '/api/sites/preview' ? reads.preview : reads.properties,
@@ -112,8 +128,20 @@ describe('connect a Site', () => {
     expect([...host.querySelectorAll('a')].map(a => a.textContent?.trim())).toEqual(
       expect.arrayContaining(['Open Search Console', 'Connect another Google account', 'How to verify a site']),
     )
+    expect(addVerifyDomains(host)).toEqual([''])
     expect(host.querySelector('input')).toBeNull()
     expect(onBlocked).toHaveBeenCalled()
+  })
+
+  it('offers Verify on a property Google has not verified for this account, never Connect', async () => {
+    reads.properties.value = { connected: true, properties: [{ siteUrl: 'sc-domain:mysite.dev', permissionLevel: 'siteUnverifiedUser' }] }
+
+    const host = mount()
+    await flush()
+
+    const row = host.querySelector('[data-testid="gsc-property"]')!
+    expect(row.querySelector('[data-add-verify]')?.getAttribute('data-add-verify')).toBe('mysite.dev')
+    expect([...row.querySelectorAll('button')].some(button => button.textContent === 'Connect')).toBe(false)
   })
 
   // The 2026-10-01 replay, N8: a screen reader heard "Refresh your Search
@@ -151,8 +179,8 @@ describe('connect a Site', () => {
 
   it('shows the server refusal for an address the account does not own, never Connected', async () => {
     reads.properties.value = { connected: true, properties: [{ siteUrl: 'sc-domain:mysite.dev', permissionLevel: 'siteOwner' }] }
-    const refusal = 'No Search Console property in this Google account covers example.com. Add the site in Search Console, or connect the Google account that owns it.'
-    post.mockRejectedValue({ data: { data: { message: refusal } } })
+    const refusal = 'No Search Console property in this Google account covers example.com. Add and verify it, or connect the Google account that owns it.'
+    post.mockRejectedValue({ data: { data: { message: refusal, details: { reason: 'not_owned' } } } })
 
     const host = mount()
     await flush()
@@ -164,6 +192,7 @@ describe('connect a Site', () => {
     await flush()
 
     expect(host.textContent).toContain(refusal)
+    expect(addVerifyDomains(host)).toEqual(['example.com'])
     expect(toast.add).not.toHaveBeenCalled()
   })
 

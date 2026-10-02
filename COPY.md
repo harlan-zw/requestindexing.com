@@ -66,7 +66,7 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | IndexNow notifies Bing and other participating search engines, and Google is not one of them | INDEXNOW-01 and INDEXNOW-02 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
 | IndexNow takes any page type on the host, and needs a key file on the site | INDEXNOW-03 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
 | Free and open source, MIT | `LICENSE`, and the repository is public |
-| We read your Search Console data, and the one change we make there is a sitemap submission | the connect flow asks for `webmasters` (read and write) and `indexing`. A sitemap submission comes from Submit sitemap on the Sitemaps tab, or from gscdump's daily sync when it finds a live sitemap |
+| We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify | the connect flow asks for `webmasters` (read and write) and `indexing`. A sitemap submission comes from Submit sitemap on the Sitemaps tab, or from gscdump's daily sync when it finds a live sitemap. A property is added only when the reader selects Verify ownership in Add and verify, after a separate grant of `siteverification` |
 | The Free allowance numbers | gscdump returns them from `partner.users.entitlements.get`; copy reads them at runtime and never hardcodes one |
 | A free tool verdict is an estimate from a Google `site:` search | PRODUCT-06 in `apps/marketing/content/VERIFIED-CLAIMS.md`. The tools read no Search Console data and no URL Inspection result |
 | Deleting an account removes its Teams, Sites, and data here, and gscdump.com deletes its record and API keys | `deleteUserData` purges the rows; its `pro:user:deleting` listener calls gscdump's `partner.users.delete`, which queues the gscdump user cleanup |
@@ -205,7 +205,7 @@ A Site connects only from a verified Search Console property in the reader's own
 `{domain}` is the address the reader chose. `{email}` is the Google account of the Search Console grant.
 `layers/pro-gsc/shared/site-property.ts` holds the refusals; `ProSiteAddForm.vue` holds the list states.
 
-These surfaces show the no-property state, each with the same title and the same three actions:
+These surfaces show the no-property state, each with the same title and the same four actions:
 
 - the property list
 - the Dashboard, Indexing, Manage Sites, and Developers, when no Site is connected
@@ -220,18 +220,71 @@ These surfaces show the no-property state, each with the same title and the same
 | Refresh action | Refresh list |
 | No Google connection | Request Indexing lists your Search Console properties here after you connect Google. |
 | No property, title | {email} has no Search Console property |
-| No property, detail | Add your site in Search Console and verify it, then refresh this list. If a different Google account owns the property, connect that account. |
-| No property, detail outside the list | Add your site in Search Console and verify it. If a different Google account owns the property, connect that account. |
-| No property, actions | Open Search Console · Connect another Google account · How to verify a site |
-| Every property connected | Every property in this Google account is already connected. Add another site in Search Console, then refresh this list. |
-| Unverified property | Not verified for this Google account. Verify it in Search Console, then refresh this list. |
+| No property, detail | Add and verify your site here, or add it in Search Console and refresh this list. If a different Google account owns the property, connect that account. |
+| No property, detail outside the list | Add and verify your site here or in Search Console. If a different Google account owns the property, connect that account. |
+| No property, actions | Add and verify a property · Open Search Console · Connect another Google account · How to verify a site |
+| Every property connected | Every property in this Google account is already connected. Add and verify another site here, or add it in Search Console and refresh this list. |
+| Unverified property | Not verified for this Google account. Select Verify, or verify it in Search Console and refresh this list. |
+| Unverified property, action | Verify |
 | Address field help | For a subdomain of one of your properties, type its address. |
 | Refused, not connected | Connect Google Search Console before you connect a Site. Request Indexing reads each Site from its Search Console property. |
 | Refused, no property | This Google account has no Search Console property, so {domain} is not connected. Add the site in Search Console, or connect a different Google account. |
-| Refused, not owned | No Search Console property in this Google account covers {domain}. Add the site in Search Console, or connect the Google account that owns it. |
-| Refused, unverified | The Search Console property for {domain} is not verified for this Google account. Verify it in Search Console, then try again. |
+| Refused, not owned | No Search Console property in this Google account covers {domain}. Add and verify it, or connect the Google account that owns it. |
+| Refused, unverified | The Search Console property for {domain} is not verified for this Google account. Verify it, then try again. |
 | Refused, read failed | Request Indexing could not read your Search Console properties, so {domain} is not connected. Try again in a minute. |
 | Integrations, no property | Connected. This Google account has no Search Console property. |
+
+## Add and verify assets
+
+These assets apply to Add and verify: the dialog that adds a Search Console property to the
+reader's Google account and verifies it. It opens from the no-property state, from an unverified
+row in the property list, and from a refused address on Connect a Site. Adding a property is
+Google's own step, so these strings say add for a property and connect for a Site.
+`{domain}` is the address the reader typed. `{url}` is the page Google reads for a meta tag.
+`layers/pro-gsc/shared/add-verify-copy.ts` holds these strings. Ported from nuxtseo.com
+`layers/pro/gsc/app/components/pro/ProGscAddVerify.vue` (ADR-0074).
+
+| Asset | String |
+| --- | --- |
+| Action | Add and verify a property |
+| Action for one address | Add and verify {domain} |
+| Dialog title | Add and verify a Search Console property |
+| Dialog intro | Search Console adds a property when you prove that you own the site. Add a DNS record or a meta tag, then verify it. The record is yours, so the property stays verified if you stop using Request Indexing. |
+| Checking the grant | Checking your Google permissions. |
+| Permission title | One more Google permission |
+| Permission detail | Request Indexing needs permission to add and verify sites in your Search Console. Google asks once, then sends you back here. |
+| Permission action | Grant permission |
+| Permission granted, title | Google permission granted |
+| Permission granted, detail | You can now add and verify a Search Console property. |
+| Address label | Site address |
+| Method label | Method |
+| Method names | DNS record · Meta tag |
+| DNS record, help | Verifies the domain and every subdomain. Search Console adds it as a Domain property. |
+| Meta tag, help | Verifies this one address. Search Console adds it as a URL-prefix property. |
+| Record actions | Get DNS record · Get meta tag |
+| DNS step | 1. Add this TXT record at your DNS provider |
+| DNS fields | Type · Name · Value |
+| DNS steps | Sign in where you manage DNS for {domain}. This is often the company where you bought the domain. · Add a TXT record with the name and value above. If the name field does not accept {domain}, type @. · Save the record. A DNS change can take minutes or hours to go live. |
+| Meta tag step | 1. Add this tag to the head of your home page, then deploy |
+| Verify step | 2. Verify ownership |
+| Verify step, detail | When the record is live, select Verify ownership. If you leave now, Request Indexing keeps the record, and you can verify it later. |
+| Verify action | Verify ownership |
+| Retry action | Check again |
+| Switch method | Use a DNS record instead · Use a meta tag instead |
+| Copy action | Copy value · Copied |
+| Verified, title | Property verified |
+| Verified, detail | {domain} is verified in Search Console. Connect it as a Site from your Search Console properties. |
+| Not live, DNS record | Google could not find the TXT record for {domain} yet. A DNS change can take minutes or hours to go live. Check again later. |
+| Not live, meta tag | Google could not find the meta tag on {url} yet. Deploy the change, then check again. |
+| Refused, not connected | Connect Google before you add and verify a property. |
+| Refused, localhost | Google cannot reach a localhost address. Type the public address of your site. |
+| Refused, Site Verification off | Request Indexing cannot reach Google Site Verification right now. Add and verify the property in Search Console instead. |
+| Refused, record | Request Indexing could not get a verification record from Google. Try again in a minute. |
+| Refused, verify | Request Indexing could not reach Google to verify {domain}. Try again in a minute. |
+
+**No background check.** nuxtseo.com re-checks a pending record on a schedule and emails the
+reader when it passes. Request Indexing does not, so no string here may say "we keep checking".
+The reader selects Check again.
 
 ## Account deletion assets
 

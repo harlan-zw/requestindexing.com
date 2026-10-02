@@ -138,7 +138,7 @@ useSeoMeta({
       </ul>
 
       <p class="mt-4 text-xs text-muted">
-        In setup, Google asks you for two permissions: view and manage Search Console data, and submit pages for indexing. We read your Search Console data, and the one change we make there is a sitemap submission.
+        In setup, Google asks you for two permissions: view and manage Search Console data, and submit pages for indexing. We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify.
       </p>
 
       <p class="mt-7 text-xs text-muted">

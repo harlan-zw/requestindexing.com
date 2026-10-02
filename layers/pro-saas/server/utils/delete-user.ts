@@ -27,6 +27,7 @@ import {
   failedJobs,
   feedback,
   googleAccounts,
+  gscPropertyVerifications,
   indexingInvestigations,
   jobBatches,
   jobs,
@@ -200,6 +201,13 @@ export async function deleteUserData(event: H3Event, opts: DeleteUserOptions): P
       table: 'drip_emails',
       count: () => scalar(db, sql`select count(*) as c from drip_emails where user_id = ${userId}`),
       run: () => db.delete(dripEmails).where(eq(dripEmails.userId, userId)),
+    },
+    {
+      // Add and verify records the user left pending. The property and its
+      // verification stay in their Google account.
+      table: 'gsc_property_verifications',
+      count: () => scalar(db, sql`select count(*) as c from gsc_property_verifications where user_id = ${userId}`),
+      run: () => db.delete(gscPropertyVerifications).where(eq(gscPropertyVerifications.userId, userId)),
     },
     {
       table: 'feedback',

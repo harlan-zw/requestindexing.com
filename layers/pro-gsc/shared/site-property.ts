@@ -61,9 +61,9 @@ export function sitePropertyRefusalMessage(reason: SitePropertyRefusalReason, do
     case 'no_properties':
       return `This Google account has no Search Console property, so ${domain} is not connected. Add the site in Search Console, or connect a different Google account.`
     case 'not_owned':
-      return `No Search Console property in this Google account covers ${domain}. Add the site in Search Console, or connect the Google account that owns it.`
+      return `No Search Console property in this Google account covers ${domain}. Add and verify it, or connect the Google account that owns it.`
     case 'unverified':
-      return `The Search Console property for ${domain} is not verified for this Google account. Verify it in Search Console, then try again.`
+      return `The Search Console property for ${domain} is not verified for this Google account. Verify it, then try again.`
     case 'unavailable':
       return `Request Indexing could not read your Search Console properties, so ${domain} is not connected. Try again in a minute.`
   }
