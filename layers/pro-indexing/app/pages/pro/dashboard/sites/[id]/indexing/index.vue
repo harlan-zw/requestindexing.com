@@ -184,13 +184,14 @@ const trust = computed(() => {
     inspectedCount: inspectedCount.value || null,
     totalUrls: summary.value?.totalUrls ?? null,
     indexingStatus: indexingStatus.value,
-    sitemapsPending: indexingStatus.value === 'pending',
+    sitemapsPending: indexingData.value?.meta.sitemapsPending ?? false,
     noSitemapsSubmitted: scopedSitemaps.value.length === 0,
     liveness: livenessData.value,
     lastDownloadedAt: lastDownloadedAt.value,
     sitemapCollapsed: sitemapHistoryCollapsed(
       scopedSitemapUrlHistory.value.map(point => point.urlCount),
     ),
+    sitemapFetchError: scopedSitemaps.value.find(sitemap => sitemap.feed?._tag !== 'dropped' && sitemap.lastError)?.lastError ?? null,
     now: new Date(),
   })
 })

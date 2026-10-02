@@ -64,7 +64,7 @@ const status = computed(() => {
           status="neutral"
           :label="model.state === 'not_connected'
             ? 'Setup needed'
-            : model.progress && model.progress.inspected > 0 ? 'Inspection in progress' : 'Waiting for Google'"
+            : model.progress && model.progress.inspected > 0 ? 'Inspection in progress' : 'Collection in progress'"
         />
         <div>
           <h2 class="text-2xl font-strong text-default">
@@ -75,7 +75,7 @@ const status = computed(() => {
               {{ model.progress.inspected.toLocaleString() }} of {{ model.progress.total.toLocaleString() }} sitemap URLs inspected
             </template>
             <template v-else>
-              Waiting for Google to inspect your pages
+              Waiting for indexing evidence
             </template>
           </h2>
           <p class="mt-2 max-w-2xl text-sm text-muted">
@@ -88,6 +88,9 @@ const status = computed(() => {
           v-if="model.state === 'not_connected'"
           class="self-start"
         />
+        <UiButton v-if="model.state === 'pending' && !model.progress" :to="sitemapTo" purpose="secondary" trailing-icon="next" class="min-h-11 self-start">
+          Review sitemap
+        </UiButton>
         <div v-if="model.progress" class="max-w-sm">
           <div
             class="h-2 overflow-hidden rounded-full bg-accented"
