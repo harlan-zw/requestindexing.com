@@ -65,12 +65,18 @@ export default defineConfig({
       }),
       defineProject({
         plugins: [vue(), rawMarkdown()],
+        // `tests/ws-route.feature.test.ts` runs Nitro's Durable Object class.
+        // Vitest must transform that runtime, so the test can stand in for its
+        // `cloudflare:workers` and `#nitro-internal-*` imports. Nitro's build
+        // sets `import.meta._websocket`, so the define stands in for it.
+        define: { 'import.meta._websocket': 'true' },
         test: {
           name: 'feature',
           environment: 'node',
           include: [FEATURE],
           exclude: [...EXCLUDE, CLIENT_FEATURE],
           globals: true,
+          server: { deps: { inline: [/nitropack\/dist\/presets\/cloudflare\/runtime\//] } },
         },
         resolve: { alias: alias() },
       }),

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { sites } from '~~/layers/core/server/db/schema'
-import { broadcastToUser } from '~~/layers/core/server/utils/event-service'
+import { broadcastToUser } from '~~/layers/core/server/utils/realtime'
 import { defineJob } from '../_types'
 
 export default defineJob({
@@ -24,7 +24,7 @@ export default defineJob({
     }).where(eq(sites.id, siteId))
 
     if (site.owner) {
-      broadcastToUser(site.owner.publicId, {
+      await broadcastToUser(ctx.env, site.owner.publicId, {
         name: 'sites/sync-finished',
         entityId: siteId,
         entityType: 'site',

@@ -29,11 +29,6 @@ export function emitAppEvent<E extends AppEventName>(
   return (nitro.hooks.callHook as (event: string, ctx: unknown) => Promise<void>)(event, ctx)
 }
 
-export function broadcastToUser(userPublicId: string, data: Record<string, unknown>): Promise<void> {
-  const nitro = useNitroApp()
-  return (nitro.hooks.callHook as (event: string, ctx: unknown) => Promise<void>)(`ws:message:${userPublicId}`, data)
-}
-
 // ============================================
 // Pure functions
 // ============================================

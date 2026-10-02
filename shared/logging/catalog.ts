@@ -79,6 +79,9 @@ export const LOG_CATALOG = {
   // Account deletion
   'account.google_revoke_failed': 'Google did not revoke a stored token during account deletion; the token row is deleted, so the grant stays until the person removes it in their Google Account',
 
+  // Realtime
+  'realtime.publish_failed': 'a /_ws event did not reach the Durable Object that holds the sockets; an open dashboard misses one refresh',
+
   // Free tools
   'dataforseo.domain_metrics_unavailable': 'the site report Labs traffic call failed; traffic and keywords show as unavailable, never zero',
 } as const
