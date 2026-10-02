@@ -13,6 +13,7 @@ definePageMeta({
 })
 
 const { siteId, site, siteStatus, gscdumpSiteId } = useSite('Queries')
+const { data: syncData, isLifecycleSettled, hasError: syncStatusError, refresh: refreshSyncStatus } = useProGscStatus(siteId)
 const { period } = useSitePeriod()
 const { brand, questions } = useProGscFilters()
 
@@ -43,6 +44,20 @@ const hasRows = ref(true)
         Back to Sites
       </UiButton>
     </template>
+  </UiAlert>
+
+  <UiSkeleton v-else-if="!isLifecycleSettled" :lines="4" />
+
+  <UiAlert v-else-if="syncStatusError" status="error" title="Search Console sync status could not load.">
+    <template #action>
+      <UiButton purpose="secondary" @click="refreshSyncStatus()">
+        Retry
+      </UiButton>
+    </template>
+  </UiAlert>
+
+  <UiAlert v-else-if="!syncData?.queryable" status="info" title="Search Console data is still being prepared.">
+    Queries appear when the first sync makes this Site's data readable.
   </UiAlert>
 
   <div v-else data-testid="search-console-queries-page" class="flex flex-col gap-5">
