@@ -52,8 +52,8 @@ const result = ref<{
   domain: string
   overview: {
     domain: string
-    organicTraffic: number
-    organicKeywords: number
+    organicTraffic: number | null
+    organicKeywords: number | null
     estimatedIndexedPages: number
     topPages: Array<{ url: string, traffic: number, keywords: number }>
   }
@@ -211,18 +211,24 @@ const recommendationColor = {
         </div>
         <div class="p-4 rounded-xl bg-[var(--ui-bg-elevated)] border border-[var(--ui-border)] text-center">
           <div class="text-2xl font-bold text-[var(--ui-text-highlighted)]">
-            {{ result.overview.organicTraffic.toLocaleString() }}
+            {{ result.overview.organicTraffic?.toLocaleString() ?? '—' }}
           </div>
           <div class="text-xs text-[var(--ui-text-muted)]">
             Est. Monthly Traffic
           </div>
+          <div v-if="result.overview.organicTraffic === null" class="text-xs text-toned mt-1">
+            Unavailable right now
+          </div>
         </div>
         <div class="p-4 rounded-xl bg-[var(--ui-bg-elevated)] border border-[var(--ui-border)] text-center">
           <div class="text-2xl font-bold text-[var(--ui-text-highlighted)]">
-            {{ result.overview.organicKeywords.toLocaleString() }}
+            {{ result.overview.organicKeywords?.toLocaleString() ?? '—' }}
           </div>
           <div class="text-xs text-[var(--ui-text-muted)]">
             Ranking Keywords
+          </div>
+          <div v-if="result.overview.organicKeywords === null" class="text-xs text-toned mt-1">
+            Unavailable right now
           </div>
         </div>
       </div>

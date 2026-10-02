@@ -95,4 +95,43 @@ describe('getDomainOverview', () => {
 
     expect(overview.estimatedIndexedPages).toBe(1234)
   })
+
+  const searched = { tasks: [{ status_code: 20000, status_message: 'Ok.', result: [{ se_results_count: 3, items: [] }] }] }
+
+  async function overviewWithLabs(labs: () => unknown) {
+    const providerFetch = vi.fn(async (url: string) => url.includes('/serp/') ? searched : labs())
+    return getDomainOverview('example.com', { ...callContext(), providerFetch: providerFetch as unknown as typeof $fetch })
+  }
+
+  it('reports traffic as unknown when the Labs task fails', async () => {
+    // A failed Labs task used to read as 0 traffic and 0 keywords, which the
+    // report turned into "No organic traffic detected".
+    const overview = await overviewWithLabs(() => ({ tasks: [{ status_code: 40501, status_message: 'Invalid Field.', result: null }] }))
+
+    expect(overview.organicTraffic).toBeNull()
+    expect(overview.organicKeywords).toBeNull()
+  })
+
+  it('reports traffic as unknown when the Labs call throws', async () => {
+    const overview = await overviewWithLabs(() => Promise.reject(new Error('connect ETIMEDOUT')))
+
+    expect(overview.organicTraffic).toBeNull()
+    expect(overview.organicKeywords).toBeNull()
+  })
+
+  it('reports zero traffic when Labs answers with no data for the domain', async () => {
+    const overview = await overviewWithLabs(() => ({ tasks: [{ status_code: 20000, status_message: 'Ok.', result: [{ items: [] }] }] }))
+
+    expect(overview.organicTraffic).toBe(0)
+    expect(overview.organicKeywords).toBe(0)
+  })
+
+  it('reads traffic and keywords from a Labs answer', async () => {
+    const overview = await overviewWithLabs(() => ({
+      tasks: [{ status_code: 20000, status_message: 'Ok.', result: [{ items: [{ metrics: { organic: { etv: 412.6, count: 37 } } }] }] }],
+    }))
+
+    expect(overview.organicTraffic).toBe(413)
+    expect(overview.organicKeywords).toBe(37)
+  })
 })

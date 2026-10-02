@@ -35,9 +35,9 @@ export default defineEventHandler(async (event) => {
   let healthScore = 50 // Base score
   if (overview.estimatedIndexedPages > 0)
     healthScore += 20
-  if (overview.organicTraffic > 100)
+  if (overview.organicTraffic !== null && overview.organicTraffic > 100)
     healthScore += 15
-  if (overview.organicKeywords > 10)
+  if (overview.organicKeywords !== null && overview.organicKeywords > 10)
     healthScore += 15
   healthScore = Math.min(healthScore, 100)
 
