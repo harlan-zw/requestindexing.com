@@ -94,7 +94,7 @@ export function sampleOverlay(state: SiteSearchState, context: { gscConnected: b
     case 'Syncing':
       return {
         message: 'Syncing your search data...',
-        description: 'Showing sample data while we backfill your Search Console history. This usually takes a few minutes.',
+        description: 'Showing sample data while we import your Search Console history. You can leave this page while sync runs.',
         cta: { label: 'View sync status', to: SITES_ROUTE },
       }
     case 'Checking':
