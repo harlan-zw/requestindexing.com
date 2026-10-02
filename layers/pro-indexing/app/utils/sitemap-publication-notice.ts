@@ -10,7 +10,7 @@ export function resolveSitemapPublicationNotice(
   if (!data || data.sitemaps.length === 0)
     return null
 
-  const fetchFailed = data.sitemaps.some(sitemap => Boolean(sitemap.lastError))
+  const fetchFailed = data.sitemaps.some(sitemap => sitemap.feed?._tag !== 'dropped' && Boolean(sitemap.lastError))
   if (fetchFailed) {
     return data.generation
       ? {
