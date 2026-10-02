@@ -5,4 +5,4 @@ import type { IndexingApiGrantV1 } from '@gscdump/contracts/v1'
  * (gscdump.com ADR-0016). `/auth/google-indexing` hands it over; this app
  * keeps no copy of the token.
  */
-export type IndexingGrant = IndexingApiGrantV1
+export type IndexingGrant = IndexingApiGrantV1 | { _tag: 'unavailable' }

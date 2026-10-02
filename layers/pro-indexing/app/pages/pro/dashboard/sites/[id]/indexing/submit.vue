@@ -13,6 +13,7 @@ import { useProGscdumpIndexingUrls } from '#layers/pro-gsc/app/composables/usePr
 import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
 import IndexingChannelsCard from '#layers/pro-indexing/app/internal/components/indexing/IndexingChannelsCard.vue'
 import { describeReceipt, describeSubmissionRefusal, readIndexingGrantRefusal, readSubmissionRefusal, resolveSubmitAction } from '#layers/pro-indexing/app/utils/indexing-grant'
+import { INDEXING_API_UNAVAILABLE } from '#layers/pro-indexing/shared/indexing-copy'
 
 definePageMeta({
   proTab: { feature: 'indexing', label: 'Submit to Google', icon: 'i-ph-check-circle-duotone', order: 40 },
@@ -106,6 +107,8 @@ const { data: historyData, status: historyStatus, error: historyError, refresh: 
 const historyRows = computed(() => historyData.value?.urls ?? [])
 
 async function submitForIndexing() {
+  if (submitAction.value._tag !== 'Submit')
+    return
   const target = parseAbsoluteUrl(url.value)
   if (!target) {
     lastSubmit.value = { _tag: 'Err', message: 'Enter a full URL, including https:// and the page path.' }
@@ -255,7 +258,7 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
             type="submit"
             purpose="cta"
             :loading="submitting"
-            :disabled="!url.trim() || submitAction._tag === 'Checking' || !canWrite || submissionsLeft === 0"
+            :disabled="!url.trim() || submitAction._tag !== 'Submit' || !canWrite || submissionsLeft === 0"
             class="min-h-11"
           >
             Submit URL
@@ -270,6 +273,13 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
           </p>
           <UCheckbox v-model="intentConfirmed" label="I will submit only pages I own that are new or changed." />
         </div>
+        <UiAlert v-else-if="submitAction._tag === 'Unavailable'" status="info" :title="INDEXING_API_UNAVAILABLE" class="mt-4">
+          <template #action>
+            <UiButton purpose="secondary" :to="`/pro/dashboard/sites/${siteId}/indexing/indexnow`">
+              Submit with IndexNow
+            </UiButton>
+          </template>
+        </UiAlert>
         <p v-else-if="engineId && canWrite" class="mt-3 text-sm text-muted">
           {{ submissionsLeft }} of {{ GOOGLE_SUBMISSION_SITE_DAILY_LIMIT }} Google Submissions left today for this Site.
         </p>

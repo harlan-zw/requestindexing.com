@@ -116,9 +116,11 @@ describe('gET /auth/google-indexing', () => {
     expect(await roundTrip('/auth/google-indexing', granted, { referer: 'https://evil.example/pro/dashboard' })).toBe('/pro/dashboard')
   })
 
-  it('refuses before Google when the dedicated client is not configured', async () => {
+  it('returns to the app when the dedicated client is not configured', async () => {
     h.client = null
-    await expect(visit(start)).rejects.toMatchObject({ statusCode: 503 })
+    expect(await visit(start)).toBe(SUBMIT_PAGE)
+    expect(await visit('/auth/google-indexing?returnTo=https://evil.example')).toBe('/pro/dashboard/account')
+    expect(h.handovers).toEqual([])
   })
 
   it('refuses to hand over a grant for a user gscdump does not know', async () => {

@@ -2,6 +2,7 @@ import type { GoogleSubmissionReceiptV1, GoogleSubmissionRefusal } from '@gscdum
 import type { IndexingGrant } from '../../shared/contracts/indexing-grant'
 import { parseGoogleSubmissionRefusal } from '@gscdump/contracts/v1'
 import { withQuery } from 'ufo'
+import { INDEXING_API_UNAVAILABLE } from '../../shared/indexing-copy'
 
 /**
  * The Indexing API grant route. Google sends the browser back to `returnTo`,
@@ -29,6 +30,7 @@ export function readIndexingGrantRefusal(error: unknown): IndexingGrantRefusal |
 
 export type SubmitAction
   = | { _tag: 'Checking' }
+    | { _tag: 'Unavailable' }
     | { _tag: 'Submit' }
     | { _tag: 'GrantAccess', cause: IndexingGrantRefusal, to: string }
 
@@ -45,6 +47,8 @@ export interface SubmitActionInput {
 
 /** The action beside the Page URL field: Submit, or the grant that Submit needs first. */
 export function resolveSubmitAction(input: SubmitActionInput): SubmitAction {
+  if (input.grant?._tag === 'unavailable')
+    return { _tag: 'Unavailable' }
   if (input.refusal)
     return { _tag: 'GrantAccess', cause: input.refusal, to: indexingGrantHref(input.returnTo) }
   if (input.grantUnavailable)
@@ -65,7 +69,7 @@ const formatDay = (value: string) => dayFormatter.format(new Date(value))
 export function describeSubmissionRefusal(refusal: GoogleSubmissionRefusal): string {
   switch (refusal.reason) {
     case 'indexing_api_unavailable':
-      return 'Google Indexing API access is not set up for Request Indexing. Use IndexNow, or URL Inspection in Search Console.'
+      return INDEXING_API_UNAVAILABLE
     case 'needs_indexing_api_grant':
       return refusal.grant === 'missing'
         ? 'Grant Indexing API access, then submit the URL.'
