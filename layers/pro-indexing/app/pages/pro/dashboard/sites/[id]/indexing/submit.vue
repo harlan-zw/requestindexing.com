@@ -297,7 +297,7 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
         <p v-if="receipts.error.value" class="text-sm text-error">
           Your Submissions could not load. Retry to read the latest outcomes.
         </p>
-        <UiSkeleton v-else-if="receipts.status.value === 'pending' && !receipts.data.value" :lines="3" :base="240" :range="80" />
+        <UiSkeleton v-else-if="(receipts.status.value === 'idle' || receipts.status.value === 'pending') && !receipts.data.value" :lines="3" :base="240" :range="80" />
         <p v-else-if="!receiptRows.length" class="text-sm text-muted">
           No Submissions yet. Each URL you submit appears here with Google's answer.
         </p>
@@ -339,7 +339,7 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
               Retry
             </UiButton>
           </UiEmptyState>
-          <UiSkeleton v-else-if="historyStatus === 'pending' && !historyRows.length" :lines="4" :base="240" :range="80" />
+          <UiSkeleton v-else-if="(historyStatus === 'idle' || historyStatus === 'pending') && !historyRows.length" :lines="4" :base="240" :range="80" />
           <UiEmptyState
             v-else-if="!historyRows.length"
             compact

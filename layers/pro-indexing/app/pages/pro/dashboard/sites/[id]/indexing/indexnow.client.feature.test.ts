@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp, defineComponent, h, nextTick, ref } from 'vue'
+import { createApp, createSSRApp, defineComponent, h, nextTick, ref } from 'vue'
+import { renderToString } from 'vue/server-renderer'
 
 const fixture = vi.hoisted(() => ({
   canWrite: true,
@@ -35,10 +36,7 @@ Object.assign(globalThis, {
 })
 const { default: IndexNowPage } = await import('./indexnow.vue')
 const apps: ReturnType<typeof createApp>[] = []
-function mount() {
-  const host = document.createElement('div')
-  document.body.appendChild(host)
-  const app = createApp(IndexNowPage)
+function configure(app: ReturnType<typeof createApp>) {
   for (const name of ['ProPageStates', 'ProPageZone', 'UiCard', 'UBadge', 'UiSkeleton']) {
     app.component(name, defineComponent({
       props: ['title'],
@@ -67,6 +65,12 @@ function mount() {
       ? h('a', { href: props.to }, slots.default?.())
       : h('button', { type: props.type || 'button', disabled: props.disabled }, slots.default?.()),
   }))
+  return app
+}
+function mount() {
+  const host = document.createElement('div')
+  document.body.appendChild(host)
+  const app = configure(createApp(IndexNowPage))
   app.mount(host)
   apps.push(app)
   return host
@@ -104,6 +108,29 @@ afterEach(() => {
 })
 
 describe('indexNow page', () => {
+  it('hydrates a client-only receipt read before rendering its empty result', async () => {
+    receiptData.value = undefined as unknown as typeof receiptData.value
+    readStatus.value = 'idle'
+    const html = await renderToString(configure(createSSRApp(IndexNowPage)))
+    const host = document.createElement('div')
+    host.innerHTML = html
+    document.body.appendChild(host)
+    readStatus.value = 'pending'
+    const errors: unknown[] = []
+    const app = configure(createSSRApp(IndexNowPage))
+    app.config.warnHandler = message => errors.push(message)
+    app.config.errorHandler = error => errors.push(error)
+    app.mount(host)
+    apps.push(app)
+    await nextTick()
+    receiptData.value = { submissionReceipts: [], pagination: { hasMore: false } }
+    readStatus.value = 'success'
+    await nextTick()
+    expect(errors).toEqual([])
+    expect(host.textContent).toContain('No submission receipts yet')
+    expect(host.querySelector('a')?.getAttribute('href')).toBe('/pro/dashboard/sites/kv1109/indexing/submit')
+  })
+
   it('requires verification before submission', async () => {
     connectionData.value = { _tag: 'verification-required', host: 'example.com', keyLocation: 'https://example.com/abc12345.txt', reason: null }
     const host = mount()
