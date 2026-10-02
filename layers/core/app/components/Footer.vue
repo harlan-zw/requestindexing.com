@@ -1,5 +1,8 @@
 <script setup lang="ts">
 const toast = useToast()
+// Ported from nuxtseo.com. The payload carries the server's year to the client,
+// so a reader past midnight on 1 January in another zone hydrates the same text.
+const currentYear = useState('footer-current-year', () => new Date().getUTCFullYear())
 const links = [
   {
     label: 'Request Indexing',
@@ -145,7 +148,7 @@ function toaster() {
 
     <template #left>
       <p class="text-muted text-sm">
-        Copyright © {{ new Date().getFullYear() }}. All rights reserved.
+        Copyright © {{ currentYear }}. All rights reserved.
       </p>
     </template>
 

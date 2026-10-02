@@ -75,13 +75,8 @@ useSchemaOrg([
   }),
 ])
 
-const humanPublishedDate = computed(() => page.value?.publishedAt
-  ? new Date(page.value.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-  : '')
-
-const humanUpdatedDate = computed(() => page.value?.updatedAt
-  ? new Date(page.value.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-  : '')
+const humanPublishedDate = computed(() => formatGuideDate(page.value?.publishedAt))
+const humanUpdatedDate = computed(() => formatGuideDate(page.value?.updatedAt))
 </script>
 
 <template>
