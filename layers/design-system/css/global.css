@@ -1395,6 +1395,13 @@ textarea {
   transform: rotate(-2deg);
   z-index: 5;
 }
+/* Below lg the slope spans fewer pixels, so the slice needs less depth. At the
+   full 70px it covered the bottom of the hero call to action on a phone. */
+@media (width < 64rem) {
+  .divider-tilt::after {
+    height: 110px;
+  }
+}
 
 /* Staggered fade-in for list rows. The index arrives through --stagger-index so
    markup avoids a per-item :style binding. */
