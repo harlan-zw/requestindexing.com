@@ -13,9 +13,7 @@ const {
   author?: string
 }>()
 
-const publishedLabel = publishedAt
-  ? new Date(publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-  : ''
+const publishedLabel = formatGuideDate(publishedAt)
 </script>
 
 <template>
