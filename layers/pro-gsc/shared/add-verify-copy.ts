@@ -49,7 +49,7 @@ export const ADD_VERIFY_DNS_FIELDS = { type: 'Type', name: 'Name', value: 'Value
 export function addVerifyDnsSteps(domain: string): string[] {
   return [
     `Sign in where you manage DNS for ${domain}. This is often the company where you bought the domain.`,
-    `Add a TXT record with the name and value above. If the name field does not accept ${domain}, type @.`,
+    `Add a TXT record with the name and value above. If your provider appends the DNS zone name, enter only the part before that zone. For replay.example.com in the example.com zone, enter replay. Use @ only when ${domain} is the DNS zone itself.`,
     'Save the record. A DNS change can take minutes or hours to go live.',
   ]
 }
