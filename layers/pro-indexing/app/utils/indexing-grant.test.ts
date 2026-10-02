@@ -61,6 +61,11 @@ describe('describeSubmissionRefusal', () => {
 describe('resolveSubmitAction', () => {
   const base = { grant: null, grantUnavailable: false, refusal: null, returnTo: SUBMIT_PAGE } as const
 
+  it('does not offer access when Request Indexing cannot start the grant', () => {
+    expect(resolveSubmitAction({ ...base, grant: { _tag: 'unavailable' }, refusal: 'missing' }))
+      .toEqual({ _tag: 'Unavailable' })
+  })
+
   it('offers the grant beside Submit when the account has no Indexing API grant', () => {
     expect(resolveSubmitAction({ ...base, grant: { _tag: 'missing' } }))
       .toEqual({ _tag: 'GrantAccess', cause: 'missing', to: GRANT_HREF })

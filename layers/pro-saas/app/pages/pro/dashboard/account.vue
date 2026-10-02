@@ -7,6 +7,7 @@
 // The layer that owns `ProConnectedAccounts` opts out of auto-import, so the
 // component is imported by path.
 import type { IndexingGrant } from '#layers/pro-indexing/shared/contracts/indexing-grant'
+import { INDEXING_API_UNAVAILABLE } from '#layers/pro-indexing/shared/indexing-copy'
 import ProConnectedAccounts from '#layers/pro-saas-auth/app/components/auth/ProConnectedAccounts.vue'
 import { ACCOUNT_DELETED_PATH, accountDeletionCopy } from '#layers/pro-saas/shared/account-deletion-copy'
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
@@ -187,6 +188,9 @@ async function deleteAccount() {
           </UButton>
         </template>
         <USkeleton v-else-if="!indexingGrant" class="h-5 w-2/3" />
+        <p v-else-if="indexingGrant._tag === 'unavailable'" class="text-sm text-muted">
+          {{ INDEXING_API_UNAVAILABLE }}
+        </p>
         <template v-else-if="indexingGrant._tag !== 'missing'">
           <p v-if="indexingGrant._tag === 'reauthorization-required'" class="mb-3 text-sm break-words text-muted">
             Google no longer accepts this app's Indexing API access. To grant access again, open the Submit to Google page of a Site.

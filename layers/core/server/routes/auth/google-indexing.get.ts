@@ -33,9 +33,10 @@ interface GoogleTokenResponse {
 // stores the grant and sends every Submission with it. This app keeps no copy.
 export default defineEventHandler(async (event) => {
   const user = await authenticateUser(event)
+  const query = getQuery(event)
   const client = googleIndexingClient(event)
   if (!client)
-    throw createError({ statusCode: 503, statusMessage: 'Google Indexing API access is not set up yet.' })
+    return sendRedirect(event, safeAuthRedirect(query.returnTo) ?? '/pro/dashboard/account')
 
   // Strip the query string so the same absolute URL is used as `redirect_uri`
   // for both the authorization request and the token exchange below.
@@ -43,7 +44,6 @@ export default defineEventHandler(async (event) => {
   requestUrl.search = ''
   const redirectUri = requestUrl.href
 
-  const query = getQuery(event)
   const { code, state, error } = query
 
   if (error) {

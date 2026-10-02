@@ -94,6 +94,7 @@ The scope warning informs that choice and never blocks a Submission.
 | Google page intro | This sends one URL to Google's Indexing API. Google decides whether to crawl it, and when. |
 | Google page scope warning | Google documents the Indexing API for job posting and livestream pages only. Check your page type before you submit. |
 | Comparison heading | Google Indexing API or IndexNow |
+| Indexing API unavailable | Google Indexing API access is not set up for Request Indexing. Use IndexNow, or URL Inspection in Search Console. |
 | Comparison row labels | Search engines · Pages · Setup |
 | Google Indexing API, search engines | Google only. |
 | Google Indexing API, pages | Google documents it for job posting and livestream pages only. |
