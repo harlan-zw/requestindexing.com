@@ -222,6 +222,18 @@ describe('add and verify a property', () => {
     expect(navigateTo).toHaveBeenCalledWith({ path: '/pro/dashboard/sites/connect', query: { step: 'sites' } }, { replace: true })
   })
 
+  it('does not let another property take the Google grant return', async () => {
+    route.query = { gsc_scope_granted: 'verify', gsc_verify_domain: 'replay.harlanzw.com' }
+    const other = mount({ domain: 'areplay.harlanzw.com' })
+    await flush()
+    expect(other.querySelector('[role="dialog"]')).toBeNull()
+    expect(navigateTo).not.toHaveBeenCalled()
+    const target = mount({ domain: 'replay.harlanzw.com' })
+    await flush()
+    expect(target.querySelector('[role="dialog"]')).not.toBeNull()
+    expect(target.querySelector('input')?.value).toBe('replay.harlanzw.com')
+  })
+
   it('asks for the permission again when gscdump refuses the record for the scope', async () => {
     api.record = { _tag: 'ScopeMissing' }
     const host = mount({ domain: 'example.com' })

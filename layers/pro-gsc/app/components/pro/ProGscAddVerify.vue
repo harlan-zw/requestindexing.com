@@ -158,16 +158,21 @@ watch(open, (isOpen) => {
 })
 
 // Resume after the grant: open, confirm, and clear the marker so a reload does
-// not replay it. Only the first instance on the page takes the marker.
+// not replay it. A property row can take only its own address. The general
+// Add and verify trigger can resume an address with no property row yet.
 const grantReturnTaken = useState('pro-gsc:verify-grant-return-taken', () => false)
 onMounted(() => {
   if (route.query[VERIFY_GRANT_RETURN_QUERY] !== VERIFY_GRANT_RETURN_VALUE || grantReturnTaken.value)
     return
+  const returnedDomain = route.query[DOMAIN_RETURN_QUERY]
+  const returned = typeof returnedDomain === 'string' ? parseSiteUrlInput(returnedDomain) : null
+  const target = domain ? parseSiteUrlInput(domain) : null
+  if (domain && (returned?._tag !== 'Ok' || target?._tag !== 'Ok' || target.domain !== returned.domain))
+    return
   grantReturnTaken.value = true
   justGranted.value = true
-  const returnedDomain = route.query[DOMAIN_RETURN_QUERY]
-  if (typeof returnedDomain === 'string' && parseSiteUrlInput(returnedDomain)._tag === 'Ok')
-    address.value = returnedDomain
+  if (returned?._tag === 'Ok')
+    address.value = returned.domain
   open.value = true
   toast.add({ title: ADD_VERIFY_PERMISSION.grantedTitle, description: ADD_VERIFY_PERMISSION.grantedDetail, color: 'success' })
   const { [VERIFY_GRANT_RETURN_QUERY]: _granted, [DOMAIN_RETURN_QUERY]: _domain, ...rest } = route.query
