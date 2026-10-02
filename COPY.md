@@ -116,6 +116,10 @@ Engine contracts own IndexNow and Submission Receipt terms.
 | Setup heading | Verify your IndexNow key |
 | Setup instruction | Publish a UTF-8 text file containing only your key at the key location. |
 | Key label | IndexNow key |
+| Key format | Use 8 to 128 letters, numbers, or hyphens. Generate a key if you do not have one. |
+| Generate action | Generate key |
+| Download action | Download key file |
+| Download instruction | Download the key file, publish it at the key location, then save and verify the key. |
 | Key location label | Key location |
 | Save action | Save key |
 | Verify action | Verify key |

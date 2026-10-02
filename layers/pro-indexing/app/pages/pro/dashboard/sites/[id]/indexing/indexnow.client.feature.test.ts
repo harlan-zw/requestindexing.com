@@ -1,3 +1,4 @@
+import { indexNowKeyV1Schema } from '@gscdump/contracts/v1/http'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, createSSRApp, defineComponent, h, nextTick, ref } from 'vue'
 import { renderToString } from 'vue/server-renderer'
@@ -108,6 +109,21 @@ afterEach(() => {
 })
 
 describe('indexNow page', () => {
+  it('generates a valid key and keeps its download after saving', async () => {
+    const host = mount()
+    button(host, 'Generate key').click()
+    await nextTick()
+    const key = host.querySelector('input')!.value
+    expect(indexNowKeyV1Schema.safeParse(key).success).toBe(true)
+    const download = [...host.querySelectorAll('a')].find(link => link.textContent?.includes('Download key file'))!
+    expect(download.download).toBe(`${key}.txt`)
+    expect(decodeURIComponent(download.getAttribute('href')!.split(',')[1]!)).toBe(key)
+    button(host, 'Save key').click()
+    await flush()
+    expect(fixture.configure).toHaveBeenCalledWith({ params: { siteId: 's_engine' }, body: { key } }, true)
+    expect(host.querySelector('input')!.value).toBe('')
+    expect([...host.querySelectorAll('a')].some(link => link.download === `${key}.txt`)).toBe(true)
+  })
   it('hydrates a client-only receipt read before rendering its empty result', async () => {
     receiptData.value = undefined as unknown as typeof receiptData.value
     readStatus.value = 'idle'
