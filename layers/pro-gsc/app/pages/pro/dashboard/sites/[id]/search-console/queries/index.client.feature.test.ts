@@ -6,6 +6,7 @@ const lifecycle = vi.hoisted(() => ({ refresh: vi.fn() }))
 const settled = ref(false)
 const failed = ref(false)
 const data = ref<{ queryable: boolean } | null>(null)
+const engineSiteId = ref<string | undefined>('s_engine')
 vi.mock('#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue', () => ({ default: defineComponent({ render: () => h('div') }) }))
 vi.mock('#layers/pro-gsc/app/components/pro/ProGscTopEntityTrendPanel.vue', () => ({ default: defineComponent({ render: () => h('div') }) }))
 vi.mock('#layers/pro-gsc/app/internal/components/pro/ProTableKeywords.vue', () => ({ default: defineComponent({ render: () => h('div', { 'data-query-table': '' }, 'Query results') }) }))
@@ -17,7 +18,7 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscFilters', () => ({
 
 Object.assign(globalThis, {
   definePageMeta: () => {},
-  useSite: () => ({ siteId: ref('s_app'), site: ref({ url: 'https://example.com' }), siteStatus: ref('success'), gscdumpSiteId: ref('s_engine') }),
+  useSite: () => ({ siteId: ref('s_app'), site: ref({ url: 'https://example.com' }), siteStatus: ref('success'), gscdumpSiteId: engineSiteId }),
   useSitePeriod: () => ({ period: ref('28d') }),
   useProGscStatus: () => ({ data, isLifecycleSettled: settled, hasError: failed, refresh: lifecycle.refresh }),
 })
@@ -26,7 +27,7 @@ function mount() {
   const host = document.createElement('div')
   document.body.appendChild(host)
   const app = createApp(QueriesPage)
-  for (const name of ['UiAlert', 'ProPageZone', 'ProSectionHeader', 'UiSkeleton']) {
+  for (const name of ['UiAlert', 'UiEmptyState', 'ConnectSearchConsoleButton', 'ProPageZone', 'ProSectionHeader', 'UiSkeleton']) {
     app.component(name, defineComponent({
       props: ['title'],
       setup: (props, { slots }) => () => h('div', [props.title, slots.default?.(), slots.action?.()]),
@@ -44,10 +45,17 @@ afterEach(() => {
   settled.value = false
   failed.value = false
   data.value = null
+  engineSiteId.value = 's_engine'
   vi.clearAllMocks()
 })
 
 describe('queries during the first sync', () => {
+  it('offers Search Console connection for an unlinked Site', () => {
+    engineSiteId.value = undefined
+    const host = mount()
+    expect(host.textContent).toContain('Connect Search Console to see queries')
+    expect(host.querySelector('[data-query-table]')).toBeNull()
+  })
   it('waits for readable Search Console data before mounting query reads', async () => {
     const host = mount()
     expect(host.querySelector('[data-query-table]')).toBeNull()

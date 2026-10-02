@@ -46,6 +46,17 @@ const hasRows = ref(true)
     </template>
   </UiAlert>
 
+  <UiSkeleton v-else-if="siteStatus !== 'success'" :lines="4" />
+
+  <UiEmptyState
+    v-else-if="!gscdumpSiteId"
+    icon="link"
+    title="Connect Search Console to see queries"
+    description="Queries come from the Google Search Console property linked to this Site."
+  >
+    <ConnectSearchConsoleButton />
+  </UiEmptyState>
+
   <UiSkeleton v-else-if="!isLifecycleSettled" :lines="4" />
 
   <UiAlert v-else-if="syncStatusError" status="error" title="Search Console sync status could not load.">
