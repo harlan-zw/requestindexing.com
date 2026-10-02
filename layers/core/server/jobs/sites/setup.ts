@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm'
 import { withoutTrailingSlash } from 'ufo'
 import { sites, userSites } from '~~/layers/core/server/db/schema'
-import { broadcastToUser } from '~~/layers/core/server/utils/event-service'
+import { broadcastToUser } from '~~/layers/core/server/utils/realtime'
 import { defineJob } from '../_types'
 
 export default defineJob({
@@ -87,7 +87,7 @@ export default defineJob({
     }
 
     // Broadcast result
-    broadcastToUser(user.publicId, {
+    await broadcastToUser(ctx.env, user.publicId, {
       name: 'sites/setup',
       entityId: siteId,
       entityType: 'site',

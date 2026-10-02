@@ -6,7 +6,6 @@ declare module 'nitropack/types' {
     'app:job:failed': (ctx: { env: Record<string, unknown>, jobId: string, taskName: string, error: string, attempt: number, permanent: boolean }) => void | Promise<void>
     'app:batch:progress': (ctx: { env: Record<string, unknown>, batchId: string, batchName?: string, completed: number, total: number, failed: number }) => void | Promise<void>
     'app:batch:complete': (ctx: { env: Record<string, unknown>, batchId: string, batchName?: string, total: number, failed: number }) => void | Promise<void>
-    [key: `ws:message:${string}`]: (ctx: unknown) => void | Promise<void>
   }
 }
 
