@@ -200,6 +200,7 @@ async function refreshIndexNow() {
 
 watch(engineId, () => {
   key.value = ''
+  savedKey.value = ''
   keyLocation.value = ''
   urlInput.value = ''
   batch = undefined

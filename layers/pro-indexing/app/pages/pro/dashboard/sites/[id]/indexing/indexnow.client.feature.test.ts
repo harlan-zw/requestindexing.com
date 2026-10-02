@@ -13,6 +13,7 @@ const fixture = vi.hoisted(() => ({
   connected: { _tag: 'connected', host: 'example.com', keyLocation: 'https://example.com/abc12345.txt', verifiedAt: '2026-09-30T00:00:00.000Z' },
 }))
 const connectionData = ref<Record<string, unknown>>(fixture.connected)
+const engineSiteId = ref('s_engine')
 const connectionError = ref<unknown>(null)
 const receiptError = ref<unknown>(null)
 const readStatus = ref('success')
@@ -31,7 +32,7 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscdump/_internal', () => ({
 
 Object.assign(globalThis, {
   definePageMeta: () => {},
-  useSite: () => ({ siteId: ref('kv1109'), gscdumpSiteId: ref('s_engine'), site: ref({ teamId: 1 }) }),
+  useSite: () => ({ siteId: ref('kv1109'), gscdumpSiteId: engineSiteId, site: ref({ teamId: 1 }) }),
   useTeamPolicy: () => ({ can: () => fixture.canWrite }),
   useCaller: () => ({ isAdmin: ref(false) }),
 })
@@ -89,6 +90,7 @@ async function flush() {
   await nextTick()
 }
 beforeEach(() => {
+  engineSiteId.value = 's_engine'
   vi.clearAllMocks()
   fixture.canWrite = true
   connectionError.value = null
@@ -123,6 +125,9 @@ describe('indexNow page', () => {
     expect(fixture.configure).toHaveBeenCalledWith({ params: { siteId: 's_engine' }, body: { key } }, true)
     expect(host.querySelector('input')!.value).toBe('')
     expect([...host.querySelectorAll('a')].some(link => link.download === `${key}.txt`)).toBe(true)
+    engineSiteId.value = 's_other'
+    await nextTick()
+    expect([...host.querySelectorAll('a')].some(link => link.download === `${key}.txt`)).toBe(false)
   })
   it('hydrates a client-only receipt read before rendering its empty result', async () => {
     receiptData.value = undefined as unknown as typeof receiptData.value
