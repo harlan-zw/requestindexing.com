@@ -147,6 +147,7 @@ A `site:` search is public search output. URL Inspection is Google's own report 
 | Estimate label | Estimate from a Google `site:` search | under the Google Index Checker verdict, and under the Site Indexing Report page count |
 | Bulk estimate label | Indexed and Not Indexed are estimates from a Google `site:` search for that URL. | above the Bulk Indexing Checker results. Not Checked ran no search, so the label never covers it |
 | Bulk CSV status header | Status (Indexed and Not Indexed are site: search estimates) | the Status column of the Bulk Indexing Checker export |
+| Metric unavailable | Unavailable right now | under a Site Indexing Report traffic or keyword figure when DataForSEO Labs could not answer; the figure shows a dash, never zero |
 | Verdict offer heading | See Google's own verdict | below each tool result |
 | Verdict offer | Search Console's URL Inspection says whether Google indexed a page, and if not, why. Request Indexing shows that answer for the Sites you connect. | below each tool result |
 | Verdict offer action, signed out | Connect Google | links to `/pro/onboarding`, whose first step has the same label |

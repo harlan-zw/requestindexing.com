@@ -8,6 +8,7 @@ import {
   dataForSeoStatusCode,
   isTransientDataForSeoFailure,
 } from '../../../../../shared/dataforseo'
+import { logWarn } from '../../../../../shared/logging'
 import { dataForSeoSpendEnv, recordDataForSeoSpend } from './dataforseo-spend'
 import { matchSiteSearch, parseSerpTask } from './site-search'
 
@@ -39,7 +40,7 @@ interface DataForSEOCredentials {
 interface DataForSeoResponse<T> {
   status_code?: number
   cost?: number
-  tasks?: Array<{ result?: T[], cost?: number }>
+  tasks?: Array<{ status_code?: number, status_message?: string, result?: T[] | null, cost?: number }>
 }
 
 function tagHash(value: string): string {
@@ -101,8 +102,9 @@ interface DomainRankResult {
 
 export interface DomainOverviewResult {
   domain: string
-  organicTraffic: number
-  organicKeywords: number
+  /** `null` when DataForSEO Labs could not answer. Never read it as zero. */
+  organicTraffic: number | null
+  organicKeywords: number | null
   estimatedIndexedPages: number
   topPages: Array<{ url: string, traffic: number, keywords: number }>
 }
@@ -267,6 +269,41 @@ export async function checkUrlsIndexed(urls: string[], ctx?: DataForSeoCallConte
   return rows
 }
 
+type DomainMetrics
+  = | { _tag: 'Measured', organicTraffic: number, organicKeywords: number }
+    | { _tag: 'Unavailable' }
+
+/**
+ * Labs traffic and keyword estimates are optional on the site report, so a
+ * failed call or task degrades to `Unavailable`. It never reads as zero,
+ * because zero becomes "No organic traffic detected" in the report.
+ */
+async function readDomainMetrics(domain: string, ctx?: DataForSeoCallContext): Promise<DomainMetrics> {
+  const response = await dataforseoFetch<DataForSeoResponse<DomainRankResult>>('/dataforseo_labs/google/domain_rank_overview/live', [
+    {
+      target: domain,
+      location_code: 2840,
+      language_code: 'en',
+    },
+  ], ctx).catch((error: unknown) => {
+    logWarn('dataforseo.domain_metrics_unavailable', error, { domain })
+    return null
+  })
+  if (!response)
+    return { _tag: 'Unavailable' }
+
+  const task = response.tasks?.[0]
+  if (task?.status_code !== 20000) {
+    logWarn('dataforseo.domain_metrics_unavailable', new Error(task?.status_message ?? 'DataForSEO returned no task'), { domain, statusCode: task?.status_code ?? null })
+    return { _tag: 'Unavailable' }
+  }
+
+  // A completed task with no item means Labs holds no data for the domain,
+  // which is a real zero.
+  const organic = task.result?.[0]?.items?.[0]?.metrics?.organic
+  return { _tag: 'Measured', organicTraffic: Math.round(organic?.etv || 0), organicKeywords: organic?.count || 0 }
+}
+
 export async function getDomainOverview(domain: string, ctx?: DataForSeoCallContext): Promise<DomainOverviewResult> {
   // Estimated indexed pages from a site: search. A task error throws, so a
   // search that never ran cannot report zero pages.
@@ -281,33 +318,12 @@ export async function getDomainOverview(domain: string, ctx?: DataForSeoCallCont
       keywords: 0,
     }))
 
-  // Get domain metrics via ranked keywords
-  let organicTraffic = 0
-  let organicKeywords = 0
-
-  try {
-    const domainData = await dataforseoFetch<DataForSeoResponse<DomainRankResult>>('/dataforseo_labs/google/domain_rank_overview/live', [
-      {
-        target: domain,
-        location_code: 2840,
-        language_code: 'en',
-      },
-    ], ctx)
-
-    const domainResult = domainData?.tasks?.[0]?.result?.[0]?.items?.[0]
-    if (domainResult) {
-      organicTraffic = domainResult.metrics?.organic?.etv || 0
-      organicKeywords = domainResult.metrics?.organic?.count || 0
-    }
-  }
-  catch {
-    // Domain rank overview may not be available for all domains
-  }
+  const metrics = await readDomainMetrics(domain, ctx)
 
   return {
     domain,
-    organicTraffic: Math.round(organicTraffic),
-    organicKeywords,
+    organicTraffic: metrics._tag === 'Measured' ? metrics.organicTraffic : null,
+    organicKeywords: metrics._tag === 'Measured' ? metrics.organicKeywords : null,
     estimatedIndexedPages,
     topPages: topOrganicPages,
   }
