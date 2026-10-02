@@ -45,7 +45,7 @@ const walkthroughSteps = [
     num: '01',
     eyebrow: 'Connect',
     title: 'Sign in with your Google account',
-    description: 'One OAuth sign-in. We read your Search Console data, and the one change we make there is a sitemap submission.',
+    description: 'One OAuth sign-in. We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify.',
     bullets: ['Search Console read access, plus sitemap submission', 'Revoke any time from your Google account', 'Tokens encrypted at rest'],
   },
   {

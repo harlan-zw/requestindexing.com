@@ -84,6 +84,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 **Is:** the act of attaching a Site to a Team. Every control in the product says Connect.
 **Use for:** prose and labels about attaching a Site.
 **Never:** add, create, or register a Site in prose or in a label. Code keeps `registerSite` and the `site_added` value.
+**Add and verify** is Google's own step for a Search Console property, so "Add and verify a property" is correct. It never names a Site: the reader adds and verifies the property, then connects the Site.
 **Casing:** Match the visible label when naming a control.
 
 ### Integration

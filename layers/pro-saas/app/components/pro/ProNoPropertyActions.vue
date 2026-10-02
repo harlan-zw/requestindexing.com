@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import ProGscAddVerify from '#layers/pro-gsc/app/components/pro/ProGscAddVerify.vue'
 import { NO_PROPERTY_ACTIONS, SEARCH_CONSOLE_URL, VERIFY_SITE_HELP_URL } from '#layers/pro-gsc/shared/no-property-copy'
 
-// "No property, actions" from COPY.md: the three ways out of a Google account
-// with no Search Console property. Every surface that shows the no-property
-// state renders these, so no surface offers a fourth label for the same step.
+// "No property, actions" from COPY.md: the four ways out of a Google account
+// with no Search Console property. Add and verify comes first, because it is
+// the one that stays inside Request Indexing. Every surface that shows the
+// no-property state renders these, so no surface offers a fifth label for the
+// same step.
 const { gscReturnTo, align = 'start' } = defineProps<{
   /** The page the Google grant returns to. */
   gscReturnTo: string
@@ -16,6 +19,7 @@ const gscConnectUrl = computed(() => `/auth/integrations/gsc/connect?returnTo=${
 
 <template>
   <div class="flex flex-wrap gap-2" :class="align === 'center' ? 'justify-center' : ''">
+    <ProGscAddVerify :gsc-return-to="gscReturnTo" />
     <UButton
       :to="SEARCH_CONSOLE_URL"
       target="_blank"

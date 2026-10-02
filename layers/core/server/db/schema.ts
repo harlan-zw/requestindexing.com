@@ -621,6 +621,31 @@ export const notificationOptouts = sqliteTable('notification_optouts', {
   pk: primaryKey({ columns: [t.recipientKey, t.channel, t.category] }),
 }))
 
+// A Search Console property the user is adding and verifying, ported from the
+// `gsc_verification_*` columns nuxtseo.com keeps on its `sites` row (ADR-0074).
+// Here no Site exists until the property is verified, so the record is the
+// user's, one per domain. A row means the record is minted and not verified
+// yet; verifying deletes it. gscdump keeps no state for this, and Google
+// returns the same token for the same account, site, and method.
+export const gscPropertyVerifications = sqliteTable('gsc_property_verifications', {
+  userId: integer('user_id').notNull().references(() => users.userId, { onDelete: 'cascade' }),
+  /** The bare host the user typed. */
+  domain: text('domain').notNull(),
+  /** The property gscdump adds: `sc-domain:` for a DNS record, a URL prefix for a meta tag. */
+  siteUrl: text('site_url').notNull(),
+  method: text('method', { enum: ['DNS_TXT', 'META'] }).notNull(),
+  /** Google's verification target: the TXT record name, or the page that carries the meta tag. */
+  target: text('target').notNull(),
+  /** The TXT record value, or the meta tag content. Public once placed. */
+  token: text('token').notNull(),
+  attempts: integer('attempts').notNull().default(0),
+  lastError: text('last_error'),
+  mintedAt: integer('minted_at', { mode: 'timestamp' }).notNull(),
+  checkedAt: integer('checked_at', { mode: 'timestamp' }),
+}, t => ({
+  pk: primaryKey({ columns: [t.userId, t.domain] }),
+}))
+
 // ─────────────────────────────────────────────────────────────────────────────
 // V1 net-new tables. The boundary that decides what lives here: docs/arch/README.md
 // ─────────────────────────────────────────────────────────────────────────────
@@ -720,6 +745,7 @@ export type Feedback = typeof feedback.$inferSelect
 export type NewFeedback = typeof feedback.$inferInsert
 export type DripEmail = typeof dripEmails.$inferSelect
 export type NotificationOptout = typeof notificationOptouts.$inferSelect
+export type GscPropertyVerification = typeof gscPropertyVerifications.$inferSelect
 export type IndexingInvestigation = typeof indexingInvestigations.$inferSelect
 export type NewIndexingInvestigation = typeof indexingInvestigations.$inferInsert
 export type NewUser = typeof users.$inferInsert

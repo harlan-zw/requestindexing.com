@@ -13,6 +13,11 @@ const fixture = vi.hoisted(() => ({
   properties: [] as Record<string, unknown>[],
 }))
 
+// The Add and verify dialog has its own test.
+vi.mock('#layers/pro-gsc/app/components/pro/ProGscAddVerify.vue', async () => {
+  const { defineComponent, h } = await import('vue')
+  return { default: defineComponent({ setup: () => () => h('button', { type: 'button' }, 'Add and verify a property') }) }
+})
 vi.mock('~~/layers/core/app/composables/fetch', () => ({
   fetchSites: async () => ({ data: ref({ sites: fixture.sites }) }),
 }))

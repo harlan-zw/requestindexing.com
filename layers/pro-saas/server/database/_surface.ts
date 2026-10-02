@@ -16,6 +16,7 @@ export {
   feedback,
   googleAccounts,
   googleOAuthClients,
+  gscPropertyVerifications,
   indexingInvestigations,
   jobBatches,
   jobs,

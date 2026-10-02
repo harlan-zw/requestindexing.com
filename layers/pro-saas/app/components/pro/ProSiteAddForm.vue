@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SiteAllowance } from '#layers/pro-gsc/shared/free-allowance'
 import type { PropertyPickerResponse } from '#layers/pro-gsc/shared/property-picker'
+import ProGscAddVerify from '#layers/pro-gsc/app/components/pro/ProGscAddVerify.vue'
+import { ADD_VERIFY_ACTION } from '#layers/pro-gsc/shared/add-verify-copy'
 import { siteAllowanceReached, siteAllowanceSummary } from '#layers/pro-gsc/shared/entitlement-copy'
 import { projectPropertyPicker, propertyPickerBlocksConnect } from '#layers/pro-gsc/shared/property-picker'
 import { parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
@@ -15,6 +17,11 @@ import ProNoPropertyNotice from './ProNoPropertyNotice.vue'
 // without Search Console. A Site here has none, so the server refuses an
 // address no verified property covers, and the address field is only for a
 // subdomain of a listed property.
+//
+// A property the reader lacks can be added and verified here (nuxtseo.com
+// ADR-0074): from the no-property state, from an unverified row, from a typed
+// address no property covers, and from the action under the list. The new
+// property then joins the list and connects like any other.
 //
 // Three pages render it: the onboarding wizard, Connect a Site, and the
 // Manage Sites modal. `gscReturnTo` is required because the Google grant must
@@ -135,8 +142,12 @@ const gscConnectUrl = computed(() => `/auth/integrations/gsc/connect?returnTo=${
 const url = ref('')
 const submitting = ref<string | null>(null)
 // A refusal shows where the attempt started: under the field for a typed
-// address, above the list for a row.
-const connectError = ref<{ source: 'field' | 'list', message: string } | null>(null)
+// address, above the list for a row. `domain` is set when Add and verify can
+// fix the refusal: no property covers the address, or its property is not
+// verified for this Google account.
+const connectError = ref<{ source: 'field' | 'list', message: string, domain: string | null } | null>(null)
+const ADD_VERIFY_REASONS: ReadonlySet<unknown> = new Set(['not_owned', 'unverified'])
+const addVerifyDomain = computed(() => connectError.value?.source === 'field' ? connectError.value.domain : null)
 
 const typedError = computed(() => {
   if (!url.value.trim())
@@ -163,7 +174,7 @@ async function connect(value: string, source: 'field' | 'list') {
 
   const parsed = parseSiteUrlInput(value)
   if (parsed._tag === 'Err') {
-    connectError.value = { source, message: parsed.message }
+    connectError.value = { source, message: parsed.message, domain: null }
     return
   }
 
@@ -178,10 +189,12 @@ async function connect(value: string, source: 'field' | 'list') {
   catch (err: unknown) {
     // The API error envelope carries the reader-facing message: this app's
     // copy for a property refusal or a Free allowance refusal.
-    const message = (err as { data?: { data?: { message?: unknown } } } | null)?.data?.data?.message
+    const envelope = (err as { data?: { data?: { message?: unknown, details?: { reason?: unknown } } } } | null)?.data?.data
+    const message = envelope?.message
     connectError.value = {
       source,
       message: typeof message === 'string' && message ? message : 'Request Indexing could not connect that site. Try again.',
+      domain: ADD_VERIFY_REASONS.has(envelope?.details?.reason) ? parsed.domain : null,
     }
     emit('blocked')
     // A refusal means the allowance or the property list moved since the page
@@ -273,7 +286,7 @@ async function connect(value: string, source: 'field' | 'list') {
       </div>
 
       <p v-else-if="picker._tag === 'AllConnected'" class="text-sm text-muted">
-        Every property in this Google account is already connected. Add another site in Search Console, then refresh this list.
+        Every property in this Google account is already connected. Add and verify another site here, or add it in Search Console and refresh this list.
       </p>
 
       <ul v-else class="space-y-2">
@@ -288,10 +301,19 @@ async function connect(value: string, source: 'field' | 'list') {
               {{ property.domain }}
             </div>
             <div v-if="!property.verified" class="text-xs text-warning">
-              Not verified for this Google account. Verify it in Search Console, then refresh this list.
+              Not verified for this Google account. Select Verify, or verify it in Search Console and refresh this list.
             </div>
           </div>
+          <ProGscAddVerify
+            v-if="!property.verified"
+            class="shrink-0"
+            :domain="property.domain"
+            :gsc-return-to="gscReturnTo"
+            label="Verify"
+            :aria-label="`Verify ${property.domain}`"
+          />
           <UButton
+            v-else
             color="neutral"
             variant="subtle"
             size="sm"
@@ -299,7 +321,7 @@ async function connect(value: string, source: 'field' | 'list') {
             label="Connect"
             :aria-label="`Connect ${property.domain}`"
             :loading="submitting === property.domain"
-            :disabled="!property.verified || atLimit || !!submitting"
+            :disabled="atLimit || !!submitting"
             @click="connect(property.siteUrl, 'list')"
           />
         </li>
@@ -330,6 +352,11 @@ async function connect(value: string, source: 'field' | 'list') {
         </div>
       </UFormField>
     </form>
+
+    <!-- The address no property covers: add and verify it, then connect it. -->
+    <ProGscAddVerify v-if="addVerifyDomain" :domain="addVerifyDomain" :gsc-return-to="gscReturnTo" @verified="connectError = null" />
+    <!-- A property this Google account lacks, for an account that has others. -->
+    <ProGscAddVerify v-else-if="showAddressField" :gsc-return-to="gscReturnTo" :label="ADD_VERIFY_ACTION" />
 
     <p v-if="cappedAllowance && !atLimit" class="text-xs text-muted">
       {{ siteAllowanceSummary(cappedAllowance.used, cappedAllowance.allowance) }}

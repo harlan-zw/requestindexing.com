@@ -17,12 +17,12 @@ export function noPropertyTitle(email: string | null | undefined): string {
 }
 
 /** "No property, detail": under the property list, next to Refresh list. */
-export const NO_PROPERTY_DETAIL = 'Add your site in Search Console and verify it, then refresh this list. If a different Google account owns the property, connect that account.'
+export const NO_PROPERTY_DETAIL = 'Add and verify your site here, or add it in Search Console and refresh this list. If a different Google account owns the property, connect that account.'
 
 /** "No property, detail outside the list": every page with no property list to refresh. */
-export const NO_PROPERTY_DETAIL_OUTSIDE_LIST = 'Add your site in Search Console and verify it. If a different Google account owns the property, connect that account.'
+export const NO_PROPERTY_DETAIL_OUTSIDE_LIST = 'Add and verify your site here or in Search Console. If a different Google account owns the property, connect that account.'
 
-/** "No property, actions". */
+/** "No property, actions". The first one, Add and verify, is `ADD_VERIFY_ACTION` in `add-verify-copy.ts`. */
 export const NO_PROPERTY_ACTIONS = {
   openSearchConsole: 'Open Search Console',
   connectAnotherAccount: 'Connect another Google account',
