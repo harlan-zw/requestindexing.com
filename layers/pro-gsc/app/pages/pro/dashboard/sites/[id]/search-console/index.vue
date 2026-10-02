@@ -33,7 +33,8 @@ definePageMeta({
   icon: 'i-lucide-layout-dashboard',
 })
 
-const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, isLifecycleSettled, hold } = useSite('Search Console')
+const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, isLifecycleSettled, hold, gscData, gscStatusError, refreshGscStatus } = useSite('Search Console')
+const analyticsSiteId = computed(() => isLifecycleSettled.value && isReady.value && !hold.value ? gscdumpSiteId.value ?? undefined : undefined)
 const { session } = useUserSession()
 
 const { period, columns, stableData, compareMode, searchType, brand, questions, zoomTo, resetZoom } = useProGscFilters()
@@ -110,7 +111,7 @@ const demoHeroStats = computed(() => {
 
 // The main chart. `error` is consumed on purpose: dropping it let a failed
 // read render as a synced site with zero traffic.
-const { data: dates, status: datesStatus, error: datesError } = useProGscdumpDates(gscdumpSiteId, period, { stableData, compareMode })
+const { data: dates, status: datesStatus, error: datesError } = useProGscdumpDates(analyticsSiteId, period, { stableData, compareMode })
 
 // Primary metric only: the overview stays clean, detail pages show every
 // column. A clicks-less slice (Images, Video, News) leads with impressions.
@@ -124,7 +125,7 @@ const MOVER_ROWS = 3
 // New and Lost rankings live on the Queries tab as filter chips; the lead
 // list's "View all" is the doorway.
 const { rows: keywordRows, isLoading: keywordsLoading, setSort: setKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
+  siteId: analyticsSiteId,
   dimension: 'queryCanonical',
   period,
   stableData,
@@ -136,7 +137,7 @@ const { rows: keywordRows, isLoading: keywordsLoading, setSort: setKeywordSort }
 
 // Grouped by queryCanonical so variants stay merged.
 const { rows: improvingKeywordRows, isLoading: improvingKeywordsLoading, setSort: setImprovingKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
+  siteId: analyticsSiteId,
   dimension: 'queryCanonical',
   period,
   stableData,
@@ -148,7 +149,7 @@ const { rows: improvingKeywordRows, isLoading: improvingKeywordsLoading, setSort
 })
 
 const { rows: decliningKeywordRows, isLoading: decliningKeywordsLoading, setSort: setDecliningKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
+  siteId: analyticsSiteId,
   dimension: 'queryCanonical',
   period,
   stableData,
@@ -169,7 +170,7 @@ const queryMovers = computed(() => [
 // Queries are the diagnosis; pages are where it landed. The page movers sit one
 // click away on the Pages tab, where Improving and Declining are filter chips.
 const { rows: pageRows, isLoading: pagesLoading, setSort: setPageSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
+  siteId: analyticsSiteId,
   dimension: 'page',
   period,
   stableData,
@@ -180,7 +181,7 @@ const { rows: pageRows, isLoading: pagesLoading, setSort: setPageSort } = usePro
 
 // ── Countries and Devices ───────────────────────────────────────────────────
 const { rows: countryRows, isLoading: countriesLoading, setSort: setCountrySort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
+  siteId: analyticsSiteId,
   dimension: 'country',
   period,
   stableData,
@@ -190,7 +191,7 @@ const { rows: countryRows, isLoading: countriesLoading, setSort: setCountrySort 
 })
 
 const { rows: deviceRows, isLoading: devicesLoading } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
+  siteId: analyticsSiteId,
   dimension: 'device',
   period,
   stableData,
@@ -205,7 +206,7 @@ const { rows: deviceRows, isLoading: devicesLoading } = useProGscdumpTableData<G
 //
 // The raw queries behind a canonical row are a second read, fired when the
 // variant popover opens. The row's own variants stand in until it answers.
-const queryVariants = useProGscQueryVariants({ siteId: gscdumpSiteId, period, stableData, compareMode })
+const queryVariants = useProGscQueryVariants({ siteId: analyticsSiteId, period, stableData, compareMode })
 function variantsFor(row: GscdumpDataRow): Array<{ query: string, clicks: number, impressions: number, position: number }> {
   const loaded = queryVariants.variantsFor(canonicalQueryKey(row))
   return loaded?.length ? loaded : normalizedVariants(row)
@@ -217,7 +218,7 @@ function variantsLoadingFor(row: GscdumpDataRow): boolean {
 const sparkMetric = computed(() => primaryMetric.value === 'clicks' ? 'clicks' : 'impressions')
 const sparkRange = computed(() => periodToDateRange(period.value, stableData.value))
 const querySparklines = useProEntitySparklines({
-  gscdumpSiteId,
+  gscdumpSiteId: analyticsSiteId,
   range: sparkRange,
   dimension: 'queryCanonical',
   metric: sparkMetric,
@@ -225,7 +226,7 @@ const querySparklines = useProEntitySparklines({
   keys: computed(() => [...keywordRows.value, ...improvingKeywordRows.value, ...decliningKeywordRows.value].map(canonicalQueryKey).filter(Boolean)),
 })
 const pageSparklines = useProEntitySparklines({
-  gscdumpSiteId,
+  gscdumpSiteId: analyticsSiteId,
   range: sparkRange,
   dimension: 'page',
   metric: sparkMetric,
@@ -234,7 +235,7 @@ const pageSparklines = useProEntitySparklines({
 
 // Position over time for the rank badge tooltips. Nothing fetches until a
 // badge is pointed at, and a term is read once per period.
-const positionSparklines = useProQueryPositionSparklines({ gscdumpSiteId, range: sparkRange })
+const positionSparklines = useProQueryPositionSparklines({ gscdumpSiteId: analyticsSiteId, range: sparkRange })
 
 // Consider loading when site hasn't resolved yet (siteId null = no request fired = isLoading false)
 const siteLoading = computed(() => siteStatus.value === 'pending')
@@ -254,8 +255,8 @@ const topLabel = computed(() => {
 // chart series. Each is its own one-period read: the lead lists compare, and a
 // compared read counts every row either window has. No delta: the comparison
 // window's distinct count is not fetched.
-const queryCount = useProGscdumpPeriodCount({ siteId: gscdumpSiteId, dimension: 'queryCanonical', period, stableData, facets: queryFacets })
-const pageCount = useProGscdumpPeriodCount({ siteId: gscdumpSiteId, dimension: 'page', period, stableData })
+const queryCount = useProGscdumpPeriodCount({ siteId: analyticsSiteId, dimension: 'queryCanonical', period, stableData, facets: queryFacets })
+const pageCount = useProGscdumpPeriodCount({ siteId: analyticsSiteId, dimension: 'page', period, stableData })
 const heroEntityCounts = computed(() => [
   {
     key: 'queries',
@@ -393,15 +394,27 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
       </template>
     </UiAlert>
 
+    <UiAlert v-else-if="gscStatusError && !isReady" status="error" title="Search Console sync status could not load.">
+      <template #action>
+        <UiButton purpose="secondary" @click="refreshGscStatus()">
+          Retry
+        </UiButton>
+      </template>
+    </UiAlert>
+
     <template v-else>
       <!-- The shared control strip owns period, comparison, search type, chart
            metrics and the Brand and Questions facets. Country and Device stay
            off: a per-Site breakdown cannot cross-filter by them. -->
-      <ProGscSurfaceBar v-if="!overlay" surface="overview" :site-id="siteId" />
+      <ProGscSurfaceBar v-if="searchState._tag === 'Ready'" surface="overview" :site-id="siteId" />
+
+      <UiAlert v-if="gscData?.syncStatus === 'syncing' && gscData.syncProgress" status="info" :title="`Syncing ${Math.round(gscData.syncProgress.percent)}%`">
+        {{ gscData.syncProgress.completed }} of {{ gscData.syncProgress.total }} Search Console tasks completed.
+      </UiAlert>
 
       <!-- The Search Console read failed. Distinct from the site-load error
            above: the Site is fine, the upstream read is not. -->
-      <ProGscReadError :error="datesError" />
+      <ProGscReadError v-if="searchState._tag === 'Ready'" :error="datesError" />
 
       <!-- Not linked, held, or in its first sync: show the live nuxtseo.com preview -->
       <UiSampleDataOverlay

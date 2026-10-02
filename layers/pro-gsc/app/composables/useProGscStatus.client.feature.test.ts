@@ -35,4 +35,36 @@ describe('useProGscStatus', () => {
     expect(status.isLifecycleSettled.value).toBe(true)
     expect(status.isProcessing.value).toBe(false)
   })
+
+  it('does not call a readable one-percent import complete', async () => {
+    lifecycle.read.mockResolvedValue({ site: {
+      analytics: { status: 'queryable_partial', queryable: true, sourceMode: 'server', progress: { completed: 7, failed: 0, total: 668, percent: 1 }, syncedRange: { oldest: null, newest: null } },
+      indexing: { status: 'idle', progress: { completed: 0, failed: 0, total: 0, percent: 0 } },
+      sitemaps: { status: 'idle' },
+      latestError: null,
+      hold: null,
+    } })
+    const status = useProGscStatus('ri_1')
+    await status.refresh()
+    expect(status.isReady.value).toBe(true)
+    expect(status.isFullySynced.value).toBe(false)
+    expect(status.isProcessing.value).toBe(true)
+    expect(status.data.value?.syncStatus).toBe('syncing')
+    expect(status.data.value?.syncProgress).toEqual({ percent: 1, completed: 7, total: 668 })
+  })
+
+  it('waits for readable data even after sixty tasks finish', async () => {
+    lifecycle.read.mockResolvedValue({ site: {
+      analytics: { status: 'syncing', queryable: false, sourceMode: 'none', progress: { completed: 60, failed: 0, total: 668, percent: 9 }, syncedRange: { oldest: null, newest: null } },
+      indexing: { status: 'idle', progress: { completed: 0, failed: 0, total: 0, percent: 0 } },
+      sitemaps: { status: 'idle' },
+      latestError: null,
+      hold: null,
+    } })
+    const status = useProGscStatus('ri_1')
+    await status.refresh()
+    expect(status.isReady.value).toBe(false)
+    expect(status.isFullySynced.value).toBe(false)
+    expect(status.isProcessing.value).toBe(true)
+  })
 })

@@ -33,7 +33,7 @@ export function useSite(pageTitle?: string) {
     }
   })
 
-  const { isNotConnected, isLifecycleSettled, isReady, isProcessing, hold, data: gscData } = useProGscStatus(siteId)
+  const { isNotConnected, isLifecycleSettled, isReady, isProcessing, hold, data: gscData, hasError: gscStatusError, refresh: refreshGscStatus } = useProGscStatus(siteId)
 
   if (pageTitle) {
     useSeoMeta({ title: () => `${pageTitle} - ${siteName.value}` })
@@ -53,5 +53,7 @@ export function useSite(pageTitle?: string) {
     /** Why gscdump holds the Site before its first import, or null. */
     hold,
     gscData,
+    gscStatusError,
+    refreshGscStatus,
   }
 }

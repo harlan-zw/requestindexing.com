@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { SiteHoldReason } from '@gscdump/contracts'
 import type { DropdownMenuItem } from '@nuxt/ui'
+import { useIntervalFn } from '@vueuse/core'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { HELD_LABEL, holdMessage, SITE_LINK_REFUSED } from '#layers/pro-gsc/shared/entitlement-copy'
 import { NO_PROPERTY_DETAIL_OUTSIDE_LIST, noPropertyTitle } from '#layers/pro-gsc/shared/no-property-copy'
@@ -20,6 +21,13 @@ definePageMeta({
 })
 
 const { data, status, error, refresh } = await fetchSites()
+const { pause: pauseSyncRefresh, resume: resumeSyncRefresh } = useIntervalFn(() => refresh(), 5000, { immediate: false })
+watch(() => data.value?.sites.some(site => site.syncStatus === 'pending' || site.syncStatus === 'syncing'), (syncing) => {
+  if (syncing)
+    resumeSyncRefresh()
+  else
+    pauseSyncRefresh()
+}, { immediate: true })
 
 const { currentTeamId } = useCurrentWorkspace()
 const policy = useTeamPolicy(currentTeamId)
@@ -42,7 +50,11 @@ const rows = computed<SiteRow[]>(() => (data.value?.sites ?? []).map(site => ({
   label: siteLabel(site),
   url: siteLabel(site),
   property: site.property,
-  syncLabel: SITE_SYNC_LABELS[site.syncStatus],
+  syncLabel: site.syncStatus === 'syncing' && site.syncProgress !== null
+    ? `${SITE_SYNC_LABELS.syncing} ${Math.round(site.syncProgress)}%`
+    : site.syncProgress === null && site.syncStatus === 'synced'
+      ? `Last known: ${SITE_SYNC_LABELS.synced}`
+      : SITE_SYNC_LABELS[site.syncStatus],
   refused: site.syncStatus === 'refused',
   hold: site.hold,
   to: `/pro/dashboard/sites/${site.siteId}`,
