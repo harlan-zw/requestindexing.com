@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { IndexNowConnectionV1, IndexNowSubmissionReceiptV1 } from '@gscdump/contracts/v1/http'
 import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
-import { indexNowConfigureV1Schema, indexNowSubmitV1Schema } from '@gscdump/contracts/v1/http'
+import { indexNowConfigureV1Schema, indexNowKeyV1Schema, indexNowSubmitV1Schema } from '@gscdump/contracts/v1/http'
 import { isGscdumpV1Error } from '@gscdump/sdk/v1'
 import { useMounted } from '@vueuse/core'
-import { nanoid } from 'nanoid'
+import { customAlphabet, nanoid } from 'nanoid'
 import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
 import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump/useProGscdump'
 import IndexingChannelsCard from '#layers/pro-indexing/app/internal/components/indexing/IndexingChannelsCard.vue'
@@ -21,6 +21,15 @@ const { isAdmin } = useCaller()
 const teamPolicy = useTeamPolicy(() => site.value?.teamId)
 const canWrite = computed(() => isAdmin.value || teamPolicy.can('write-data'))
 const key = ref('')
+const savedKey = ref('')
+const createKey = customAlphabet('0123456789abcdef', 32)
+const downloadableKey = computed(() => {
+  const draft = key.value.trim()
+  if (!draft)
+    return savedKey.value
+  return indexNowKeyV1Schema.safeParse(draft).success ? draft : ''
+})
+const keyFileUrl = computed(() => downloadableKey.value ? `data:text/plain;charset=utf-8,${encodeURIComponent(downloadableKey.value)}` : '')
 const keyLocation = ref('')
 const urlInput = ref('')
 const urls = computed(() => [...new Set(urlInput.value.split(/\r?\n/).map(url => url.trim()).filter(Boolean))])
@@ -58,6 +67,13 @@ type ActionState
     | { _tag: 'message', message: string }
 const action = ref<ActionState>({ _tag: 'idle' })
 const busy = computed(() => action.value._tag === 'busy')
+
+function generateKey() {
+  if (!canWrite.value || busy.value)
+    return
+  key.value = createKey()
+  action.value = { _tag: 'idle' }
+}
 
 const reasonMessages: Record<string, string> = {
   'invalid-key-location': 'The key location must use HTTPS on this host. Check its address, then save the key.',
@@ -119,6 +135,7 @@ async function saveKey() {
     return
   }
   connection.data.value = result.data
+  savedKey.value = parsed.data.key
   if (key.value === draft.key && keyLocation.value === draft.keyLocation) {
     key.value = ''
     keyLocation.value = result.data._tag === 'disconnected' ? '' : result.data.keyLocation
@@ -183,6 +200,7 @@ async function refreshIndexNow() {
 
 watch(engineId, () => {
   key.value = ''
+  savedKey.value = ''
   keyLocation.value = ''
   urlInput.value = ''
   batch = undefined
@@ -235,7 +253,7 @@ function formatDate(value: string) {
         </p>
         <form class="mt-5 space-y-4" @submit.prevent="saveKey">
           <div class="grid gap-4 md:grid-cols-2">
-            <UFormField label="IndexNow key">
+            <UFormField label="IndexNow key" description="Use 8 to 128 letters, numbers, or hyphens. Generate a key if you do not have one.">
               <UiInput v-model="key" autocomplete="off" class="w-full" :ui="{ base: 'min-h-11 text-base' }" />
             </UFormField>
             <UFormField label="Key location" hint="Optional" :description="defaultKeyLocation || undefined" :ui="{ description: 'text-muted' }">
@@ -243,6 +261,12 @@ function formatDate(value: string) {
             </UFormField>
           </div>
           <div class="flex flex-wrap gap-3">
+            <UiButton purpose="secondary" class="min-h-11" :disabled="!canWrite || busy" @click="generateKey">
+              Generate key
+            </UiButton>
+            <UiButton v-if="downloadableKey" purpose="secondary" class="min-h-11" :to="keyFileUrl" :download="`${downloadableKey}.txt`" external>
+              Download key file
+            </UiButton>
             <UiButton type="submit" purpose="cta" class="min-h-11" :disabled="!canWrite || busy || !key.trim()" :loading="action._tag === 'busy' && action.action === 'save'">
               Save key
             </UiButton>
@@ -254,6 +278,9 @@ function formatDate(value: string) {
             </UBadge>
           </div>
         </form>
+        <p v-if="downloadableKey" class="mt-3 text-base text-muted">
+          Download the key file, publish it at the key location, then save and verify the key.
+        </p>
         <p v-if="publishedKeyLocation" class="mt-4 break-all text-base text-muted">
           Key location: {{ publishedKeyLocation }}
         </p>
