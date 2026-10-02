@@ -59,6 +59,11 @@ const toasterConfig = computed(() => typeof appConfig.toaster === 'object' && ap
 // The root gutter already reserves scrollbar space. Turn off Reka's second
 // compensation, so opening a modal does not shift the page sideways.
 const scrollBody = { padding: 0, margin: 0 }
+
+// Only `SkewNotification` opens the skew socket, and its prompt never shows on
+// a prerendered page. Signed-out visitors keep Nuxt's hourly build check, the
+// same split nuxtseo.com runs between its marketing site and its dashboard.
+const { loggedIn } = useUserSession()
 </script>
 
 <template>
@@ -78,7 +83,7 @@ const scrollBody = { padding: 0, margin: 0 }
             nuxt.config: the strategy detects the stale build, this renders the
             choice. Without it, `prompt` would detect and then do nothing.
           -->
-          <SkewNotification v-slot="{ isOpen, dismiss, reload }">
+          <SkewNotification v-if="loggedIn" v-slot="{ isOpen, dismiss, reload }">
             <Transition
               enter-active-class="transition duration-300 ease-out"
               enter-from-class="opacity-0 translate-y-2"
