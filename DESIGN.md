@@ -102,7 +102,8 @@ components:
 
 - **Body text contrast**: `text-default` on `bg-default` ≥ 12:1 in light mode (olive-900 on olive-50), ≥ 13:1 in dark mode (olive-50 on olive-950). Both well above AA.
 - **Dark mode adjustments**: emerald primary stays at default saturation (it sits well against olive-950 without desaturation). Body text uses `--ui-text` directly — no manual weight reduction needed because DM Sans 400 reads cleanly at 16px on dark.
-- **Known risks**: emerald-500 on white fails AA for normal-size text (≈3.4:1). Buttons are fine because text is white-on-emerald. *Never* set `text-primary` on `bg-default` for body copy — only for icons, badges, and links ≥ 14px semibold.
+- **Primary text shade**: `text-primary` reads `--ui-text-primary`, a text-only token. In light mode it is emerald-700, 5.4:1 on white. Inside a primary tint (`bg-primary/*`), it is emerald-800, 5.8:1 on a tinted card. Dark mode keeps emerald-400. Fills, rings, borders and buttons stay on emerald-500. A raw shade such as `text-primary-500` bypasses the token.
+- **Known risks**: emerald-500 is 2.5:1 on white, so it never colours light-mode text. White on an emerald-500 button is also 2.5:1. Design Decisions records that pair as an accepted exception. *Never* set `text-primary` on `bg-default` for body copy — only for icons, badges, and links ≥ 14px semibold.
 
 ## Typography
 

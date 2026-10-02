@@ -114,12 +114,14 @@
    `text-*` utilities only, so `text-warning` et al resolve through these while
    bg/border/ring/charts keep Nuxt UI's `--ui-*` defaults (tints, badges and
    solid fills are untouched). Why: the stock 500 shades fail WCAG on white
-   (amber-500 1.9:1, red-500 3.8:1, green-500 2.2:1, blue-500 3.8:1), so light
-   mode steps each hue down to its lightest AA-passing stop (warning 700 5.0:1,
-   error 600 4.8:1, success 700 5.0:1, info 600 5.3:1). Dark mode keeps the
+   (emerald-500 2.5:1, amber-500 1.9:1, red-500 3.8:1, green-500 2.2:1,
+   blue-500 3.8:1), so light mode steps each hue down to its lightest
+   AA-passing stop (primary 700 5.4:1, warning 700 5.0:1, error 600 4.8:1,
+   success 700 5.0:1, info 600 5.3:1). Dark mode keeps the
    Nuxt UI per-mode `--ui-*` value (400 shades — already passing). `static`
    because several consumers reference these via runtime-built class maps. */
 @theme static {
+  --text-color-primary: var(--ui-text-primary);
   --text-color-success: var(--ui-text-success);
   --text-color-info: var(--ui-text-info);
   --text-color-warning: var(--ui-text-warning);
@@ -130,6 +132,7 @@
 }
 
 :root {
+  --ui-text-primary: var(--ui-color-primary-700);
   --ui-text-success: var(--ui-color-success-700);
   --ui-text-info: var(--ui-color-info-600);
   --ui-text-warning: var(--ui-color-warning-800);
@@ -137,10 +140,21 @@
 }
 
 .dark {
+  --ui-text-primary: var(--ui-primary);
   --ui-text-success: var(--ui-success);
   --ui-text-info: var(--ui-info);
   --ui-text-warning: var(--ui-warning);
   --ui-text-error: var(--ui-error);
+}
+
+/* Primary text on a primary tint (the `bg-primary/10` badges and pills, the
+   `bg-primary/5` row) sits on a darker surface than the page. On an elevated
+   card the tint drops primary 700 to 4.1:1, so text inside a tint steps down
+   one more stop: primary 800 holds 5.8:1 there. Matched on any class that
+   carries a primary tint, state variants included, in light mode only. Dark
+   mode tints already pass with the 400 shade. */
+.light [class*="bg-primary/"] {
+  --text-color-primary: var(--ui-color-primary-800);
 }
 
 :root {
