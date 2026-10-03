@@ -1,17 +1,24 @@
 diff --git a/dist/presets/cloudflare/runtime/cloudflare-durable.mjs b/dist/presets/cloudflare/runtime/cloudflare-durable.mjs
-index d4138abdcc0b28d668a217b1e713476fa21da3a9..89066b117131e7d7aa083c3ab33eb7d1ca62bb12 100644
+index d4138abdcc0b28d668a217b1e713476fa21da3a9..48302430a47b88a26f33636f5cfb2d234d959e93 100644
 --- a/dist/presets/cloudflare/runtime/cloudflare-durable.mjs
 +++ b/dist/presets/cloudflare/runtime/cloudflare-durable.mjs
-@@ -60,7 +60,13 @@ export class $DurableObject extends DurableObject {
+@@ -60,7 +60,20 @@ export class $DurableObject extends DurableObject {
      if (!ws) {
        throw new Error("WebSocket not available");
      }
 -    return ws.publish(topic, data, opts);
 +    // CrossWS stores topics in socket attachments. Read them after hibernation.
 +    for (const socket of this.ctx.getWebSockets()) {
++      if (socket.readyState !== 1) {
++        continue;
++      }
 +      const topics = socket.deserializeAttachment()?.t;
 +      if (topics instanceof Set && topics.has(topic)) {
-+        socket.send(data);
++        try {
++          socket.send(data);
++        } catch (error) {
++          console.warn(error);
++        }
 +      }
 +    }
    }

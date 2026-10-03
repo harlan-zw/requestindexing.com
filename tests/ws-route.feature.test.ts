@@ -46,9 +46,12 @@ interface Connection {
   attachment: unknown
   received: unknown[]
   closed?: number
+  readyState?: number
+  sendError?: Error
 }
 
 interface Socket {
+  readonly readyState: number
   send: (data: string) => void
   close: (code?: number) => void
   serializeAttachment: (value: unknown) => void
@@ -57,7 +60,12 @@ interface Socket {
 
 function socketOf(connection: Connection): Socket {
   return {
-    send: data => connection.received.push(parse(data)),
+    get readyState() { return connection.closed ? 3 : connection.readyState ?? 1 },
+    send: (data) => {
+      if (connection.sendError)
+        throw connection.sendError
+      connection.received.push(parse(data))
+    },
     close: (code) => {
       connection.closed = code
     },
@@ -158,6 +166,31 @@ beforeEach(async () => {
 })
 
 describe('the /_ws websocket', () => {
+  it.each([2, 3])('skips a socket in state %s and reaches the next subscriber after hibernation', async (readyState) => {
+    const { connections, wake } = runtime()
+    const durable = await wake()
+    await durable.fetch(upgradeRequest('/_ws', signedIn))
+    await durable.fetch(upgradeRequest('/_ws', signedIn))
+    connections[0]!.readyState = readyState
+    connections[0]!.sendError = new Error('Socket is closing')
+    await broadcast(await wake(), 'u_1', SYNC_FINISHED)
+    expect(connections.map(connection => connection.received)).toEqual([[], [SYNC_FINISHED]])
+  })
+
+  it('reports a send failure and delivers to the remaining subscribers', async () => {
+    const { connections, wake } = runtime()
+    const durable = await wake()
+    await durable.fetch(upgradeRequest('/_ws', signedIn))
+    await durable.fetch(upgradeRequest('/_ws', signedIn))
+    const error = new Error('Socket send failed')
+    connections[0]!.sendError = error
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await broadcast(await wake(), 'u_1', SYNC_FINISHED)
+    expect(connections.map(connection => connection.received)).toEqual([[], [SYNC_FINISHED]])
+    expect(warning).toHaveBeenCalledWith(error)
+    warning.mockRestore()
+  })
+
   it('refuses the upgrade with a 401 for a visitor without a session cookie', async () => {
     const durable = await runtime().wake()
     expect((await durable.fetch(upgradeRequest('/_ws?userId=2', ''))).status).toBe(401)
