@@ -79,9 +79,19 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
   // to pending every few seconds, so a page that waits for the first answer
   // cannot read it from `fetchStatus`.
   const settled = ref(false)
+  let statusSiteId: string | null | undefined
+  let requestId = 0
 
   async function refresh() {
     const siteIdVal = gscdumpSiteId.value
+    const currentRequest = ++requestId
+    if (statusSiteId !== siteIdVal) {
+      statusSiteId = siteIdVal
+      syncData.value = null
+      error.value = null
+      fetchStatus.value = 'idle'
+      settled.value = false
+    }
     if (!siteIdVal) {
       syncData.value = null
       return
@@ -116,7 +126,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
     fetchStatus.value = 'pending'
     error.value = null
 
-    syncData.value = await proFetch<{ site: PartnerLifecycleSite | null }>('/api/pro/gsc-lifecycle', {
+    const result = await proFetch<{ site: PartnerLifecycleSite | null }>('/api/pro/gsc-lifecycle', {
       query: { siteId: siteIdVal },
     }).then((res) => {
       const lifecycleSite = res.site
@@ -158,16 +168,21 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
         indexingStatus: lifecycleSite.indexing.status,
         hold: lifecycleSite.hold,
       } satisfies GscSyncStatus
-    }).catch((cause: unknown) => {
-      error.value = cause instanceof Error ? cause : new Error(String(cause))
+    }).then(data => ({ _tag: 'Ok' as const, data })).catch((cause: unknown) => ({ _tag: 'Err' as const, cause }))
+
+    if (currentRequest !== requestId || gscdumpSiteId.value !== siteIdVal)
+      return
+    if (result._tag === 'Err') {
+      error.value = result.cause instanceof Error ? result.cause : new Error(String(result.cause))
       fetchStatus.value = 'error'
-      return null
-    })
+    }
+    else {
+      syncData.value = result.data
+      fetchStatus.value = 'success'
+    }
 
     // A lifecycle that does not list this Site is a finished read too. Gating
     // this on `syncData` left such a read pending for good.
-    if (!error.value)
-      fetchStatus.value = 'success'
     settled.value = true
   }
 
@@ -189,10 +204,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
   // Only fetch gscdump data on the client - raw $fetch to gscdump.com
   // doesn't have user cookies during SSR, causing false AUTH errors
   if (import.meta.client) {
-    watch(gscdumpSiteId, (id) => {
-      if (id)
-        refresh()
-    }, { immediate: true })
+    watch(gscdumpSiteId, refresh, { immediate: true })
 
     // Auto-manage polling based on phase / permission state
     watch(() => [syncData.value?.phase, syncData.value?.permissionLost, syncData.value?.sitemapStatus, syncData.value?.indexingStatus, syncData.value?.hold] as const, ([phase, permissionLost, sitemapStatus, indexingStatus, hold]) => {
