@@ -4,7 +4,9 @@ definePageMeta({
 })
 
 const { data: guides } = await useAsyncData('all-guides', async () => {
-  const items = await queryCollection('guides').all()
+  const items = await queryCollection('guides')
+    .select('path', 'title', 'description', 'icon', 'navigation')
+    .all()
   return items.slice().sort((a, b) => {
     const ao = getNavigationOrder(a)
     const bo = getNavigationOrder(b)

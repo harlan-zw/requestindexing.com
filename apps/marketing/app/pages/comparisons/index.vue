@@ -4,7 +4,9 @@ definePageMeta({
 })
 
 const { data: comparisons } = await useAsyncData('all-comparisons', () =>
-  queryCollection('comparisons').all())
+  queryCollection('comparisons')
+    .select('path', 'title', 'description')
+    .all())
 
 useSeoMeta({
   title: 'Request Indexing Comparisons',

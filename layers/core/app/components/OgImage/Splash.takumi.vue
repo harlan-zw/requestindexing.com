@@ -19,7 +19,7 @@ const mockRows = [
           class="font-title font-bold"
           style="font-size: 72px; line-height: 1.05; letter-spacing: -0.03em; color: #1c1f0e;"
         >
-          Get your pages indexed in 48 hours.
+          Get your pages indexed.
         </div>
 
         <div
