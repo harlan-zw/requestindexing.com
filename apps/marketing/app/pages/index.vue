@@ -108,14 +108,15 @@ const marketingTools = [
                 Free during beta &middot; Open source
               </div>
               <h1 class="font-title font-bold leading-[0.98] tracking-[-0.045em] text-default text-center text-6xl sm:text-7xl lg:text-left lg:text-[5rem] xl:text-[6rem] mb-6">
-                Get your pages <span class="italic text-primary">indexed</span>
+                Get your pages <span class="italic text-primary">indexed</span>.
                 <HeroSvg />
-                <span class="whitespace-nowrap">in 48 hours</span>.
               </h1>
               <p class="text-toned max-w-2xl text-center text-lg sm:text-xl lg:text-left mb-10 leading-relaxed">
-                Submit URLs straight to Google's <NuxtLink to="https://developers.google.com/search/apis/indexing-api/v3/quickstart" target="_blank" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-default rounded">
+                Check Google's indexing status across your Search Console properties. For ordinary pages, use <NuxtLink to="/indexing-api-for-blog-posts" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-default rounded">
+                  URL Inspection or a sitemap
+                </NuxtLink>. For job posting and livestream pages, submit URLs through Google's <NuxtLink to="https://developers.google.com/search/apis/indexing-api/v3/quickstart" target="_blank" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-default rounded">
                   Indexing API
-                </NuxtLink>. Track coverage across every Search Console property in one place, and keep your history past Google's 16-month window.
+                </NuxtLink>. Keep your history past Google's 16-month window.
               </p>
 
               <div class="flex items-center justify-center gap-3 flex-row sm:gap-4 lg:justify-start">

@@ -18,7 +18,7 @@ These exact strings. Do not paraphrase them per page.
 | Name | `Request Indexing`, title case, both words. Never RequestIndexing, Request Indexer, RI. | everywhere |
 | Domain | `requestindexing.com` | links, footers, canonical URLs |
 | Tagline | Get your pages indexed. | README, `VISION.md`, social card headline |
-| Landing H1 | Get your pages indexed in 48 hours. | `apps/marketing/app/pages/index.vue` only. See Open questions: the timeframe is a claim |
+| Landing H1 | Get your pages indexed. | `apps/marketing/app/pages/index.vue`; reuses the tagline |
 | Site description | Monitor and request Google indexing for your pages | `nuxt.config.ts` site description, which feeds every page's meta description |
 | Landing meta description | Request Google indexing for your pages, then see which URLs Google has indexed, which it has not, and the reason it gives. Free and open source. | the landing page only |
 
@@ -45,7 +45,7 @@ deliberate: a meta title competes in a search result, a heading does not.
 
 ## Copy principles
 
-1. **State the outcome, not the feature.** "Get your pages indexed in 48 hours" beats "Powerful
+1. **State the outcome, not the feature.** "Get your pages indexed" beats "Powerful
    indexing API integration".
 2. **Address the reader directly.** Their pages, their data, their quota. Avoid corporate
    hedging: "solutions that empower teams" says nothing.
@@ -323,11 +323,6 @@ Harlan's global writing rules already apply and are not repeated here: no em das
 Wording calls this file does not settle. Add one here, resolve it, fold the answer into the
 section above, then delete it from this list.
 
-1. **The landing H1 promises 48 hours and nothing backs it.** `GLOSSARY.md` bans "guaranteed
-   indexing" because "no reviewed source establishes a guarantee", and Google documents no
-   timeframe for the Indexing API. The headline is the strongest copy on the site and it is the
-   one claim with no evidence row above. Either find the measured figure and cite it, soften the
-   claim, or accept it as marketing licence and record that decision here.
 2. **Three descriptions of the product ship.** The site description, the landing meta
    description, and the README second sentence describe Request Indexing three ways, and only
    the README mentions multi-engine. Decide which is canonical for a one-sentence slot.
