@@ -46,16 +46,24 @@ function parseRow(row: IndexCohortSource['urls'][number], base?: string | null):
   if (!candidate)
     return { _tag: 'unparsable' }
 
-  const origin = base && base.startsWith('sc-domain:')
-    ? `https://${base.slice('sc-domain:'.length)}`
-    : base ?? undefined
-
   let parsed: URL
   try {
-    parsed = new URL(candidate, origin)
+    // Absolute rows do not depend on optional site metadata.
+    parsed = new URL(candidate)
   }
   catch {
-    return { _tag: 'unparsable' }
+    const site = base?.trim()
+    const origin = site?.startsWith('sc-domain:')
+      ? `https://${site.slice('sc-domain:'.length)}`
+      : site && !site.includes('://')
+        ? `https://${site}`
+        : site
+    try {
+      parsed = new URL(candidate, origin)
+    }
+    catch {
+      return { _tag: 'unparsable' }
+    }
   }
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:')
     return { _tag: 'unparsable' }
