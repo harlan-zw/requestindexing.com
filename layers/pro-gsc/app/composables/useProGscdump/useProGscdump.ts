@@ -94,6 +94,14 @@ export function useProGscdump() {
     return runV1<GscdumpSitemapChangesResponse>(() => createV1Client().getSiteSitemapChanges(input), silent)
   }
 
+  function getSiteSitemapSubmission(input: GscdumpV1OperationInput<'partner.sites.sitemaps.submission.get'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.sitemaps.submission.get'>['data']>(() => createV1Client().getSiteSitemapSubmission(input), silent)
+  }
+
+  function submitSiteSitemap(input: GscdumpV1OperationInput<'partner.sites.sitemaps.submission.create'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.sitemaps.submission.create'>['data']>(() => createV1Client().submitSiteSitemap(input), silent)
+  }
+
   function recoverSitePermission(input: GscdumpV1OperationInput<'partner.sites.permission.recover'>, silent = false) {
     return runV1<GscdumpV1OperationResponse<'partner.sites.permission.recover'>['data']>(
       () => createV1Client().recoverSitePermission(input),
@@ -205,6 +213,8 @@ export function useProGscdump() {
   }
 
   return {
+    getSiteSitemapSubmission,
+    submitSiteSitemap,
     getSiteIndexNowConnection,
     configureSiteIndexNowConnection,
     verifySiteIndexNowConnection,
