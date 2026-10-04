@@ -1,7 +1,7 @@
 import type { IndexCohortsResponse } from '#layers/pro-indexing/shared/contracts/index-cohorts'
 import { useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
-import { buildIndexCohortsFromIndexingUrls } from '#layers/pro-indexing/server/utils/index-cohorts'
 import { readIndexingUrlPages } from '#layers/pro-indexing/server/utils/indexing-url-pages'
+import { buildIndexCohortsFromIndexingUrls } from '#layers/pro-indexing/shared/index-cohort-source'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 
 // Which part of this site does Google treat worse than the rest?
@@ -10,7 +10,7 @@ import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 // names a symptom the developer cannot act on. Partitioning the inspected set
 // by path and asking which partition Google treats differently names a place
 // they can. The join, the Wilson intervals and the Bonferroni correction all
-// live in `server/utils/index-cohorts.ts`, so this handler only fetches.
+// live in `shared/index-cohort-source.ts`, so this handler only fetches.
 //
 // The cohort test needs the WHOLE inspected set, not a page of it: a partial
 // sample would rank sections by which rows happened to load. The read is paged
