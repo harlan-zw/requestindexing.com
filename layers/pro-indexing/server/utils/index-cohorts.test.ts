@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildIndexCohortsFromIndexingUrls } from './index-cohorts'
+import { buildIndexCohortsFromIndexingUrls } from '../../shared/index-cohort-source'
 
 function row(url: string, indexed: boolean) {
   return { url, verdict: indexed ? 'PASS' : 'NEUTRAL', sitemaps: null }

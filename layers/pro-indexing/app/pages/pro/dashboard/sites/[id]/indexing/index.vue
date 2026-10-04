@@ -23,6 +23,7 @@ import {
   buildIndexingOverviewModel,
   buildIndexingPipelineEvidence,
 } from '#layers/pro-indexing/app/utils/indexing-overview'
+import { loadIndexingOverviewCohorts } from '#layers/pro-indexing/app/utils/indexing-overview-cohorts'
 import { sitemapLivenessSchema } from '#layers/pro-indexing/shared/contracts/sitemap-liveness'
 import { selectIndexCohortLead } from '#layers/pro-indexing/shared/index-cohorts'
 import { selectIndexingRegressionLead } from '#layers/pro-indexing/shared/indexing-transition-lead'
@@ -257,11 +258,16 @@ const primaryActionRoute = computed(() => {
 
 // Cohorts partition the inspected set by path and test which part Google
 // indexes worse than the rest. Client-side only and best effort: the diagnosis
-// above is complete without it.
+// above is complete without it. Reuse the overview snapshot when it is whole.
+// Wait for that read before asking the server to enumerate any further pages.
 const { data: cohortState, error: cohortsError } = useAsyncData<IndexCohortsResponse | null>(
   computed(() => `indexing-overview:cohorts:${siteId.value}`),
-  () => proFetch<IndexCohortsResponse>(`/api/pro/sites/${siteId.value}/indexing/cohorts`),
-  { server: false, lazy: true, watch: [siteId] },
+  () => loadIndexingOverviewCohorts(
+    indexingUrlsStatus.value === 'success' ? indexingUrlsData.value : null,
+    diagnosticsStatus.value === 'success' ? diagnosticsData.value : null,
+    () => proFetch<IndexCohortsResponse>(`/api/pro/sites/${siteId.value}/indexing/cohorts`),
+  ),
+  { server: false, lazy: true, watch: [siteId, indexingUrlsData, indexingUrlsStatus, diagnosticsData, diagnosticsStatus] },
 )
 
 // Transitions only sharpen the cohort headline. The proxy answers 409 for a

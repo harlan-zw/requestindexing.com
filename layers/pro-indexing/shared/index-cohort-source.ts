@@ -1,7 +1,7 @@
 import type { GscdumpIndexingUrl } from '#layers/pro-gsc/shared/gscdump-api'
-import type { IndexCohortsResponse } from '../../shared/contracts/index-cohorts'
-import type { IndexCohortPage } from '../../shared/index-cohorts'
-import { buildIndexCohortDiagnosis, COHORT_MIN_ENUMERATED_SHARE } from '../../shared/index-cohorts'
+import type { IndexCohortsResponse } from './contracts/index-cohorts'
+import type { IndexCohortPage } from './index-cohorts'
+import { buildIndexCohortDiagnosis, COHORT_MIN_ENUMERATED_SHARE } from './index-cohorts'
 
 // Which part of this site does Google treat worse than the rest?
 //
