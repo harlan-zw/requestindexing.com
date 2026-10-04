@@ -93,10 +93,7 @@ export default defineNuxtPlugin({
 
           // Public pages never use the realtime SDK. Load its code only when
           // a connected dashboard needs it, outside the initial page bundle.
-          void Promise.all([
-            import('@gscdump/sdk/v1'),
-            import('@gscdump/contracts/v1/realtime'),
-          ]).then(([{ createGscdumpRealtimeV1Client, createGscdumpV1Client }, { createRealtimeV1Schemas }]) => {
+          void import('../internal/gscdump-realtime-runtime').then(({ createGscdumpRealtimeV1Client, createGscdumpV1Client, createRealtimeV1Schemas }) => {
             // Integration loss or scope disposal can happen during the load.
             if (cancelled)
               return

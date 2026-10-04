@@ -4,6 +4,7 @@ import { resolve } from 'path'
 import { globbySync } from 'globby'
 import { externalCheckin } from './shared/checkin-external'
 import { CLOUDFLARE_REQUIRED_SECRETS } from './shared/cloudflare'
+import { disableDeferredPrefetch } from './shared/deferred-prefetch'
 import { redirectRouteRules, runtimeOnlyRouteRules } from './shared/routes'
 import { SENTRY_DSN } from './shared/sentry'
 
@@ -148,6 +149,9 @@ export default defineNuxtConfig({
   imports: { autoImport: true },
 
   hooks: {
+    'build:manifest': (manifest) => {
+      disableDeferredPrefetch(manifest, 'layers/pro-gsc/app/internal/gscdump-realtime-runtime.ts')
+    },
     // Dev-only server routes never reach a production bundle. Scanned handlers
     // are a separate list from declared ones, so both are filtered. Each
     // handler also 404s unless `import.meta.dev`; this is the second lock, so a
