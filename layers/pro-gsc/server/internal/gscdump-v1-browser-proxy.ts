@@ -34,6 +34,8 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.inspectSiteUrls },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteSitemaps },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteSitemapChanges },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteSitemapSubmission },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.submitSiteSitemap },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.createSitemapAction },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.recoverSitePermission },
   // `analytics.rows.query` answers a raw grouped read. Every sparkline reads
@@ -62,9 +64,6 @@ const baseOperationEntries = [
  *   Microsoft authorization, and submit a Sitemap. Each needs write access.
  * - The fleet read `partner.users.indexing.bing.sites.list`, which names a
  *   gscdump user. The route always sends the caller's own id.
- *
- * `partner.sites.sitemaps.submission.*` (Google Sitemap submission) is absent
- * on purpose: the Sitemaps page owns it and does not call it yet.
  */
 const bingOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteBingData },

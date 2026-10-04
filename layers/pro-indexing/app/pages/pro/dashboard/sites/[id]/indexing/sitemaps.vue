@@ -1,9 +1,9 @@
 <script lang="ts" setup>
+import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import type { FactItem } from '#layers/design-system/app/components/data/UiFactsGrid.vue'
 import type { SemanticStatus } from '#layers/design-system/app/composables/semanticColors'
 import type { UiNavLink } from '#layers/design-system/app/shared/nav'
 import type { GscdumpSitemapChangesResponse } from '#layers/pro-gsc/shared/gscdump-api'
-import type { SitemapSubmissionState, SitemapSubmitResult } from '#layers/pro-indexing/app/utils/sitemap-submission-adapter'
 import type { SitemapLiveness } from '#layers/pro-indexing/shared/contracts/sitemap-liveness'
 import { gscConsoleUrl } from '@gscdump/sdk/gsc-console-url'
 import { sameSitemapIdentity } from 'gscdump/sitemap-identity'
@@ -14,12 +14,12 @@ import { periodToDateRange } from '#layers/pro-gsc/app/composables/useGscPeriod'
 import {
   useProGscdumpSitemapChanges,
   useProGscdumpSitemaps,
+  useProGscdumpSitemapSubmission,
 } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump/useProGscdump'
 import { sitemapChangeCoverageView } from '#layers/pro-indexing/app/internal/sitemap-window-math'
 import { resolveSitemapEmptyState } from '#layers/pro-indexing/app/utils/sitemap-empty-state'
 import { resolveSitemapPublicationNotice } from '#layers/pro-indexing/app/utils/sitemap-publication-notice'
-import { sitemapSubmissionFromLiveness, sitemapSubmissionFromSubmit } from '#layers/pro-indexing/app/utils/sitemap-submission-adapter'
 import { sitemapLivenessSchema } from '#layers/pro-indexing/shared/contracts/sitemap-liveness'
 import { classifyCurrentSitemapDrop } from '#layers/pro-indexing/shared/trust-gate'
 
@@ -45,6 +45,13 @@ const {
   status: sitemapsStatus,
   refresh: refreshSitemaps,
 } = useProGscdumpSitemaps(computed(() => gscdumpSiteId.value ?? undefined))
+
+const {
+  data: submissionData,
+  error: submissionError,
+  status: submissionStatus,
+  refresh: refreshSubmission,
+} = useProGscdumpSitemapSubmission(computed(() => gscdumpSiteId.value ?? undefined))
 
 const {
   data: changesData,
@@ -175,7 +182,7 @@ const {
 } = useAsyncData<unknown>(
   computed(() => `indexing-sitemaps:liveness:${siteId.value}:${selectedSitemapPath.value}`),
   async () => {
-    if (!gscdumpSiteId.value)
+    if (!gscdumpSiteId.value || !selectedSitemap.value)
       return null
     const base = `/api/pro/sites/${siteId.value}/sitemap-liveness`
     return proFetch(selectedSitemap.value ? withQuery(base, { sitemap: selectedSitemap.value.path }) : base)
@@ -193,9 +200,7 @@ const livenessUnavailable = computed(() =>
   Boolean(livenessError.value)
   || (livenessStatus.value === 'success' && rawLivenessData.value != null && !livenessData.value),
 )
-// Google's answer to the last submit on this page. It overrides what the live
-// probe predicts, because Google is the authority on the refusal.
-const submitAnswer = ref<SitemapSubmissionState | null>(null)
+const submitAnswer = ref<GscdumpV1OperationResponse<'partner.sites.sitemaps.submission.create'>['data'] | null>(null)
 const submitting = ref(false)
 const submitFailed = ref(false)
 watch(gscdumpSiteId, () => {
@@ -203,27 +208,25 @@ watch(gscdumpSiteId, () => {
   submitFailed.value = false
 })
 
-async function submitSitemap(sitemapUrl: string) {
+async function submitSitemap() {
   const engineSiteId = gscdumpSiteId.value
-  if (!engineSiteId || !canWrite.value || submitting.value)
+  if (!engineSiteId || !canWrite.value || !submissionData.value?.callerCanAct || submissionData.value.state._tag !== 'ready' || submitting.value)
     return
   submitting.value = true
   submitFailed.value = false
   // Silent: a refusal renders in place next to the button that caused it.
-  const result: SitemapSubmitResult = await gscdump.createSitemapAction({
+  const result = await gscdump.submitSiteSitemap({
     params: { siteId: engineSiteId },
-    body: { action: 'submit', sitemapUrl },
   }, true)
     .then(data => ({ _tag: 'ok' as const, data }))
     .catch((error: unknown) => ({ _tag: 'error' as const, error }))
+  if (gscdumpSiteId.value === engineSiteId) {
+    submitAnswer.value = result._tag === 'ok' ? result.data : null
+    submitFailed.value = result._tag === 'error'
+      || (result.data._tag === 'failed' && (result.data.reason === 'rejected' || result.data.reason === 'provider-unavailable'))
+    await Promise.all([refreshSubmission(), refreshSitemaps()])
+  }
   submitting.value = false
-  if (gscdumpSiteId.value !== engineSiteId)
-    return
-  const answer = sitemapSubmissionFromSubmit(result, sitemapUrl)
-  if (answer)
-    submitAnswer.value = answer
-  else
-    submitFailed.value = true
 }
 
 const allowSubmissionTo = computed(() =>
@@ -231,10 +234,10 @@ const allowSubmissionTo = computed(() =>
 )
 
 const emptyState = computed(() => resolveSitemapEmptyState({
-  liveness: livenessData.value,
-  pending: livenessPending.value,
-  unavailable: livenessUnavailable.value,
-  submission: submitAnswer.value ?? (livenessData.value ? sitemapSubmissionFromLiveness(livenessData.value) : null),
+  pending: !submissionData.value && !submissionError.value && (submissionStatus.value === 'idle' || submissionStatus.value === 'pending'),
+  unavailable: Boolean(submissionError.value),
+  submission: submissionData.value ?? null,
+  result: submitAnswer.value,
   canSubmit: canWrite.value,
 }))
 const resolvedEmptyState = computed(() =>
@@ -242,7 +245,7 @@ const resolvedEmptyState = computed(() =>
 )
 
 async function retrySitemaps() {
-  await Promise.all([refreshSitemaps(), refreshChanges(), refreshLiveness()])
+  await Promise.all([refreshSitemaps(), refreshChanges(), refreshLiveness(), refreshSubmission()])
 }
 
 function belongsToSelectedSitemap(item: { sitemap: string }): boolean {
@@ -400,7 +403,7 @@ const selectedVerdict = computed(() => {
 })
 
 const searchConsoleSitemapsTo = computed(() => {
-  const siteUrl = sitemapsData.value?.meta.gscPropertyUrl ?? sitemapsData.value?.meta.siteUrl
+  const siteUrl = submissionData.value?.gscPropertyUrl ?? sitemapsData.value?.meta.gscPropertyUrl ?? sitemapsData.value?.meta.siteUrl
   return siteUrl ? gscConsoleUrl({ siteLabel: siteUrl, resource: 'sitemaps' }) : null
 })
 const emptyActionTo = computed(() => searchConsoleSitemapsTo.value ?? undefined)
@@ -461,7 +464,8 @@ function changeDate(timestamp: number): string {
 const reportRefreshing = computed(() =>
   (sitemapsStatus.value === 'pending' && !!sitemapsData.value)
   || (changesStatus.value === 'pending' && !!changesData.value)
-  || (livenessStatus.value === 'pending' && !!livenessData.value),
+  || (livenessStatus.value === 'pending' && !!livenessData.value)
+  || (submissionStatus.value === 'pending' && !!submissionData.value),
 )
 
 // The rail column exists for any state that can still resolve into one, so the
@@ -514,21 +518,21 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
       <UiEmptyState
         v-else-if="!hasReportShell && !resolvedEmptyState"
         icon="loading"
-        title="Checking /sitemap.xml"
-        description="Confirming whether the sitemap is live before suggesting a change."
+        title="Checking sitemap submission"
+        description="Reading Search Console sitemap evidence before suggesting a change."
         aria-busy="true"
       />
 
       <template v-else-if="!hasReportShell && resolvedEmptyState">
         <UiAlert
-          v-if="submitFailed && resolvedEmptyState._tag === 'submit'"
+          v-if="submitFailed"
           status="error"
-          title="Sitemap not submitted"
-          description="Search Console did not accept the sitemap. Retry in a minute, or submit it in Search Console."
+          title="Sitemap submission not confirmed"
+          description="Sitemap submission could not be confirmed. Refresh the check before submitting again."
           class="mb-6"
         />
         <UiEmptyState
-          :icon="resolvedEmptyState._tag === 'install' ? 'file-x' : resolvedEmptyState._tag === 'repair' ? 'wifi-off' : resolvedEmptyState._tag === 'submitted' ? 'file-check' : 'search'"
+          :icon="resolvedEmptyState._tag === 'install' ? 'file-x' : resolvedEmptyState._tag === 'submitted' ? 'file-check' : 'search'"
           :title="resolvedEmptyState.title"
           :description="resolvedEmptyState.description"
         >
@@ -536,7 +540,7 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
             v-if="resolvedEmptyState._tag === 'retry'"
             purpose="secondary"
             class="min-h-11"
-            @click="refreshLiveness()"
+            @click="refreshSubmission()"
           >
             {{ resolvedEmptyState.actionLabel }}
           </UiButton>
@@ -550,7 +554,7 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
               class="min-h-11"
               icon="send"
               :loading="submitting"
-              @click="submitSitemap(resolvedEmptyState.action.sitemapUrl)"
+              @click="submitSitemap()"
             >
               {{ resolvedEmptyState.action.label }}
             </UiButton>

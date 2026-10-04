@@ -70,11 +70,13 @@ describe('resolveGscdumpV1ProxyOperation', () => {
     expect(resolveGscdumpV1ProxyOperation(method, 'partner', path, { bing: true })?.operation.id).toBe(id)
   })
 
-  // Google Sitemap submission belongs to the Sitemaps page, which does not
-  // call these yet. The Bing flag must not open them as a side effect.
-  it('rejects Google Sitemap submission even while the Bing flag is on', () => {
-    expect(resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/sitemaps/submission', { bing: true })).toBeNull()
-    expect(resolveGscdumpV1ProxyOperation('POST', 'partner', 'sites/s_site-1/sitemaps/submission', { bing: true })).toBeNull()
+  it.each([
+    ['GET', 'partner.sites.sitemaps.submission.get'],
+    ['POST', 'partner.sites.sitemaps.submission.create'],
+  ])('routes Sitemap submission %s through Site ownership without the Bing flag', (method, id) => {
+    const resolved = resolveGscdumpV1ProxyOperation(method, 'partner', 'sites/s_site-1/sitemaps/submission')
+    expect(resolved?.operation.id).toBe(id)
+    expect(resolved && selectGscdumpV1ProxyTarget(resolved, 'u_me')).toMatchObject({ _tag: 'site', siteId: 's_site-1', requiresWrite: method === 'POST' })
   })
 
   it.each([

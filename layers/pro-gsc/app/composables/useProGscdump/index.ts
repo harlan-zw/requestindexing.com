@@ -34,7 +34,7 @@ export {
   useProGscdumpInspectUrls,
 } from './useProGscdumpIndexing'
 export { useProGscdumpPeriodCount, type UseProGscdumpPeriodCountOptions } from './useProGscdumpPeriodCount'
-export { useProGscdumpSitemapChanges, useProGscdumpSitemaps } from './useProGscdumpSitemaps'
+export { useProGscdumpSitemapChanges, useProGscdumpSitemaps, useProGscdumpSitemapSubmission } from './useProGscdumpSitemaps'
 export {
   type Dimension,
   type ProGscdumpTableOptions,
