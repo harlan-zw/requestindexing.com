@@ -1,7 +1,7 @@
 import type { GscdumpIndexingUrl } from '#layers/pro-gsc/shared/gscdump-api'
-import type { IndexCohortsResponse } from './contracts/index-cohorts'
+import type { IndexCohortFilter, IndexCohortsResponse } from './contracts/index-cohorts'
 import type { IndexCohortPage } from './index-cohorts'
-import { buildIndexCohortDiagnosis, COHORT_MIN_ENUMERATED_SHARE } from './index-cohorts'
+import { belongsToIndexCohort, buildIndexCohortDiagnosis, COHORT_MIN_ENUMERATED_SHARE } from './index-cohorts'
 
 // Which part of this site does Google treat worse than the rest?
 //
@@ -153,4 +153,15 @@ export function buildIndexCohortsFromIndexingUrls(
     tested: diagnosis.tested,
     cells: diagnosis.cells,
   }
+}
+
+export function selectIndexCohortUrls<Url extends IndexCohortSource['urls'][number]>(
+  urls: ReadonlyArray<Url>,
+  filter: IndexCohortFilter,
+  siteUrl?: string | null,
+): Url[] {
+  return urls.filter((row) => {
+    const parsed = parseRow(row, siteUrl)
+    return parsed._tag === 'page' && !parsed.page.indexed && belongsToIndexCohort(parsed.page.path, filter)
+  })
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildIndexCohortsFromIndexingUrls } from '../../shared/index-cohort-source'
+import { buildIndexCohortsFromIndexingUrls, selectIndexCohortUrls } from '../../shared/index-cohort-source'
 
 function row(url: string, indexed: boolean) {
   return { url, verdict: indexed ? 'PASS' : 'NEUTRAL', sitemaps: null }
@@ -167,5 +167,26 @@ describe('buildIndexCohortsFromIndexingUrls with a sampled not-indexed list', ()
     const result = buildIndexCohortsFromIndexingUrls({ urls: duplicated, reportedNotIndexed: 1000 })
 
     expect(result).toMatchObject({ reason: 'sampled-index-state', sample: { enumerated: 38, reported: 1000 } })
+  })
+})
+
+describe('selectIndexCohortUrls', () => {
+  it('returns the exact not-indexed version group across unrelated prefixes', () => {
+    const urls = [
+      row('https://example.com/docs/a/v5/old', false),
+      row('/guides/v3/old', false),
+      row('/guides/v3/indexed', true),
+      row('/guides/current', false),
+      row('/releases/v5', false),
+      row('/guides/v3/old#section', false),
+    ]
+    expect(selectIndexCohortUrls(urls, { dimension: 'lifecycle', key: 'versioned' }, 'example.com'))
+      .toEqual(urls.slice(0, 2))
+  })
+
+  it('matches section segments rather than substring search', () => {
+    const urls = [row('/docs', false), row('/docs/page', false), row('/docs-other/page', false), row('/blog/docs/page', false)]
+    expect(selectIndexCohortUrls(urls, { dimension: 'section', key: '/docs' }, 'example.com'))
+      .toEqual(urls.slice(0, 2))
   })
 })

@@ -1,6 +1,8 @@
 import type { LocationQuery } from 'vue-router'
 import type { IndexingUrlsParams } from '#layers/pro-gsc/shared/gscdump-api'
+import type { IndexCohortFilter } from '#layers/pro-indexing/shared/contracts/index-cohorts'
 import { issueDetails } from '@gscdump/sdk/indexing-issues'
+import { parseIndexCohortFilter } from '#layers/pro-indexing/shared/contracts/index-cohorts'
 
 /**
  * The URLs table's route query, parsed once.
@@ -20,6 +22,7 @@ export type IndexingUrlsStatus = NonNullable<IndexingUrlsParams['status']>
 export type IndexingUrlsFacet = 'canonical_mismatch' | 'rich_results'
 
 export interface IndexingUrlsRouteState {
+  cohort: IndexCohortFilter | undefined
   /** An issue type gscdump knows. An unknown value is dropped, never forwarded. */
   issue: string | undefined
   search: string | undefined
@@ -42,14 +45,19 @@ export function parseIndexingUrlsPage(value: LocationQuery[string] | undefined):
 }
 
 export function parseIndexingUrlsRouteQuery(query: LocationQuery): IndexingUrlsRouteState {
-  const issue = single(query.issue)
-  const facet = single(query.facet)
-  const status = single(query.status)
+  const rawIssue = single(query.issue)
+  const rawFacet = single(query.facet)
+  const rawStatus = single(query.status)
+  const issue = rawIssue && Object.hasOwn(issueDetails, rawIssue) ? rawIssue : undefined
+  const facet = rawFacet === 'canonical_mismatch' || rawFacet === 'rich_results' ? rawFacet : undefined
+  const status = rawStatus === 'indexed' || rawStatus === 'not_indexed' || rawStatus === 'pending' ? rawStatus : undefined
+  const cohort = issue || facet || (status && status !== 'not_indexed') ? undefined : parseIndexCohortFilter(query.cohort)
   return {
-    issue: issue && Object.hasOwn(issueDetails, issue) ? issue : undefined,
+    cohort,
+    issue,
     search: single(query.search) || undefined,
-    facet: facet === 'canonical_mismatch' || facet === 'rich_results' ? facet : undefined,
-    status: status === 'indexed' || status === 'not_indexed' || status === 'pending' ? status : undefined,
+    facet,
+    status: cohort ? 'not_indexed' : status,
     page: parseIndexingUrlsPage(query.page),
   }
 }
@@ -65,7 +73,8 @@ export function firstPageIndexingUrlsParams(pageSize: number): IndexingUrlsParam
 
 /** True when the route carries none of the table's URL-driven filters. */
 export function isFirstPageIndexingUrlsRouteQuery(query: LocationQuery): boolean {
-  return query.issue == null
+  return query.cohort == null
+    && query.issue == null
     && query.search == null
     && query.status == null
     && query.page == null

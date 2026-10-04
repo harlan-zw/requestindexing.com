@@ -23,6 +23,8 @@
 // multiple-comparison correction, making true findings harder to surface. They
 // go back in when there is evidence, not before.
 
+import type { IndexCohortFilter } from './contracts/index-cohorts'
+
 export interface IndexCohortPage {
   /** Site-relative path, e.g. `/docs/og-image/v5/guides/emojis`. */
   path: string
@@ -39,10 +41,8 @@ export interface IndexCohortCell {
   key: string
   label: string
   /**
-   * Path prefix that isolates this cohort in the URL list, or null when the
-   * cohort is not expressible as one (a lifecycle cohort spans many prefixes).
-   * Null means the drill-through must fall back to the unfiltered not-indexed
-   * list rather than apply a filter that only approximates the cohort.
+   * Section prefix for presentation, or null for a lifecycle cohort.
+   * URL drill-through uses the dimension and key for exact membership.
    */
   pathPrefix: string | null
   total: number
@@ -229,6 +229,12 @@ function sectionKeys(path: string): string[] {
  */
 function lifecycleKey(path: string): 'versioned' | 'evergreen' {
   return VERSION_SEGMENT.test(path) ? 'versioned' : 'evergreen'
+}
+
+export function belongsToIndexCohort(path: string, filter: IndexCohortFilter): boolean {
+  return filter.dimension === 'section'
+    ? sectionKeys(path).includes(filter.key)
+    : lifecycleKey(path) === filter.key
 }
 
 const LIFECYCLE_LABEL: Record<'versioned' | 'evergreen', string> = {

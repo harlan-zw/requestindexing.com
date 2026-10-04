@@ -5,6 +5,24 @@ import { z } from 'zod'
 // with nullable fields, so a consumer cannot render `cells` without also having
 // the `baseline` and `coverage` that make those cells interpretable.
 
+export const indexCohortFilterSchema = z.discriminatedUnion('dimension', [
+  z.object({ dimension: z.literal('section'), key: z.string().regex(/^\/(?:[^/?#]+(?:\/[^/?#]+)?)?$/) }),
+  z.object({ dimension: z.literal('lifecycle'), key: z.enum(['versioned', 'evergreen']) }),
+])
+export type IndexCohortFilter = z.infer<typeof indexCohortFilterSchema>
+
+export function parseIndexCohortFilter(value: unknown): IndexCohortFilter | undefined {
+  if (typeof value !== 'string')
+    return undefined
+  const colon = value.indexOf(':')
+  const parsed = indexCohortFilterSchema.safeParse({ dimension: value.slice(0, colon), key: value.slice(colon + 1) })
+  return parsed.success ? parsed.data : undefined
+}
+
+export function indexCohortRouteQuery(cell: Pick<IndexCohortCell, 'dimension' | 'key'>) {
+  return { status: 'not_indexed', cohort: `${cell.dimension}:${cell.key}` }
+}
+
 export const indexCohortDimensionSchema = z.enum(['section', 'lifecycle'])
 
 export const indexCohortCellSchema = z.object({

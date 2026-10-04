@@ -13,7 +13,7 @@ definePageMeta({
   icon: 'i-lucide-link-2',
 })
 
-const { gscdumpSiteId, site } = useSite('Indexing URLs')
+const { siteId, gscdumpSiteId, site } = useSite('Indexing URLs')
 const route = useRoute()
 const { isAdmin } = useCaller()
 const teamPolicy = useTeamPolicy(() => site.value?.teamId)
@@ -32,8 +32,10 @@ if (import.meta.server && gscdumpSiteId.value && isFirstPageIndexingUrlsRouteQue
 <template>
   <ProPageStates>
     <TableIndexingUrls
-      :key="`urls-${routeState.issue}-${routeState.facet}`"
+      :key="`urls-${routeState.issue}-${routeState.facet}-${routeState.cohort?.dimension}-${routeState.cohort?.key}`"
       :gscdump-site-id="gscdumpSiteId"
+      :site-id="siteId"
+      :initial-cohort="routeState.cohort"
       :page-size="INDEXING_URLS_PAGE_SIZE"
       :initial-issue="routeState.issue"
       :initial-search="routeState.search"
