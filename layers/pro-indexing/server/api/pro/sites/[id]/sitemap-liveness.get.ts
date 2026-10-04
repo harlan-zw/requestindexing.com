@@ -1,6 +1,6 @@
 import type { SitemapLiveness } from '#layers/pro-indexing/shared/contracts/sitemap-liveness'
 import { cachedFunction } from 'nitropack/runtime'
-import { probeSitemap } from '#layers/pro-indexing/server/utils/sitemap-liveness'
+import { probeOrigin, probeSitemap } from '#layers/pro-indexing/server/utils/sitemap-liveness'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 
 // The live sitemap probe behind the indexing trust gate. gscdump reports the
@@ -23,13 +23,13 @@ const probe = cachedFunction(
     swr: true,
     maxAge: 30 * 60,
     staleMaxAge: 4 * 60 * 60,
-    getKey: (siteUrl: string, submitted?: string) => `${siteUrl}:${submitted ?? ''}`,
+    // Normalize the key so cached failures for bare hosts cannot survive this fix.
+    getKey: (siteUrl: string, submitted?: string) => `${probeOrigin(siteUrl) ?? siteUrl}:${submitted ?? ''}`,
   },
 )
 
 export default defineProApiHandler({ site: true }, async ({ event, site: access }): Promise<SitemapLiveness | null> => {
-  // `property` is the Search Console property: an https URL or an
-  // `sc-domain:` label. `probeSitemap` resolves both to an origin.
+  // Hosted Sites can supply a bare host. Properties can supply URLs or domain labels.
   const siteUrl = access.site.gscdumpSiteUrl ?? access.site.property
   if (!siteUrl)
     return null

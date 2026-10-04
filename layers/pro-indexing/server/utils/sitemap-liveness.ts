@@ -61,14 +61,13 @@ export function isPublicProbeTarget(target: string): boolean {
 /**
  * The http(s) origin to probe, or null.
  *
- * A Search Console domain property (`sc-domain:example.com`) is not a URL, so
- * it is rewritten to https before parsing. Without that every probe for a
- * domain property throws before a request leaves and reports a false outage.
+ * Registered hosts and Search Console domain properties use HTTPS.
+ * Explicit URLs keep their protocol. Unsupported protocols return null.
  */
 export function probeOrigin(siteUrl: string): string | null {
   const candidate = siteUrl.startsWith('sc-domain:')
     ? `https://${siteUrl.slice('sc-domain:'.length)}`
-    : siteUrl
+    : /^[^/?#:@\s]+(?::\d+)?$/.test(siteUrl) ? `https://${siteUrl}` : siteUrl
   try {
     const url = new URL(candidate)
     return url.protocol === 'https:' || url.protocol === 'http:' ? url.origin : null

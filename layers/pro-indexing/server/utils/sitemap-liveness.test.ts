@@ -24,6 +24,25 @@ function clock() {
 }
 
 describe('probeSitemap', () => {
+  it.each(['nuxtseo.com', 'www.nuxtseo.com', 'nuxtseo.com:8443'])('probes the submitted sitemap for the registered host %s', async (host) => {
+    const sitemap = `https://${host}/custom.xml`
+    const { fetch, calls } = stubFetch({ [sitemap]: response(200, '<urlset/>') })
+
+    const result = await probeSitemap(host, { fetch, now: clock() }, sitemap)
+
+    expect(result).toMatchObject({ status: 'reachable', statusCode: 200, url: sitemap })
+    expect(calls).toEqual([sitemap])
+  })
+
+  it.each(['localhost', '127.0.0.1', '10.1.2.3', 'box.internal', 'ftp://example.com', 'mailto:example.com'])('refuses unsafe or unsupported input %s without fetching', async (host) => {
+    const { fetch, calls } = stubFetch({})
+
+    const result = await probeSitemap(host, { fetch, now: clock() })
+
+    expect(result).toMatchObject({ status: 'error', statusCode: null })
+    expect(calls).toEqual([])
+  })
+
   it('reports reachable when /sitemap.xml answers 200', async () => {
     const { fetch, calls } = stubFetch({
       'https://example.com/sitemap.xml': response(200, '<urlset><url><loc>https://example.com/</loc></url></urlset>'),
