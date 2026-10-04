@@ -28,8 +28,6 @@ import type { RealtimeV1Event } from '@gscdump/contracts/v1'
 import type { GscdumpRealtimeV1Client } from '@gscdump/sdk/v1'
 import type { GscdumpIntegration } from '../composables/useGscdumpIntegration'
 import type { CursorStorage } from '../internal/gscdump-realtime-cursor'
-import { createRealtimeV1Schemas } from '@gscdump/contracts/v1/realtime'
-import { createGscdumpRealtimeV1Client, createGscdumpV1Client } from '@gscdump/sdk/v1'
 import { logWarn } from '~~/shared/logging'
 import { GSCDUMP_INTEGRATION_KEY } from '../composables/useGscdumpIntegration'
 import { bumpGscInvalidation } from '../internal/composables/useGscInvalidation'
@@ -80,7 +78,7 @@ export default defineNuxtPlugin({
 
       stopWatch = watch(
         () => integration.value?.connected ?? false,
-        (connected) => {
+        (connected, _previous, onCleanup) => {
           if (realtime) {
             realtime.stop()
             realtime = null
@@ -88,50 +86,69 @@ export default defineNuxtPlugin({
           if (!connected)
             return
 
-          // Session-proxied: the browser never holds a gscdump API key. The
-          // proxy resolves the caller's stored credential server-side and
-          // mints the realtime ticket on their behalf.
-          const http = createGscdumpV1Client({
-            apiRoot: '/api/_gscdump',
-            credential: 'session-proxy',
-            fetch: (request, init) => {
-              const headers = new Headers(init?.headers)
-              headers.delete('authorization')
-              return fetch(request, { ...init, headers })
-            },
+          let cancelled = false
+          onCleanup(() => {
+            cancelled = true
           })
-          const userId = user.value?.id
-          const client = createGscdumpRealtimeV1Client({
-            // Without a signed-in id there is no account to key the cursor
-            // by, so the SDK keeps it in memory for this page load only.
-            ...(userId != null && {
-              cursorStore: createGscdumpCursorStore(createRealtimeV1Schemas(), String(userId), lazyLocalStorage),
-            }),
-            // The body is empty on purpose. A ticket's origin is host policy,
-            // so the proxy substitutes its own request origin; sending one from
-            // the browser is rejected as an unexpected body and the ticket
-            // never minted. Same call shape as nuxtseo.com.
-            ticketProvider: () => http.createRealtimeTicket({ body: {} }),
-            applyEvent: async event => invalidateAffectedSites(event),
-            resync: async () => refreshNuxtData(),
-            onObservation: (observation) => {
-              if (observation.type === 'error')
-                logWarn('gscdump.integration.probe_failed', observation.error, { source: 'realtime' })
-            },
-          })
-          realtime = client
-          void client.start().catch((err) => {
-            logWarn('gscdump.integration.probe_failed', err, { source: 'realtime', stage: 'connect' })
-            if (realtime === client) {
-              client.stop()
-              realtime = null
-            }
+
+          // Public pages never use the realtime SDK. Load its code only when
+          // a connected dashboard needs it, outside the initial page bundle.
+          void Promise.all([
+            import('@gscdump/sdk/v1'),
+            import('@gscdump/contracts/v1/realtime'),
+          ]).then(([{ createGscdumpRealtimeV1Client, createGscdumpV1Client }, { createRealtimeV1Schemas }]) => {
+            // Integration loss or scope disposal can happen during the load.
+            if (cancelled)
+              return
+
+            // Session-proxied: the browser never holds a gscdump API key. The
+            // proxy resolves the caller's stored credential server-side and
+            // mints the realtime ticket on their behalf.
+            const http = createGscdumpV1Client({
+              apiRoot: '/api/_gscdump',
+              credential: 'session-proxy',
+              fetch: (request, init) => {
+                const headers = new Headers(init?.headers)
+                headers.delete('authorization')
+                return fetch(request, { ...init, headers })
+              },
+            })
+            const userId = user.value?.id
+            const client = createGscdumpRealtimeV1Client({
+              // Without a signed-in id there is no account to key the cursor
+              // by, so the SDK keeps it in memory for this page load only.
+              ...(userId != null && {
+                cursorStore: createGscdumpCursorStore(createRealtimeV1Schemas(), String(userId), lazyLocalStorage),
+              }),
+              // The body is empty on purpose. A ticket's origin is host policy,
+              // so the proxy substitutes its own request origin; sending one from
+              // the browser is rejected as an unexpected body and the ticket
+              // never minted. Same call shape as nuxtseo.com.
+              ticketProvider: () => http.createRealtimeTicket({ body: {} }),
+              applyEvent: async event => invalidateAffectedSites(event),
+              resync: async () => refreshNuxtData(),
+              onObservation: (observation) => {
+                if (observation.type === 'error')
+                  logWarn('gscdump.integration.probe_failed', observation.error, { source: 'realtime' })
+              },
+            })
+            realtime = client
+            void client.start().catch((err) => {
+              logWarn('gscdump.integration.probe_failed', err, { source: 'realtime', stage: 'connect' })
+              if (realtime === client) {
+                client.stop()
+                realtime = null
+              }
+            })
+          }).catch((err) => {
+            logWarn('gscdump.integration.probe_failed', err, { source: 'realtime', stage: 'load' })
           })
         },
         { immediate: true },
       )
 
       useEventListener(window, 'beforeunload', () => {
+        stopWatch?.()
         realtime?.stop()
         realtime = null
       })
@@ -139,14 +156,15 @@ export default defineNuxtPlugin({
 
     if (isProAppPath(route.path)) {
       activate()
-      return
     }
-    const stop = watch(() => route.path, (path) => {
-      if (isProAppPath(path)) {
-        stop()
-        activate()
-      }
-    })
+    else {
+      const stop = watch(() => route.path, (path) => {
+        if (isProAppPath(path)) {
+          stop()
+          activate()
+        }
+      })
+    }
 
     onScopeDispose(() => {
       stopWatch?.()
