@@ -33,6 +33,9 @@ function buildEmailVirtuals(emailsDir: string): Record<string, string> {
 }
 
 export default defineNuxtConfig({
+  features: {
+    inlineStyles: true,
+  },
   checkin: { external: externalCheckin },
   alias: {
     h3: resolve('./node_modules/h3/dist/index.mjs'),
