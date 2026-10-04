@@ -73,3 +73,20 @@ describe('isFirstPageIndexingUrlsRouteQuery', () => {
     expect(isFirstPageIndexingUrlsRouteQuery({ [key]: 'x' })).toBe(false)
   })
 })
+
+it('keeps an exact lifecycle group in a shared link', () => {
+  expect(parseIndexingUrlsRouteQuery({ cohort: 'lifecycle:versioned', page: '2' })).toMatchObject({
+    cohort: { dimension: 'lifecycle', key: 'versioned' },
+    status: 'not_indexed',
+    page: 2,
+  })
+  expect(isFirstPageIndexingUrlsRouteQuery({ cohort: 'lifecycle:versioned' })).toBe(false)
+})
+
+it.each(['lifecycle:unknown', 'section:/docs/a/b', 'versioned', ['lifecycle:versioned']])('rejects invalid group selection %j', (cohort) => {
+  expect(parseIndexingUrlsRouteQuery({ cohort }).cohort).toBeUndefined()
+})
+
+it.each([['status', 'indexed'], ['issue', 'crawled_not_indexed'], ['facet', 'rich_results']])('lets explicit %s replace the group', (key, value) => {
+  expect(parseIndexingUrlsRouteQuery({ cohort: 'lifecycle:versioned', [key]: value }).cohort).toBeUndefined()
+})

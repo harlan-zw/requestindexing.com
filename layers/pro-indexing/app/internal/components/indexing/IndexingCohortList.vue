@@ -3,6 +3,7 @@ import type { IndexCohortsResponse } from '#layers/pro-indexing/shared/contracts
 import { withQuery } from 'ufo'
 import { computed } from 'vue'
 import { NuxtLink, UiIcon } from '#components'
+import { indexCohortRouteQuery } from '#layers/pro-indexing/shared/contracts/index-cohorts'
 import { sampledIndexStateMessage } from '#layers/pro-indexing/shared/index-cohorts'
 // Which PART of the site does Google treat worse than the rest — the question
 // GSC's own taxonomy ("37 crawled but not indexed") cannot answer because it
@@ -69,10 +70,8 @@ const coverageNote = computed(() => {
   return parts.join(' · ')
 })
 
-function cohortRoute(pathPrefix: string | null): string {
-  return withQuery(urlsRoute, pathPrefix
-    ? { status: 'not_indexed', search: pathPrefix }
-    : { status: 'not_indexed' })
+function cohortRoute(cell: Extract<IndexCohortsResponse, { _tag: 'outliers' }>['cells'][number]): string {
+  return withQuery(urlsRoute, indexCohortRouteQuery(cell))
 }
 </script>
 
@@ -86,7 +85,7 @@ function cohortRoute(pathPrefix: string | null): string {
       <NuxtLink
         v-for="cell in cells"
         :key="`${cell.dimension}:${cell.key}`"
-        :to="cohortRoute(cell.pathPrefix)"
+        :to="cohortRoute(cell)"
         class="flex min-h-11 items-center gap-3 rounded-md px-1 py-2 hover:bg-accented focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <span class="min-w-0 flex-1">

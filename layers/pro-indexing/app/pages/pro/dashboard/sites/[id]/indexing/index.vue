@@ -24,6 +24,7 @@ import {
   buildIndexingPipelineEvidence,
 } from '#layers/pro-indexing/app/utils/indexing-overview'
 import { loadIndexingOverviewCohorts } from '#layers/pro-indexing/app/utils/indexing-overview-cohorts'
+import { indexCohortRouteQuery } from '#layers/pro-indexing/shared/contracts/index-cohorts'
 import { sitemapLivenessSchema } from '#layers/pro-indexing/shared/contracts/sitemap-liveness'
 import { selectIndexCohortLead } from '#layers/pro-indexing/shared/index-cohorts'
 import { selectIndexingRegressionLead } from '#layers/pro-indexing/shared/indexing-transition-lead'
@@ -310,9 +311,7 @@ const cohortLeadTo = computed(() => {
   const lead = cohortLead.value
   if (lead?._tag !== 'lead')
     return undefined
-  return indexingRoute('urls', lead.cell.pathPrefix
-    ? { status: 'not_indexed', search: lead.cell.pathPrefix }
-    : { status: 'not_indexed' })
+  return indexingRoute('urls', indexCohortRouteQuery(lead.cell))
 })
 
 const funnelStageDescriptions = {

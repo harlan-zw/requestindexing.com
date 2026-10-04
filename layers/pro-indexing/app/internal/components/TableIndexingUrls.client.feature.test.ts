@@ -1,6 +1,6 @@
-import type { PropType, VNodeChild } from 'vue'
+import type { PropType, VNodeChild, WatchSource } from 'vue'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { createApp, defineComponent, h, nextTick, ref } from 'vue'
+import { createApp, defineComponent, h, nextTick, ref, shallowRef, watch } from 'vue'
 
 // The URLs table answers "why is this page not indexed, and what now". These
 // tests drive it through its gscdump seams (the URL list, diagnostics,
@@ -28,6 +28,8 @@ const rows = [
 ]
 
 const fixture = vi.hoisted(() => ({
+  cohortRead: vi.fn(),
+  urlRead: vi.fn(),
   urlParams: { value: {} } as { value: Record<string, unknown> },
   canonicalOptions: [] as Record<string, unknown>[],
   refresh: vi.fn(),
@@ -40,6 +42,7 @@ const diagnostics = ref<Record<string, unknown> | null>(null)
 
 vi.mock('#layers/pro-gsc/app/composables/useProGscdump', () => ({
   useProGscdumpIndexingUrls: (_siteId: unknown, params: { value: Record<string, unknown> }) => {
+    fixture.urlRead()
     fixture.urlParams = params
     return {
       data: ref({ urls: rows, pagination: { total: 60, limit: 25, offset: 0, hasMore: true }, meta: { siteUrl: 'sc-domain:example.com', status: 'ok', issue: null } }),
@@ -108,6 +111,19 @@ vi.mock('#layers/pro-gsc/app/components/pro/ProGscTableShell.vue', () => ({
 }))
 
 Object.assign(globalThis, {
+  useProFetch: () => fixture.cohortRead,
+  useAsyncData: <T>(key: unknown, handler: () => Promise<T>, options: { watch?: WatchSource[] }) => {
+    const data = shallowRef<T | null>(null)
+    const status = ref('pending')
+    const refresh = async () => {
+      data.value = await handler()
+      status.value = 'success'
+    }
+    void refresh()
+    if (options.watch)
+      watch(options.watch, refresh)
+    return { data, status, error: ref(null), refresh }
+  },
   useRoute: () => ({ query: {}, path: '/pro/dashboard/sites/s_1/indexing/urls' }),
   navigateTo: fixture.navigate,
   useProDevSkeleton: () => ref(false),
@@ -153,6 +169,8 @@ async function flush() {
 }
 
 beforeEach(() => {
+  fixture.cohortRead.mockReset()
+  fixture.urlRead.mockClear()
   fixture.urlParams = { value: {} }
   fixture.canonicalOptions.length = 0
   fixture.refresh.mockReset()
@@ -301,4 +319,24 @@ it('keeps a view-only Team role from spending URL Inspection checks', () => {
   const recheck = button(host, 'Re-check with Google')!
   expect(recheck.disabled).toBe(true)
   expect(recheck.title).toBe('Your Team role allows viewing only.')
+})
+
+it('reads the selected group instead of the broader engine status list, and keeps it when paging', async () => {
+  fixture.cohortRead.mockResolvedValue({
+    urls: [{ ...rows[0], url: 'https://example.com/docs/v5/selected' }],
+    pagination: { total: 11, limit: 25, offset: 0, hasMore: false },
+    meta: { siteUrl: 'example.com', status: 'not_indexed', issue: null },
+  })
+  const host = mount({ siteId: 's_1', initialStatus: 'not_indexed', initialCohort: { dimension: 'lifecycle', key: 'versioned' } })
+  await flush()
+  expect(host.textContent).toContain('/docs/v5/selected')
+  expect(fixture.urlRead).not.toHaveBeenCalled()
+  expect(fixture.cohortRead).toHaveBeenCalledWith('/api/pro/sites/s_1/indexing/cohorts/urls', {
+    query: { cohort: 'lifecycle:versioned', limit: 25, offset: 0, search: undefined },
+  })
+  button(host, 'Go to page 2')!.click()
+  await flush()
+  expect(fixture.cohortRead).toHaveBeenLastCalledWith('/api/pro/sites/s_1/indexing/cohorts/urls', {
+    query: { cohort: 'lifecycle:versioned', limit: 25, offset: 25, search: undefined },
+  })
 })

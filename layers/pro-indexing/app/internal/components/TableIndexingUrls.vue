@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { VNode } from 'vue'
 import type { UiTableColumn } from '#layers/design-system/app/shared/table'
-import type { GscdumpCanonicalMismatchesResponse, GscdumpIndexingUrl } from '#layers/pro-gsc/shared/gscdump-api'
+import type { GscdumpCanonicalMismatchesResponse, GscdumpIndexingUrl, GscdumpIndexingUrlsResponse } from '#layers/pro-gsc/shared/gscdump-api'
 import type { IndexingUrlsFacet, IndexingUrlsStatus } from '#layers/pro-indexing/app/utils/indexing-urls-first-page'
 import type { RichResultDistributionRow } from '#layers/pro-indexing/app/utils/indexing-urls-table'
+import type { IndexCohortFilter } from '#layers/pro-indexing/shared/contracts/index-cohorts'
 import { gscConsoleUrl } from '@gscdump/sdk/gsc-console-url'
 import { computed, h, onMounted, ref, watch } from 'vue'
 import UiTableDash from '#layers/design-system/app/components/data/cells/UiTableDash.vue'
@@ -58,6 +59,8 @@ type ConsolidationTargetRow = GscdumpCanonicalMismatchesResponse['consolidationT
 
 const {
   gscdumpSiteId,
+  siteId,
+  initialCohort,
   pageSize = 25,
   initialIssue,
   initialSearch,
@@ -67,6 +70,8 @@ const {
   canWrite = false,
 } = defineProps<{
   gscdumpSiteId: string | null | undefined
+  siteId?: string
+  initialCohort?: IndexCohortFilter
   pageSize?: number
   initialIssue?: string
   initialSearch?: string
@@ -81,7 +86,7 @@ const {
 
 const route = useRoute()
 
-type TableQueryKey = 'facet' | 'issue' | 'page' | 'search' | 'status'
+type TableQueryKey = 'cohort' | 'facet' | 'issue' | 'page' | 'search' | 'status'
 
 function updateRouteQuery(
   updates: Partial<Record<TableQueryKey, string | undefined>>,
@@ -143,6 +148,7 @@ function toggleStatusFilter(key: string) {
   facet.value = undefined
   page.value = 1
   updateRouteQuery({
+    cohort: undefined,
     status: nextStatus,
     issue: undefined,
     facet: undefined,
@@ -193,6 +199,7 @@ function handleIssueClick(issueType: string) {
   page.value = 1
   issuePopoverOpen.value = false
   updateRouteQuery({
+    cohort: undefined,
     issue: nextIssue,
     status: undefined,
     facet: undefined,
@@ -207,6 +214,7 @@ function clearTableFilters() {
   facet.value = undefined
   page.value = 1
   updateRouteQuery({
+    cohort: undefined,
     facet: undefined,
     issue: undefined,
     search: undefined,
@@ -257,11 +265,20 @@ const params = computed(() => ({
 // The URLs page seeds the clean first page into the SSR payload under this
 // query's key (see `useIndexingUrlsFirstPageSeed.ts`), so the server HTML
 // carries the rows and hydration does not refetch them.
-const { data, status: fetchStatus, error, refresh } = useProGscdumpIndexingUrls(
-  siteIdForQuery,
-  params,
-  { immediate: !!gscdumpSiteId, seedFromSsrPayload: true },
-)
+const proFetch = initialCohort && siteId ? useProFetch() : null
+const { data, status: fetchStatus, error, refresh } = initialCohort && siteId && proFetch
+  ? useAsyncData<GscdumpIndexingUrlsResponse>(
+      computed(() => `indexing-cohort-urls:${siteId}:${JSON.stringify(initialCohort)}:${JSON.stringify(params.value)}`),
+      () => proFetch<GscdumpIndexingUrlsResponse>(`/api/pro/sites/${siteId}/indexing/cohorts/urls`, {
+        query: { cohort: `${initialCohort.dimension}:${initialCohort.key}`, limit: params.value.limit, offset: params.value.offset, search: params.value.search },
+      }),
+      { server: false, watch: [params] },
+    )
+  : useProGscdumpIndexingUrls(
+      siteIdForQuery,
+      params,
+      { immediate: !!gscdumpSiteId, seedFromSsrPayload: true },
+    )
 const displayError = computed(() => error.value ?? null)
 
 const activeRemediation = computed(() => {
