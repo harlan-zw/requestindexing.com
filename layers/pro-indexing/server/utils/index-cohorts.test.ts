@@ -88,10 +88,22 @@ describe('buildIndexCohortsFromIndexingUrls', () => {
     expect(result.baseline.total).toBe(20)
   })
 
-  it('resolves relative rows against a Search Console domain property', () => {
+  it.each(['example.com', 'not a valid base', null])('parses absolute rows independently of site metadata %s', (siteUrl) => {
+    const result = buildIndexCohortsFromIndexingUrls({
+      urls: section('/docs', 20, 4),
+      siteUrl,
+      reportedNotIndexed: 4,
+    })
+
+    if (result._tag === 'no-evidence')
+      throw new Error('expected a diagnosis')
+    expect(result.baseline).toEqual({ total: 20, notIndexed: 4, rate: 0.2 })
+  })
+
+  it.each(['example.com', 'sc-domain:example.com', 'https://example.com/'])('resolves relative rows against %s', (siteUrl) => {
     const result = buildIndexCohortsFromIndexingUrls({
       urls: Array.from({ length: 20 }, (_, index) => row(`/docs/page-${index}`, index >= 4)),
-      siteUrl: 'sc-domain:example.com',
+      siteUrl,
       reportedNotIndexed: 4,
     })
 
