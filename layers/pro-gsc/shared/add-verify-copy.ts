@@ -25,6 +25,7 @@ export const ADD_VERIFY_PERMISSION = {
 } as const
 
 export const ADD_VERIFY_ADDRESS_LABEL = 'Site address'
+export const ADD_VERIFY_CHANGE_ADDRESS = 'Change address'
 export const ADD_VERIFY_METHOD_LABEL = 'Method'
 
 export const ADD_VERIFY_METHODS = {

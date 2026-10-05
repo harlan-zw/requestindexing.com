@@ -12,6 +12,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import {
   ADD_VERIFY_ACTION,
   ADD_VERIFY_ADDRESS_LABEL,
+  ADD_VERIFY_CHANGE_ADDRESS,
   ADD_VERIFY_CHECKING_GRANT,
   ADD_VERIFY_COPY,
   ADD_VERIFY_DNS_FIELDS,
@@ -235,6 +236,11 @@ function switchMethod() {
   step.value = { _tag: 'Choose' }
 }
 
+function changeAddress() {
+  error.value = null
+  step.value = { _tag: 'Choose' }
+}
+
 function reset() {
   step.value = { _tag: 'CheckingGrant' }
   address.value = domain ?? ''
@@ -259,7 +265,12 @@ function reset() {
       />
     </ProAbilityGate>
 
-    <UModal v-model:open="open" :title="ADD_VERIFY_TITLE" :ui="{ footer: 'justify-end' }" @after-leave="reset">
+    <UModal
+      v-model:open="open"
+      :title="ADD_VERIFY_TITLE"
+      :ui="{ header: 'pr-14 sm:pr-14', wrapper: 'min-w-0', title: 'break-words', footer: 'justify-end' }"
+      @after-leave="reset"
+    >
       <template #body>
         <div class="space-y-4" data-testid="gsc-add-verify">
           <p class="text-sm text-muted">
@@ -312,6 +323,14 @@ function reset() {
           </form>
 
           <template v-else-if="place">
+            <UiButton
+              v-if="!domain"
+              purpose="quiet"
+              class="min-h-11"
+              :disabled="busy !== null"
+              :label="ADD_VERIFY_CHANGE_ADDRESS"
+              @click="changeAddress"
+            />
             <div v-if="dnsRecord" class="space-y-2">
               <p class="text-sm font-medium text-highlighted">
                 {{ ADD_VERIFY_DNS_STEP }}

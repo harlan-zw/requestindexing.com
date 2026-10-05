@@ -45,8 +45,20 @@ export type OnboardingStep = typeof ONBOARDING_STEPS[number]
 export const ONBOARDING_STEP_LABELS: Record<OnboardingStep, string> = {
   connect: 'Connect Google',
   sites: 'Connect Sites',
-  sync: 'Start syncing',
+  sync: 'Finish setup',
 }
+
+/** COPY.md: setup completion describes the setup, never an unread sync lifecycle. */
+export const ONBOARDING_COMPLETION_COPY = {
+  connected: {
+    title: 'You\'re set up',
+    description: 'Open the dashboard to see the indexing evidence for your connected Sites.',
+  },
+  missingSite: {
+    title: 'Connect a Site to finish setup',
+    description: 'Go back to Connect Sites and choose a Search Console property.',
+  },
+} as const
 
 /** Parse an untrusted `?step=` value once, at the boundary. */
 export function parseOnboardingStep(value: unknown): OnboardingStep | null {
@@ -131,7 +143,7 @@ export function resolveOnboardingResumeStep(signals: OnboardingResumeSignals): O
  * Continue and no way forward. This mirrors nuxtseo.com ADR-0035.
  */
 export function canAdvanceOnboardingStep(step: OnboardingStep, signals: OnboardingResumeSignals): boolean {
-  return step === 'sites' ? signals.hasSites : true
+  return step === 'connect' ? true : signals.hasSites
 }
 
 export interface SitesSkipInput {

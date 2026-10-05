@@ -4,6 +4,7 @@ import {
   canAdvanceOnboardingStep,
   canSkipOnboardingSites,
   DASHBOARD_ROUTE,
+  ONBOARDING_COMPLETION_COPY,
   ONBOARDING_STEP_LABELS,
   ONBOARDING_STEPS,
   onboardingStepIndex,
@@ -229,15 +230,9 @@ useSeoMeta({ title: 'Set up Request Indexing' })
     <section v-else class="space-y-5">
       <UiAuthHeading
         size="md"
-        title="You're set up"
-        description="We are pulling your Search Console history now. It runs in the background, and the dashboard shows the progress as it lands."
+        :title="hasSites ? ONBOARDING_COMPLETION_COPY.connected.title : ONBOARDING_COMPLETION_COPY.missingSite.title"
+        :description="hasSites ? ONBOARDING_COMPLETION_COPY.connected.description : ONBOARDING_COMPLETION_COPY.missingSite.description"
       />
-      <div class="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 px-3 py-3" role="status" aria-live="polite">
-        <UIcon name="i-heroicons-arrow-path" class="size-5 shrink-0 animate-spin text-primary" aria-hidden="true" />
-        <p class="text-sm text-muted">
-          First sync started. You do not have to wait here.
-        </p>
-      </div>
     </section>
 
     <UiWizardNav

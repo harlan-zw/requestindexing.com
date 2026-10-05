@@ -570,7 +570,7 @@ function plural(count: number, one: string, many: string): string {
 </script>
 
 <template>
-  <div class="space-y-3">
+  <div class="idx-urls space-y-3">
     <!-- Facet panel: consolidation targets (canonical_mismatch) -->
     <UiDataList
       v-if="facet === 'canonical_mismatch'"
@@ -932,6 +932,10 @@ function plural(count: number, one: string, many: string): string {
 </template>
 
 <style scoped>
+.idx-urls {
+  container-type: inline-size;
+}
+
 .idx-chip {
   display: inline-flex;
   align-items: center;
@@ -943,6 +947,11 @@ function plural(count: number, one: string, many: string): string {
 }
 
 .idx-expanded {
+  /* A wide data table can scroll. The answer must fit the visible table frame. */
+  box-sizing: border-box;
+  width: min(100%, calc(100cqi - 1rem - 2px));
+  white-space: normal;
+  overflow-wrap: anywhere;
   padding: 1rem 1.25rem;
   border-radius: 0.5rem;
   background: color-mix(in srgb, var(--ui-bg-elevated) 20%, transparent);
@@ -970,7 +979,7 @@ function plural(count: number, one: string, many: string): string {
 
 .idx-detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), 1fr));
   gap: 0.625rem 1.5rem;
 }
 
