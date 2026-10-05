@@ -84,7 +84,7 @@ const reasonMessages: Record<string, string> = {
   'key-file-unreachable': 'The key file could not be reached. Check its public access, then verify again.',
   'key-unavailable': 'The saved key could not be read. Save your key again, then verify it.',
   'connection-changed': 'The key changed after submission. Verify your current key before submitting again.',
-  'retry-budget-exhausted': 'IndexNow could not accept the notification after several attempts. Check your setup before submitting again.',
+  'retry-budget-exhausted': 'IndexNow could not accept the notification after several attempts. Automatic retries have ended. Try again later.',
   'invalid-key': 'IndexNow rejected the key. Check the key file, then verify it again.',
   'invalid-request': 'IndexNow rejected the notification. Check the submitted URLs and key location.',
   'rate-limited': 'IndexNow limited this submission. Check the receipt outcome before submitting again.',
@@ -273,7 +273,7 @@ function formatDate(value: string) {
             <UiButton purpose="secondary" class="min-h-11" :disabled="!canWrite || busy || !publishedKeyLocation || setupChanged" :loading="action._tag === 'busy' && action.action === 'verify'" @click="verifyKey">
               Verify key
             </UiButton>
-            <UBadge v-if="setup._tag === 'connected'" color="success" variant="subtle">
+            <UBadge v-if="setup._tag === 'connected' && !setupChanged" color="success" variant="subtle">
               Key verified
             </UBadge>
           </div>

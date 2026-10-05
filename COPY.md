@@ -137,6 +137,7 @@ Engine contracts own IndexNow and Submission Receipt terms.
 | Retry action | Retry loading |
 | Read-only role | Your Team role allows viewing only. |
 | Accepted outcome | IndexNow accepted the notification. Search engines decide whether to index each URL. |
+| Retries exhausted | IndexNow could not accept the notification after several attempts. Automatic retries have ended. Try again later. |
 
 IndexNow reason codes use the corrective-action strings in the IndexNow page.
 Each string names the failed step and the next action.
