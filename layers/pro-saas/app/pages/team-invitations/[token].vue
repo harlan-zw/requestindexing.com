@@ -3,6 +3,8 @@ definePageMeta({ layout: false })
 
 const route = useRoute()
 const token = computed(() => route.params.token as string)
+const invitationPath = computed(() => `/team-invitations/${encodeURIComponent(token.value)}`)
+const signInPath = computed(() => `/login?redirect=${encodeURIComponent(invitationPath.value)}`)
 
 const { loggedIn, session } = useUserSession()
 const toast = useToast()
@@ -70,7 +72,7 @@ async function accept() {
 
 async function switchAccount() {
   // Logout, then redirect back here so the user signs in with the right email.
-  await navigateTo(`/auth/logout?redirect=/team-invitations/${token.value}`, { external: true })
+  await navigateTo(`/auth/logout?redirect=${encodeURIComponent(invitationPath.value)}`, { external: true })
 }
 
 function decline() {
@@ -163,7 +165,7 @@ function decline() {
           :description="`Sign in with ${inv.email} to join the team.`"
         >
           <template #actions>
-            <UButton :to="`/auth/github?redirect=/team-invitations/${token}`" color="info" variant="subtle" label="Sign in" />
+            <UButton :to="signInPath" color="info" variant="subtle" label="Sign in" />
           </template>
         </ProAlert>
 
