@@ -12,6 +12,8 @@ type Db = ReturnType<typeof useDrizzle>
 
 /** Rows per run, as on nuxtseo.com. The task runs every 10 minutes. */
 const BATCH_SIZE = 20
+// Scheduled Workers finish within this lease. An interrupted run becomes due again.
+const SEND_LEASE_MS = 30 * 60 * 1000
 
 export interface ProcessDripsDeps {
   db: Db
@@ -64,6 +66,7 @@ export async function processDueDrips(deps: ProcessDripsDeps): Promise<ProcessDr
     email: dripEmails.email,
     sequence: dripEmails.sequence,
     stepIndex: dripEmails.stepIndex,
+    nextSendAt: dripEmails.nextSendAt,
     name: users.name,
   })
     .from(dripEmails)
@@ -103,6 +106,28 @@ export async function processDueDrips(deps: ProcessDripsDeps): Promise<ProcessDr
       baseUrl: deps.baseUrl,
       unsubscribeUrl,
     })
+    // Compare and swap the selected step before sending. A second runner cannot
+    // claim it, and an expired lease can retry after an interrupted Worker.
+    const leaseUntil = new Date(Math.floor((now.getTime() + SEND_LEASE_MS) / 1000) * 1000)
+    const claimedStep = and(
+      eq(dripEmails.dripEmailId, row.id),
+      eq(dripEmails.status, 'active'),
+      eq(dripEmails.stepIndex, row.stepIndex),
+      eq(dripEmails.nextSendAt, leaseUntil),
+    )
+    const claim = await db.update(dripEmails)
+      .set({ nextSendAt: leaseUntil })
+      .where(and(
+        eq(dripEmails.dripEmailId, row.id),
+        eq(dripEmails.status, 'active'),
+        eq(dripEmails.stepIndex, row.stepIndex),
+        eq(dripEmails.nextSendAt, row.nextSendAt),
+        lte(dripEmails.nextSendAt, now),
+      ))
+      .returning({ id: dripEmails.dripEmailId })
+    if (!claim.length)
+      continue
+
     const outcome = await deps.send({
       to: row.email,
       subject: rendered.subject,
@@ -113,7 +138,8 @@ export async function processDueDrips(deps: ProcessDripsDeps): Promise<ProcessDr
       logError('email.send_failed', error, { type: 'drip', dripEmailId: row.id, sequence: row.sequence, stepIndex: row.stepIndex })
       return null
     })
-    if (!outcome) {
+    if (!outcome || outcome._tag === 'Skipped') {
+      await db.update(dripEmails).set({ nextSendAt: row.nextSendAt }).where(claimedStep)
       report.failed++
       continue
     }
@@ -122,7 +148,7 @@ export async function processDueDrips(deps: ProcessDripsDeps): Promise<ProcessDr
       .set(decision.after._tag === 'Next'
         ? { stepIndex: decision.after.stepIndex, nextSendAt: decision.after.nextSendAt, lastSentAt: now }
         : { status: 'completed', lastSentAt: now, completedAt: now })
-      .where(eq(dripEmails.dripEmailId, row.id))
+      .where(claimedStep)
     report.sent++
   }
 

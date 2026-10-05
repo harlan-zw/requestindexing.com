@@ -1,8 +1,10 @@
 <script lang="ts" setup>
+import type { CompareMode } from '../../composables/useGscPeriod'
 import { Scale, TextAlign } from '@unovis/ts'
 import { VisArea, VisAxis, VisCrosshair, VisLine, VisTooltip, VisXYContainer } from '@unovis/vue'
 import { gscMetricColors } from '~~/layers/design-system/app/composables/dataVizColors'
 import { GSC_STABLE_LATENCY_DAYS } from '../../composables/useGscPeriod'
+import { alignPrev, resolveCompareAligner } from '../../utils/compare-align'
 
 interface DataRow {
   date: string
@@ -12,9 +14,11 @@ interface DataRow {
   ctr: number
 }
 
-const { value, prevValue, fullValue, fullPrevValue, columns, height, loading: loadingProp } = defineProps<{
+const { value, prevValue, fullValue, fullPrevValue, columns, height, compareMode, compareOffsetDays, loading: loadingProp } = defineProps<{
   value: DataRow[]
   prevValue: DataRow[] | null
+  compareMode?: CompareMode
+  compareOffsetDays?: number | null
   columns?: string[]
   height?: number | string
   /** Show loading skeleton */
@@ -63,27 +67,9 @@ const svgDefs = `
     <stop offset="100%" stop-color="${alpha(gscMetricColors.impressions.hex, 0.01)}" />
   </linearGradient>`
 
-// --- Comparison data handling ---
-// Unovis applies accessors against the container's data, so we merge prev rows into
-// `value` by calendar-date match (prev.date + 1 year = value.date) and expose them
-// via accessor functions. Using a separate `:data` prop or a shifted x-accessor
-// doesn't work: the former is ignored, the latter expands the x-domain and squishes
-// the current line.
+// Pair comparison rows using the selected window, including sparse series.
 type MergedRow = DataRow & { prev?: DataRow }
-const mergedValue = computed<MergedRow[]>(() => {
-  if (!value.length)
-    return []
-  if (!prevValue?.length)
-    return value.slice()
-  const prevByDate = new Map<string, DataRow>()
-  for (const row of prevValue) prevByDate.set(row.date, row)
-  return value.map((row) => {
-    const [y, m, d] = row.date.split('-')
-    const key = `${Number(y) - 1}-${m}-${d}`
-    const match = prevByDate.get(key)
-    return match ? { ...row, prev: match } : row
-  })
-})
+const mergedValue = computed<MergedRow[]>(() => alignPrev(value, prevValue, resolveCompareAligner(compareMode, compareOffsetDays ?? null)))
 
 const hasComparison = computed(() => mergedValue.value.some(r => r.prev))
 
@@ -229,6 +215,21 @@ function handleMouseLeave() {
   emit('tooltip', null, null, false)
 }
 
+// Stacked Unovis containers do not reliably trigger the crosshair template.
+// The graph draws edge to edge, so its pointer position identifies the same row.
+function handlePointerMove(event: PointerEvent) {
+  if (event.pointerType === 'touch' || !mergedValue.value.length || loading.value)
+    return
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  if (rect.width <= 0)
+    return
+  const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
+  const index = Math.round(fraction * (mergedValue.value.length - 1))
+  const row = mergedValue.value[index]!
+  const estimated = unstableCount.value > 0 && index >= mergedValue.value.length - unstableCount.value
+  emit('tooltip', row, row.prev ?? null, estimated)
+}
+
 // Use the full (unzoomed) series for y-domain calcs when provided, so zooming keeps
 // the value-axis scale stable. Falls back to current value/prev when not zooming.
 const allData = computed(() => {
@@ -292,7 +293,7 @@ const position = (d: DataRow) => d.position
 </script>
 
 <template>
-  <div data-ui="ProGraphGsc" class="gsc-chart" role="img" aria-label="Search console performance chart" :style="{ height: `${chartHeight}px` }" @mouseleave="handleMouseLeave">
+  <div data-ui="ProGraphGsc" :class="{ 'tick-edge-last': tickPlan.indices.at(-1) === value.length - 1 }" class="gsc-chart" role="img" aria-label="Search console performance chart" :style="{ height: `${chartHeight}px` }" @pointermove="handlePointerMove" @mouseleave="handleMouseLeave">
     <!-- Loading skeleton -->
     <div v-if="loading" class="loading-skeleton">
       <div class="flex-1 flex items-end gap-1">
@@ -486,7 +487,7 @@ const position = (d: DataRow) => d.position
           tick-text-color="var(--ui-text-dimmed)"
         />
         <VisTooltip :follow-cursor="false" horizontal-placement="right" />
-        <VisCrosshair color="none" :template="crosshairTemplate" />
+        <VisCrosshair :x="x" :y="clicks" color="none" :template="crosshairTemplate" />
       </VisXYContainer>
 
       <template #fallback>
@@ -506,6 +507,10 @@ const position = (d: DataRow) => d.position
 </template>
 
 <style scoped>
+.gsc-chart.tick-edge-last :deep(g.tick:last-of-type > text) {
+  text-anchor: end;
+}
+
 [data-ui="ProGraphGsc"] :deep(.unovis-area-group path) {
   stroke: none;
 }

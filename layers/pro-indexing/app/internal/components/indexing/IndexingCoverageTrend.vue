@@ -36,12 +36,6 @@ const series = [
     color: 'var(--ui-color-primary-500)',
     area: false,
   },
-  {
-    key: 'inspected',
-    label: 'Inspected',
-    color: 'var(--ui-text-dimmed)',
-    area: false,
-  },
 ]
 
 function formatCount(value: number): string {
@@ -57,7 +51,7 @@ function formatCount(value: number): string {
           <h3 class="text-sm font-strong text-highlighted">
             Indexed URLs over time
           </h3>
-          <!-- The legend below already prints both counts, so restating them in
+          <!-- The legend below prints the indexed count, so restating them in
                prose said the same thing twice. What is left is the part the
                numbers cannot say: what they are counted over, and as of when. -->
           <p class="mt-1 text-mini text-dimmed">
@@ -82,15 +76,6 @@ function formatCount(value: number): string {
           </dt>
           <dd class="numerals-display text-highlighted">
             {{ readyTrend.latest.indexed.toLocaleString() }}
-          </dd>
-        </div>
-        <div class="flex items-center gap-2">
-          <dt class="flex items-center gap-2 text-muted">
-            <span class="h-0.5 w-4 bg-current text-dimmed" aria-hidden="true" />
-            Inspected
-          </dt>
-          <dd class="numerals-display text-highlighted">
-            {{ readyTrend.latest.inspected.toLocaleString() }}
           </dd>
         </div>
       </dl>

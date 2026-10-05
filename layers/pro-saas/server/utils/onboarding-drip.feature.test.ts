@@ -98,6 +98,33 @@ describe('enrolment', () => {
 })
 
 describe('sending', () => {
+  it('sends one step once when scheduled runs overlap', async () => {
+    await enrol()
+    await Promise.all([run(hoursAfterOnboarding(1)), run(hoursAfterOnboarding(1))])
+    expect(sent.map(message => message.subject)).toEqual([SUBJECTS[0]])
+    expect(dripRows()).toEqual([{ stepIndex: 1, status: 'active' }])
+  })
+
+  it('retries an interrupted claim only after its lease expires', async () => {
+    await enrol()
+    sqlite.prepare('UPDATE drip_emails SET next_send_at = ?').run(Math.floor(hoursAfterOnboarding(1.5).getTime() / 1000))
+    await run(hoursAfterOnboarding(1.2))
+    expect(sent).toEqual([])
+    await run(hoursAfterOnboarding(1.6))
+    expect(sent.map(message => message.subject)).toEqual([SUBJECTS[0]])
+  })
+
+  it('keeps cancellation authoritative when the recipient opts out during delivery', async () => {
+    await enrol()
+    await run(hoursAfterOnboarding(1), { send: async (message) => {
+      await request('POST', unsubscribeUrlOf(message))
+      return recordSend(message)
+    } })
+    await run(hoursAfterOnboarding(1 + 72))
+    expect(sent.map(message => message.subject)).toEqual([SUBJECTS[0]])
+    expect(dripRows()).toEqual([{ stepIndex: 1, status: 'cancelled' }])
+  })
+
   it('sends each step once it is due: 1 hour, then 3 days, then 7 days later', async () => {
     await enrol()
 
