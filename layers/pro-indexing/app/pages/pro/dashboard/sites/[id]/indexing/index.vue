@@ -36,7 +36,7 @@ definePageMeta({
   icon: 'i-lucide-layout-dashboard',
 })
 
-const { siteId, gscdumpSiteId, isNotConnected } = useSite('Indexing')
+const { siteId, gscdumpSiteId, isNotConnected, isLifecycleSettled, gscData, gscStatusError, refreshGscStatus } = useSite('Indexing')
 const proFetch = useProFetch()
 const { listSiteIndexingTransitions } = useProGscdump()
 
@@ -91,6 +91,14 @@ const inspectedCount = computed(() =>
   ?? diagnosisMeta.value?.inspectedCount
   ?? 0,
 )
+// Empty snapshots during first discovery do not establish a missing sitemap.
+// The shared Site status re-reads this lifecycle from gscdump, never the local mirror.
+const firstCollectionPending = computed(() =>
+  isLifecycleSettled.value
+  && inspectedCount.value === 0
+  && (gscData.value?.indexing?.completed ?? 0) === 0
+  && (gscData.value?.indexing?.processing ?? 0) > 0,
+)
 const sitemapTotal = computed(() => {
   if (sitemapsData.value) {
     return scopedSitemaps.value
@@ -129,7 +137,7 @@ const diagnosisIndexed = computed(() =>
     ? summary.value?.indexed ?? 0
     : completeUrlSnapshot.value?.urls.filter(row => row.verdict === 'PASS').length ?? 0,
 )
-const overviewError = computed(() => diagnosticsError.value ?? sitemapsError.value)
+const overviewError = computed(() => diagnosticsError.value ?? sitemapsError.value ?? gscStatusError.value)
 const hasRequiredOverviewEvidence = computed(() => !!summary.value && !!sitemapsData.value)
 const overviewErrorTitle = computed(() => (
   diagnosticsError.value
@@ -140,6 +148,7 @@ const overviewErrorTitle = computed(() => (
 ))
 async function retryOverview() {
   await Promise.all([
+    refreshGscStatus(),
     refreshDiagnostics(),
     refreshSitemaps(),
     refreshIndexingUrls(),
@@ -178,6 +187,9 @@ const lastDownloadedAt = computed(() =>
 )
 
 const trust = computed(() => {
+  if (firstCollectionPending.value)
+    return { state: 'pending' as const, reason: 'URL Inspection data has not been collected yet.' }
+
   if (livenessError.value)
     return { state: 'unknown' as const, reason: 'Sitemap reachability could not be checked.' }
 
@@ -213,8 +225,11 @@ const overviewModel = computed(() => {
   if (overviewError.value && !hasRequiredOverviewEvidence.value)
     return null
 
+  if (gscdumpSiteId.value && !isLifecycleSettled.value && inspectedCount.value === 0)
+    return null
+
   if (!summary.value || !sitemapsData.value) {
-    if (!isNotConnected.value)
+    if (!isNotConnected.value && !firstCollectionPending.value)
       return null
   }
 
@@ -235,7 +250,8 @@ const overviewModel = computed(() => {
 const overviewLoading = computed(() =>
   !overviewModel.value
   && !overviewError.value
-  && [diagnosticsStatus.value, sitemapsStatus.value].some(status => status === 'pending' || status === 'idle'),
+  && ((!isLifecycleSettled.value && !!gscdumpSiteId.value)
+    || [diagnosticsStatus.value, sitemapsStatus.value].some(status => status === 'pending' || status === 'idle')),
 )
 const overviewRefreshing = computed(() =>
   !!overviewModel.value

@@ -193,6 +193,29 @@ describe('add and verify a property', () => {
     expect(button(host, 'Verify ownership')).toBeTruthy()
   })
 
+  it('lets a pending property give way to another address without changing the method', async () => {
+    api.state = { grant: { _tag: 'Ready' }, pending: [PENDING] }
+    api.record = { _tag: 'Minted', verification: { ...PENDING, domain: 'other.example.com' } }
+    const host = mount()
+
+    await click(host, 'Add and verify a property')
+    await click(host, 'Change address')
+    await type(host, 'other.example.com')
+    await click(host, 'Get DNS record')
+
+    expect(api.calls.at(-1)).toEqual({ url: '/api/pro/gsc-verification/record', body: { address: 'other.example.com', method: 'DNS_TXT' } })
+  })
+
+  it('keeps an address-specific trigger on its property when another record is pending', async () => {
+    api.state = { grant: { _tag: 'Ready' }, pending: [PENDING] }
+    const host = mount({ domain: 'other.example.com' })
+
+    await click(host, 'Add and verify other.example.com')
+
+    expect(host.querySelector('input')?.value).toBe('other.example.com')
+    expect(host.querySelector('[data-testid="gsc-verify-record"]')).toBeNull()
+  })
+
   it('closes on a verified property, and reads both property lists again', async () => {
     api.state = { grant: { _tag: 'Ready' }, pending: [PENDING] }
     api.verify = { _tag: 'Verified', domain: 'example.com', siteUrl: 'sc-domain:example.com' }

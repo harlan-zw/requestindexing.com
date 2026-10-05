@@ -277,6 +277,7 @@ Google's own step, so these strings say add for a property and connect for a Sit
 | Verify action | Verify ownership |
 | Retry action | Check again |
 | Switch method | Use a DNS record instead · Use a meta tag instead |
+| Change address action | Change address |
 | Copy action | Copy value · Copied |
 | Verified, title | Property verified |
 | Verified, detail | {domain} is verified in Search Console. Connect it as a Site from your Search Console properties. |
@@ -291,6 +292,23 @@ Google's own step, so these strings say add for a property and connect for a Sit
 **No background check.** nuxtseo.com re-checks a pending record on a schedule and emails the
 reader when it passes. Request Indexing does not, so no string here may say "we keep checking".
 The reader selects Check again.
+
+## Setup completion
+
+The final setup step confirms a connected Site. It does not read or start an engine sync.
+Never show a spinner or claim that history is importing without a live engine lifecycle read.
+The dashboard shows the current indexing evidence.
+
+While authoritative first collection runs with no inspected URLs, show the existing neutral waiting state.
+An empty discovery snapshot does not establish a missing sitemap.
+
+| Asset | String |
+| --- | --- |
+| Final step label | Finish setup |
+| Connected heading | You're set up |
+| Connected detail | Open the dashboard to see the indexing evidence for your connected Sites. |
+| Missing Site heading | Connect a Site to finish setup |
+| Missing Site detail | Go back to Connect Sites and choose a Search Console property. |
 
 ## Account deletion assets
 
