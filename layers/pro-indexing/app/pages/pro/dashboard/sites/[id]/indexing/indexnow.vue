@@ -252,11 +252,11 @@ function formatDate(value: string) {
           {{ setup.host }}
         </p>
         <form class="mt-5 space-y-4" @submit.prevent="saveKey">
-          <div class="grid gap-4 md:grid-cols-2">
-            <UFormField label="IndexNow key" description="Use 8 to 128 letters, numbers, or hyphens. Generate a key if you do not have one.">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <UFormField label="IndexNow key" description="Use 8 to 128 letters, numbers, or hyphens. Generate a key if you do not have one." class="min-w-0">
               <UiInput v-model="key" autocomplete="off" class="w-full" :ui="{ base: 'min-h-11 text-base' }" />
             </UFormField>
-            <UFormField label="Key location" hint="Optional" :description="defaultKeyLocation || undefined" :ui="{ description: 'text-muted' }">
+            <UFormField label="Key location" hint="Optional" :description="defaultKeyLocation || undefined" class="min-w-0" :ui="{ description: 'text-muted break-all' }">
               <UiInput v-model="keyLocation" type="url" class="w-full" :placeholder="defaultKeyLocation || publishedKeyLocation || undefined" :ui="{ base: 'min-h-11 text-base' }" />
             </UFormField>
           </div>
