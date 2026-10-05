@@ -93,11 +93,11 @@ const inspectedCount = computed(() =>
 )
 // Empty snapshots during first discovery do not establish a missing sitemap.
 // The shared Site status re-reads this lifecycle from gscdump, never the local mirror.
+// Task completion is not evidence that URL Inspection collection has finished.
 const firstCollectionPending = computed(() =>
   isLifecycleSettled.value
   && inspectedCount.value === 0
-  && (gscData.value?.indexing?.completed ?? 0) === 0
-  && (gscData.value?.indexing?.processing ?? 0) > 0,
+  && ['waiting_for_sitemaps', 'discovering', 'checking'].includes(gscData.value?.indexingStatus ?? ''),
 )
 const sitemapTotal = computed(() => {
   if (sitemapsData.value) {

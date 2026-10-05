@@ -18,6 +18,19 @@ beforeEach(() => {
 })
 
 describe('useProGscStatus', () => {
+  it('exposes the authoritative indexing phase independently of completed task progress', async () => {
+    lifecycle.read.mockResolvedValue({ site: {
+      analytics: { status: 'queryable_live', queryable: true, sourceMode: 'live', progress: { completed: 668, failed: 0, total: 668, percent: 100 }, syncedRange: { oldest: null, newest: null } },
+      indexing: { status: 'waiting_for_sitemaps', progress: { completed: 1, failed: 0, total: 1, percent: 100 } },
+      sitemaps: { status: 'discovering' },
+      latestError: null,
+      hold: null,
+    } })
+    const status = useProGscStatus('ri_1')
+    await status.refresh()
+    expect(status.data.value).toMatchObject({ indexingStatus: 'waiting_for_sitemaps', indexing: { completed: 1, total: 1 } })
+  })
+
   it.each(['discovering', 'syncing', 'none_found', 'ready', 'failed'])('exposes authoritative sitemap status %s to the page', async (sitemapStatus) => {
     lifecycle.read.mockResolvedValue({ site: {
       analytics: { status: 'syncing', queryable: false, sourceMode: 'none', progress: { completed: 12, failed: 0, total: 668, percent: 2 }, syncedRange: { oldest: null, newest: null } },
