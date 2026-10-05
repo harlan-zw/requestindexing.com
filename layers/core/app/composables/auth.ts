@@ -26,28 +26,20 @@ export function createSessionExpiredHandler() {
   }
 }
 
-// work around nuxt-auth-utils async context bug
 export function createLogoutHandler() {
-  const { session } = useUserSession()
+  const { clear } = useUserSession()
   const toast = useToast()
 
-  const nextTickFn = nextTick
   return async (force?: boolean) => {
+    await clear()
     if (!force) {
-      toast.add({ id: 'logout', title: 'See you next time!', description: 'You have logged out of the site.', color: 'success' })
       await navigateTo('/')
+      toast.add({ id: 'logout', title: 'See you next time!', description: 'You have logged out of the site.', color: 'success' })
     }
     else {
       // A forced logout means the session expired under an existing account, so
       // the sign-in door is the right one. `/pro/onboarding` is for new ones.
       await navigateTo('/login')
     }
-    await nextTickFn(() => {
-      // can't access clear API here
-      $fetch('/api/_auth/session', { method: 'DELETE' })
-        .finally(() => {
-          session.value = null
-        })
-    })
   }
 }

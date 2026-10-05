@@ -10,7 +10,9 @@ export function safeAuthRedirect(value: unknown): string | null {
     return null
 
   const allowed = AUTHENTICATED_PATHS.some(path => url.pathname === path || url.pathname.startsWith(`${path}/`))
-  if (!allowed)
+  // Invitation tokens are opaque single path segments, not arbitrary return URLs.
+  const invitation = /^\/team-invitations\/[\w-]+$/.test(url.pathname)
+  if (!allowed && !invitation)
     return null
 
   return `${url.pathname}${url.search}${url.hash}`
