@@ -29,7 +29,7 @@ definePageMeta({
   icon: 'i-lucide-map',
 })
 
-const { siteId, gscdumpSiteId, site } = useSite('Sitemaps')
+const { siteId, gscdumpSiteId, site, isLifecycleSettled, gscData, gscStatusError, refreshGscStatus } = useSite('Sitemaps')
 const route = useRoute()
 const proFetch = useProFetch()
 const gscdump = useProGscdump()
@@ -239,13 +239,18 @@ const emptyState = computed(() => resolveSitemapEmptyState({
   submission: submissionData.value ?? null,
   result: submitAnswer.value,
   canSubmit: canWrite.value,
+  discovery: gscStatusError.value || gscData.value?.sitemapStatus === 'failed'
+    ? 'unavailable'
+    : !isLifecycleSettled.value || !gscData.value?.sitemapStatus || ['unknown', 'discovering', 'syncing'].includes(gscData.value.sitemapStatus)
+        ? 'pending'
+        : 'settled',
 }))
 const resolvedEmptyState = computed(() =>
   emptyState.value._tag === 'checking' ? null : emptyState.value,
 )
 
 async function retrySitemaps() {
-  await Promise.all([refreshSitemaps(), refreshChanges(), refreshLiveness(), refreshSubmission()])
+  await Promise.all([refreshGscStatus(), refreshSitemaps(), refreshChanges(), refreshLiveness(), refreshSubmission()])
 }
 
 function belongsToSelectedSitemap(item: { sitemap: string }): boolean {
@@ -494,7 +499,7 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
         class="mb-6"
       />
       <UiAlert
-        v-if="sitemapsError && !sitemapsData"
+        v-if="(sitemapsError || gscStatusError || gscData?.sitemapStatus === 'failed') && rows.length === 0"
         status="error"
         title="Sitemaps could not be loaded"
         description="Search Console sitemap evidence is unavailable."
@@ -540,7 +545,7 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
             v-if="resolvedEmptyState._tag === 'retry'"
             purpose="secondary"
             class="min-h-11"
-            @click="refreshSubmission()"
+            @click="retrySitemaps()"
           >
             {{ resolvedEmptyState.actionLabel }}
           </UiButton>
