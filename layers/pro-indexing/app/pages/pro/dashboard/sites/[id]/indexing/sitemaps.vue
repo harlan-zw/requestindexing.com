@@ -662,7 +662,7 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
 
         <div v-else-if="selectedSitemap" class="min-w-0 space-y-6">
           <UiAlert
-            v-if="sitemapsError && sitemapsData"
+            v-if="(sitemapsError || gscStatusError || gscData?.sitemapStatus === 'failed') && sitemapsData"
             status="warning"
             title="Latest sitemap refresh failed"
             description="Showing the last successful sitemap report."

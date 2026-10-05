@@ -102,3 +102,11 @@ it('preserves observed sitemap rows and their refresh warning during discovery',
   expect(html).toContain('Latest sitemap refresh failed')
   expect(html).not.toContain('Checking sitemap submission')
 })
+
+it('preserves observed rows and surfaces lifecycle refresh failure', async () => {
+  fixture.rows = [{ path: 'https://example.com/sitemap.xml', urlCount: 1, errors: 0, warnings: 0 }]
+  fixture.lifecycleError = true
+  const html = await render()
+  expect(html).toContain('https://example.com/sitemap.xml')
+  expect(html).toContain('Latest sitemap refresh failed')
+})
