@@ -353,3 +353,9 @@ section above, then delete it from this list.
    Google account tokens", which was false (UX replay N1). The blast radius is nuxtseo.com's
    sentence with Team and Site in place of workspace and site. Confirm the four strings, or
    change them here first.
+
+## Search Console comparison evidence
+
+| Asset | Canonical string |
+| --- | --- |
+| Search Console comparison unavailable | Comparison unavailable. Both periods need complete recorded Search Console data. |

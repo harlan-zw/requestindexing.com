@@ -18,6 +18,7 @@ import {
   hasMoreRows,
   isMoversFilter,
 } from '../../../shared/utils/gsc-facets'
+import { useGscComparisonCoverage } from '../useGscComparisonCoverage'
 import { compareRange, periodToDateRange } from '../useGscPeriod'
 import { useProGscFilters } from '../useProGscFilters'
 import { useProTableState } from '../useProTableState'
@@ -115,7 +116,9 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
   const isDimensionSort = computed(() => !METRIC_SORT_COLUMNS.has(sort.value.column))
 
   const range = computed(() => periodToDateRange(_period.value, _stableData.value))
-  const comparisonRange = computed(() => compareRange(range.value, _compareMode.value))
+  const requestedComparison = computed(() => compareRange(range.value, _compareMode.value))
+  const coverage = useGscComparisonCoverage(() => [_siteId.value], range, requestedComparison, _searchType)
+  const comparisonRange = computed(() => coverage.allowed.value ? requestedComparison.value : null)
   const window = computed(() => breakdownWindow({ loadMore, page: page.value, pageSize }))
 
   const orderBy = computed(() => (isDimensionSort.value
@@ -169,7 +172,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
 
   const data = computed<ProGscdumpTableResponse<T>>(() => {
     const result = query.data.value
-    if (!result)
+    if (!result || (isMoversFilter(filter.value) && !comparisonRange.value))
       return { rows: [], total: 0, totalClicks: 0, totalImpressions: 0, hasPrevData: false, warnings: [], meta: null }
 
     let rows = (loadMore ? accumulated.value : (result.rows ?? [])) as unknown as T[]
@@ -178,10 +181,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
     // previous window. Scan before the zero-filter: a window whose previous
     // data sits only on those rows would otherwise read as "no comparison data"
     // while its deltas still rendered.
-    const hasPrevData = rows.some((r) => {
-      const row = r as Record<string, unknown>
-      return (Number(row.prevImpressions) || 0) > 0 || (Number(row.prevClicks) || 0) > 0
-    })
+    const hasPrevData = !!comparisonRange.value && !query.pending.value && !query.error.value
 
     // Outside the movers views, a previous-window-only row is not a row of this
     // period; it rendered as an all-dash line at the bottom of the table. Every
@@ -261,6 +261,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
   const response = computed<GscdumpDataResponse | null>(() => query.data.value)
 
   return {
+    coverage,
     q,
     page,
     filter,

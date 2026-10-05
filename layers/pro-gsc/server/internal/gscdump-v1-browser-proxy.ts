@@ -22,6 +22,7 @@ import { callerCan } from '#layers/pro-saas/shared/policies/team-policy'
 const protocol = createGscdumpV1Protocol()
 
 const baseOperationEntries = [
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteAnalyticsCoverage },
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryReport },
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryReportDetail },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteAnalysis },
