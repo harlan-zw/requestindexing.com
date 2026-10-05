@@ -3,24 +3,10 @@ import type { Period } from '../../composables/useGscPeriod'
 import { onKeyStroke, useResizeObserver } from '@vueuse/core'
 import { AnimatePresence, motion, useMotionValue, useSpring } from 'motion-v'
 
-import { parseCustomPeriod } from '../../composables/useGscPeriod'
+import { compareRange, parseCustomPeriod, periodToDateRange } from '../../composables/useGscPeriod'
+import { useProGscFilters } from '../../composables/useProGscFilters'
+import { resolveCompareAligner, toUtcDay } from '../../utils/compare-align'
 import ProGraphGsc from './ProGraphGsc.vue'
-
-interface DateAnalytics {
-  date: string
-  clicks: number
-  impressions: number
-  position: number
-  ctr: number
-}
-
-interface PeriodTotals {
-  clicks: number
-  impressions: number
-  position: number
-  ctr: number
-  date?: string
-}
 
 const { loading: loadingProp, ...props } = defineProps<{
   dates: DateAnalytics[]
@@ -60,10 +46,32 @@ const { loading: loadingProp, ...props } = defineProps<{
     loading?: boolean
   }>
 }>()
-
 const emit = defineEmits<{
   zoom: [range: { start: string, end: string, prevStart?: string, prevEnd?: string } | null]
 }>()
+const { period: selectedPeriod, compareMode, stableData } = useProGscFilters()
+const comparisonOffset = computed(() => {
+  const current = periodToDateRange(props.dateRange ?? selectedPeriod.value, stableData.value)
+  const previous = compareRange(current, compareMode.value)
+  return previous ? (toUtcDay(current.start) - toUtcDay(previous.start)) / 86_400_000 : null
+})
+
+interface DateAnalytics {
+  date: string
+  clicks: number
+  impressions: number
+  position: number
+  ctr: number
+}
+
+interface PeriodTotals {
+  clicks: number
+  impressions: number
+  position: number
+  ctr: number
+  date?: string
+}
+
 const devSkeleton = useProDevSkeleton()
 const metricPopoverId = useId()
 const hydrated = ref(false)
@@ -346,9 +354,9 @@ function onPointerDown(e: PointerEvent) {
       // Pass the corresponding slice of the original prev so the server queries the
       // comparison window the user actually expects (preserves original period semantics
       // — e.g., zooming within a 12m+year view compares to the year-ago month slice).
-      const prev = props.prevDates
-      const prevStart = prev?.[range.startIdx]?.date
-      const prevEnd = prev?.[range.endIdx]?.date
+      const align = resolveCompareAligner(compareMode.value, comparisonOffset.value)
+      const prevStart = align?.(range.startDate)
+      const prevEnd = align?.(range.endDate)
 
       emit('zoom', {
         start: range.startDate,
@@ -445,7 +453,12 @@ const displayedPrevSlice = computed(() => {
   const idx = zoomIndices.value
   if (!idx || !props.prevDates)
     return props.prevDates ?? null
-  return props.prevDates.slice(idx.startIdx, idx.endIdx + 1)
+  const align = resolveCompareAligner(compareMode.value, comparisonOffset.value)
+  if (!align)
+    return null
+  const start = align(props.dates[idx.startIdx]!.date)
+  const end = align(props.dates[idx.endIdx]!.date)
+  return props.prevDates.filter(day => day.date >= start && day.date <= end)
 })
 
 function aggregate(rows: DateAnalytics[] | null | undefined): DateAnalytics | null {
@@ -817,6 +830,8 @@ const zoomRangeLabel = computed(() => {
           :height="220"
           :value="displayedGraph"
           :prev-value="displayedPrev"
+          :compare-mode="compareMode"
+          :compare-offset-days="comparisonOffset"
           :full-value="fullGraph"
           :full-prev-value="fullPrev"
           :columns="selectedColumns"
