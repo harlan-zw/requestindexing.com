@@ -1,12 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-import { createSSRApp, defineComponent, h, ref } from 'vue'
-import { renderToString } from 'vue/server-renderer'
+import { createApp, defineComponent, h, ref } from 'vue'
 
 const fixture = vi.hoisted(() => ({
   diagnostics: null as Record<string, unknown> | null,
   sitemaps: null as Record<string, unknown> | null,
   error: null as Error | null,
   processing: 1,
+  completed: 0,
+  lifecyclePhase: 'discovering',
   settled: true,
   indexingStatus: 'pending',
   lifecycleError: false,
@@ -38,7 +39,7 @@ Object.assign(globalThis, {
     isLifecycleSettled: ref(fixture.settled),
     gscStatusError: ref(fixture.lifecycleError),
     refreshGscStatus: vi.fn(),
-    gscData: ref({ indexing: { processing: fixture.processing, completed: 0 } }),
+    gscData: ref({ indexingStatus: fixture.lifecyclePhase, indexing: { processing: fixture.processing, completed: fixture.completed } }),
   }),
   useProFetch: () => vi.fn(),
   useAsyncData: () => ({ data: ref(null), error: ref(null), status: ref('success') }),
@@ -47,7 +48,7 @@ Object.assign(globalThis, {
 const { default: Indexing } = await import('./index.vue')
 
 async function render() {
-  const app = createSSRApp(Indexing)
+  const app = createApp(Indexing)
   for (const name of ['ProPageZone', 'ProSecondaryGrid', 'UiCard'])
     app.component(name, defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) }))
   app.component('UiAlert', defineComponent({
@@ -57,7 +58,11 @@ async function render() {
   app.component('UiButton', defineComponent({ setup: (_, { slots }) => () => h('button', slots.default?.()) }))
   for (const name of ['UiSkeleton', 'UiStat', 'UiFactsGrid', 'ProFunnel', 'UiProgressPercent'])
     app.component(name, defineComponent({ render: () => null }))
-  return renderToString(app)
+  const container = document.createElement('div')
+  app.mount(container)
+  const html = container.innerHTML
+  app.unmount()
+  return html
 }
 
 beforeEach(() => {
@@ -65,6 +70,8 @@ beforeEach(() => {
   fixture.sitemaps = { sitemaps: [], history: [] }
   fixture.error = null
   fixture.processing = 1
+  fixture.completed = 0
+  fixture.lifecyclePhase = 'discovering'
   fixture.settled = true
   fixture.indexingStatus = 'pending'
   fixture.lifecycleError = false
@@ -95,11 +102,21 @@ it('keeps a failed lifecycle read visible when required evidence has not arrived
   expect(await render()).toContain('Indexing coverage failed to load')
 })
 
-it('offers sitemap recovery once discovery has settled with no sitemap', async () => {
+it.each(['ready', 'no_urls'])('offers sitemap recovery once collection settles as %s with no sitemap', async (phase) => {
   fixture.processing = 0
+  fixture.lifecyclePhase = phase
   const html = await render()
   expect(html).toContain('No sitemap is submitted in Search Console')
   expect(html).toContain('Review sitemap')
+})
+
+it.each(['waiting_for_sitemaps', 'discovering', 'checking'])('honors authoritative %s despite completed job counters', async (phase) => {
+  fixture.lifecyclePhase = phase
+  fixture.completed = 1
+  fixture.processing = 0
+  const html = await render()
+  expect(html).toContain('Waiting for indexing evidence')
+  expect(html).not.toContain('No sitemap is submitted')
 })
 
 it('waits for the first lifecycle read before diagnosing an empty discovery snapshot', async () => {
@@ -110,6 +127,8 @@ it('waits for the first lifecycle read before diagnosing an empty discovery snap
 })
 
 it('retains observed partial evidence and its refresh error while discovery continues', async () => {
+  fixture.lifecyclePhase = 'waiting_for_sitemaps'
+  fixture.completed = 1
   fixture.indexingStatus = 'partial'
   fixture.diagnostics = { summary: { totalUrls: 1, indexed: 0, indexedPercent: 0 }, issues: [{ type: 'unknown_to_google', count: 1 }], meta: { indexingStatus: 'partial' } }
   fixture.sitemaps = { sitemaps: [{ path: 'https://example.com/sitemap.xml', urlCount: 1, lastDownloaded: new Date().toISOString(), isIndex: false, errors: 0, warnings: 0 }], history: [] }

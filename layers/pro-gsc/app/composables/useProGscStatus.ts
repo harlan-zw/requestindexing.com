@@ -42,7 +42,7 @@ interface GscSyncStatus {
   queryable?: boolean
   sourceMode?: string
   sitemapStatus?: string
-  indexingStatus?: string
+  indexingStatus?: PartnerLifecycleSite['indexing']['status']
   /** Why gscdump holds the Site before its first import, or null. */
   hold: SiteHoldReason | null
 }
@@ -253,6 +253,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
         hasMinimumData: false,
         tablesProgress: [] as TableProgress[],
         indexing: null as IndexingProgress | null,
+        indexingStatus: null,
         queryable: false,
         sourceMode: 'none',
       }
@@ -280,6 +281,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
       hasMinimumData: syncData.value.hasMinimumData ?? false,
       tablesProgress: syncData.value.tablesProgress ?? [],
       indexing: syncData.value.indexing ?? null,
+      indexingStatus: syncData.value.indexingStatus ?? null,
       queryable: !!syncData.value.queryable,
       sourceMode: syncData.value.sourceMode ?? 'none',
     }
