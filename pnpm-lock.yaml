@@ -13,14 +13,14 @@ catalogs:
       specifier: ^5.20260929.1
       version: 5.20260929.1
     '@gscdump/contracts':
-      specifier: 5.3.0
-      version: 5.3.0
+      specifier: 5.5.0
+      version: 5.5.0
     '@gscdump/engine':
       specifier: 5.3.0
       version: 5.3.0
     '@gscdump/sdk':
-      specifier: 5.3.0
-      version: 5.3.0
+      specifier: 5.5.0
+      version: 5.5.0
     '@harlan-zw/comark-content':
       specifier: 0.1.5
       version: 0.1.5
@@ -289,13 +289,13 @@ importers:
     dependencies:
       '@gscdump/contracts':
         specifier: 'catalog:'
-        version: 5.3.0
+        version: 5.5.0
       '@gscdump/engine':
         specifier: 'catalog:'
         version: 5.3.0(@cloudflare/workers-types@5.20260929.1)(@opentelemetry/api@1.9.1)(valibot@1.4.2(typescript@6.0.3))(zod@4.6.5(patch_hash=c4ca1e62791f9b6c44833bf2eea69c99e08fd64437cc27226a4aa4ef1840e231))
       '@gscdump/sdk':
         specifier: 'catalog:'
-        version: 5.3.0
+        version: 5.5.0
       '@harlan-zw/comark-content':
         specifier: 'catalog:'
         version: 0.1.5(45b9f71b0839d4fdd0a557ed56be9a66)
@@ -1647,6 +1647,10 @@ packages:
     resolution: {integrity: sha512-g2dIwN44VXq/gGPfWLrZqUlS27vjRSTXfvQrmWQ1jlzEsTH+6Q/siJf9qld8kB2+WSAIMM1Hv3LF035AwDEv4g==}
     engines: {node: '>=22.13.0'}
 
+  '@gscdump/contracts@5.5.0':
+    resolution: {integrity: sha512-v4NruMafOWPZn6tNNp4IJCFBYFM29QsXbRHKJ/plLMelbj7dq7jvABYuwTkv7q1M7koqv4K5qYLjkrgg/EJfzA==}
+    engines: {node: '>=22.13.0'}
+
   '@gscdump/engine@5.3.0':
     resolution: {integrity: sha512-K8K0rqNL4kQjKcssSIzHn533+qHD3UErOauAUPRsCzjvKMWvUFcnhmHuOTW6wpYvDdGN2o7s8dNTLOWZPmgu/w==}
     engines: {node: '>=22.13.0'}
@@ -1660,8 +1664,8 @@ packages:
     resolution: {integrity: sha512-eOqfYbKGhZu+hMDPegQ6iEuUCJTVe6Hosn8yQOgkrSgmZbvkFWhMCZWYpZHh2kCIJKNS8B+buy15tMAIdrmqnQ==}
     engines: {node: '>=22.13.0'}
 
-  '@gscdump/sdk@5.3.0':
-    resolution: {integrity: sha512-wBrEfJHVHDaiqOfkp+0MHZpbFrRxlWZ/KVlAbbXMOw+PEJSJ5LyRCSxs7biStEmSX/yITLJg6DcTKXypKLIC4A==}
+  '@gscdump/sdk@5.5.0':
+    resolution: {integrity: sha512-YciMAprC4+wf4bse2+QrC/Y02ndPGIIDn8LcGlgf3kizaIDMyDuuHeXb7qHyWNuZFEDuk0C/WC7JTRi42LNABA==}
     engines: {node: '>=22.13.0'}
 
   '@harlan-zw/comark-content@0.1.5':
@@ -5950,6 +5954,10 @@ packages:
     resolution: {integrity: sha512-EottB4WGhfdNJUWmkO1DxefYDHHZORAGSW4tssNiFNTK/MEJh1OR87abwpAx5SCmNqh1AevXXZoXwwW6kRT5Tg==}
     engines: {node: '>=22.13.0'}
 
+  gscdump@5.3.1:
+    resolution: {integrity: sha512-7ySrp8GbEOc16zd+J9NjiSpPGwG+6AzwXW5r3G4MM9HBiF7UXEBm6c3Ev5UE3/YY+NJBGF5ZgNaUBb+jGlgF/Q==}
+    engines: {node: '>=22.13.0'}
+
   gzip-size@7.0.0:
     resolution: {integrity: sha512-O1Ld7Dr+nqPnmGpdhzLmMTQ4vAsD+rHwMm1NLUmoUFFymBOMKxCCrtDxqdBRYXdeEPEi3SyoR4TizJLQrnKBNA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
@@ -9750,9 +9758,13 @@ snapshots:
     dependencies:
       zod: 4.6.5(patch_hash=c4ca1e62791f9b6c44833bf2eea69c99e08fd64437cc27226a4aa4ef1840e231)
 
+  '@gscdump/contracts@5.5.0':
+    dependencies:
+      zod: 4.6.5(patch_hash=c4ca1e62791f9b6c44833bf2eea69c99e08fd64437cc27226a4aa4ef1840e231)
+
   '@gscdump/engine@5.3.0(@cloudflare/workers-types@5.20260929.1)(@opentelemetry/api@1.9.1)(valibot@1.4.2(typescript@6.0.3))(zod@4.6.5(patch_hash=c4ca1e62791f9b6c44833bf2eea69c99e08fd64437cc27226a4aa4ef1840e231))':
     dependencies:
-      '@gscdump/contracts': 5.3.0
+      '@gscdump/contracts': 5.5.0
       '@gscdump/lakehouse': 5.3.0
       drizzle-orm: 1.0.0-rc.4(@cloudflare/workers-types@5.20260929.1)(@opentelemetry/api@1.9.1)(valibot@1.4.2(typescript@6.0.3))(zod@4.6.5(patch_hash=c4ca1e62791f9b6c44833bf2eea69c99e08fd64437cc27226a4aa4ef1840e231))
       gscdump: 5.3.0
@@ -9809,10 +9821,10 @@ snapshots:
 
   '@gscdump/lakehouse@5.3.0': {}
 
-  '@gscdump/sdk@5.3.0':
+  '@gscdump/sdk@5.5.0':
     dependencies:
-      '@gscdump/contracts': 5.3.0
-      gscdump: 5.3.0
+      '@gscdump/contracts': 5.5.0
+      gscdump: 5.3.1
       ofetch: 1.5.1
       zod: 4.6.5(patch_hash=c4ca1e62791f9b6c44833bf2eea69c99e08fd64437cc27226a4aa4ef1840e231)
 
@@ -14879,6 +14891,11 @@ snapshots:
   graceful-fs@4.2.11: {}
 
   gscdump@5.3.0:
+    dependencies:
+      '@gscdump/contracts': 5.5.0
+      ofetch: 1.5.1
+
+  gscdump@5.3.1:
     dependencies:
       '@gscdump/contracts': 5.3.0
       ofetch: 1.5.1

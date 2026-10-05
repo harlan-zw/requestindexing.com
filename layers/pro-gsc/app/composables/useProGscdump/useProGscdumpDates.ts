@@ -1,6 +1,7 @@
 import type { GscSearchType } from '@gscdump/contracts'
 import type { DailyReportInput, DailySeriesFilter } from '../../../shared/analytics-requests'
 import type { CompareMode, Period } from '../useGscPeriod'
+import { useGscComparisonCoverage } from '../useGscComparisonCoverage'
 import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdumpDataDetail } from './useProGscdumpDataDetail'
 
@@ -40,7 +41,10 @@ export function useProGscdumpDates(
   const _searchType = computed(() => toValue(opts?.searchType) ?? filters.searchType.value)
 
   const range = computed(() => periodToDateRange(_period.value, _stableData.value))
-  const cmp = computed(() => compareRange(range.value, _compareMode.value))
+  const requestedComparison = computed(() => compareRange(range.value, _compareMode.value))
+
+  const coverage = useGscComparisonCoverage(() => [_siteId.value], range, requestedComparison, _searchType)
+  const cmp = computed(() => coverage.allowed.value ? requestedComparison.value : null)
 
   const currentRequest = computed<DailyReportInput>(() => ({
     searchType: _searchType.value,
@@ -67,12 +71,12 @@ export function useProGscdumpDates(
     const result = current.data.value
     if (!result)
       return null
-    const hasPrevData = !!result.previousTotals
+    const hasPrevData = !!cmp.value && !current.pending.value && !current.error.value
     return {
       dates: result.daily,
-      prevDates: hasPrevData && cmp.value && prev?.data.value?.daily ? prev.data.value.daily : null,
+      prevDates: hasPrevData && !prev?.pending.value && !prev?.error.value ? prev?.data.value?.daily ?? [] : null,
       period: result.totals,
-      prevPeriod: result.previousTotals ?? null,
+      prevPeriod: hasPrevData ? result.previousTotals ?? { clicks: 0, impressions: 0, ctr: 0, position: 0 } : null,
       meta: result.meta,
       hasPrevData,
     }
@@ -80,6 +84,7 @@ export function useProGscdumpDates(
 
   return {
     data,
+    coverage,
     status: current.status,
     pending: current.pending,
     error: current.error,

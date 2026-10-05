@@ -56,10 +56,10 @@ afterEach(() => {
 
 it('says nothing about a previous period when the table has no comparison', () => {
   const host = mount({})
-  expect(host.textContent).not.toContain('No comparison for this period')
+  expect(host.textContent).not.toContain('Comparison unavailable.')
 })
 
-it('says the previous period has no data when the table reports that', () => {
+it('requires recorded coverage when the table cannot compare', () => {
   const host = mount({ hasPrevData: false })
-  expect(host.textContent).toContain('No comparison for this period')
+  expect(host.textContent).toContain('Comparison unavailable.')
 })

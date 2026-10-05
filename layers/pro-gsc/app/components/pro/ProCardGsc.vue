@@ -4,23 +4,8 @@ import { onKeyStroke, useResizeObserver } from '@vueuse/core'
 import { AnimatePresence, motion, useMotionValue, useSpring } from 'motion-v'
 
 import { parseCustomPeriod } from '../../composables/useGscPeriod'
+import { useProGscFilters } from '../../composables/useProGscFilters'
 import ProGraphGsc from './ProGraphGsc.vue'
-
-interface DateAnalytics {
-  date: string
-  clicks: number
-  impressions: number
-  position: number
-  ctr: number
-}
-
-interface PeriodTotals {
-  clicks: number
-  impressions: number
-  position: number
-  ctr: number
-  date?: string
-}
 
 const { loading: loadingProp, ...props } = defineProps<{
   dates: DateAnalytics[]
@@ -64,6 +49,25 @@ const { loading: loadingProp, ...props } = defineProps<{
 const emit = defineEmits<{
   zoom: [range: { start: string, end: string, prevStart?: string, prevEnd?: string } | null]
 }>()
+
+const comparisonSelected = useProGscFilters().compareMode
+
+interface DateAnalytics {
+  date: string
+  clicks: number
+  impressions: number
+  position: number
+  ctr: number
+}
+
+interface PeriodTotals {
+  clicks: number
+  impressions: number
+  position: number
+  ctr: number
+  date?: string
+}
+
 const devSkeleton = useProDevSkeleton()
 const metricPopoverId = useId()
 const hydrated = ref(false)
@@ -674,6 +678,10 @@ const zoomRangeLabel = computed(() => {
         </template>
       </template>
     </div>
+
+    <p v-if="period && !prevPeriod && comparisonSelected !== 'none' && !loadingProp" class="px-4 pb-3 text-xs text-muted">
+      Comparison unavailable. Both periods need complete recorded Search Console data.
+    </p>
 
     <!-- Chart area -->
     <div

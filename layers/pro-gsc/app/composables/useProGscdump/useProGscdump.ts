@@ -70,6 +70,10 @@ export function useProGscdump() {
     return runV1<GscdumpAnalysisResponse>(() => createV1Client().getSiteAnalysis(input), silent)
   }
 
+  function getSiteAnalyticsCoverage(input: GscdumpV1OperationInput<'partner.sites.analytics.coverage.get'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.analytics.coverage.get'>['data']>(() => createV1Client().getSiteAnalyticsCoverage(input), silent)
+  }
+
   function getSiteIndexing(input: GscdumpV1OperationInput<'partner.sites.indexing.get'>, silent = false) {
     return runV1<GscdumpIndexingResponse>(() => createV1Client().getSiteIndexing(input), silent)
   }
@@ -231,6 +235,7 @@ export function useProGscdump() {
     listSiteBingIndexingEvidence,
     listUserBingSites,
     submitSiteBingSitemap,
+    getSiteAnalyticsCoverage,
     getSiteIndexing,
     getSiteIndexingDiagnostics,
     getSiteSitemapChanges,

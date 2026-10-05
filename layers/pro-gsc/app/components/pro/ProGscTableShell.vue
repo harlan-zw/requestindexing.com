@@ -335,7 +335,7 @@ function onApplySaved(id: string) {
     <!-- No comparison data notice -->
     <div v-if="!isLoading && hasPrevData === false" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-elevated border border-default text-sm text-muted">
       <UiIcon name="note" class="size-4 shrink-0" />
-      <span>No comparison for this period. The previous period has no Search Console data.</span>
+      <span>Comparison unavailable. Both periods need complete recorded Search Console data.</span>
     </div>
 
     <!-- Loading skeleton (suppressed while paging in load-more — the table stays put) -->
