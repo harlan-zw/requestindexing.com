@@ -29,7 +29,7 @@ definePageMeta({
   icon: 'i-lucide-map',
 })
 
-const { siteId, gscdumpSiteId, site } = useSite('Sitemaps')
+const { siteId, gscdumpSiteId, site, isLifecycleSettled, gscData, gscStatusError, refreshGscStatus } = useSite('Sitemaps')
 const route = useRoute()
 const proFetch = useProFetch()
 const gscdump = useProGscdump()
@@ -233,19 +233,51 @@ const allowSubmissionTo = computed(() =>
   withQuery('/auth/integrations/gsc/connect', { scope: 'write', returnTo: route.fullPath }),
 )
 
+const discoveryEvidence = ref<'current' | 'refreshing' | 'unavailable'>('current')
+let evidenceRead = 0
+
+async function refreshDiscoveryEvidence() {
+  const read = ++evidenceRead
+  discoveryEvidence.value = 'refreshing'
+  await Promise.all([refreshSitemaps(), refreshSubmission()]).then(() => {
+    if (read === evidenceRead)
+      discoveryEvidence.value = sitemapsError.value || submissionError.value ? 'unavailable' : 'current'
+  }).catch(() => {
+    if (read === evidenceRead)
+      discoveryEvidence.value = 'unavailable'
+  })
+}
+
+watch([gscdumpSiteId, () => gscData.value?.sitemapStatus], ([id, status], [previousId, previousStatus]) => {
+  if (id !== previousId) {
+    evidenceRead++
+    discoveryEvidence.value = 'current'
+    return
+  }
+  // Empty snapshots fetched during discovery cannot establish a missing sitemap
+  // after collection succeeds. Read both sources before releasing that advice.
+  if (rows.value.length === 0 && (status === 'ready' || status === 'auto_submitted') && status !== previousStatus)
+    void refreshDiscoveryEvidence()
+}, { flush: 'sync' })
+
 const emptyState = computed(() => resolveSitemapEmptyState({
   pending: !submissionData.value && !submissionError.value && (submissionStatus.value === 'idle' || submissionStatus.value === 'pending'),
   unavailable: Boolean(submissionError.value),
   submission: submissionData.value ?? null,
   result: submitAnswer.value,
   canSubmit: canWrite.value,
+  discovery: gscStatusError.value || gscData.value?.sitemapStatus === 'failed' || discoveryEvidence.value === 'unavailable'
+    ? 'unavailable'
+    : discoveryEvidence.value === 'refreshing' || !isLifecycleSettled.value || !gscData.value?.sitemapStatus || ['unknown', 'discovering', 'syncing'].includes(gscData.value.sitemapStatus)
+      ? 'pending'
+      : 'settled',
 }))
 const resolvedEmptyState = computed(() =>
   emptyState.value._tag === 'checking' ? null : emptyState.value,
 )
 
 async function retrySitemaps() {
-  await Promise.all([refreshSitemaps(), refreshChanges(), refreshLiveness(), refreshSubmission()])
+  await Promise.all([refreshGscStatus(), refreshDiscoveryEvidence(), refreshChanges(), refreshLiveness()])
 }
 
 function belongsToSelectedSitemap(item: { sitemap: string }): boolean {
@@ -494,7 +526,7 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
         class="mb-6"
       />
       <UiAlert
-        v-if="sitemapsError && !sitemapsData"
+        v-if="(sitemapsError || gscStatusError || gscData?.sitemapStatus === 'failed' || discoveryEvidence === 'unavailable') && rows.length === 0"
         status="error"
         title="Sitemaps could not be loaded"
         description="Search Console sitemap evidence is unavailable."
@@ -540,7 +572,7 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
             v-if="resolvedEmptyState._tag === 'retry'"
             purpose="secondary"
             class="min-h-11"
-            @click="refreshSubmission()"
+            @click="retrySitemaps()"
           >
             {{ resolvedEmptyState.actionLabel }}
           </UiButton>
@@ -657,7 +689,7 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
 
         <div v-else-if="selectedSitemap" class="min-w-0 space-y-6">
           <UiAlert
-            v-if="sitemapsError && sitemapsData"
+            v-if="(sitemapsError || gscStatusError || gscData?.sitemapStatus === 'failed' || discoveryEvidence === 'unavailable') && sitemapsData"
             status="warning"
             title="Latest sitemap refresh failed"
             description="Showing the last successful sitemap report."

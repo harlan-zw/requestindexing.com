@@ -48,7 +48,15 @@ beforeEach(() => {
   mocks.submission.mockReturnValue({ ...query(null, refreshSubmission), data: submission })
   Object.assign(globalThis, {
     definePageMeta: () => {},
-    useSite: () => ({ siteId: ref('s_app'), gscdumpSiteId: engineSiteId, site: ref({ teamId: 't_team' }) }),
+    useSite: () => ({
+      siteId: ref('s_app'),
+      gscdumpSiteId: engineSiteId,
+      site: ref({ teamId: 't_team' }),
+      isLifecycleSettled: ref(true),
+      gscData: ref({ sitemapStatus: 'ready' }),
+      gscStatusError: ref(false),
+      refreshGscStatus: vi.fn(),
+    }),
     useRoute: () => ({ path: '/pro/dashboard/sites/s_app/indexing/sitemaps', fullPath: '/pro/dashboard/sites/s_app/indexing/sitemaps', query: {} }),
     useProFetch: () => vi.fn(),
     useCaller: () => ({ isAdmin: ref(false) }),

@@ -9,6 +9,7 @@ interface SitemapEmptyStateInput {
   pending: boolean
   unavailable: boolean
   canSubmit: boolean
+  discovery: 'pending' | 'settled' | 'unavailable'
 }
 
 export type SitemapSubmitAction
@@ -38,9 +39,18 @@ export function resolveSitemapEmptyState(input: SitemapEmptyStateInput): Sitemap
       description: `Search Console received ${sitemapPath(input.result.sitemapUrl)}. Its report appears here after Google fetches it.`,
     }
   }
-  if (input.pending)
+  if (input.unavailable || input.discovery === 'unavailable') {
+    return {
+      _tag: 'retry',
+      title: 'Sitemap submission check unavailable',
+      description: 'Retry the check before changing sitemap configuration.',
+      actionLabel: 'Retry',
+    }
+  }
+  // Confirmed positive evidence remains useful during later collection.
+  if (input.pending || (input.discovery === 'pending' && (!input.submission || !['listed', 'awaiting-google'].includes(input.submission.state._tag))))
     return { _tag: 'checking' }
-  if (input.unavailable || !input.submission) {
+  if (!input.submission) {
     return {
       _tag: 'retry',
       title: 'Sitemap submission check unavailable',

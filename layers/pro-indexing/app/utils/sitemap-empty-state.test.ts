@@ -4,13 +4,14 @@ import { resolveSitemapEmptyState } from './sitemap-empty-state'
 
 type Submission = GscdumpV1OperationResponse<'partner.sites.sitemaps.submission.get'>['data']
 const SITEMAP = 'https://example.com/sitemap.xml'
-function resolve(state: Submission['state'], canSubmit = true, callerCanAct = true) {
+function resolve(state: Submission['state'], canSubmit = true, callerCanAct = true, discovery: 'pending' | 'settled' | 'unavailable' = 'settled') {
   return resolveSitemapEmptyState({
     submission: { searchEngine: 'google', gscPropertyUrl: 'sc-domain:example.com', callerCanAct, state },
     result: null,
     pending: false,
     unavailable: false,
     canSubmit,
+    discovery,
   })
 }
 
@@ -64,11 +65,37 @@ describe('resolveSitemapEmptyState', () => {
       pending: true,
       unavailable: true,
       canSubmit: true,
+      discovery: 'pending',
     })).toMatchObject({ _tag: 'submitted', title: 'Sitemap submitted to Search Console' })
   })
 
   it('offers installation only after the host found no sitemap', () => {
     expect(resolve({ _tag: 'no-sitemap-found', checkedOn: '2026-10-04' })).toMatchObject({ _tag: 'install' })
+  })
+
+  it('waits for discovery before treating an empty snapshot as a missing sitemap', () => {
+    expect(resolve({ _tag: 'no-sitemap-found', checkedOn: '2026-10-05' }, true, true, 'pending'))
+      .toMatchObject({ _tag: 'checking' })
+  })
+
+  it('waits for first discovery before a submission snapshot exists', () => {
+    expect(resolveSitemapEmptyState({ submission: null, result: null, pending: false, unavailable: false, canSubmit: true, discovery: 'pending' }))
+      .toMatchObject({ _tag: 'checking' })
+  })
+
+  it('retains confirmed positive sitemap evidence while collection continues', () => {
+    expect(resolve({ _tag: 'listed', checkedOn: '2026-10-05', sitemapCount: 1 }, true, true, 'pending'))
+      .toMatchObject({ _tag: 'submitted' })
+  })
+
+  it('keeps a failed authoritative discovery read visible instead of offering installation', () => {
+    expect(resolve({ _tag: 'no-sitemap-found', checkedOn: '2026-10-05' }, true, true, 'unavailable'))
+      .toMatchObject({ _tag: 'retry' })
+  })
+
+  it('keeps a failed submission read visible while discovery continues', () => {
+    expect(resolveSitemapEmptyState({ submission: null, result: null, pending: true, unavailable: true, canSubmit: true, discovery: 'pending' }))
+      .toMatchObject({ _tag: 'retry' })
   })
 
   it('offers a retry before the host has checked', () => {
@@ -80,7 +107,7 @@ describe('resolveSitemapEmptyState', () => {
   })
 
   it('does not convert failed reads into an installation or submission prompt', () => {
-    expect(resolveSitemapEmptyState({ submission: null, result: null, pending: false, unavailable: true, canSubmit: true }))
+    expect(resolveSitemapEmptyState({ submission: null, result: null, pending: false, unavailable: true, canSubmit: true, discovery: 'settled' }))
       .toMatchObject({ _tag: 'retry' })
   })
 })
