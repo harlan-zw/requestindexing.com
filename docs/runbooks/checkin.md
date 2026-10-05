@@ -30,6 +30,23 @@ The authenticated admin route returns a versioned report with required IDs, iden
 The external caller checks freshness and deployment identity before accepting the report.
 Missing credentials and missing evidence never prove health.
 
+## Deployment identity
+
+The report check (`checks/external/report.ts`) compares `CHECKIN_DEPLOYMENT` with the report identity.
+Without that variable, the report check reports Unavailable.
+The value is never inferred from the latest CI commit.
+
+The Worker reports its own side from the `CF_VERSION_METADATA` binding (`wrangler.toml`).
+The derivation in `server/utils/checkin-deployment.ts` uses the version tag, else the version id, else `unknown`.
+An identity of `unknown` means the binding was missing.
+
+A manual run derives the same value before invoking the shared CLI.
+Run `cf workers deployments list --worker request-indexing`.
+The first deployment in the list serves traffic.
+Use the version's tag when one is set.
+The deploy script sets no tag (`scripts/deploy-cloudflare.ts`), so the version id is the value in practice.
+Export the chosen value as `CHECKIN_DEPLOYMENT`, then run `pnpm checkin`.
+
 ## Release
 
 Use Nuxt Check-in 0.3.0, Cloudflare 0.4.3, and Sentry 0.1.7 from the npm registry.
