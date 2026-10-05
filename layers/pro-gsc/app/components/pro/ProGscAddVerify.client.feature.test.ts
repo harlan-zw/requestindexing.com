@@ -1,6 +1,6 @@
 import type { PendingVerification } from '#layers/pro-gsc/shared/property-verification'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp, defineComponent, h, nextTick, reactive, ref } from 'vue'
+import { createApp, defineComponent, h, nextTick, reactive, ref, watch } from 'vue'
 import { notLiveDnsMessage } from '#layers/pro-gsc/shared/add-verify-copy'
 
 // The dialog's three calls are the routes under `/api/pro/gsc-verification`.
@@ -73,7 +73,24 @@ function mount(props: Record<string, unknown> = {}, onVerified = vi.fn()) {
   }))
   app.component('UModal', defineComponent({
     props: ['open', 'title'],
-    setup: (props, { slots }) => () => props.open ? h('div', { role: 'dialog' }, [h('h2', props.title), slots.body?.(), slots.footer?.()]) : null,
+    emits: ['update:open', 'after:leave'],
+    setup(props, { slots, emit }) {
+      // Nuxt UI emits this event after its closing transition finishes.
+      watch(() => props.open, async (open, wasOpen) => {
+        if (!open && wasOpen) {
+          await nextTick()
+          emit('after:leave')
+        }
+      })
+      return () => props.open
+        ? h('div', { role: 'dialog' }, [
+            h('h2', props.title),
+            h('button', { type: 'button', onClick: () => emit('update:open', false) }, 'Close dialog'),
+            slots.body?.(),
+            slots.footer?.(),
+          ])
+        : null
+    },
   }))
   app.component('UiAlert', defineComponent({
     props: ['title', 'description'],
@@ -214,6 +231,23 @@ describe('add and verify a property', () => {
 
     expect(host.querySelector('input')?.value).toBe('other.example.com')
     expect(host.querySelector('[data-testid="gsc-verify-record"]')).toBeNull()
+  })
+
+  it('resumes the pending record after closing an unfinished address edit', async () => {
+    api.state = { grant: { _tag: 'Ready' }, pending: [PENDING] }
+    const host = mount()
+
+    await click(host, 'Add and verify a property')
+    await click(host, 'Change address')
+    await type(host, 'other.example.com')
+    await click(host, 'Close dialog')
+    expect(host.querySelector('[role="dialog"]')).toBeNull()
+
+    await click(host, 'Add and verify a property')
+
+    expect(host.querySelector('[data-testid="gsc-verify-record"]')?.textContent?.trim()).toBe('google-site-verification=dns-token')
+    expect(button(host, 'Verify ownership')).toBeTruthy()
+    expect(api.calls.filter(call => call.url.endsWith('/record'))).toEqual([])
   })
 
   it('closes on a verified property, and reads both property lists again', async () => {
