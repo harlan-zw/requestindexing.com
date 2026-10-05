@@ -1,6 +1,8 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, ref } from 'vue'
 
+const { comparisonMode } = vi.hoisted(() => ({ comparisonMode: { value: 'previous' } }))
+
 // The shell's "No comparison" notice speaks about a previous period. A table
 // with no comparison at all must not show it.
 
@@ -19,7 +21,7 @@ vi.mock('#components', () => ({
   UPagination: passthrough('UPagination'),
 }))
 vi.mock('#imports', () => ({ useProHumanFriendlyNumber: (n: number) => String(n) }))
-vi.mock('../../composables/useProGscFilters', () => ({ useProGscFilters: () => ({ country: ref(''), device: ref('') }) }))
+vi.mock('../../composables/useProGscFilters', () => ({ useProGscFilters: () => ({ country: ref(''), device: ref(''), compareMode: ref(comparisonMode.value) }) }))
 vi.mock('../../composables/useGscSavedFilters', () => ({ useGscSavedFilters: () => ({ saved: ref([]), add: vi.fn(), remove: vi.fn() }) }))
 vi.mock('./GscFilterBar.vue', () => ({ default: passthrough('GscFilterBar') }))
 vi.mock('./ProGscdumpError.vue', () => ({ default: passthrough('ProGscdumpError') }))
@@ -52,6 +54,7 @@ afterEach(() => {
   for (const app of apps.splice(0))
     app.unmount()
   document.body.innerHTML = ''
+  comparisonMode.value = 'previous'
 })
 
 it('says nothing about a previous period when the table has no comparison', () => {
@@ -62,4 +65,10 @@ it('says nothing about a previous period when the table has no comparison', () =
 it('requires recorded coverage when the table cannot compare', () => {
   const host = mount({ hasPrevData: false })
   expect(host.textContent).toContain('Comparison unavailable.')
+})
+
+it('hides the coverage notice when the selected comparison is off', () => {
+  comparisonMode.value = 'none'
+  const host = mount({ hasPrevData: false })
+  expect(host.textContent).not.toContain('Comparison unavailable.')
 })

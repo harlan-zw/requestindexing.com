@@ -161,7 +161,7 @@ function commitQ(value = localQ.value) {
 
 // Wire the presentational GscFilterBar to URL-synced Pro facet state.
 // `countryData` is auto-imported from `design-system/app/utils/countries.ts`.
-const { country, device } = useProGscFilters()
+const { country, device, compareMode } = useProGscFilters()
 const countryItems = computed(() =>
   Object.entries(countryData)
     .map(([code, d]) => ({ label: d.name, value: code, icon: `i-circle-flags:${d.alpha2}` }))
@@ -333,7 +333,7 @@ function onApplySaved(id: string) {
     </div>
 
     <!-- No comparison data notice -->
-    <div v-if="!isLoading && hasPrevData === false" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-elevated border border-default text-sm text-muted">
+    <div v-if="!isLoading && compareMode !== 'none' && hasPrevData === false" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-elevated border border-default text-sm text-muted">
       <UiIcon name="note" class="size-4 shrink-0" />
       <span>Comparison unavailable. Both periods need complete recorded Search Console data.</span>
     </div>
