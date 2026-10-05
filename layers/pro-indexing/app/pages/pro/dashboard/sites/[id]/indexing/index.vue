@@ -137,12 +137,25 @@ const diagnosisIndexed = computed(() =>
     ? summary.value?.indexed ?? 0
     : completeUrlSnapshot.value?.urls.filter(row => row.verdict === 'PASS').length ?? 0,
 )
-const overviewError = computed(() => diagnosticsError.value ?? sitemapsError.value ?? gscStatusError.value)
-const hasRequiredOverviewEvidence = computed(() => !!summary.value && !!sitemapsData.value)
+const sitemapSourceFailed = computed(() => gscData.value?.sitemapStatus === 'failed')
+const overviewError = computed<'diagnosis' | 'sitemap' | 'coverage' | null>(() => {
+  if (diagnosticsError.value)
+    return 'diagnosis'
+  if (sitemapsError.value)
+    return 'sitemap'
+  if (gscStatusError.value)
+    return 'coverage'
+  return sitemapSourceFailed.value ? 'sitemap' : null
+})
+// A successful read of empty snapshots cannot establish absence after the
+// authoritative source failed. Previously observed inspections remain useful.
+const hasRequiredOverviewEvidence = computed(() =>
+  !!summary.value && !!sitemapsData.value && (!sitemapSourceFailed.value || inspectedCount.value > 0),
+)
 const overviewErrorTitle = computed(() => (
-  diagnosticsError.value
+  overviewError.value === 'diagnosis'
     ? 'Indexing diagnosis failed to load'
-    : sitemapsError.value
+    : overviewError.value === 'sitemap'
       ? 'Sitemap evidence failed to load'
       : 'Indexing coverage failed to load'
 ))
@@ -199,7 +212,7 @@ const trust = computed(() => {
     totalUrls: summary.value?.totalUrls ?? null,
     indexingStatus: indexingStatus.value,
     sitemapsPending: indexingData.value?.meta.sitemapsPending ?? false,
-    noSitemapsSubmitted: scopedSitemaps.value.length === 0,
+    noSitemapsSubmitted: !sitemapSourceFailed.value && scopedSitemaps.value.length === 0,
     liveness: livenessData.value,
     lastDownloadedAt: lastDownloadedAt.value,
     sitemapCollapsed: sitemapHistoryCollapsed(

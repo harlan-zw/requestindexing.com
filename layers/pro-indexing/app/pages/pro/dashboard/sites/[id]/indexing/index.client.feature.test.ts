@@ -8,6 +8,7 @@ const fixture = vi.hoisted(() => ({
   processing: 1,
   completed: 0,
   lifecyclePhase: 'discovering',
+  sitemapPhase: 'discovering',
   settled: true,
   indexingStatus: 'pending',
   lifecycleError: false,
@@ -39,7 +40,7 @@ Object.assign(globalThis, {
     isLifecycleSettled: ref(fixture.settled),
     gscStatusError: ref(fixture.lifecycleError),
     refreshGscStatus: vi.fn(),
-    gscData: ref({ indexingStatus: fixture.lifecyclePhase, indexing: { processing: fixture.processing, completed: fixture.completed } }),
+    gscData: ref({ sitemapStatus: fixture.sitemapPhase, indexingStatus: fixture.lifecyclePhase, indexing: { processing: fixture.processing, completed: fixture.completed } }),
   }),
   useProFetch: () => vi.fn(),
   useAsyncData: () => ({ data: ref(null), error: ref(null), status: ref('success') }),
@@ -72,6 +73,7 @@ beforeEach(() => {
   fixture.processing = 1
   fixture.completed = 0
   fixture.lifecyclePhase = 'discovering'
+  fixture.sitemapPhase = 'discovering'
   fixture.settled = true
   fixture.indexingStatus = 'pending'
   fixture.lifecycleError = false
@@ -105,6 +107,7 @@ it('keeps a failed lifecycle read visible when required evidence has not arrived
 it.each(['ready', 'no_urls'])('offers sitemap recovery once collection settles as %s with no sitemap', async (phase) => {
   fixture.processing = 0
   fixture.lifecyclePhase = phase
+  fixture.sitemapPhase = 'none_found'
   const html = await render()
   expect(html).toContain('No sitemap is submitted in Search Console')
   expect(html).toContain('Review sitemap')
@@ -137,4 +140,40 @@ it('retains observed partial evidence and its refresh error while discovery cont
   expect(html).toContain('Why pages stop')
   expect(html).toContain('Indexing diagnosis failed to load')
   expect(html).not.toContain('Waiting for indexing evidence')
+})
+
+it('offers a read retry for failed sitemap discovery with no inspected evidence', async () => {
+  fixture.lifecyclePhase = 'no_urls'
+  fixture.sitemapPhase = 'failed'
+  fixture.completed = 2
+  fixture.processing = 0
+  const html = await render()
+  expect(html).toContain('Sitemap evidence failed to load')
+  expect(html).toContain('Retry')
+  expect(html).not.toContain('No sitemap is submitted')
+  expect(html).not.toContain('Waiting for indexing evidence')
+})
+
+it('retains observed coverage and warns when the authoritative sitemap source fails', async () => {
+  fixture.lifecyclePhase = 'ready'
+  fixture.sitemapPhase = 'failed'
+  fixture.indexingStatus = 'partial'
+  fixture.diagnostics = { summary: { totalUrls: 1, indexed: 0, indexedPercent: 0 }, issues: [{ type: 'unknown_to_google', count: 1 }], meta: { indexingStatus: 'partial' } }
+  fixture.sitemaps = { sitemaps: [{ path: 'https://example.com/sitemap.xml', urlCount: 1, lastDownloaded: new Date().toISOString(), isIndex: false, errors: 0, warnings: 0 }], history: [] }
+  const html = await render()
+  expect(html).toContain('Why pages stop')
+  expect(html).toContain('Sitemap evidence failed to load')
+  expect(html).toContain('Showing the last available indexing evidence')
+})
+
+it('keeps observed coverage without inferring sitemap absence from a failed empty source', async () => {
+  fixture.lifecyclePhase = 'no_urls'
+  fixture.sitemapPhase = 'failed'
+  fixture.indexingStatus = 'partial'
+  fixture.diagnostics = { summary: { totalUrls: 1, indexed: 1, indexedPercent: 100 }, issues: [], meta: { indexingStatus: 'partial' } }
+  const html = await render()
+  expect(html).toContain('The inspected sample looks indexed')
+  expect(html).toContain('View inspected URLs')
+  expect(html).toContain('Sitemap evidence failed to load')
+  expect(html).not.toContain('No sitemap is submitted')
 })
