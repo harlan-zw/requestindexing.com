@@ -269,7 +269,7 @@ function reset() {
       v-model:open="open"
       :title="ADD_VERIFY_TITLE"
       :ui="{ header: 'pr-14 sm:pr-14', wrapper: 'min-w-0', title: 'break-words', footer: 'justify-end' }"
-      @after-leave="reset"
+      @after:leave="reset"
     >
       <template #body>
         <div class="space-y-4" data-testid="gsc-add-verify">
