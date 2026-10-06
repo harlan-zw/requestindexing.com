@@ -84,6 +84,22 @@ describe('breakdownRequest', () => {
     const body = breakdownRequest({ searchType: 'web', dimension: 'page', range: RANGE, comparisonRange: null, orderBy: { column: 'clicks', dir: 'desc' }, rowLimit: 5, moversFilter: 'declining' })
     expect(body).not.toHaveProperty('filter')
     expect(body).not.toHaveProperty('comparison')
+    expect(body).not.toHaveProperty('comparisonOrderBy')
+  })
+
+  it.each([
+    ['improving', 'desc'],
+    ['new', 'desc'],
+    ['declining', 'asc'],
+    ['lost', 'asc'],
+  ] as const)('ranks %s movers by click change before the row cap', (moversFilter, dir) => {
+    const body = breakdownRequest({ searchType: 'web', dimension: 'queryCanonical', range: RANGE, comparisonRange: PREVIOUS, orderBy: { column: 'clicks', dir: 'desc' }, rowLimit: 5, moversFilter })
+    expect(body).toMatchObject({ filter: moversFilter, comparisonOrderBy: { column: 'clicksChange', dir } })
+  })
+
+  it('keeps the requested order on a comparison list without a movers filter', () => {
+    const body = breakdownRequest({ searchType: 'web', dimension: 'page', range: RANGE, comparisonRange: PREVIOUS, orderBy: { column: 'impressions', dir: 'desc' }, rowLimit: 5 })
+    expect(body).not.toHaveProperty('comparisonOrderBy')
   })
 
   it('rejects a sort column the engine does not know, naming the field', () => {

@@ -1,6 +1,6 @@
-import type { PartnerLifecycleResponse } from '#layers/pro-gsc/shared/gscdump-api'
+import type { PartnerLifecycleResponse, PartnerLifecycleSite } from '#layers/pro-gsc/shared/gscdump-api'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { isNearRetentionLimit, readOptionalUserLifecycle } from './site-lifecycle'
+import { isNearRetentionLimit, readOptionalUserLifecycle, syncStatusFor } from './site-lifecycle'
 
 describe('isNearRetentionLimit', () => {
   afterEach(() => vi.useRealTimers())
@@ -49,5 +49,63 @@ describe('readOptionalUserLifecycle', () => {
     }))
 
     expect(result).toEqual({ _tag: 'Unavailable', reason: '502 Bad Gateway' })
+  })
+})
+
+interface SiteInput {
+  status: PartnerLifecycleSite['analytics']['status']
+  completed: number
+  failed: number
+  total: number
+  hold?: PartnerLifecycleSite['hold']
+}
+
+function lifecycleSite({ status, completed, failed, total, hold = null }: SiteInput): PartnerLifecycleSite {
+  return {
+    siteId: 's_test',
+    externalSiteId: null,
+    requestedUrl: 'https://example.com/',
+    gscPropertyUrl: 'sc-domain:example.com',
+    permissionLevel: 'siteOwner',
+    hold,
+    analytics: {
+      status,
+      queryable: status === 'ready' || status.startsWith('queryable'),
+      progress: { percent: total ? Math.round((completed / total) * 100) : 0, completed, failed, total },
+      syncedRange: { oldest: null, newest: null },
+    },
+    indexing: { status: 'not_requested', eligible: false, reason: null, progress: null },
+    latestError: null,
+    updatedAt: null,
+  } as unknown as PartnerLifecycleSite
+}
+
+describe('site sync status', () => {
+  it('reads a Site registered a second ago as pending, not synced', () => {
+    expect(syncStatusFor(lifecycleSite({ status: 'queryable_live', completed: 0, failed: 0, total: 0 }), null)).toBe('pending')
+  })
+
+  it('reads a Backfill with a failed day as an error', () => {
+    expect(syncStatusFor(lifecycleSite({ status: 'queryable_partial', completed: 667, failed: 1, total: 668 }), null)).toBe('error')
+  })
+
+  it('reads a held Site as pending', () => {
+    expect(syncStatusFor(lifecycleSite({ status: 'queued', completed: 0, failed: 0, total: 0, hold: 'size_limit' }), null)).toBe('pending')
+  })
+
+  it('reads open Sync jobs as syncing', () => {
+    expect(syncStatusFor(lifecycleSite({ status: 'queryable_live', completed: 3, failed: 0, total: 668 }), null)).toBe('syncing')
+  })
+
+  it.each([
+    ['a record that serves reads', { status: 'ready', completed: 668, failed: 0, total: 668 }],
+    ['a host with no Search Console rows', { status: 'queryable_live', completed: 668, failed: 0, total: 668 }],
+  ] as const)('reads %s as synced', (_label, input) => {
+    expect(syncStatusFor(lifecycleSite(input), null)).toBe('synced')
+  })
+
+  it('falls back to the stored status without a lifecycle row', () => {
+    expect(syncStatusFor(null, 'syncing')).toBe('syncing')
+    expect(syncStatusFor(null, null)).toBe('pending')
   })
 })

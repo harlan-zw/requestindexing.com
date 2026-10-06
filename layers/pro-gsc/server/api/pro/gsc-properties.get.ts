@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm'
 import { matchGscSite, normalizeRegistrationTarget, toIsoDate } from 'gscdump'
 import { getQuery } from 'h3'
 import { logger } from '~~/shared/server/logger'
-import { analyticsStatusToSyncStatus, findLifecycleSite, useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
+import { findLifecycleSite, lifecycleSiteToSyncStatus, useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
 import { hasGscdumpConnection, readSearchConsoleProperties } from '#layers/pro-gsc/server/utils/search-console-properties'
 // TODO(pro-saas-cleanup): re-wire stats fetch when V1 site-signals lands.
 // The old `#layers/pro-saas/server/utils/site-signals` was deleted in Phase 1.
@@ -32,8 +32,9 @@ export function lifecycleAccountError(status: string): GscPropertiesResponse['er
   }
 }
 
+/** `synced` means the Backfill is complete: a Site connected a second ago reads `pending`. */
 export function lifecycleSyncStatus(site: PartnerLifecycleSite) {
-  return analyticsStatusToSyncStatus(site.analytics.status)
+  return lifecycleSiteToSyncStatus(site).syncStatus
 }
 
 export interface GscPropertiesResponse {
