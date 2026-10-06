@@ -13,7 +13,7 @@
 //   so a mistyped field passes the contract and the engine drops it silently.
 //   Parsing here, against the stricter rows schema too, turns both into a
 //   thrown error that a unit test sees.
-import type { GscSearchType } from '@gscdump/contracts'
+import type { GscComparisonOrderBy, GscSearchType } from '@gscdump/contracts'
 import type { GscdumpV1OperationInput } from '@gscdump/sdk/v1'
 import type { Filter, Metric } from 'gscdump/query'
 import type { GscComparisonFilter } from './gscdump-api'
@@ -87,12 +87,13 @@ function strictState(operation: string, state: ReportState, searchType: GscSearc
   return parsed(operation, contract().analyticsRowsRequest.safeParse({ ...state, searchType }))
 }
 
-function listReport(input: { searchType: GscSearchType, state: ReportState, comparison?: ReportState, filter?: GscComparisonFilter }): ListReportRequest {
+function listReport(input: { searchType: GscSearchType, state: ReportState, comparison?: ReportState, filter?: GscComparisonFilter, comparisonOrderBy?: GscComparisonOrderBy }): ListReportRequest {
   const operation = 'analytics.reports.query'
   const body = {
     state: strictState(operation, input.state, input.searchType),
     ...(input.comparison ? { comparison: strictState(operation, input.comparison, input.searchType) } : {}),
     ...(input.filter ? { filter: input.filter } : {}),
+    ...(input.comparisonOrderBy ? { comparisonOrderBy: input.comparisonOrderBy } : {}),
   }
   return parsed(operation, contract().analyticsReportRequest.safeParse(body)) as ListReportRequest
 }
@@ -127,6 +128,18 @@ export interface BreakdownInput {
   moversFilter?: GscComparisonFilter
 }
 
+/**
+ * The click change order that picks each movers list before the row cap. In
+ * the requested metric order a query that lost all its clicks sorts below every
+ * steady one, so a capped Declining or Lost list kept arbitrary rows.
+ */
+const MOVERS_CHANGE_ORDER = {
+  improving: 'desc',
+  new: 'desc',
+  declining: 'asc',
+  lost: 'asc',
+} as const satisfies Record<GscComparisonFilter, GscComparisonOrderBy['dir']>
+
 /** One ranked list over one dimension: every table, mover list and trend candidate read. */
 export function breakdownRequest(input: BreakdownInput): ListReportRequest {
   const where = (range: DateFilterRange) => andFilter(
@@ -148,7 +161,9 @@ export function breakdownRequest(input: BreakdownInput): ListReportRequest {
     ...(comparisonRange
       ? {
           comparison: { dimensions: [input.dimension], filter: where(comparisonRange) },
-          ...(input.moversFilter ? { filter: input.moversFilter } : {}),
+          ...(input.moversFilter
+            ? { filter: input.moversFilter, comparisonOrderBy: { column: 'clicksChange', dir: MOVERS_CHANGE_ORDER[input.moversFilter] } }
+            : {}),
         }
       : {}),
   })
