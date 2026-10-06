@@ -4,7 +4,7 @@ import type { GoogleSubmissionReceiptV1 } from '@gscdump/contracts/v1'
 import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import type { UiTableColumn } from '#layers/design-system/app/shared/table'
 import type { GscdumpIndexingUrl } from '#layers/pro-gsc/shared/gscdump-api'
-import type { IndexingGrantRefusal } from '#layers/pro-indexing/app/utils/indexing-grant'
+import type { IndexingGrantRefusal, SubmissionAttempt } from '#layers/pro-indexing/app/utils/indexing-grant'
 import type { SiteIndexingGrant } from '#layers/pro-indexing/shared/contracts/indexing-grant'
 import { GOOGLE_SUBMISSION_SITE_DAILY_LIMIT } from '@gscdump/contracts/v1'
 import { nanoid } from 'nanoid'
@@ -14,7 +14,7 @@ import { UiStatusBadge, UiUrlLabel } from '#components'
 import { useProGscdumpIndexingUrls } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
 import IndexingChannelsCard from '#layers/pro-indexing/app/internal/components/indexing/IndexingChannelsCard.vue'
-import { describeReceipt, describeSubmissionRefusal, readIndexingGrantRefusal, readSubmissionRefusal, resolveSubmitAction } from '#layers/pro-indexing/app/utils/indexing-grant'
+import { attemptAfterReceipt, describeReceipt, describeSubmissionRefusal, readIndexingGrantRefusal, readSubmissionRefusal, resolveSubmitAction, submissionAttemptFor } from '#layers/pro-indexing/app/utils/indexing-grant'
 import { INDEXING_API_UNAVAILABLE } from '#layers/pro-indexing/shared/indexing-copy'
 
 definePageMeta({
@@ -109,6 +109,9 @@ const { data: historyData, status: historyStatus, error: historyError, refresh: 
 )
 const historyRows = computed(() => historyData.value?.urls ?? [])
 
+// A retry of the same URL reuses its key, so gscdump does not count it twice.
+let attempt: SubmissionAttempt | undefined
+
 async function submitForIndexing() {
   if (submitAction.value._tag !== 'Submit')
     return
@@ -118,10 +121,12 @@ async function submitForIndexing() {
     return
   }
 
+  const current = submissionAttemptFor(attempt, target.toString(), nanoid)
+  attempt = current
   submitting.value = true
   const result = await getAppFetch()<GoogleSubmissionReceiptV1>(`/api/sites/${siteId.value}/indexing/google-submissions`, {
     method: 'POST',
-    body: { url: target.toString(), idempotencyKey: nanoid() },
+    body: { url: current.url, idempotencyKey: current.idempotencyKey },
   })
     .then(response => ({ _tag: 'Ok' as const, response }))
     .catch((error: unknown) => ({ _tag: 'Err' as const, error }))
@@ -143,6 +148,7 @@ async function submitForIndexing() {
   }
 
   const receipt = result.response
+  attempt = attemptAfterReceipt(current, receipt)
   if (receipt._tag === 'rejected' && receipt.reason === 'reauthorization-required')
     grantRefusal.value = 'rejected'
   lastSubmit.value = { _tag: 'Ok', receipt }

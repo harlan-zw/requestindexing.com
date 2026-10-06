@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { safeAuthRedirect } from '#layers/pro-saas-auth/shared/utils/auth-redirect'
-import { describeSubmissionRefusal, indexingGrantHref, readIndexingGrantRefusal, readSubmissionRefusal, resolveSubmitAction } from './indexing-grant'
+import { attemptAfterReceipt, describeSubmissionRefusal, indexingGrantHref, readIndexingGrantRefusal, readSubmissionRefusal, resolveSubmitAction, submissionAttemptFor } from './indexing-grant'
 
 const SUBMIT_PAGE = '/pro/dashboard/sites/s_kv1109/indexing/submit'
 const GRANT_HREF = '/auth/google-indexing?returnTo=%2Fpro%2Fdashboard%2Fsites%2Fs_kv1109%2Findexing%2Fsubmit'
@@ -92,5 +92,34 @@ describe('resolveSubmitAction', () => {
   it.each(['missing', 'rejected'] as const)('offers the grant after gscdump refuses a %s grant', (refusal) => {
     expect(resolveSubmitAction({ ...base, grant: { _tag: 'granted', grantedAt }, refusal }))
       .toEqual({ _tag: 'GrantAccess', cause: refusal, to: GRANT_HREF })
+  })
+})
+
+describe('submission idempotency keys', () => {
+  const page = 'https://example.com/blog/post'
+  let minted = 0
+  const mint = () => `key-${++minted}`
+  const receiptOf = (tag: 'accepted' | 'rejected' | 'failed') => ({ _tag: tag }) as Parameters<typeof attemptAfterReceipt>[1]
+
+  it('keeps the key when the same URL is sent again after a request that never answered', () => {
+    const first = submissionAttemptFor(undefined, page, mint)
+    expect(submissionAttemptFor(first, page, mint).idempotencyKey).toBe(first.idempotencyKey)
+  })
+
+  it('mints a new key for a different URL', () => {
+    const first = submissionAttemptFor(undefined, page, mint)
+    expect(submissionAttemptFor(first, 'https://example.com/other', mint).idempotencyKey).not.toBe(first.idempotencyKey)
+  })
+
+  it('keeps the key after a failed receipt, so gscdump retries that Submission', () => {
+    const first = submissionAttemptFor(undefined, page, mint)
+    const next = attemptAfterReceipt(first, receiptOf('failed'))
+    expect(submissionAttemptFor(next, page, mint).idempotencyKey).toBe(first.idempotencyKey)
+  })
+
+  it.each(['accepted', 'rejected'] as const)('mints a new key after a %s receipt, which gscdump replays for its key', (tag) => {
+    const first = submissionAttemptFor(undefined, page, mint)
+    const next = attemptAfterReceipt(first, receiptOf(tag))
+    expect(submissionAttemptFor(next, page, mint).idempotencyKey).not.toBe(first.idempotencyKey)
   })
 })
