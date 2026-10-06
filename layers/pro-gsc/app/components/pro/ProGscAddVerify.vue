@@ -6,9 +6,11 @@ import type {
   PropertyVerificationState,
   VerificationMethod,
 } from '#layers/pro-gsc/shared/property-verification'
+
 import { useClipboard } from '@vueuse/core'
 import { withQuery } from 'ufo'
 import { computed, onMounted, ref, watch } from 'vue'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import {
   ADD_VERIFY_ACTION,
   ADD_VERIFY_ADDRESS_LABEL,
@@ -135,7 +137,7 @@ function resume(verification: PendingVerification) {
 async function start() {
   error.value = null
   step.value = { _tag: 'CheckingGrant' }
-  const state = await $fetch<PropertyVerificationState>('/api/pro/gsc-verification')
+  const state = await getAppFetch()<PropertyVerificationState>('/api/pro/gsc-verification')
     .catch((): PropertyVerificationState => {
       // The read only decides where the dialog opens. Without it the dialog
       // opens on the record step, and a mint that gscdump refuses for the
@@ -183,7 +185,7 @@ onMounted(() => {
 async function getRecord() {
   error.value = null
   busy.value = 'record'
-  const result = await $fetch<MintVerificationResult>('/api/pro/gsc-verification/record', {
+  const result = await getAppFetch()<MintVerificationResult>('/api/pro/gsc-verification/record', {
     method: 'POST',
     body: { address: address.value, method: method.value },
   }).catch((): MintVerificationResult => ({ _tag: 'Refused', refusal: { reason: 'unavailable', message: ADD_VERIFY_REFUSED.record } }))
@@ -204,7 +206,7 @@ async function verify() {
   error.value = null
   busy.value = 'verify'
   // The property URL repeats the minted target exactly, `www.` included.
-  const result = await $fetch<CheckVerificationResult>('/api/pro/gsc-verification/verify', {
+  const result = await getAppFetch()<CheckVerificationResult>('/api/pro/gsc-verification/verify', {
     method: 'POST',
     body: { address: verification.siteUrl, method: verification.method },
   }).catch((): CheckVerificationResult => ({ _tag: 'Refused', refusal: { reason: 'unavailable', message: verifyFailedMessage(verification.domain) } }))

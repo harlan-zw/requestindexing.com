@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
+
 definePageMeta({ layout: false })
 
 const route = useRoute()
@@ -48,7 +50,7 @@ async function accept() {
     return
   accepting.value = true
   try {
-    await $fetch<{ teamId: string }>('/api/pro/invitations/accept', {
+    await getAppFetch()<{ teamId: string }>('/api/pro/invitations/accept', {
       method: 'POST',
       body: { token: token.value },
     })

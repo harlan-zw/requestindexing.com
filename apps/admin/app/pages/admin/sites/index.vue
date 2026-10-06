@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SiteSelect } from '#shared/types/database'
 
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
+
 definePageMeta({
   layout: 'admin',
   title: 'Admin Sites',
@@ -9,7 +11,7 @@ definePageMeta({
 const data = ref<SiteSelect[]>([])
 
 onMounted(async () => {
-  data.value = await $fetch('/api/admin/sites')
+  data.value = await getAppFetch()('/api/admin/sites')
 })
 
 const columns: { key: string, label: string }[] = [
@@ -23,7 +25,7 @@ const columns: { key: string, label: string }[] = [
 function deleteSite(site: SiteSelect) {
   // Widened to `string` so Nitro's typed-route inference does not fold this
   // into the GET-only `/api/sites/list` match a bare template literal reaches.
-  $fetch(`/api/sites/${site.publicId}` as string, { method: 'DELETE' })
+  getAppFetch()(`/api/sites/${site.publicId}` as string, { method: 'DELETE' })
 }
 </script>
 

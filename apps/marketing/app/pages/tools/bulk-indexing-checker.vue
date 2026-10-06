@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
+
 import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
 
 const faqs = [
@@ -121,7 +123,7 @@ function runCheck() {
     body.urls = urls
   }
 
-  $fetch('/api/tools/bulk-check', {
+  getAppFetch()('/api/tools/bulk-check', {
     method: 'POST',
     body,
   })

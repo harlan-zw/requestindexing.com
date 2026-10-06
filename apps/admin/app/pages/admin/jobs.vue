@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { JobSelect } from '#shared/types/database'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 
 definePageMeta({
   layout: 'admin',
@@ -9,7 +10,7 @@ definePageMeta({
 const data = ref<{ jobs: JobSelect[], failedJobs: unknown[] }>({ jobs: [], failedJobs: [] })
 
 onMounted(async () => {
-  data.value = await $fetch('/api/admin/jobs')
+  data.value = await getAppFetch()('/api/admin/jobs')
 })
 
 function jobStatus(job: JobSelect) {
@@ -47,7 +48,7 @@ const filters = [
 ]
 
 function retry(row: JobSelect) {
-  $fetch(`/api/jobs/${row.id}/retry`, { method: 'POST' })
+  getAppFetch()(`/api/jobs/${row.id}/retry`, { method: 'POST' })
 }
 </script>
 

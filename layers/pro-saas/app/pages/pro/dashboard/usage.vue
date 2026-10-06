@@ -7,6 +7,8 @@
 //
 // Google Submissions show their daily limit on each Site's Submit to Google page.
 import type { FreeAllowanceView } from '#layers/pro-gsc/shared/free-allowance'
+
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { FREE_ALLOWANCE_HEADING, FREE_ALLOWANCE_NONE, FREE_ALLOWANCE_READ_FAILURE, meterRows } from '#layers/pro-gsc/shared/entitlement-copy'
 
 definePageMeta({
@@ -22,7 +24,7 @@ definePageMeta({
 // "Loading your Free allowance" 8 s after a reload.
 const { data, status, refresh } = await useAsyncData(
   'pro:usage:free-allowance',
-  () => $fetch<{ allowance: FreeAllowanceView }>('/api/pro/usage'),
+  () => getAppFetch()<{ allowance: FreeAllowanceView }>('/api/pro/usage'),
   { server: false, dedupe: 'defer' },
 )
 

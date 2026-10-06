@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
+
 const faqs = [
   {
     question: 'How do I check if Google has indexed my entire site?',
@@ -70,7 +72,7 @@ function runReport() {
   error.value = null
   result.value = null
 
-  $fetch('/api/tools/site-report', {
+  getAppFetch()('/api/tools/site-report', {
     method: 'POST',
     body: { domain: domainInput.value.trim() },
   })

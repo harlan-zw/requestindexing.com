@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SiteAllowance } from '#layers/pro-gsc/shared/free-allowance'
+
 import type { PropertyPickerResponse } from '#layers/pro-gsc/shared/property-picker'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProGscAddVerify from '#layers/pro-gsc/app/components/pro/ProGscAddVerify.vue'
 import { ADD_VERIFY_ACTION } from '#layers/pro-gsc/shared/add-verify-copy'
 import { siteAllowanceReached, siteAllowanceSummary } from '#layers/pro-gsc/shared/entitlement-copy'
@@ -180,7 +182,7 @@ async function connect(value: string, source: 'field' | 'list') {
 
   submitting.value = parsed.domain
   try {
-    const { site } = await $fetch<{ site: { id: string, domain: string | null } }>('/api/pro/sites', { method: 'POST', body: { url: parsed.origin } })
+    const { site } = await getAppFetch()<{ site: { id: string, domain: string | null } }>('/api/pro/sites', { method: 'POST', body: { url: parsed.origin } })
     url.value = ''
     await rereadAfterConnect()
     toast.add({ title: `Connected ${parsed.domain}`, color: 'success' })
