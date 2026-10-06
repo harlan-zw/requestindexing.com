@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SiteSelect } from '#shared/types/database'
 
+import { $fetch } from '#imports'
+
 definePageMeta({
   layout: 'admin',
   title: 'Admin Sites',

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { $fetch } from '#imports'
+
 import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
 
 const faqs = [

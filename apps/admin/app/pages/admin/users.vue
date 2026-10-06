@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { UserSelect } from '#shared/types/database'
+import { $fetch } from '#imports'
 
 definePageMeta({
   layout: 'admin',

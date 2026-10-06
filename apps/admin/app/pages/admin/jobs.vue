@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { JobSelect } from '#shared/types/database'
+import { $fetch } from '#imports'
 
 definePageMeta({
   layout: 'admin',

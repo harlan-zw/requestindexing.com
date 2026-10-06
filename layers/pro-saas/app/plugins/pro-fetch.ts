@@ -1,4 +1,5 @@
-import type { $Fetch, FetchResponse } from 'ofetch'
+import type { FetchResponse } from 'ofetch'
+import { $fetch } from '#imports'
 
 /**
  * The `/api/pro/**` fetcher, behind `useProFetch()`.
@@ -14,7 +15,7 @@ import type { $Fetch, FetchResponse } from 'ofetch'
  *   - 401 on `/api/pro/**` bounces to the login page with a redirect param.
  *   - 403 on `/api/pro/**` toasts once, instead of each caller inventing copy.
  *
- * `enforce: 'post'` so this wraps after the root interceptor.
+ * This client keeps Pro auth handling separate from the native fetch client.
  */
 
 const PRO_API_PREFIX = '/api/pro/'
@@ -31,8 +32,8 @@ export default defineNuxtPlugin({
 
     // Read the incoming cookies inside the plugin's Nuxt context, while one is
     // still active. Reading them later, inside an interceptor, is too late.
-    const ssrAuthHeaders: Record<string, string> = import.meta.server
-      ? useRequestHeaders(['cookie', 'authorization']) as Record<string, string>
+    const ssrAuthHeaders: Record<string, string | undefined> = import.meta.server
+      ? useRequestHeaders(['cookie', 'authorization'])
       : {}
 
     const markHandled = (response: FetchResponse<unknown> | undefined) => {
@@ -40,11 +41,11 @@ export default defineNuxtPlugin({
         (response as ProHandledResponse)._proHandled = true
     }
 
-    const proFetch = ($fetch as $Fetch).create({
+    const proFetch = $fetch.create({
       onRequest({ options }) {
         if (!import.meta.server)
           return
-        const merged = new Headers(options.headers as HeadersInit | undefined)
+        const merged = new Headers(options.headers)
         for (const [key, value] of Object.entries(ssrAuthHeaders)) {
           if (value && !merged.has(key))
             merged.set(key, value)
@@ -72,7 +73,7 @@ export default defineNuxtPlugin({
           markHandled(response)
         }
       },
-    }) as typeof $fetch
+    })
 
     return {
       provide: {

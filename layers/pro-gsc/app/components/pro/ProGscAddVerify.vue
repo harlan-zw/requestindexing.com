@@ -6,9 +6,11 @@ import type {
   PropertyVerificationState,
   VerificationMethod,
 } from '#layers/pro-gsc/shared/property-verification'
+
 import { useClipboard } from '@vueuse/core'
 import { withQuery } from 'ufo'
 import { computed, onMounted, ref, watch } from 'vue'
+import { $fetch } from '#imports'
 import {
   ADD_VERIFY_ACTION,
   ADD_VERIFY_ADDRESS_LABEL,

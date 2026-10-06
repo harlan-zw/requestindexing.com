@@ -7,6 +7,8 @@
 //
 // Google Submissions show their daily limit on each Site's Submit to Google page.
 import type { FreeAllowanceView } from '#layers/pro-gsc/shared/free-allowance'
+
+import { $fetch } from '#imports'
 import { FREE_ALLOWANCE_HEADING, FREE_ALLOWANCE_NONE, FREE_ALLOWANCE_READ_FAILURE, meterRows } from '#layers/pro-gsc/shared/entitlement-copy'
 
 definePageMeta({

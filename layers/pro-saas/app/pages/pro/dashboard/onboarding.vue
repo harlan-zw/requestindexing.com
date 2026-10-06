@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { OnboardingStep } from '#layers/pro-saas/shared/onboarding'
+
+import { $fetch } from '#imports'
 import {
   canAdvanceOnboardingStep,
   canSkipOnboardingSites,

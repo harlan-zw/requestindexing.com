@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { AuthProviderId } from '#layers/pro-saas-auth/shared/types/auth'
 
+import { $fetch } from '#imports'
+
 interface IdentityRow {
   provider: AuthProviderId
   providerUserId: string

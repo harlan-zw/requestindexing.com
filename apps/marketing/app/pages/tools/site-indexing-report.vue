@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { $fetch } from '#imports'
+
 const faqs = [
   {
     question: 'How do I check if Google has indexed my entire site?',

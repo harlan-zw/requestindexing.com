@@ -1,8 +1,9 @@
+import type { GscdumpIntegration } from '../composables/useGscdumpIntegration'
 // Hydrates and refreshes the dedicated gscdump integration state used by the
 // v1 HTTP and realtime clients. See ADR-0002.
 
-import type { GscdumpIntegration } from '../composables/useGscdumpIntegration'
 import { logWarn } from '~~/shared/logging'
+import { $fetch } from '#imports'
 import { GSCDUMP_INTEGRATION_KEY } from '../composables/useGscdumpIntegration'
 import { isProAppPath } from '../utils/_is-pro-app-path'
 

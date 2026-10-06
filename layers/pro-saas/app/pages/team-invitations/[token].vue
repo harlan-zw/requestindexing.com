@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { $fetch } from '#imports'
+
 definePageMeta({ layout: false })
 
 const route = useRoute()

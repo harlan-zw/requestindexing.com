@@ -1,5 +1,6 @@
 import type { SiteFleetRow } from '~~/layers/core/app/types'
 import { SITES_DATA_KEY } from '~~/layers/core/app/composables/fetch'
+import { $fetch } from '#imports'
 import { siteLookupKey } from '#layers/pro-saas/shared/site-lookup'
 
 export type RemoveSiteResult

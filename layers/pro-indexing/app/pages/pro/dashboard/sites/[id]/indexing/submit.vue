@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { GoogleSubmissionReceiptV1 } from '@gscdump/contracts/v1'
+
 import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import type { UiTableColumn } from '#layers/design-system/app/shared/table'
 import type { GscdumpIndexingUrl } from '#layers/pro-gsc/shared/gscdump-api'
@@ -9,6 +10,7 @@ import { GOOGLE_SUBMISSION_SITE_DAILY_LIMIT } from '@gscdump/contracts/v1'
 import { nanoid } from 'nanoid'
 import { h } from 'vue'
 import { UiStatusBadge, UiUrlLabel } from '#components'
+import { $fetch } from '#imports'
 import { useProGscdumpIndexingUrls } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
 import IndexingChannelsCard from '#layers/pro-indexing/app/internal/components/indexing/IndexingChannelsCard.vue'

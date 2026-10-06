@@ -108,7 +108,6 @@
     "eslint": "catalog:",
     "googlethis": "catalog:",
     "happy-dom": "catalog:",
-    "node-fetch": "catalog:",
     "nuxt-og-image": "catalog:",
     "nuxt-schema-org": "catalog:",
     "oxc-parser": "catalog:",

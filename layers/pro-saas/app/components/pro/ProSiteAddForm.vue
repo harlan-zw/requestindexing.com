@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SiteAllowance } from '#layers/pro-gsc/shared/free-allowance'
+
 import type { PropertyPickerResponse } from '#layers/pro-gsc/shared/property-picker'
+import { $fetch } from '#imports'
 import ProGscAddVerify from '#layers/pro-gsc/app/components/pro/ProGscAddVerify.vue'
 import { ADD_VERIFY_ACTION } from '#layers/pro-gsc/shared/add-verify-copy'
 import { siteAllowanceReached, siteAllowanceSummary } from '#layers/pro-gsc/shared/entitlement-copy'

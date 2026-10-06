@@ -1,5 +1,19 @@
 minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
+  - '@harlan-zw/comark-content@0.2.0'
+  - '@harlan-zw/nuxt-checkin@0.4.1'
+  - '@harlan-zw/nuxt-domain-events@0.2.0'
+  - '@harlan-zw/nuxt-use-query@0.3.0'
+  - '@harlan-zw/nuxt-wide-events@0.2.0'
+  - 'nuxt@4.6.0'
+  - '@harlan-zw/nuxt-cloudflare@0.5.1'
+  - '@harlan-zw/nuxt-dx@0.3.0'
+  - '@harlan-zw/nuxt-sentry@0.3.0'
+  - '@nuxt/kit@4.6.0'
+  - '@nuxt/schema@4.6.0'
+  - '@nuxt/vite-builder@4.6.0'
+  - '@nuxt/nitro-server@4.6.0'
+  - '@nuxt/vite-server@4.6.0'
   - '@gscdump/sdk@5.5.0'
   - '@gscdump/contracts@5.5.0'
   - '@harlan-zw/nuxt-cloudflare@0.4.4'
@@ -15,6 +29,37 @@ minimumReleaseAgeExclude:
 
 trustPolicy: no-downgrade
 trustPolicyExclude:
+  # These exact cssnano releases match official-source provenance and tarball digests.
+  - cssnano-preset-default@9.2.2
+  - cssnano-utils@8.1.0
+  - cssnano@9.2.2
+  - postcss-colormin@9.0.6
+  - postcss-convert-values@9.0.7
+  - postcss-discard-comments@9.0.6
+  - postcss-discard-duplicates@9.0.5
+  - postcss-discard-empty@9.0.5
+  - postcss-discard-overridden@9.0.5
+  - postcss-merge-longhand@9.2.0
+  - postcss-merge-rules@9.0.8
+  - postcss-minify-font-values@9.0.7
+  - postcss-minify-gradients@9.0.6
+  - postcss-minify-params@9.0.6
+  - postcss-minify-selectors@9.0.6
+  - postcss-normalize-charset@9.0.5
+  - postcss-normalize-display-values@9.0.5
+  - postcss-normalize-positions@9.0.6
+  - postcss-normalize-repeat-style@9.0.5
+  - postcss-normalize-string@9.0.5
+  - postcss-normalize-timing-functions@9.0.5
+  - postcss-normalize-unicode@9.0.5
+  - postcss-normalize-url@9.0.5
+  - postcss-normalize-whitespace@9.0.5
+  - postcss-ordered-values@9.0.6
+  - postcss-reduce-initial@9.0.6
+  - postcss-reduce-transforms@9.0.4
+  - postcss-svgo@9.0.4
+  - postcss-unique-selectors@9.0.5
+  - stylehacks@9.0.7
   # Nuxt's vite-plugin-checker still resolves this release without provenance.
   - chokidar@4.0.3
   # Existing Babel transitive predates npm provenance.
@@ -45,7 +90,7 @@ overrides:
   vue: 3.5.43
 
 patchedDependencies:
-  '@nuxt/nitro-server@4.5.2': patches/@nuxt__nitro-server@4.5.2.patch
+  '@nuxt/nitro-server@4.6.0': patches/@nuxt__nitro-server@4.6.0.patch
   '@nuxt/ui@4.11.2': patches/@nuxt__ui@4.11.2.patch
   nitropack@2.13.4: patches/nitropack@2.13.4.patch
   nuxt-auth-utils@0.5.30: patches/nuxt-auth-utils@0.5.30.patch
@@ -67,14 +112,14 @@ catalog:
   '@gscdump/contracts': 5.5.0
   '@gscdump/engine': 5.3.0
   '@gscdump/sdk': 5.5.0
-  '@harlan-zw/comark-content': 0.1.5
-  '@harlan-zw/nuxt-checkin': 0.3.0
-  '@harlan-zw/nuxt-cloudflare': 0.4.4
-  '@harlan-zw/nuxt-domain-events': 0.1.2
-  '@harlan-zw/nuxt-dx': 0.2.1
-  '@harlan-zw/nuxt-sentry': 0.2.0
-  '@harlan-zw/nuxt-use-query': 0.2.2
-  '@harlan-zw/nuxt-wide-events': 0.1.4
+  '@harlan-zw/comark-content': 0.2.0
+  '@harlan-zw/nuxt-checkin': 0.4.1
+  '@harlan-zw/nuxt-cloudflare': 0.5.1
+  '@harlan-zw/nuxt-domain-events': 0.2.0
+  '@harlan-zw/nuxt-dx': 0.3.0
+  '@harlan-zw/nuxt-sentry': 0.3.0
+  '@harlan-zw/nuxt-use-query': 0.3.0
+  '@harlan-zw/nuxt-wide-events': 0.2.0
   '@iconify-json/carbon': ^1.2.28
   '@iconify-json/circle-flags': ^1.2.11
   '@iconify-json/heroicons': ^1.2.3
@@ -127,8 +172,7 @@ catalog:
   motion-v: 2.5.1
   nanoid: ^6.0.1
   nitro-cloudflare-dev: ^0.2.2
-  node-fetch: ^3.3.2
-  nuxt: ^4.5.2
+  nuxt: 4.6.0
   nuxt-ai-ready: https://pkg.pr.new/nuxt-ai-ready@8b2f4e085f48510f09b28110eecaa0e713896fd3
   nuxt-auth-utils: ^0.5.30
   nuxt-og-image: ^6.10.1
