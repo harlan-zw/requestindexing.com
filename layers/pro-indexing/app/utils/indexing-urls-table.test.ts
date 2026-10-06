@@ -10,6 +10,7 @@ import {
   readInspectOutcome,
   retryAfterLabel,
   richResultsDistribution,
+  shortCoverage,
   sitemapMembership,
 } from './indexing-urls-table'
 
@@ -208,5 +209,30 @@ describe('readInspectOutcome', () => {
   it('reports a skipped URL as a failed check with the skip reason', () => {
     expect(readInspectOutcome({ ...base, skipped: [{ url: result.url, reason: 'URL is outside this property' }] }))
       .toMatchObject({ _tag: 'Failed', reason: 'URL is outside this property' })
+  })
+})
+
+describe('shortCoverage', () => {
+  it.each([
+    // URL Inspection sends typographic quotes; the Page indexing report sends straight ones.
+    ['Excluded by ‘noindex’ tag', 'Noindex'],
+    ['Excluded by \'noindex\' tag', 'Noindex'],
+    ['Blocked due to other 4xx issue', 'Blocked (4xx)'],
+    ['Redirect error', 'Redirect error'],
+    ['Blocked by page removal tool', 'Removal tool'],
+    ['Crawled - currently not indexed', 'Crawled, not indexed'],
+    ['Submitted and indexed', 'Indexed'],
+    ['Indexed, not submitted in sitemap', 'Indexed (no sitemap)'],
+  ])('labels %s as %s', (coverageState, label) => {
+    expect(shortCoverage(coverageState)).toBe(label)
+  })
+
+  it('keeps the prose of an indexed state the tag merges with plain Indexed', () => {
+    expect(shortCoverage('Indexed, though blocked by robots.txt')).toBe('Indexed, though blocked by robots.txt')
+  })
+
+  it('shows prose no tag maps, and nothing when Google reported none', () => {
+    expect(shortCoverage('A state Google adds later')).toBe('A state Google adds later')
+    expect(shortCoverage(null)).toBeNull()
   })
 })
