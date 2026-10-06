@@ -27,8 +27,6 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryReportDetail },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteAnalysis },
   // Query and page counts over a window, with the comparison window.
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getQueryTrend },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getPageTrend },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexing },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexingUrls },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexingDiagnostics },
@@ -42,9 +40,8 @@ const baseOperationEntries = [
   // `analytics.rows.query` answers a raw grouped read. Every sparkline reads
   // its `(dimension, date)` series here, because a list report rejects `date`.
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryRows },
-  // Indexing coverage history and the sitemap URL views.
+  // Indexing coverage history and canonical mismatches.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexingTransitions },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSitemapUrls },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getCanonicalMismatches },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexNowConnection },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.configureSiteIndexNowConnection },

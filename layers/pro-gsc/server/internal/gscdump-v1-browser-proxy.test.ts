@@ -24,18 +24,6 @@ describe('resolveGscdumpV1ProxyOperation', () => {
     expect(resolved?.params).toEqual({ siteId: 's_site-1' })
   })
 
-  it('resolves the query-trend operation', () => {
-    const resolved = resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/query-trend')
-    expect(resolved?.operation.id).toBe('partner.sites.query.trend.get')
-    expect(resolved?.params).toEqual({ siteId: 's_site-1' })
-  })
-
-  it('resolves the page-trend operation', () => {
-    const resolved = resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/page-trend')
-    expect(resolved?.operation.id).toBe('partner.sites.page.trend.get')
-    expect(resolved?.params).toEqual({ siteId: 's_site-1' })
-  })
-
   it('resolves the grouped analytics rows read every sparkline uses', () => {
     const resolved = resolveGscdumpV1ProxyOperation('POST', 'analytics', 'sites/s_site-1/rows')
     expect(resolved?.operation.id).toBe('analytics.rows.query')

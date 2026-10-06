@@ -1,12 +1,9 @@
 import type { DailyReportInput } from '../../../shared/analytics-requests'
 import type {
   GscdumpDataDetailResponse,
-  GscdumpMeta,
-  GscdumpTotals,
 } from '../../../shared/gscdump-api'
 import { dailyReportRequest } from '../../../shared/analytics-requests'
 import { useGscSiteInvalidation } from '../../internal/composables/useGscInvalidation'
-import { useTrackGscEngine } from '../useGscEngineStats'
 import { useGscQuery } from '../useGscQuery'
 import { useProGscdump } from './useProGscdump'
 
@@ -25,27 +22,14 @@ export function useProGscdumpDataDetail(
 
   const gscdump = useProGscdump()
 
-  const result = useGscQuery<GscdumpDataDetailResponse>({
+  return useGscQuery<GscdumpDataDetailResponse>({
     site: _siteId,
     params: computed(() => ({ type: 'data-detail' as const, searchType: _input.value.searchType })),
     enabled: computed(() => !!_siteId.value),
     watchSources: [useGscSiteInvalidation(_siteId), _input],
-    reshape: (raw) => {
-      const meta = (raw.meta ?? {}) as Record<string, unknown>
-      const out: GscdumpDataDetailResponse = {
-        daily: (raw.results ?? []) as unknown as GscdumpDataDetailResponse['daily'],
-        totals: (meta.totals as GscdumpTotals | undefined) ?? { clicks: 0, impressions: 0, ctr: 0, position: 0 },
-        meta: meta as unknown as GscdumpMeta,
-      }
-      if (meta.previousTotals)
-        out.previousTotals = meta.previousTotals as GscdumpTotals
-      return out
-    },
     serverFallback: async id => gscdump.queryAnalyticsReportDetail({
       params: { siteId: id },
       body: dailyReportRequest(_input.value),
     }),
   })
-  useTrackGscEngine(result)
-  return result
 }
