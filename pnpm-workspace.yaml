@@ -5,7 +5,7 @@ minimumReleaseAgeExclude:
   - '@harlan-zw/nuxt-domain-events@0.2.0'
   - '@harlan-zw/nuxt-use-query@0.3.0'
   - '@harlan-zw/nuxt-wide-events@0.2.0'
-  - 'nuxt@4.6.0'
+  - nuxt@4.6.0
   - '@harlan-zw/nuxt-cloudflare@0.5.1'
   - '@harlan-zw/nuxt-dx@0.3.0'
   - '@harlan-zw/nuxt-sentry@0.3.0'
