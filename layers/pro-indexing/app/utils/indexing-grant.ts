@@ -1,5 +1,5 @@
 import type { GoogleSubmissionReceiptV1, GoogleSubmissionRefusal } from '@gscdump/contracts/v1'
-import type { IndexingGrant } from '../../shared/contracts/indexing-grant'
+import type { SiteIndexingGrant } from '../../shared/contracts/indexing-grant'
 import { parseGoogleSubmissionRefusal } from '@gscdump/contracts/v1'
 import { withQuery } from 'ufo'
 import { INDEXING_API_UNAVAILABLE } from '../../shared/indexing-copy'
@@ -35,8 +35,8 @@ export type SubmitAction
     | { _tag: 'GrantAccess', cause: IndexingGrantRefusal, to: string }
 
 export interface SubmitActionInput {
-  /** Null while the grant read is in flight. */
-  grant: IndexingGrant | null
+  /** The Site's grant, which Submissions use. Null while the read is in flight. */
+  grant: SiteIndexingGrant | null
   /** The grant read failed. gscdump still refuses without a grant, so Submit stays. */
   grantUnavailable: boolean
   /** The submit route refused for a grant reason. Google is the authority, so this wins over the read. */

@@ -66,18 +66,18 @@ describe('resolveSubmitAction', () => {
       .toEqual({ _tag: 'Unavailable' })
   })
 
-  it('offers the grant beside Submit when the account has no Indexing API grant', () => {
+  it('offers the grant beside Submit when the Site has no Indexing API grant', () => {
     expect(resolveSubmitAction({ ...base, grant: { _tag: 'missing' } }))
       .toEqual({ _tag: 'GrantAccess', cause: 'missing', to: GRANT_HREF })
   })
 
   it('asks for the grant again when Google stopped accepting it', () => {
-    expect(resolveSubmitAction({ ...base, grant: { _tag: 'reauthorization-required', googleEmail: null } }))
+    expect(resolveSubmitAction({ ...base, grant: { _tag: 'reauthorization-required' } }))
       .toEqual({ _tag: 'GrantAccess', cause: 'rejected', to: GRANT_HREF })
   })
 
-  it('submits when the account holds a grant', () => {
-    expect(resolveSubmitAction({ ...base, grant: { _tag: 'granted', googleEmail: 'dev@example.com', grantedAt } }))
+  it('submits when the Site holds a grant', () => {
+    expect(resolveSubmitAction({ ...base, grant: { _tag: 'granted', grantedAt } }))
       .toEqual({ _tag: 'Submit' })
   })
 
@@ -90,7 +90,7 @@ describe('resolveSubmitAction', () => {
   })
 
   it.each(['missing', 'rejected'] as const)('offers the grant after gscdump refuses a %s grant', (refusal) => {
-    expect(resolveSubmitAction({ ...base, grant: { _tag: 'granted', googleEmail: null, grantedAt }, refusal }))
+    expect(resolveSubmitAction({ ...base, grant: { _tag: 'granted', grantedAt }, refusal }))
       .toEqual({ _tag: 'GrantAccess', cause: refusal, to: GRANT_HREF })
   })
 })

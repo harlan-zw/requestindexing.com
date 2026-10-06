@@ -4,7 +4,7 @@ import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import type { UiTableColumn } from '#layers/design-system/app/shared/table'
 import type { GscdumpIndexingUrl } from '#layers/pro-gsc/shared/gscdump-api'
 import type { IndexingGrantRefusal } from '#layers/pro-indexing/app/utils/indexing-grant'
-import type { IndexingGrant } from '#layers/pro-indexing/shared/contracts/indexing-grant'
+import type { SiteIndexingGrant } from '#layers/pro-indexing/shared/contracts/indexing-grant'
 import { GOOGLE_SUBMISSION_SITE_DAILY_LIMIT } from '@gscdump/contracts/v1'
 import { nanoid } from 'nanoid'
 import { h } from 'vue'
@@ -61,10 +61,11 @@ function parseAbsoluteUrl(value: string): URL | null {
   }
 }
 
-// Submission sends with the Indexing API grant, which the Search Console
-// connect never writes. Without it the only action that can work is the
-// grant, so it takes the Submit button's place.
-const { data: grant, error: grantError } = useFetch<IndexingGrant>('/api/indexing/auth', { key: 'indexing-grant' })
+// Submission sends with the Indexing API grant of the account that linked the
+// Site, which the Search Console connect never writes. It can differ from the
+// caller's own grant, so this reads the Site's. Without it the only action
+// that can work is the grant, so it takes the Submit button's place.
+const { data: grant, error: grantError } = useFetch<SiteIndexingGrant>(() => `/api/sites/${siteId.value}/indexing/google-grant`, { key: () => `indexing-grant:${siteId.value}` })
 // The grant asks the person to read what the API is for before Google asks
 // for consent. Overuse can make Google block it for every user.
 const intentConfirmed = ref(false)
@@ -288,10 +289,10 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
         </p>
 
         <p v-if="submitAction._tag === 'GrantAccess' && submitAction.cause === 'rejected'" class="mt-3 text-sm text-error">
-          Google no longer accepts this app's Indexing API access. This app did not send the URL. Grant access again, then submit the URL.
+          Google no longer accepts the Indexing API access this Site uses. This app did not send the URL. The Google account that linked this Site must grant access again.
         </p>
         <p v-else-if="submitAction._tag === 'GrantAccess'" class="mt-3 text-sm text-muted">
-          To submit a URL, this app needs Indexing API access from your Google account. After you grant access, you return to this page.
+          Submissions for this Site use the Indexing API access of the Google account that linked it to Search Console. If that is your account, grant access, then you return to this page.
         </p>
         <p v-else-if="lastSubmit._tag === 'Err'" class="mt-3 text-sm text-error">
           {{ lastSubmit.message }}
