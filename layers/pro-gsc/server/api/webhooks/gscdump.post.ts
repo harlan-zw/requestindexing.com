@@ -15,6 +15,7 @@
 // and this app sends it as an email.
 
 import type { CanonicalWebhookEnvelope } from '@gscdump/contracts'
+import type { H3Event } from 'h3'
 import type { DeliveryClaims } from '#layers/pro-gsc/server/utils/gscdump-webhook-receiver'
 import { WEBHOOK_SIGNATURE_HEADER } from '@gscdump/sdk/webhook'
 import { eq } from 'drizzle-orm'
@@ -86,6 +87,15 @@ export default defineEventHandler(async (event) => {
   }
 
   const { envelope } = receipt
+  // A delivery whose local work fails gives its claim back, so gscdump's retry
+  // runs it again instead of reading as a duplicate of work never done.
+  return applyDelivery(event, envelope).catch(async (error: unknown) => {
+    await claims.release(envelope.deliveryId)
+    throw error
+  })
+})
+
+async function applyDelivery(event: H3Event, envelope: CanonicalWebhookEnvelope) {
   const db = useDrizzle(event)
 
   // gscdump sends no email to a metered partner's user. This delivery is the
@@ -102,9 +112,6 @@ export default defineEventHandler(async (event) => {
       // holds back a Free allowance email.
       send: sendEmail,
       manageSitesUrl: `${getRequestURL(event).origin}/pro/dashboard/sites`,
-    }).catch(async (error: unknown) => {
-      await claims.release(envelope.deliveryId)
-      throw error
     })
     if (outcome._tag === 'UnknownUser') {
       logWarn('webhook.allowance_notice_unknown_user', new Error('unknown gscdump user'), {
@@ -118,12 +125,11 @@ export default defineEventHandler(async (event) => {
     return { ok: true, notice: outcome }
   }
 
-  const localSite = envelope.siteId
-    ? await db.query.sites.findFirst({
-        columns: { id: true, ownerId: true, teamId: true },
-        where: eq(sites.gscdumpSiteId, envelope.siteId),
-      })
-    : undefined
+  // Every Site linked to the gscdump site. The link is unique per Team, not
+  // globally, so a property linked in two Teams has a Site in each.
+  const linkedSiteIds = envelope.siteId
+    ? await db.select({ id: sites.id }).from(sites).where(eq(sites.gscdumpSiteId, envelope.siteId)).then(rows => rows.map(row => row.id))
+    : []
 
   const localUser = envelope.userId
     ? await db.query.users.findFirst({
@@ -148,13 +154,11 @@ export default defineEventHandler(async (event) => {
   // state immediately, without waiting for the reconcile to finish its
   // authoritative lifecycle re-read. Recovered from the hand-rolled receiver
   // this route replaced, whose own event names never matched a real delivery.
-  if (localSite) {
-    const patch = syncStatusPatch(envelope, Date.now())
-    if (patch) {
-      await db.update(sites)
-        .set(patch)
-        .where(eq(sites.id, localSite.id))
-    }
+  const patch = envelope.siteId && linkedSiteIds.length ? syncStatusPatch(envelope, Date.now()) : null
+  if (patch && envelope.siteId) {
+    await db.update(sites)
+      .set(patch)
+      .where(eq(sites.gscdumpSiteId, envelope.siteId))
   }
 
   if (RECONCILE_EVENTS.has(envelope.event)) {
@@ -164,12 +168,14 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  await dispatchEvent('pro:gsc:webhook', {
-    event,
-    envelope,
-    userId: localUser.userId,
-    siteId: localSite?.id ?? null,
-  }).catch((err: unknown) => logWarn('webhook.side_effect_failed', err, { event: envelope.event }))
+  for (const siteId of linkedSiteIds.length ? linkedSiteIds : [null]) {
+    await dispatchEvent('pro:gsc:webhook', {
+      event,
+      envelope,
+      userId: localUser.userId,
+      siteId,
+    }).catch((err: unknown) => logWarn('webhook.side_effect_failed', err, { event: envelope.event }))
+  }
 
   return { ok: true }
-})
+}
