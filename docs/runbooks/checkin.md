@@ -41,10 +41,21 @@ The derivation in `server/utils/checkin-deployment.ts` uses the version tag, els
 An identity of `unknown` means the binding was missing.
 
 A manual run derives the same value before invoking the shared CLI.
-Run `cf workers deployments list --worker request-indexing`.
+With Cloudflare credentials, run `cf workers deployments list --worker request-indexing`.
 The first deployment in the list serves traffic.
 Use the version's tag when one is set.
 The deploy script sets no tag (`scripts/deploy-cloudflare.ts`), so the version id is the value in practice.
+
+Without Cloudflare credentials, read the version id from the deploy run log.
+Open the newest successful run of `.github/workflows/deploy-cloudflare.yml`.
+The deploy step prints `Current Version ID` when Wrangler activates the version.
+
+```sh
+gh run list --workflow deploy-cloudflare.yml --status success --limit 1 --json databaseId
+gh run view <run-id> --log | grep 'Current Version ID'
+```
+
+A deploy outside this workflow makes the log value stale.
 Export the chosen value as `CHECKIN_DEPLOYMENT`, then run `pnpm checkin`.
 
 ## Release
