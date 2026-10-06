@@ -200,6 +200,15 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
       const dir = sort.value.direction === 'asc' ? 1 : -1
       rows = [...rows].sort((a, b) => accessor(a).localeCompare(accessor(b)) * dir)
     }
+    // A movers list arrives ranked by click change, which decides the rows that
+    // load. The table's metric sort orders them; the sort is stable, so a Lost
+    // list, where every current metric is 0, keeps the biggest loss first.
+    else if (moversActive) {
+      const column = sort.value.column
+      const dir = sort.value.direction === 'asc' ? 1 : -1
+      const metric = (r: T) => Number((r as Record<string, unknown>)[column] ?? 0)
+      rows = [...rows].sort((a, b) => (metric(a) - metric(b)) * dir)
+    }
 
     let totalClicks = 0
     let totalImpressions = 0

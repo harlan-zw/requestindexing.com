@@ -1,7 +1,6 @@
 import type { SiteHoldReason } from '@gscdump/contracts'
 import type { PartnerLifecycleSite } from '../../shared/gscdump-api'
 import { lifecycleSiteToSyncStatus } from '@gscdump/sdk/lifecycle'
-import { analyticsSyncStatus } from '#layers/pro-gsc/shared/analytics-sync'
 import { useProSiteInjection } from '#layers/pro-saas/app/composables/useProSiteInjection'
 
 interface TableProgress {
@@ -133,7 +132,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
       if (!lifecycleSite)
         return null
       const lifecycleStatus = lifecycleSiteToSyncStatus(lifecycleSite)
-      const syncStatus = analyticsSyncStatus(lifecycleSite.analytics)
+      const syncStatus = lifecycleStatus.syncStatus
       const activeAnalytics = syncStatus === 'pending' || syncStatus === 'syncing'
       const activeSitemaps = ['discovering', 'syncing'].includes(lifecycleSite.sitemaps.status)
       const activeIndexing = ['discovering', 'checking', 'waiting_for_sitemaps'].includes(lifecycleSite.indexing.status)
