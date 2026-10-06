@@ -1,3 +1,4 @@
+import type { CoverageStateTag } from '@gscdump/contracts'
 import type { IssueSeverity } from '@gscdump/sdk/indexing-issues'
 import type { GscdumpInspectRefused } from '#layers/pro-gsc/app/composables/useProGscdump'
 import type {
@@ -7,6 +8,7 @@ import type {
   GscdumpInspectResponse,
 } from '#layers/pro-gsc/shared/gscdump-api'
 import { severityOrder } from '@gscdump/sdk/indexing-issues'
+import { parseCoverageState } from 'gscdump'
 
 /**
  * Pure reads behind the URLs table (`TableIndexingUrls.vue`). Every value comes
@@ -119,31 +121,50 @@ export function inspectionStateLabel(raw: string | null | undefined, labels: Rec
   return words || 'Unknown'
 }
 
-// Short labels for Google's coverage state strings.
-const coverageShortLabels: Record<string, string> = {
+// Short labels by gscdump coverage tag. Typed against every mapped tag, so a
+// tag gscdump adds later fails the typecheck until it has a label.
+const coverageTagLabels: Record<Exclude<CoverageStateTag, 'unrecognized' | 'not_reported' | 'indexed'>, string> = {
+  unknown_to_google: 'Unknown to Google',
+  discovered_not_indexed: 'Discovered, not indexed',
+  crawled_not_indexed: 'Crawled, not indexed',
+  noindex: 'Noindex',
+  blocked_robots: 'Blocked (robots)',
+  soft_404: 'Soft 404',
+  not_found: '404',
+  server_error: 'Server error',
+  access_denied: 'Auth required',
+  access_forbidden: 'Forbidden',
+  blocked_4xx: 'Blocked (4xx)',
+  redirect: 'Redirect',
+  redirect_error: 'Redirect error',
+  alternate_canonical: 'Canonical alternate',
+  duplicate_no_canonical: 'Duplicate',
+  duplicate_google_canonical: 'Canonical mismatch',
+  page_removed: 'Removal tool',
+}
+
+// The `indexed` tag merges five phrasings. Two get short labels that keep the
+// sitemap distinction the tag drops; the rest keep Google's prose.
+const indexedShortLabels: Record<string, string> = {
   'Submitted and indexed': 'Indexed',
   'Indexed, not submitted in sitemap': 'Indexed (no sitemap)',
-  'Crawled - currently not indexed': 'Crawled, not indexed',
-  'Discovered - currently not indexed': 'Discovered, not indexed',
-  'URL is unknown to Google': 'Unknown to Google',
-  'Page with redirect': 'Redirect',
-  'Blocked by robots.txt': 'Blocked (robots)',
-  'Excluded by \'noindex\' tag': 'Noindex',
-  'Soft 404': 'Soft 404',
-  'Not found (404)': '404',
-  'Server error (5xx)': 'Server error',
-  'Duplicate without user-selected canonical': 'Duplicate',
-  'Duplicate, Google chose different canonical than user': 'Canonical mismatch',
-  'Alternate page with proper canonical tag': 'Canonical alternate',
-  'Blocked due to unauthorized request (401)': 'Auth required',
-  'Blocked due to access forbidden (403)': 'Forbidden',
 }
 
 /** The coverage column's short label, or `null` when Google reported none. */
 export function shortCoverage(raw: string | null | undefined): string | null {
-  if (!raw)
-    return null
-  return coverageShortLabels[raw] ?? raw
+  const state = parseCoverageState(raw)
+  switch (state._tag) {
+    case 'not_reported':
+      return null
+    case 'unrecognized':
+      return state.coverageState
+    case 'indexed': {
+      const prose = raw!.trim()
+      return indexedShortLabels[prose] ?? prose
+    }
+    default:
+      return coverageTagLabels[state._tag]
+  }
 }
 
 /**
