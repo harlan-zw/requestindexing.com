@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { UserSelect } from '#shared/types/database'
-import { $fetch } from '#imports'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 
 definePageMeta({
   layout: 'admin',
@@ -10,7 +10,7 @@ definePageMeta({
 const data = ref<UserSelect[]>([])
 
 onMounted(async () => {
-  data.value = await $fetch('/api/admin/users')
+  data.value = await getAppFetch()('/api/admin/users')
 })
 
 const columns: { key: keyof UserSelect, label: string }[] = [

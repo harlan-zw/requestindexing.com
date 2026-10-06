@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { $fetch } from '#imports'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 
 import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
 
@@ -59,7 +59,7 @@ function checkIndex() {
   error.value = null
   result.value = null
 
-  $fetch('/api/tools/check-index', {
+  getAppFetch()('/api/tools/check-index', {
     method: 'POST',
     body: { url: urlInput.value.trim() },
   })

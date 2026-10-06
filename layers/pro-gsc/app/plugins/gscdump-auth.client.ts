@@ -2,8 +2,8 @@ import type { GscdumpIntegration } from '../composables/useGscdumpIntegration'
 // Hydrates and refreshes the dedicated gscdump integration state used by the
 // v1 HTTP and realtime clients. See ADR-0002.
 
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { logWarn } from '~~/shared/logging'
-import { $fetch } from '#imports'
 import { GSCDUMP_INTEGRATION_KEY } from '../composables/useGscdumpIntegration'
 import { isProAppPath } from '../utils/_is-pro-app-path'
 
@@ -16,7 +16,7 @@ function useClientIntegration() {
     status.value = 'pending'
     error.value = null
     try {
-      data.value = await $fetch<GscdumpIntegration | null>('/api/pro/gscdump-integration')
+      data.value = await getAppFetch()<GscdumpIntegration | null>('/api/pro/gscdump-integration')
       status.value = 'success'
     }
     catch (err) {

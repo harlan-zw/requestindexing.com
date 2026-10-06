@@ -8,7 +8,7 @@
 // component is imported by path.
 import type { IndexingGrant } from '#layers/pro-indexing/shared/contracts/indexing-grant'
 
-import { $fetch } from '#imports'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { INDEXING_API_UNAVAILABLE } from '#layers/pro-indexing/shared/indexing-copy'
 import ProConnectedAccounts from '#layers/pro-saas-auth/app/components/auth/ProConnectedAccounts.vue'
 import { ACCOUNT_DELETED_PATH, accountDeletionCopy } from '#layers/pro-saas/shared/account-deletion-copy'
@@ -89,7 +89,7 @@ const isConfirmingDelete = computed({
 async function revokeIndexingAuth() {
   revokeState.value = { _tag: 'revoking' }
   try {
-    await $fetch('/api/indexing/auth', {
+    await getAppFetch()('/api/indexing/auth', {
       method: 'DELETE',
       headers: { Accept: 'text/json' },
     })
@@ -114,7 +114,7 @@ async function revokeIndexingAuth() {
 
 async function deleteAccount() {
   deleteState.value = { _tag: 'deleting' }
-  const deleted = await $fetch('/api/user/me', {
+  const deleted = await getAppFetch()('/api/user/me', {
     method: 'DELETE',
     headers: { Accept: 'text/json' },
   }).then(() => true, () => false)

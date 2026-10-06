@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { $fetch } from '#imports'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 
 definePageMeta({ layout: false })
 
@@ -50,7 +50,7 @@ async function accept() {
     return
   accepting.value = true
   try {
-    await $fetch<{ teamId: string }>('/api/pro/invitations/accept', {
+    await getAppFetch()<{ teamId: string }>('/api/pro/invitations/accept', {
       method: 'POST',
       body: { token: token.value },
     })

@@ -1,5 +1,5 @@
 import type { FetchResponse } from 'ofetch'
-import { $fetch } from '#imports'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 
 /**
  * The `/api/pro/**` fetcher, behind `useProFetch()`.
@@ -41,7 +41,7 @@ export default defineNuxtPlugin({
         (response as ProHandledResponse)._proHandled = true
     }
 
-    const proFetch = $fetch.create({
+    const proFetch = getAppFetch().create({
       onRequest({ options }) {
         if (!import.meta.server)
           return

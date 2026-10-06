@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AuthProviderId } from '#layers/pro-saas-auth/shared/types/auth'
 
-import { $fetch } from '#imports'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 
 interface IdentityRow {
   provider: AuthProviderId
@@ -73,7 +73,7 @@ async function confirmDisconnect() {
     return
   disconnecting.value = provider
   try {
-    const res = await $fetch<{ ok: boolean, forceLogout?: boolean }>('/api/auth/disconnect', {
+    const res = await getAppFetch()<{ ok: boolean, forceLogout?: boolean }>('/api/auth/disconnect', {
       method: 'POST',
       body: { provider },
     })
@@ -97,7 +97,7 @@ async function confirmDisconnect() {
 async function onPromoteGoogle() {
   promoting.value = true
   try {
-    const res = await $fetch<{ status: string }>('/api/auth/promote-integration-to-identity', {
+    const res = await getAppFetch()<{ status: string }>('/api/auth/promote-integration-to-identity', {
       method: 'POST',
       body: { provider: 'google' },
     })

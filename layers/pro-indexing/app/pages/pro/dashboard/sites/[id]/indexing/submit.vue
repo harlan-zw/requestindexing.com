@@ -9,8 +9,8 @@ import type { IndexingGrant } from '#layers/pro-indexing/shared/contracts/indexi
 import { GOOGLE_SUBMISSION_SITE_DAILY_LIMIT } from '@gscdump/contracts/v1'
 import { nanoid } from 'nanoid'
 import { h } from 'vue'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { UiStatusBadge, UiUrlLabel } from '#components'
-import { $fetch } from '#imports'
 import { useProGscdumpIndexingUrls } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
 import IndexingChannelsCard from '#layers/pro-indexing/app/internal/components/indexing/IndexingChannelsCard.vue'
@@ -118,7 +118,7 @@ async function submitForIndexing() {
   }
 
   submitting.value = true
-  const result = await $fetch<GoogleSubmissionReceiptV1>(`/api/sites/${siteId.value}/indexing/google-submissions`, {
+  const result = await getAppFetch()<GoogleSubmissionReceiptV1>(`/api/sites/${siteId.value}/indexing/google-submissions`, {
     method: 'POST',
     body: { url: target.toString(), idempotencyKey: nanoid() },
   })

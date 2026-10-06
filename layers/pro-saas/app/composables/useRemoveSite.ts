@@ -1,6 +1,6 @@
 import type { SiteFleetRow } from '~~/layers/core/app/types'
 import { SITES_DATA_KEY } from '~~/layers/core/app/composables/fetch'
-import { $fetch } from '#imports'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { siteLookupKey } from '#layers/pro-saas/shared/site-lookup'
 
 export type RemoveSiteResult
@@ -27,7 +27,7 @@ export function useRemoveSite() {
 
   async function removeSite(siteId: string): Promise<RemoveSiteResult> {
     removing.value = true
-    const result = await $fetch<{ success: boolean }>(`/api/sites/${encodeURIComponent(siteId)}`, { method: 'DELETE' })
+    const result = await getAppFetch()<{ success: boolean }>(`/api/sites/${encodeURIComponent(siteId)}`, { method: 'DELETE' })
       .then((): RemoveSiteResult => ({ _tag: 'Ok' }))
       .catch((error: unknown): RemoveSiteResult => ({ _tag: 'Err', message: removeErrorMessage(error) }))
 

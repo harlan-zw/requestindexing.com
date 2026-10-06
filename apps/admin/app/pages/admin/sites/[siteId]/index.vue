@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { JobSelect } from '#shared/types/database'
 
-import { $fetch } from '#imports'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 
 definePageMeta({
   layout: 'admin',
@@ -19,7 +19,7 @@ interface SiteAdminData {
 const data = ref<SiteAdminData | null>(null)
 
 onMounted(async () => {
-  data.value = await $fetch<SiteAdminData>(`/api/sites/${siteId}`)
+  data.value = await getAppFetch()<SiteAdminData>(`/api/sites/${siteId}`)
 })
 
 function jobStatus(job: JobSelect) {
@@ -42,7 +42,7 @@ const columns: { key: string, label: string }[] = [
 ]
 
 function retry(row: JobSelect) {
-  $fetch(`/api/jobs/${row.id}/retry`, { method: 'POST' })
+  getAppFetch()(`/api/jobs/${row.id}/retry`, { method: 'POST' })
 }
 </script>
 
