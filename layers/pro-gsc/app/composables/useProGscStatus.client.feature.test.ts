@@ -173,4 +173,18 @@ describe('useProGscStatus', () => {
     await nextTick()
     expect(lifecycle.read).toHaveBeenCalledTimes(2)
   })
+
+  it('reads a held Site as not syncing, so no progress bar says a sync is starting', async () => {
+    lifecycle.read.mockResolvedValue({ site: {
+      analytics: { status: 'queued', queryable: false, sourceMode: 'none', progress: { completed: 0, failed: 0, total: 0, percent: 0 }, syncedRange: { oldest: null, newest: null } },
+      indexing: { status: 'idle', progress: { completed: 0, failed: 0, total: 0, percent: 0 } },
+      sitemaps: { status: 'idle' },
+      latestError: null,
+      hold: 'size_limit',
+    } })
+    const status = useProGscStatus('ri_1')
+    await status.refresh()
+    expect(status.data.value?.syncStatus).toBe('pending')
+    expect(status.isProcessing.value).toBe(false)
+  })
 })

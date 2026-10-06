@@ -134,7 +134,9 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
         return null
       const lifecycleStatus = lifecycleSiteToSyncStatus(lifecycleSite)
       const syncStatus = lifecycleStatus.syncStatus
-      const activeAnalytics = syncStatus === 'pending' || syncStatus === 'syncing'
+      // A held Site reads `pending` but runs nothing until its owner acts, so the
+      // SDK's `isSyncing` decides, not the status.
+      const activeAnalytics = lifecycleStatus.isSyncing
       const activeSitemaps = ['discovering', 'syncing'].includes(lifecycleSite.sitemaps.status)
       const activeIndexing = ['discovering', 'checking', 'waiting_for_sitemaps'].includes(lifecycleSite.indexing.status)
       return {
