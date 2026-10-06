@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { GoogleSubmissionReceiptV1 } from '@gscdump/contracts/v1'
+
 import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import type { UiTableColumn } from '#layers/design-system/app/shared/table'
 import type { GscdumpIndexingUrl } from '#layers/pro-gsc/shared/gscdump-api'
@@ -8,6 +9,7 @@ import type { SiteIndexingGrant } from '#layers/pro-indexing/shared/contracts/in
 import { GOOGLE_SUBMISSION_SITE_DAILY_LIMIT } from '@gscdump/contracts/v1'
 import { nanoid } from 'nanoid'
 import { h } from 'vue'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { UiStatusBadge, UiUrlLabel } from '#components'
 import { useProGscdumpIndexingUrls } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
@@ -117,7 +119,7 @@ async function submitForIndexing() {
   }
 
   submitting.value = true
-  const result = await $fetch<GoogleSubmissionReceiptV1>(`/api/sites/${siteId.value}/indexing/google-submissions`, {
+  const result = await getAppFetch()<GoogleSubmissionReceiptV1>(`/api/sites/${siteId.value}/indexing/google-submissions`, {
     method: 'POST',
     body: { url: target.toString(), idempotencyKey: nanoid() },
   })

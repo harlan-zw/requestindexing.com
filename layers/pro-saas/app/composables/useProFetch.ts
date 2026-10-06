@@ -1,4 +1,4 @@
-import type { $Fetch } from 'nitropack'
+import type { TypedFetch } from 'nuxt/app'
 
 /**
  * Returns the pro layer's custom `$fetch` instance. Use this for every
@@ -8,6 +8,6 @@ import type { $Fetch } from 'nitropack'
  * For `useFetch` / `useLazyFetch` / `useAsyncData`, pass it as the
  * `$fetch` option: `useFetch('/api/pro/x', { $fetch: useProFetch() })`.
  */
-export function useProFetch(): $Fetch {
-  return useNuxtApp().$proFetch as $Fetch
+export function useProFetch(): TypedFetch {
+  return useNuxtApp().$proFetch
 }

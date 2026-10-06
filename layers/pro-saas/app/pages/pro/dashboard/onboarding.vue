@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { OnboardingStep } from '#layers/pro-saas/shared/onboarding'
+
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import {
   canAdvanceOnboardingStep,
   canSkipOnboardingSites,
@@ -88,7 +90,7 @@ async function finish(options: { skipSites?: boolean } = {}) {
     return
   finishing.value = true
   try {
-    await $fetch('/api/pro/onboarding/complete', {
+    await getAppFetch()('/api/pro/onboarding/complete', {
       method: 'POST',
       body: options.skipSites ? { skipSites: true } : undefined,
     })
