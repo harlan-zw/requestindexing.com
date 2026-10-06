@@ -14,13 +14,13 @@ minimumReleaseAgeExclude:
   - '@nuxt/vite-builder@4.6.0'
   - '@nuxt/nitro-server@4.6.0'
   - '@nuxt/vite-server@4.6.0'
-  - '@gscdump/sdk@5.7.1'
-  - '@gscdump/contracts@5.7.1'
+  - '@gscdump/sdk@5.8.0'
+  - '@gscdump/contracts@5.8.0'
   - nuxt-og-image@6.10.1
   - nuxt-skew-protection@1.6.1
-  - '@gscdump/engine@5.7.1'
-  - '@gscdump/lakehouse@5.7.1'
-  - gscdump@5.7.1
+  - '@gscdump/engine@5.8.0'
+  - '@gscdump/lakehouse@5.8.0'
+  - gscdump@5.8.0
   - '@vitejs/plugin-vue@6.0.9'
   - '@nuxt/cli@4.0.0'
 
@@ -106,9 +106,9 @@ allowBuilds:
 catalog:
   '@antfu/eslint-config': ^9.5.1
   '@cloudflare/workers-types': ^5.20260929.1
-  '@gscdump/contracts': 5.7.1
-  '@gscdump/engine': 5.7.1
-  '@gscdump/sdk': 5.7.1
+  '@gscdump/contracts': 5.8.0
+  '@gscdump/engine': 5.8.0
+  '@gscdump/sdk': 5.8.0
   '@harlan-zw/comark-content': 0.2.0
   '@harlan-zw/nuxt-checkin': 0.4.1
   '@harlan-zw/nuxt-cloudflare': 0.5.1
@@ -160,7 +160,7 @@ catalog:
   eslint: ^10.11.0
   globby: ^16.2.4
   googlethis: ^1.8.0
-  gscdump: 5.7.1
+  gscdump: 5.8.0
   h3: ^1.15.11
   happy-dom: ^20.0.0
   hookable: ^6.1.2
