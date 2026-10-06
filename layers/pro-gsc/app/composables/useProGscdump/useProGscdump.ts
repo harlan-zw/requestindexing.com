@@ -113,20 +113,8 @@ export function useProGscdump() {
     )
   }
 
-  function getQueryTrend<T = GscdumpV1OperationResponse<'partner.sites.query.trend.get'>['data']>(input: GscdumpV1OperationInput<'partner.sites.query.trend.get'>, silent = false) {
-    return runV1<T>(() => createV1Client().getQueryTrend(input), silent)
-  }
-
-  function getPageTrend<T = GscdumpV1OperationResponse<'partner.sites.page.trend.get'>['data']>(input: GscdumpV1OperationInput<'partner.sites.page.trend.get'>, silent = false) {
-    return runV1<T>(() => createV1Client().getPageTrend(input), silent)
-  }
-
   function listSiteIndexingTransitions<T = GscdumpV1OperationResponse<'partner.sites.indexing.transitions.list'>['data']>(input: GscdumpV1OperationInput<'partner.sites.indexing.transitions.list'>, silent = false) {
     return runV1<T>(() => createV1Client().listSiteIndexingTransitions(input), silent)
-  }
-
-  function listSitemapUrls<T = GscdumpV1OperationResponse<'partner.sites.sitemaps.urls.get'>['data']>(input: GscdumpV1OperationInput<'partner.sites.sitemaps.urls.get'>, silent = false) {
-    return runV1<T>(() => createV1Client().listSitemapUrls(input), silent)
   }
 
   function getCanonicalMismatches<T = GscdumpV1OperationResponse<'partner.sites.canonical.mismatches.get'>['data']>(input: GscdumpV1OperationInput<'partner.sites.canonical.mismatches.get'>, silent = false) {
@@ -240,10 +228,7 @@ export function useProGscdump() {
     getSiteIndexingDiagnostics,
     getSiteSitemapChanges,
     getSiteSitemaps,
-    getPageTrend,
-    getQueryTrend,
     listSiteIndexingTransitions,
-    listSitemapUrls,
     inspectSiteUrls,
     listSiteIndexingUrls,
     queryAnalyticsReport,

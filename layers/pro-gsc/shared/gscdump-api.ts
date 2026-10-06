@@ -19,7 +19,6 @@ export type {
   IndexingInspectResult as GscdumpInspectResult,
   GscdumpMeta,
   GscdumpPerSitemapHistoryEntry,
-  GscdumpQueryTrendResponse,
   GscdumpSitemap,
   GscdumpSitemapChangesResponse,
   GscdumpSitemapHistory,

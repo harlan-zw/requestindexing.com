@@ -1,5 +1,5 @@
 // Same-origin proxy for the gscdump v1 HTTP API. The browser client
-// (`useGscdump.ts`, `useProGscdump.ts`, the realtime plugin) never holds a
+// (`useProGscdump.ts`, the realtime plugin) never holds a
 // gscdump API key; it authenticates with the host session and calls this
 // route, which resolves the request against a closed operation allowlist
 // (`gscdump-v1-browser-proxy.ts`), checks the caller owns or has team access

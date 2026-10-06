@@ -1,4 +1,4 @@
-import type { AnalysisParams, AnalysisResult } from '@gscdump/engine/analysis-types'
+import type { AnalysisParams } from '@gscdump/engine/analysis-types'
 import type { ComputedRef, MaybeRefOrGetter, Ref, WatchSource } from 'vue'
 import { classifyGscError } from '@gscdump/sdk/gsc-error'
 import { computed, onScopeDispose, ref, shallowRef, toValue, watch } from 'vue'
@@ -39,8 +39,6 @@ export interface GscQueryMeta {
 export interface UseGscQueryOptions<T> {
   site: MaybeRefOrGetter<string | null | undefined>
   params: MaybeRefOrGetter<AnalysisParams>
-  /** Retained while callers shed their browser-only response adapters. */
-  reshape?: (raw: AnalysisResult) => T
   /** The consumer-owned hosted operation. No legacy default endpoint exists. */
   serverFallback: (siteId: string, params: AnalysisParams) => Promise<T>
   engine?: GscQueryEngine

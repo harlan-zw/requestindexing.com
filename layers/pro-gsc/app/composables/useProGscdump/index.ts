@@ -1,7 +1,6 @@
 // Re-export API types so existing consumers of this composable keep working.
 export * from '../../../shared/gscdump-api'
 export { type GscTrendDimension, useGscTopEntityTrend, type UseGscTopEntityTrendOptions } from './useGscTopEntityTrend'
-export { useProAnalyzeWithFallback } from './useProAnalyzeWithFallback'
 export {
   sparklineDateAxis,
   useProEntitySparklines,

@@ -6,7 +6,6 @@ import type {
 } from '../../../shared/gscdump-api'
 import type { GscdumpQueryOptions } from './_internal'
 import { useGscSiteInvalidation } from '../../internal/composables/useGscInvalidation'
-import { useTrackGscEngine } from '../useGscEngineStats'
 import { useGscQuery } from '../useGscQuery'
 import { useProGscdump } from './useProGscdump'
 
@@ -65,34 +64,11 @@ export function useProGscdumpAnalysis(
 
   const gscdump = useProGscdump()
 
-  const result = useGscQuery<GscdumpAnalysisResponse>({
+  return useGscQuery<GscdumpAnalysisResponse>({
     site: _siteId,
     params: analyzerParams,
     enabled: _enabled,
     watchSources: [useGscSiteInvalidation(_siteId)],
-    reshape: (raw) => {
-      const meta = (raw.meta ?? {}) as Record<string, unknown>
-      const preset = _params.value.preset
-      let results = (raw.results ?? []) as Array<Record<string, unknown>>
-      if (preset === 'non-brand')
-        results = results.filter(r => r.segment === 'non-brand')
-      else if (preset === 'brand-only')
-        results = results.filter(r => r.segment === 'brand')
-      else if (preset === 'movers-rising')
-        results = results.filter(r => r.direction === 'rising')
-      else if (preset === 'movers-declining')
-        results = results.filter(r => r.direction === 'declining')
-      const search = _params.value.search?.toLowerCase()
-      if (search)
-        results = results.filter(r => String(r.keyword ?? r.query ?? '').toLowerCase().includes(search))
-      return {
-        preset,
-        keywords: results as unknown as GscdumpAnalysisResponse['keywords'],
-        totalCount: results.length,
-        summary: meta.summary as GscdumpAnalysisResponse['summary'],
-        meta: (meta as unknown as GscdumpAnalysisResponse['meta']),
-      }
-    },
     serverFallback: async (id) => {
       const p = _params.value
       const query: GscdumpV1OperationInput<'partner.sites.analysis.get'>['query'] = {
@@ -123,6 +99,4 @@ export function useProGscdumpAnalysis(
       return gscdump.getSiteAnalysis({ params: { siteId: id }, query })
     },
   })
-  useTrackGscEngine(result)
-  return result
 }
