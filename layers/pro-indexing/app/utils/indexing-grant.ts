@@ -102,3 +102,26 @@ export function describeReceipt(receipt: GoogleSubmissionReceiptV1): string {
       return 'Google no longer accepts this access. Grant access again, then submit the URL.'
   }
 }
+
+/**
+ * One Submission attempt for one URL. gscdump keys a Submission by its
+ * idempotency key: a request that never answered, or a `failed` receipt, can
+ * repeat the same key, and gscdump sends that Submission again without counting
+ * another Site unit. An `accepted` or `rejected` receipt settles the key, and
+ * gscdump replays that receipt for it, so the next Submission needs a new key.
+ * A refusal happens before gscdump stores anything, so its key stays usable.
+ */
+export interface SubmissionAttempt {
+  url: string
+  idempotencyKey: string
+}
+
+/** The attempt for `url`: the open one when it is for the same URL, otherwise a new key. */
+export function submissionAttemptFor(current: SubmissionAttempt | undefined, url: string, mintKey: () => string): SubmissionAttempt {
+  return current?.url === url ? current : { url, idempotencyKey: mintKey() }
+}
+
+/** The attempt that stays open after a receipt: only a `failed` one, which gscdump retries for its key. */
+export function attemptAfterReceipt(attempt: SubmissionAttempt, receipt: GoogleSubmissionReceiptV1): SubmissionAttempt | undefined {
+  return receipt._tag === 'failed' ? attempt : undefined
+}
