@@ -1,11 +1,17 @@
 import type { Ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { computed, nextTick, ref, toValue } from 'vue'
 
 const lifecycle = vi.hoisted(() => ({ read: vi.fn(), site: null as unknown as Ref<{ publicId: string, gscdumpSiteId: string, gscdumpSiteUrl: string }> }))
+// The realtime plugin bumps a gscdump Site's token on each durable lifecycle event.
+const invalidation = vi.hoisted(() => ({ map: null as unknown as Ref<Record<string, number>> }))
 
 vi.mock('#layers/pro-saas/app/composables/useProSiteInjection', () => ({
   useProSiteInjection: () => ({ site: lifecycle.site }),
+}))
+
+vi.mock('../internal/composables/useGscInvalidation', () => ({
+  useGscSiteInvalidation: (siteId: unknown) => computed(() => invalidation.map.value[toValue(siteId as string)] ?? 0),
 }))
 
 Object.assign(globalThis, { useProFetch: () => lifecycle.read })
@@ -14,6 +20,7 @@ const { useProGscStatus } = await import('./useProGscStatus')
 
 beforeEach(() => {
   lifecycle.read.mockReset()
+  invalidation.map = ref({})
   lifecycle.site = ref({ publicId: 'ri_1', gscdumpSiteId: 's_linked', gscdumpSiteUrl: 'sc-domain:example.com' })
 })
 
@@ -150,5 +157,20 @@ describe('useProGscStatus', () => {
     expect(status.isReady.value).toBe(false)
     expect(status.isFullySynced.value).toBe(false)
     expect(status.isProcessing.value).toBe(true)
+  })
+
+  it('re-reads the status once when gscdump signals a change for the Site', async () => {
+    lifecycle.read.mockResolvedValue({ site: null })
+    const status = useProGscStatus('ri_1')
+    await status.refresh()
+    expect(lifecycle.read).toHaveBeenCalledTimes(1)
+
+    invalidation.map.value = { s_other: 1 }
+    await nextTick()
+    expect(lifecycle.read).toHaveBeenCalledTimes(1)
+
+    invalidation.map.value = { s_other: 1, s_linked: 1 }
+    await nextTick()
+    expect(lifecycle.read).toHaveBeenCalledTimes(2)
   })
 })

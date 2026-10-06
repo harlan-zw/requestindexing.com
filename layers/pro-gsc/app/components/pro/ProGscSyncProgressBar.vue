@@ -3,25 +3,9 @@ const props = defineProps<{
   siteId: string
 }>()
 
+// `useProGscStatus` polls while a sync runs and stops on purpose for a held
+// Site, so the bar reads no status on a timer of its own.
 const { data, refresh, isProcessing, isFullySynced, daysSynced } = useProGscStatus(() => props.siteId)
-
-// Auto-refresh every 10s while syncing
-const refreshInterval = ref<ReturnType<typeof setInterval>>()
-
-watch(isProcessing, (processing) => {
-  if (processing && !refreshInterval.value) {
-    refreshInterval.value = setInterval(refresh, 10000)
-  }
-  else if (!processing && refreshInterval.value) {
-    clearInterval(refreshInterval.value)
-    refreshInterval.value = undefined
-  }
-}, { immediate: true })
-
-onUnmounted(() => {
-  if (refreshInterval.value)
-    clearInterval(refreshInterval.value)
-})
 
 const progressPercent = computed(() => data.value?.syncProgress?.percent || 0)
 const progressText = computed(() => {

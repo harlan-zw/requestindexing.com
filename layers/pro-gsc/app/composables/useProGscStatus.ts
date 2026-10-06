@@ -2,6 +2,7 @@ import type { SiteHoldReason } from '@gscdump/contracts'
 import type { PartnerLifecycleSite } from '../../shared/gscdump-api'
 import { lifecycleSiteToSyncStatus } from '@gscdump/sdk/lifecycle'
 import { useProSiteInjection } from '#layers/pro-saas/app/composables/useProSiteInjection'
+import { useGscSiteInvalidation } from '../internal/composables/useGscInvalidation'
 
 interface TableProgress {
   name: string
@@ -185,7 +186,19 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
     settled.value = true
   }
 
-  // Auto-poll during active sync
+  // The realtime plugin bumps this Site's token on each durable gscdump
+  // lifecycle event: a sync batch landed, a sync failed, access was lost. Re-read
+  // then, so a transition shows without waiting for the next poll, and still
+  // shows once polling has stopped. HTTP stays authoritative: the polls below
+  // still converge after a dropped frame. Only the client ever bumps, so this
+  // never fires during SSR.
+  watch(useGscSiteInvalidation(gscdumpSiteId), () => {
+    void refresh()
+  })
+
+  // Auto-poll during active sync. gscdump defines `site.lifecycle.progress`
+  // but does not emit it, so per-job progress has no realtime signal and the
+  // fast poll stays.
   let _pollTimer: ReturnType<typeof setInterval> | null = null
 
   function startPolling(intervalMs: number = POLL_INTERVAL_SYNCING) {
