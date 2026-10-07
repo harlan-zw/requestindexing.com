@@ -16,3 +16,17 @@ routines:
     timezone: Australia/Sydney
     mode: propose
     enabled: true
+  - name: dependency-updates
+    on:
+      schedule:
+        - cron: '20 6 * * 3'
+    timezone: Australia/Melbourne
+    mode: propose
+    enabled: true
+  - name: ci-review
+    on:
+      schedule:
+        - cron: '20 6 * * 5'
+    timezone: Australia/Melbourne
+    mode: propose
+    enabled: true
