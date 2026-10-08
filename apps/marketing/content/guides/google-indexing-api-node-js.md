@@ -6,7 +6,7 @@ navigation:
   icon: i-simple-icons-nodedotjs
 icon: i-simple-icons-nodedotjs
 publishedAt: "2026-03-04"
-updatedAt: "2026-10-01"
+updatedAt: "2026-10-08"
 readTime: "5 min"
 keywords:
   - google indexing api node js
@@ -70,6 +70,8 @@ The library reads the credential file through `GOOGLE_APPLICATION_CREDENTIALS`. 
 ## What the output means
 
 A successful response produces `notification-accepted`. That label reports receipt only. It says nothing about a crawl or an indexed page, so if you store the result, keep the receipt apart from indexing status.
+
+[Google Search timelines](https://nuxtseo.com/learn-seo/google-search-timelines) explains why an accepted notification does not set an indexing deadline.
 
 The failure path prints the HTTP status and, when Google returns them, its structured reasons. It also sets a nonzero exit code so a calling job can detect the failure. This small example disables automatic retries: find the cause first, then decide what to retry.
 

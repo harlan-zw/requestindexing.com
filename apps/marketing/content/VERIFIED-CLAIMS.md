@@ -131,3 +131,13 @@ Capture geometry, redaction and publication status belong in SCREENSHOTS.md. Pri
 - GSC-UI-02, Observed on 15 September 2026: URL Inspection showed URL is on Google and a Request indexing control for an existing documentation page. No indexing request or live test was submitted. The capture does not establish indexing speed or an API notification outcome.
 
 - CLOUD-UI-03, Observed on 15 September 2026: Keys → Add key → Create new key opens a dialog with JSON selected and Create. A user-authorized temporary service account enabled this capture. The dialog was cancelled, no key was created, and the account was deleted.
+
+## Reported timing context, checked 8 October 2026
+
+| ID | Evidence kind | Claim and limits | Source |
+| --- | --- | --- | --- |
+| TIMING-01 | Attributed conference reporting | New-URL discovery about 20 hours typical; slow cases weeks or never. No individual-page deadline. | [Schwartz report](https://www.seroundtable.com/google-crawling-indexing-serving-data-42225.html) |
+| TIMING-02 | Attributed conference reporting | Sitemap processing about 24 hours typical; slow cases up to 14 days or never. Processing does not prove indexing. | [Schwartz report](https://www.seroundtable.com/google-crawling-indexing-serving-data-42225.html) |
+| TIMING-03 | Attributed conference reporting | Indexing processes about 1.5 hours typical; slow cases months or never. Earlier stages can delay progress. No publish-to-index or notification-to-index estimate. | [Schwartz report](https://www.seroundtable.com/google-crawling-indexing-serving-data-42225.html) |
+
+Gary qualified the presentation as an audience exercise using internal observations. The inspected reporting gives no sample size, measurement period, or statistical definition of typical. These rows do not establish a guarantee, maximum wait, API acceleration, or Request Indexing performance.

@@ -6,7 +6,7 @@ navigation:
   icon: i-heroicons-book-open
 icon: i-heroicons-book-open
 publishedAt: "2026-03-04"
-updatedAt: "2026-10-01"
+updatedAt: "2026-10-08"
 readTime: "4 min"
 keywords:
   - google indexing api
@@ -36,6 +36,10 @@ The body alone is only part of the call. The [Indexing API setup tutorial](/goog
 A successful response means Google may attempt to recrawl the URL. It does not prove that a crawl happened or that Google indexed the page. The metadata endpoint reports notification history, so a recent timestamp there cannot establish indexing either. See [Google's request and response meanings](https://developers.google.com/search/apis/indexing-api/v3/using-api).
 
 To see whether Google returns the page in search, run a `site:` search for it with one of the [free indexing tools](/tools). They check one URL, a list of URLs, or a whole domain.
+
+An accepted notification does not set an indexing deadline. [October 2026 conference reporting](https://www.seroundtable.com/google-crawling-indexing-serving-data-42225.html) lists roughly 1.5 hours as typical for indexing processes, with slow cases reaching months or never.
+
+Earlier discovery and crawling stages can delay that work. The figure does not measure notification-to-indexing time or API speed. See [Google Search timelines](https://nuxtseo.com/learn-seo/google-search-timelines).
 
 ## Choose the correct Google interface
 

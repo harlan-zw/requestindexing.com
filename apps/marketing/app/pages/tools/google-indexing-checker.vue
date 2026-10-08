@@ -14,10 +14,11 @@ const faqs = [
   },
   {
     question: 'How long does Google take to index a new page?',
-    answer: 'Google says crawling can take anywhere from a few days to a few weeks after you request it. IndexCheckr reports that pages its users track took an average of 27.4 days to be indexed, counted from when tracking started. The Google Indexing API only covers job posting and livestream pages, and a successful notification means Google may recrawl the URL soon. It sets no timeline.',
+    answer: 'Google must discover and crawl a URL before indexing it. October 2026 reporting puts typical new-URL discovery around 20 hours, with slow cases reaching weeks or never. These internal observations are context, not a deadline for your page or a measure of API speed. A notification does not prove crawling or indexing.',
     sources: [
+      { label: 'Reported Gary Illyes timing observations', to: 'https://www.seroundtable.com/google-crawling-indexing-serving-data-42225.html' },
       { label: 'Google Search Central', to: 'https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl' },
-      { label: 'IndexCheckr indexing study', to: 'https://indexcheckr.com/resources/google-indexing' },
+      { label: 'Understand Google Search timelines', to: 'https://nuxtseo.com/learn-seo/google-search-timelines' },
     ],
   },
   {

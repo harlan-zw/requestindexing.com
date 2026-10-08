@@ -6,7 +6,7 @@ navigation:
   icon: i-heroicons-exclamation-triangle
 icon: i-heroicons-exclamation-triangle
 publishedAt: "2026-03-04"
-updatedAt: "2026-10-01"
+updatedAt: "2026-10-08"
 readTime: "3 min"
 keywords:
   - indexing api for blog posts
@@ -42,6 +42,10 @@ This follows [Google's recrawl guidance](https://developers.google.com/search/do
 If you have many posts, use a sitemap instead of repeating this process for each one. Your publishing platform may already manage a sitemap; check its documentation before adding another integration.
 
 To see which posts Google returns in search, give that sitemap to the [bulk indexing checker](/tools/bulk-indexing-checker). It runs a `site:` search for each of the first 10 URLs. Past 10 posts, the [site indexing report](/tools/site-indexing-report) estimates how many results a `site:` search returns for your whole domain. Neither tool reads Search Console, so use URL Inspection for the status Google stored.
+
+Google must discover and crawl a URL before indexing it. [October 2026 conference reporting](https://www.seroundtable.com/google-crawling-indexing-serving-data-42225.html) puts typical new-URL discovery around 20 hours, with slow cases reaching weeks or never. Sitemap processing was around 24 hours, with slow cases reaching 14 days or never. Processing a sitemap does not prove its URLs were indexed.
+
+These reported internal observations are context, not deadlines. Earlier stages can delay later ones. See [Google Search timelines](https://nuxtseo.com/learn-seo/google-search-timelines) before comparing elapsed time with indexing evidence.
 
 ## Replace old sitemap ping scripts
 

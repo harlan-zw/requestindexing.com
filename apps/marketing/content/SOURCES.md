@@ -18,6 +18,15 @@ Open each full supporting page. Discovery patterns are not citations.
 | Third-party indexing studies | 50 | https://indexcheckr.com/resources/google-indexing ; https://indexinginsight.com/blog/the-130-day-indexing-rule | Vendor research on the pages its own users track. Name the vendor, state the sample, and quote the exact figure. Never present a figure as Google behaviour or as a forecast for one page. |
 | Community discussions and prior project research | 30 | Original thread URL or `.claude/seo/` file | Leads and attributed individual experiences only. No universal efficacy, penalty prevalence or search-demand inference. |
 
+## Reported October 2026 timing observations
+
+- https://www.seroundtable.com/google-crawling-indexing-serving-data-42225.html, Barry Schwartz, 5 October 2026. The report attributes internal observations to Gary Illyes.
+- https://weareroast.com/news/google-search-central-live-deep-dive-barcelona-day-3-recap/, John Campbell’s attendee account.
+- Gary described the slides as an audience-relatability exercise, according to Schwartz.
+- No inspected report supplies a sample size, measurement period, or definition of “typical”.
+- Use reported observations for context. They establish no deadline, maximum wait, API speedup, or product performance claim.
+- Discovery, crawling, rendering, indexing, and serving are separate processes. Delays can accumulate.
+
 ## Definitive Google pages
 
 - https://developers.google.com/search/apis/indexing-api/v3/quickstart

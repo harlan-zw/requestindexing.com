@@ -6,7 +6,7 @@ navigation:
   icon: i-heroicons-academic-cap
 icon: i-heroicons-academic-cap
 publishedAt: "2026-03-04"
-updatedAt: "2026-10-01"
+updatedAt: "2026-10-08"
 readTime: "5 min"
 keywords:
   - google indexing api tutorial
@@ -116,6 +116,8 @@ The example uses [GoogleAuth's credential discovery](https://github.com/googleap
 ## Read the response correctly
 
 `notification-accepted` is the script's label for a successful API response. It does not mean the page was indexed. Google may attempt a recrawl after receiving `URL_UPDATED`; [its usage documentation](https://developers.google.com/search/apis/indexing-api/v3/using-api) defines that response. To check the listing later, open it in Search Console's URL Inspection tool, or run a quick `site:` search for it with the [Google index checker](/tools/google-indexing-checker).
+
+[Google Search timelines](https://nuxtseo.com/learn-seo/google-search-timelines) explains why an accepted notification does not set an indexing deadline.
 
 On failure, the script prints the status, reasons, and message. Read them together, because an ownership problem and an exhausted quota need different fixes. The script disables automatic retries, so it will not keep submitting while you diagnose the problem.
 

@@ -68,6 +68,7 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | Free and open source, MIT | `LICENSE`, and the repository is public |
 | We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify | the connect flow asks for `webmasters` (read and write) and `indexing`. A sitemap submission comes from Submit sitemap on the Sitemaps tab, or from gscdump's daily sync when it finds a live sitemap. A property is added only when the reader selects Verify ownership in Add and verify, after a separate grant of `siteverification` |
 | The Free allowance numbers | gscdump returns them from `partner.users.entitlements.get`; copy reads them at runtime and never hardcodes one |
+| Reported Google timing observations provide context, never a countdown or product speed claim | TIMING-01 to TIMING-03 in `apps/marketing/content/VERIFIED-CLAIMS.md`. Attribute the report beside numbers. Keep stage dependencies and slow cases visible |
 | A free tool verdict is an estimate from a Google `site:` search | PRODUCT-06 in `apps/marketing/content/VERIFIED-CLAIMS.md`. The tools read no Search Console data and no URL Inspection result |
 | Deleting an account removes its Teams, Sites, and data here, and gscdump.com deletes its record and API keys | `deleteUserData` purges the rows; its `pro:user:deleting` listener calls gscdump's `partner.users.delete`, which queues the gscdump user cleanup |
 
