@@ -29,7 +29,7 @@ const faqs = [
   },
   {
     question: 'How long does it take Google to index a new site?',
-    answer: 'Google must discover and crawl a URL before indexing it. October 2026 reporting puts typical new-URL discovery around 20 hours, with slow cases reaching weeks or never. These internal observations are context, not a deadline for your page or a measure of API speed. A notification does not prove crawling or indexing.',
+    answer: 'Google must discover and crawl a URL before indexing it. October 2026 reporting puts typical new-URL discovery around 20 hours, with slow cases reaching weeks or never. These internal observations are context, not a deadline for your page or a measure of API speed. These per-URL observations give no site-wide completion estimate. A notification does not prove crawling or indexing.',
     sources: [
       { label: 'Reported Gary Illyes timing observations', to: 'https://www.seroundtable.com/google-crawling-indexing-serving-data-42225.html' },
       { label: 'Google Search Central', to: 'https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl' },
