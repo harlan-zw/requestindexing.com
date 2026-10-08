@@ -10,6 +10,11 @@ useSeoMeta({
 
 const faqItems = [
   {
+    label: 'How long will Google take?',
+    icon: 'i-heroicons-clock',
+    content: 'Google decides when to crawl and whether to index a page. Its stages depend on earlier work. An accepted notification starts no guaranteed countdown. Check dated URL Inspection evidence to see what Google reports.',
+  },
+  {
     label: 'Does it actually work?',
     icon: 'i-heroicons-bolt',
     content: 'It sends the notification and shows you what Google reports afterwards. A successful Indexing API notification means Google may recrawl the URL soon. Google still decides whether and when to crawl and index the page.',
@@ -27,11 +32,11 @@ const faqItems = [
 ]
 
 const mockUrls = [
-  { url: '/blog/getting-started', status: 'Submitted and indexed', verdict: 'pass', ago: '2 min ago' },
+  { url: '/jobs/frontend-developer', status: 'Indexed, URL Inspection', verdict: 'pass', ago: '2 min ago' },
   { url: '/docs/configuration', status: 'Discovered - currently not indexed', verdict: 'neutral', ago: '5 min ago' },
-  { url: '/guides/seo-best-practices', status: 'Submitted and indexed', verdict: 'pass', ago: '12 min ago' },
+  { url: '/guides/seo-best-practices', status: 'Indexed, URL Inspection', verdict: 'pass', ago: '12 min ago' },
   { url: '/blog/hello-world', status: 'Crawled - currently not indexed', verdict: 'neutral', ago: '1 hr ago' },
-  { url: '/changelog/v2', status: 'Submitted and indexed', verdict: 'pass', ago: '3 hrs ago' },
+  { url: '/changelog/v2', status: 'Indexed, URL Inspection', verdict: 'pass', ago: '3 hrs ago' },
 ]
 
 const mockSites = [
@@ -413,7 +418,7 @@ const marketingTools = [
                   <div class="divide-y divide-default">
                     <div class="px-5 py-3.5 flex items-center gap-3 text-sm">
                       <UIcon name="i-heroicons-arrow-up-tray" class="size-4 text-muted shrink-0" />
-                      <span class="flex-1 text-toned font-mono text-xs truncate">/blog/new-post</span>
+                      <span class="flex-1 text-toned font-mono text-xs truncate">/jobs/frontend-developer</span>
                       <UBadge color="neutral" variant="subtle" size="xs">
                         Submitted
                       </UBadge>
@@ -421,7 +426,7 @@ const marketingTools = [
                     </div>
                     <div class="px-5 py-3.5 flex items-center gap-3 text-sm">
                       <UIcon name="i-heroicons-magnifying-glass" class="size-4 text-muted shrink-0" />
-                      <span class="flex-1 text-toned font-mono text-xs truncate">/blog/new-post</span>
+                      <span class="flex-1 text-toned font-mono text-xs truncate">/jobs/frontend-developer</span>
                       <UBadge color="neutral" variant="subtle" size="xs">
                         Crawled
                       </UBadge>
@@ -429,7 +434,7 @@ const marketingTools = [
                     </div>
                     <div class="px-5 py-3.5 flex items-center gap-3 text-sm bg-primary/5">
                       <UIcon name="i-heroicons-check-circle" class="size-4 text-primary shrink-0" />
-                      <span class="flex-1 text-default font-mono text-xs truncate font-medium">/blog/new-post</span>
+                      <span class="flex-1 text-default font-mono text-xs truncate font-medium">/jobs/frontend-developer</span>
                       <UBadge color="primary" variant="subtle" size="xs">
                         Indexed
                       </UBadge>
@@ -437,7 +442,7 @@ const marketingTools = [
                     </div>
                   </div>
                   <div class="px-5 py-3 bg-muted/60 border-t border-default flex items-center justify-between">
-                    <span class="text-xs text-muted">Index status from URL Inspection</span>
+                    <span class="text-xs text-muted">Illustrative activity. Notification receipt and index status are separate.</span>
                     <UIcon name="i-heroicons-bolt-solid" class="size-3.5 text-primary" />
                   </div>
                 </div>
@@ -711,6 +716,12 @@ const marketingTools = [
         :ui="{ container: 'max-w-3xl', title: 'font-title' }"
       >
         <UAccordion :items="faqItems" multiple />
+        <p class="text-sm text-muted">
+          <NuxtLink to="https://nuxtseo.com/learn-seo/google-search-timelines" class="underline underline-offset-4">
+            Understand Google Search timelines
+          </NuxtLink>
+          and the limits of the reported observations.
+        </p>
       </UPageSection>
 
       <!-- CTA -->

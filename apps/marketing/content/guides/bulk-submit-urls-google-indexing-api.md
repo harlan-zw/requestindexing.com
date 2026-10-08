@@ -110,6 +110,8 @@ Content-Type: application/json
 
 For a synthetic example, job 42 receives `200` while job 43 receives a quota error. Record the first as a notification receipt and the second as a failed request. Do not mark both successful because the outer batch request completed.
 
+Keep the notification time separate from Google’s crawl and index evidence. [Google Search timelines](https://nuxtseo.com/learn-seo/google-search-timelines) explains why receipt starts no guaranteed countdown.
+
 Do not depend on input order to predict which requests consume the remaining quota. Inspect each response and retain its URL or correlation identifier. The sequential example's intercepted test includes one success and one quota failure; it checks those results stay distinct.
 
 Before scaling up, decide how all workers sharing a Google Cloud project will account for requests. A counter inside one script misses other workers and resets when the process restarts. The [quota guide](/google-indexing-api-quota) separates project limits, reset times, and tool-specific limits.

@@ -17,6 +17,9 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 | Google Search Console property | Google property model | Google scope for ownership and inspection | property |
 | Indexing API notification | Google urlNotifications resource | Reports a changed/deleted eligible URL | notification |
 | URL Inspection | Google Search Console tool/API | Reports index information; manual tool also offers a request | URL Inspection |
+| discovery | Google Search process | Finds a URL before fetching it | discovery |
+| rendering | Google Search process | Executes page resources during processing | rendering |
+| serving | Google Search process | Returns search results for a query | serving |
 | crawling | Google Search process | Fetch precedes possible indexing | crawling |
 | indexing | Google Search process | Inclusion decision after processing | indexing |
 | signup | users table, /pro/onboarding | Account creation for a person | signup |
@@ -68,10 +71,10 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 **Never:** Indexing API as a synonym.
 **Casing:** URL Inspection.
 
-### Crawling and indexing
-**Is:** separate Google processes. Crawling fetches content; indexing determines inclusion.
+### Discovery, crawling, rendering, indexing, and serving
+**Is:** separate Google processes. Discovery finds a URL. Crawling fetches content. Rendering executes page resources. Indexing processes content and determines inclusion. Serving returns search results for a query.
 **Use for:** the process supported by the evidence.
-**Never:** interchangeable results of HTTP200.
+**Never:** interchangeable results of HTTP200. Notification receipt proves no crawl, index inclusion, or search appearance. URL Inspection reports Google’s stored evidence; its check time is not the time a processing stage completed.
 **Casing:** lowercase in ordinary prose.
 
 ### Signup and onboarding

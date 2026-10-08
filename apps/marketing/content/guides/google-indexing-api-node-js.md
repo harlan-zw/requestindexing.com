@@ -71,6 +71,8 @@ The library reads the credential file through `GOOGLE_APPLICATION_CREDENTIALS`. 
 
 A successful response produces `notification-accepted`. That label reports receipt only. It says nothing about a crawl or an indexed page, so if you store the result, keep the receipt apart from indexing status.
 
+Keep the notification time separate from Google’s crawl and index evidence. [Google Search timelines](https://nuxtseo.com/learn-seo/google-search-timelines) explains why receipt starts no guaranteed countdown.
+
 The failure path prints the HTTP status and, when Google returns them, its structured reasons. It also sets a nonzero exit code so a calling job can detect the failure. This small example disables automatic retries: find the cause first, then decide what to retry.
 
 A `429` does not identify the exhausted limit by itself, and a `403` is not always an ownership error. Compare the reason and message with [Google's error reference](https://developers.google.com/search/apis/indexing-api/v3/core-errors) and the [quota guide](/google-indexing-api-quota).

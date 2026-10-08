@@ -37,6 +37,8 @@ A successful response means Google may attempt to recrawl the URL. It does not p
 
 To see whether Google returns the page in search, run a `site:` search for it with one of the [free indexing tools](/tools). They check one URL, a list of URLs, or a whole domain.
 
+An accepted notification starts no guaranteed indexing countdown. [October 2026 conference reporting](https://www.seroundtable.com/google-crawling-indexing-serving-data-42225.html) lists roughly 1.5 hours as typical for indexing processes, with slow cases reaching months or never. Earlier discovery and crawling stages can delay that work. The figure does not measure notification-to-indexing time or API speed. See [Google Search timelines](https://nuxtseo.com/learn-seo/google-search-timelines).
+
 ## Choose the correct Google interface
 
 | Interface | What you use it for | What the result tells you |
