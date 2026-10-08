@@ -6,7 +6,7 @@ navigation:
   icon: i-heroicons-exclamation-triangle
 icon: i-heroicons-exclamation-triangle
 publishedAt: "2026-03-04"
-updatedAt: "2026-10-01"
+updatedAt: "2026-10-08"
 readTime: "3 min"
 keywords:
   - indexing api for blog posts

@@ -6,7 +6,7 @@ navigation:
   icon: i-heroicons-arrow-up-tray
 icon: i-heroicons-arrow-up-tray
 publishedAt: "2026-03-04"
-updatedAt: "2026-10-01"
+updatedAt: "2026-10-08"
 readTime: "6 min"
 keywords:
   - bulk submit urls google indexing api
@@ -110,7 +110,7 @@ Content-Type: application/json
 
 For a synthetic example, job 42 receives `200` while job 43 receives a quota error. Record the first as a notification receipt and the second as a failed request. Do not mark both successful because the outer batch request completed.
 
-Keep the notification time separate from Google’s crawl and index evidence. [Google Search timelines](https://nuxtseo.com/learn-seo/google-search-timelines) explains why receipt starts no guaranteed countdown.
+[Google Search timelines](https://nuxtseo.com/learn-seo/google-search-timelines) explains why an accepted notification does not set an indexing deadline.
 
 Do not depend on input order to predict which requests consume the remaining quota. Inspect each response and retain its URL or correlation identifier. The sequential example's intercepted test includes one success and one quota failure; it checks those results stay distinct.
 

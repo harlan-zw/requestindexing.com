@@ -12,7 +12,7 @@ const faqItems = [
   {
     label: 'How long will Google take?',
     icon: 'i-heroicons-clock',
-    content: 'Google decides when to crawl and whether to index a page. Its stages depend on earlier work. An accepted notification starts no guaranteed countdown. Check dated URL Inspection evidence to see what Google reports.',
+    content: 'Google decides when to crawl and whether to index a page. Its stages depend on earlier work. An accepted notification does not set an indexing deadline. Check dated URL Inspection evidence to see what Google reports.',
   },
   {
     label: 'Does it actually work?',
