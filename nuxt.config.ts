@@ -6,7 +6,7 @@ import { externalCheckin } from './shared/checkin-external'
 import { CLOUDFLARE_REQUIRED_SECRETS } from './shared/cloudflare'
 import { disableDeferredPrefetch } from './shared/deferred-prefetch'
 import { redirectRouteRules, runtimeOnlyRouteRules } from './shared/routes'
-import { SENTRY_DSN } from './shared/sentry'
+import { reportPolicy, SENTRY_DSN } from './shared/sentry'
 
 // read all the folders at the server/app path
 const recursiveServerAppFolders = globbySync('**/*', {
@@ -61,6 +61,7 @@ export default defineNuxtConfig({
     enabled: Boolean(process.env.SENTRY_RELEASE || process.env.GITHUB_SHA),
     dsn: SENTRY_DSN,
     project: 'request-indexing',
+    policy: reportPolicy,
   },
 
   drizzleLayers: {
