@@ -30,3 +30,10 @@ routines:
     timezone: Australia/Melbourne
     mode: propose
     enabled: true
+  - name: d1-query-review
+    on:
+      schedule:
+        - cron: '10 10 * * 1'
+    timezone: Australia/Melbourne
+    mode: propose
+    enabled: true
