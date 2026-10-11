@@ -1,3 +1,5 @@
+import { DATAFORSEO_UNAVAILABLE_MESSAGE } from './dataforseo'
+
 export const SENTRY_DSN = 'https://285c1e24a3cb947359ebc30e95ad7746@o4510507748163584.ingest.us.sentry.io/4511887363080192'
 
 /**
@@ -6,10 +8,16 @@ export const SENTRY_DSN = 'https://285c1e24a3cb947359ebc30e95ad7746@o45105077481
  * missing guide and from the `/_og` middleware for a stale social card, so it
  * never reports. The client list keeps the module defaults: 401 and 403 are an
  * expired session racing the login redirect.
+ *
+ * The provider-outage 503 is also an answer given on purpose: `siteSearch`
+ * throws it with `DATAFORSEO_UNAVAILABLE_MESSAGE` once DataForSEO outlives its
+ * retries. The provider failure rides as the cause, and the spend ledger and
+ * `logWarn` keep it observable, so the message never reports.
  */
 export const reportPolicy = {
   dropServerStatus: [404],
   dropClientStatus: [401, 403, 404],
+  ignoreErrors: [DATAFORSEO_UNAVAILABLE_MESSAGE],
 }
 
 /**
