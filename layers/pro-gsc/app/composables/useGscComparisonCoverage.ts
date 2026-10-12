@@ -8,6 +8,8 @@ import { useProGscdump } from './useProGscdump'
 
 interface CoverageRange { start: string, end: string }
 
+export type GscComparisonCoverageState = 'off' | 'checking' | 'allowed' | 'refused' | 'error'
+
 /** Only recorded continuous windows authorize a comparison, including zero-row days. */
 export function useGscComparisonCoverage(
   siteIds: MaybeRefOrGetter<readonly string[]>,
@@ -53,7 +55,16 @@ export function useGscComparisonCoverage(
       })))
     }
     return { key: capturedKey, complete: complete.every(Boolean) }
-  }, { server: false })
-  const allowed = computed(() => result.status.value === 'success' && result.data.value?.key === key.value && result.data.value.complete)
-  return { allowed, status: result.status, error: result.error, refresh: result.refresh }
+  }, { server: false, dedupe: 'defer' })
+  const state = computed<GscComparisonCoverageState>(() => {
+    if (!request.value.requested || !request.value.ids.length)
+      return 'off'
+    if (result.status.value === 'error')
+      return 'error'
+    if (result.status.value !== 'success' || result.data.value?.key !== key.value)
+      return 'checking'
+    return result.data.value.complete ? 'allowed' : 'refused'
+  })
+  const allowed = computed(() => state.value === 'allowed')
+  return { state, allowed, status: result.status, error: result.error, refresh: result.refresh }
 }

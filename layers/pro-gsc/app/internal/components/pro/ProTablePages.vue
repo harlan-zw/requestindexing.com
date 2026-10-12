@@ -246,6 +246,7 @@ const columns = computed<UiTableColumn<PageTableRow>[]>(() => {
     :is-loading-more="isLoadingMore"
     :loaded-count="loadedCount"
     :has-prev-data="data?.hasPrevData"
+    :comparison-refused="data?.comparisonRefused"
     :warnings="data?.warnings"
     @update:q="q = $event"
     @update:page="page = $event"

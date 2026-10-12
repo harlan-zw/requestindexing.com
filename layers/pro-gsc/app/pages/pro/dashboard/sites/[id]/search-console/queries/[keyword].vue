@@ -264,6 +264,7 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
         :prev-dates="null"
         :period="keywordDates.period"
         :prev-period="keywordDates.prevPeriod"
+        :comparison-refused="keywordDates.comparisonRefused"
         :columns="columns"
         @zoom="onZoom"
       />

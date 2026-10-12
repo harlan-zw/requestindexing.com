@@ -19,6 +19,7 @@ const { loading: loadingProp, ...props } = defineProps<{
    */
   period: PeriodTotals | null
   prevPeriod: PeriodTotals | null
+  comparisonRefused?: boolean
   /** Raw read failure, if any. The hero shows no figures while it is set. */
   error?: unknown
   /** Current period filter for tooltip labels */
@@ -604,7 +605,7 @@ const zoomRangeLabel = computed(() => {
       </template>
     </div>
 
-    <p v-if="period && !prevPeriod && compareMode !== 'none' && !loadingProp" class="px-4 pb-3 text-xs text-muted">
+    <p v-if="comparisonRefused && period && !prevPeriod && compareMode !== 'none' && !loadingProp" class="px-4 pb-3 text-xs text-muted">
       Comparison unavailable. Both periods need complete recorded Search Console data.
     </p>
 

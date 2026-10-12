@@ -63,8 +63,13 @@ it('says nothing about a previous period when the table has no comparison', () =
 })
 
 it('requires recorded coverage when the table cannot compare', () => {
-  const host = mount({ hasPrevData: false })
+  const host = mount({ hasPrevData: false, comparisonRefused: true })
   expect(host.textContent).toContain('Comparison unavailable.')
+})
+
+it('shows no missing-coverage claim while the check is pending or failed', () => {
+  const host = mount({ hasPrevData: false, comparisonRefused: false })
+  expect(host.textContent).not.toContain('Comparison unavailable.')
 })
 
 it('hides the coverage notice when the selected comparison is off', () => {

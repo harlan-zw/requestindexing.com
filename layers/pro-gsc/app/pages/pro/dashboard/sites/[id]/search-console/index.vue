@@ -481,6 +481,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
             :prev-dates="dates?.prevDates || null"
             :period="dates?.period ?? null"
             :prev-period="dates?.prevPeriod || null"
+            :comparison-refused="dates?.comparisonRefused"
             :error="datesError"
             :date-range="period"
             :columns="lead.heroColumns"

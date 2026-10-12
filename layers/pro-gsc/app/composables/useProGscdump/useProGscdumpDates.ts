@@ -79,6 +79,7 @@ export function useProGscdumpDates(
       prevPeriod: hasPrevData ? result.previousTotals ?? { clicks: 0, impressions: 0, ctr: 0, position: 0 } : null,
       meta: result.meta,
       hasPrevData,
+      comparisonRefused: coverage.state.value === 'refused',
     }
   })
 
