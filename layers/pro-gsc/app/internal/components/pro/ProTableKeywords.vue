@@ -277,7 +277,7 @@ const columns = computed<UiTableColumn<KeywordTableRow>[]>(() => {
     search-placeholder="Search queries..."
     empty-icon="i-lucide-search-code"
     empty-title="No queries found"
-    empty-default-description="Query data will appear once Google Search Console syncs"
+    empty-default-description="No query data was returned for this period. Try a wider date range."
     item-label="queries"
     table-label="Search queries"
     :sort="sort"

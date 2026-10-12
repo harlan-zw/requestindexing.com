@@ -23,7 +23,7 @@ const {
   searchPlaceholder = 'Search...',
   emptyIcon = 'search',
   emptyTitle = 'No results found',
-  emptyDefaultDescription = 'Data will appear once Google Search Console syncs',
+  emptyDefaultDescription = 'No data was returned for this period. Try a wider date range.',
   itemLabel = 'items',
   searchable = true,
   pagination = true,

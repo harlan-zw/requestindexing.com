@@ -144,6 +144,26 @@ Engine contracts own IndexNow and Submission Receipt terms.
 IndexNow reason codes use the corrective-action strings in the IndexNow page.
 Each string names the failed step and the next action.
 
+## Search Console status and reports
+
+| Asset | String | Where it goes |
+| --- | --- | --- |
+| Search Console status read failure | Search Console status unavailable | Shared Search Console status alert |
+| Search Console status read failure help | Could not read the Search Console status. Retry this check. | Shared Search Console status alert |
+| Search Console status retry | Retry status check | Failed status read action |
+| Search Console collection failure | Search Console collection failed | Failed collection alert |
+| Search Console collection failure help | Search Console data collection failed. Refresh status to check for changes. | Failed collection alert |
+| Search Console status refresh | Refresh status | Failed collection alert action |
+| Search Console pages empty period | No page data was returned for this period. Try a wider date range. | Pages without rows or active filters |
+| Search Console queries empty period | No query data was returned for this period. Try a wider date range. | Queries without rows or active filters |
+| Search Console countries empty period | No country data was returned for this period. Try a wider date range. | Countries without rows or active filters |
+| Search Console empty period | No data was returned for this period. Try a wider date range. | Shared table fallback |
+| Search Console progress starting | Preparing Search Console data… | Status with no progress |
+| Search Console progress | Preparing Search Console data: {percent}% | Collection progress |
+| Search Console progress refresh | Refresh Search Console status | Accessible refresh button |
+
+The lifecycle adapter aliases completed jobs as `daysSynced`. Do not label that value as recorded days.
+
 ## Free tool assets
 
 These assets apply to the result of each free `/tools` page.

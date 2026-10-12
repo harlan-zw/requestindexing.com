@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { computed, createApp, nextTick, onUnmounted, ref } from 'vue'
+import { computed, createApp, defineComponent, h, nextTick, onUnmounted, ref } from 'vue'
 
 // The bar renders a Site's sync progress. The status read belongs to
 // `useProGscStatus`, which already polls while a sync runs and stops on
@@ -13,7 +13,7 @@ Object.assign(globalThis, {
     refresh: status.refresh,
     isProcessing: computed(() => true),
     isFullySynced: computed(() => false),
-    daysSynced: computed(() => 0),
+    daysSynced: computed(() => 3),
   }),
 })
 
@@ -38,4 +38,12 @@ it('reads no status on a timer of its own while a sync runs', async () => {
   vi.advanceTimersByTime(60_000)
 
   expect(status.refresh).not.toHaveBeenCalled()
+})
+
+it('shows collection progress without presenting placeholder job counts', () => {
+  const host = document.createElement('div')
+  app = createApp(ProGscSyncProgressBar, { siteId: 'ri_1' })
+  app.component('ProAlert', defineComponent({ props: ['description'], setup: props => () => h('p', props.description) }))
+  app.mount(host)
+  expect(host.textContent).toBe('Preparing Search Console data: 10%')
 })

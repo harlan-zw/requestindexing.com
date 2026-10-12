@@ -181,7 +181,7 @@ const columns = computed<UiTableColumn<CountryTableRow>[]>(() => {
     search-placeholder="Search countries..."
     empty-icon="globe"
     empty-title="No countries found"
-    empty-default-description="Geographic data will appear once Google Search Console syncs"
+    empty-default-description="No country data was returned for this period. Try a wider date range."
     item-label="countries"
     table-label="Search traffic by country"
     :sort="sort"

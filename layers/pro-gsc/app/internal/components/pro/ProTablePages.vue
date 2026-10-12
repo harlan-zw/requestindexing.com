@@ -225,7 +225,7 @@ const columns = computed<UiTableColumn<PageTableRow>[]>(() => {
     search-placeholder="Search pages..."
     empty-icon="file-search"
     empty-title="No pages found"
-    empty-default-description="Page data will appear once Google Search Console syncs"
+    empty-default-description="No page data was returned for this period. Try a wider date range."
     item-label="pages"
     table-label="Search performance by page"
     :sort="sort"
