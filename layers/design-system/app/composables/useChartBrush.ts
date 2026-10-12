@@ -127,6 +127,8 @@ export function useChartBrush(opts: UseChartBrushOptions): UseChartBrush {
     refreshChartRect()
     dragStartX = e.clientX - chartRectLeft
     dragStartIdx = pixelToIdx(dragStartX)
+    const startY = e.clientY
+    const pointerId = e.pointerId
 
     // rAF-coalesce moves: a fast drag fires pointermove many times per frame,
     // but we only need one reactive `dragRange` write (and one overlay render)
@@ -134,7 +136,15 @@ export function useChartBrush(opts: UseChartBrushOptions): UseChartBrush {
     let moveRaf: number | null = null
     let pendingX = 0
     const onMove = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId)
+        return
       pendingX = ev.clientX - chartRectLeft
+      // Vertical intent belongs to page scrolling, even with horizontal drift.
+      if (!isDragging.value && Math.abs(ev.clientY - startY) >= DRAG_THRESHOLD_PX
+        && Math.abs(ev.clientY - startY) >= Math.abs(pendingX - dragStartX)) {
+        cancel()
+        return
+      }
       if (moveRaf != null)
         return
       moveRaf = requestAnimationFrame(() => {
@@ -158,7 +168,9 @@ export function useChartBrush(opts: UseChartBrushOptions): UseChartBrush {
       })
     }
 
-    const onUp = () => {
+    const onUp = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId)
+        return
       removeWindowListeners?.()
       removeWindowListeners = null
       const range = dragRange.value
@@ -168,16 +180,25 @@ export function useChartBrush(opts: UseChartBrushOptions): UseChartBrush {
         opts.onCommit(range)
     }
 
+    const onCancel = (ev: PointerEvent) => {
+      if (ev.pointerId === pointerId)
+        cancel()
+    }
+
     window.addEventListener('pointermove', onMove, { passive: true })
-    window.addEventListener('pointerup', onUp, { once: true })
-    window.addEventListener('pointercancel', onUp, { once: true })
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onCancel)
+    window.addEventListener('wheel', cancel, { passive: true })
+    window.addEventListener('scroll', cancel, { passive: true, capture: true })
     removeWindowListeners = () => {
       if (moveRaf != null)
         cancelAnimationFrame(moveRaf)
       setSelectSuppressed(false)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('pointercancel', onUp)
+      window.removeEventListener('pointercancel', onCancel)
+      window.removeEventListener('wheel', cancel)
+      window.removeEventListener('scroll', cancel, { capture: true })
     }
   }
 
