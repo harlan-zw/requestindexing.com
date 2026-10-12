@@ -222,6 +222,8 @@ function tooltipDelta(col: string): number {
   const prev = tooltipPrev.value
   if (!cur || !prev)
     return 0
+  if ((col === 'position' || col === 'ctr') && (!(cur.impressions > 0) || !(prev.impressions > 0)))
+    return 0
   const c = cur[col as keyof DateAnalytics] as number
   const p = prev[col as keyof DateAnalytics] as number
   if (col === 'position') {
@@ -233,6 +235,8 @@ function tooltipDelta(col: string): number {
 }
 
 function formatMetricValue(col: string, data: PeriodTotals): string {
+  if ((col === 'position' || col === 'ctr') && (!(data.impressions > 0) || !Number.isFinite(data[col]) || (col === 'position' && data.position < 1)))
+    return '—'
   if (col === 'clicks')
     return useProHumanFriendlyNumber(data.clicks)
   if (col === 'impressions')
@@ -246,6 +250,8 @@ function formatMetricValue(col: string, data: PeriodTotals): string {
 
 function sparklineData(col: string): number[] {
   return (props.dates || []).map((d) => {
+    if ((col === 'position' || col === 'ctr') && (!(d.impressions > 0) || !Number.isFinite(d[col]) || (col === 'position' && d.position < 1)))
+      return Number.NaN
     if (col === 'ctr')
       return d.ctr * 100
     return d[col as keyof DateAnalytics] as number
@@ -527,6 +533,7 @@ const zoomRangeLabel = computed(() => {
               <UiSparkline
                 v-if="(dates?.length ?? 0) > 1"
                 :data="sparklineData(col)"
+                :inverted="col === 'position'"
                 :color="metricMeta[col]?.color ?? ''"
                 :width="200"
                 :height="32"

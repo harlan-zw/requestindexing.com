@@ -28,3 +28,61 @@ it.each([20, 80, 180])('keeps the full-history direction with a %i-point drawing
   app.mount(host)
   expect(host.querySelector('svg')?.getAttribute('aria-label')).toBe('Sparkline, upward trend, averaging 1.11 early to 2 recently')
 })
+
+it('preserves original peak days in both sampled histories', () => {
+  const host = document.createElement('div')
+  const data = Array.from({ length: 180 }, (_, day) => day === 117 ? 500 : 0)
+  const previousData = Array.from({ length: 180 }, (_, day) => day === 40 ? 600 : 0)
+  app = createApp(UiSparkline, { data, previousData, maxPoints: 20, variant: 'step' })
+  app.mount(host)
+  const paths = [...host.querySelectorAll('path[d][stroke]')]
+  for (const [ghost, day] of [[false, 117], [true, 40]] as const) {
+    const path = paths.find(path => ghost ? path.getAttribute('stroke') !== 'none' && !path.getAttribute('stroke')?.startsWith('url(') : path.getAttribute('stroke')?.startsWith('url('))
+    const points = [...(path?.getAttribute('d') ?? '').matchAll(/(?:M|L) ([\d.e+-]+) ([\d.e+-]+)/gu)]
+      .map(match => ({ x: Number(match[1]), y: Number(match[2]) }))
+    const peak = points.reduce((best, point) => point.y < best.y ? point : best)
+    expect(peak.x).toBeCloseTo(1.5 + day / 179 * 117)
+  }
+})
+
+it('splits missing days without losing observed zero values', () => {
+  const host = document.createElement('div')
+  app = createApp(UiSparkline, { data: [0, 0, null, 8, 6], variant: 'step' })
+  app.mount(host)
+  const path = host.querySelector('path[stroke^="url("]')?.getAttribute('d') ?? ''
+  const starts = [...path.matchAll(/M ([\d.e+-]+)/gu)].map(match => Number(match[1]))
+  expect(starts).toEqual([1.5, 1.5 + 3 / 4 * 117])
+  expect(host.querySelector('svg')?.getAttribute('aria-label')).toBe('Sparkline, upward trend, averaging 0 early to 7 recently')
+})
+
+it('colors lower rank comparisons as improvements', () => {
+  const host = document.createElement('div')
+  app = createApp(UiSparkline, {
+    data: [2, 2, 2],
+    previousData: [3, 3, 3],
+    inverted: true,
+    comparisonStyle: 'diverging',
+    comparisonColors: ['green', 'red', 'gray'],
+  })
+  app.mount(host)
+  const stops = [...host.querySelectorAll('linearGradient[gradientUnits="userSpaceOnUse"] stop')]
+  expect(stops.map(stop => stop.getAttribute('style'))).toEqual(['stop-color: green;', 'stop-color: green;', 'stop-color: green;'])
+})
+
+it('keeps curve controls within each retained time interval', () => {
+  const host = document.createElement('div')
+  app = createApp(UiSparkline, { data: Array.from({ length: 180 }, (_, day) => day === 117 ? 500 : 0), maxPoints: 20 })
+  app.mount(host)
+  const path = host.querySelector('path[stroke^="url("]')?.getAttribute('d') ?? ''
+  let previous = Number(path.match(/^M ([\d.e+-]+)/u)?.[1])
+  const curves = [...path.matchAll(/C ([\d.e+-]+) [\d.e+-]+, ([\d.e+-]+) [\d.e+-]+, ([\d.e+-]+) [\d.e+-]+/gu)]
+  expect(curves.length).toBeGreaterThan(0)
+  for (const curve of curves) {
+    const end = Number(curve[3])
+    for (const value of [Number(curve[1]), Number(curve[2])]) {
+      expect(value).toBeGreaterThanOrEqual(previous)
+      expect(value).toBeLessThanOrEqual(end)
+    }
+    previous = end
+  }
+})

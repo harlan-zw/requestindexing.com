@@ -77,8 +77,16 @@ const hasComparison = computed(() => mergedValue.value.some(r => r.prev))
 // so the dashed line only renders across indices where prev data is present.
 const prevClicks = (d: MergedRow) => d.prev?.clicks ?? Number.NaN
 const prevImpressions = (d: MergedRow) => d.prev?.impressions ?? Number.NaN
-const prevCtr = (d: MergedRow) => d.prev ? d.prev.ctr * 100 : Number.NaN
-const prevPosition = (d: MergedRow) => d.prev?.position ?? Number.NaN
+// Rate and rank values require impressions. Missing observations leave gaps.
+function observedMetric(row: DataRow, metric: 'ctr' | 'position'): number | undefined {
+  const value = row[metric]
+  if (!(row.impressions > 0) || !Number.isFinite(value) || (metric === 'position' && value < 1))
+    return undefined
+  return value
+}
+
+const prevCtr = (d: MergedRow) => d.prev ? (observedMetric(d.prev, 'ctr') ?? Number.NaN) * 100 : Number.NaN
+const prevPosition = (d: MergedRow) => d.prev ? observedMetric(d.prev, 'position') ?? Number.NaN : Number.NaN
 
 // Calendar-aware tick planning: choose tick positions + label format based on span.
 // - ≤ 10 days   → every day, "Mon 12"
@@ -199,7 +207,7 @@ const unstableCount = computed(() => {
 const unstableWidthPct = computed(() => {
   if (!unstableCount.value || value.length < 2)
     return 0
-  return (unstableCount.value - 0.5) / (value.length - 1) * 100
+  return Math.min(100, (unstableCount.value - 0.5) / (value.length - 1) * 100)
 })
 
 // Crosshair tooltip — emit current + comparison data to parent, render nothing inline
@@ -255,23 +263,23 @@ const impressionsDomain = computed<[number, number]>(() => {
 
 // Use Scale for CTR and Position (they need custom ranges)
 const ctrScale = computed(() => {
-  const ctrs = allData.value.map(d => d.ctr * 100).filter(c => c > 0)
+  const ctrs = allData.value.flatMap(d => observedMetric(d, 'ctr') == null ? [] : [d.ctr * 100])
   const min = ctrs.length ? Math.min(...ctrs) : 0
   const max = ctrs.length ? Math.max(...ctrs) : 10
   const padding = (max - min) * 0.1 || 1
   return Scale.scaleLinear()
     .domain([Math.max(0, min - padding), max + padding])
-    .range([0, chartInnerHeight.value])
+    .range([chartInnerHeight.value, 0])
 })
 
 // Position scale inverted: lower position = higher on chart
 const positionScale = computed(() => {
-  const positions = allData.value.map(d => d.position).filter(p => p > 0)
+  const positions = allData.value.flatMap(d => observedMetric(d, 'position') == null ? [] : [d.position])
   const min = positions.length ? Math.min(...positions) : 1
   const max = positions.length ? Math.max(...positions) : 100
   const padding = (max - min) * 0.1 || 1
   return Scale.scaleLinear()
-    .domain([Math.max(1, min - padding), max + padding])
+    .domain([max + padding, Math.max(1, min - padding)])
     .range([chartInnerHeight.value, 0]) // inverted: high position = low on chart
 })
 
@@ -288,12 +296,27 @@ const chartKey = computed(() => {
 const x = (_d: DataRow, i: number) => i
 const clicks = (d: DataRow) => d.clicks
 const impressions = (d: DataRow) => d.impressions
-const ctr = (d: DataRow) => d.ctr * 100
-const position = (d: DataRow) => d.position
+const ctr = (d: DataRow) => (observedMetric(d, 'ctr') ?? Number.NaN) * 100
+const position = (d: DataRow) => observedMetric(d, 'position') ?? Number.NaN
+
+const metricLabels = { clicks: 'Clicks', impressions: 'Impressions', ctr: 'CTR', position: 'Avg. position' }
+type Metric = keyof typeof metricLabels
+const visibleMetrics = computed(() => (columns ?? []).filter((metric): metric is Metric => Object.hasOwn(metricLabels, metric)))
+const accessibleRows = computed(() => mergedValue.value.flatMap(row => row.prev ? [row, row.prev] : [row]))
+function accessibleValue(row: DataRow, metric: Metric): string {
+  const value = metric === 'ctr' || metric === 'position' ? observedMetric(row, metric) : row[metric]
+  if (value == null || !Number.isFinite(value))
+    return '—'
+  if (metric === 'ctr')
+    return `${(value * 100).toFixed(2)}%`
+  if (metric === 'position')
+    return value.toFixed(1)
+  return value.toLocaleString('en-US')
+}
 </script>
 
 <template>
-  <div data-ui="ProGraphGsc" :class="{ 'tick-edge-last': tickPlan.indices.at(-1) === value.length - 1 }" class="gsc-chart" role="img" aria-label="Search console performance chart" :style="{ height: `${chartHeight}px` }" @pointermove="handlePointerMove" @mouseleave="handleMouseLeave">
+  <div data-ui="ProGraphGsc" :class="{ 'tick-edge-last': tickPlan.indices.at(-1) === value.length - 1 }" class="gsc-chart" :aria-busy="loading || undefined" :style="{ height: `${chartHeight}px` }" @pointermove="handlePointerMove" @mouseleave="handleMouseLeave">
     <!-- Loading skeleton -->
     <div v-if="loading" class="loading-skeleton">
       <div class="flex-1 flex items-end gap-1">
@@ -342,6 +365,7 @@ const position = (d: DataRow) => d.position
         :margin="margin"
         :auto-margin="false"
         class="chart-layer"
+        aria-hidden="true"
         :y-domain="impressionsDomain"
       >
         <VisLine
@@ -378,6 +402,7 @@ const position = (d: DataRow) => d.position
         :margin="margin"
         :auto-margin="false"
         class="chart-layer"
+        aria-hidden="true"
         :y-domain="clicksDomain"
       >
         <VisLine
@@ -413,6 +438,7 @@ const position = (d: DataRow) => d.position
         :margin="margin"
         :auto-margin="false"
         class="chart-layer"
+        aria-hidden="true"
       >
         <VisLine
           v-if="hasComparison"
@@ -443,6 +469,7 @@ const position = (d: DataRow) => d.position
         :margin="margin"
         :auto-margin="false"
         class="chart-layer"
+        aria-hidden="true"
       >
         <VisLine
           v-if="hasComparison"
@@ -472,6 +499,7 @@ const position = (d: DataRow) => d.position
         :margin="margin"
         :auto-margin="false"
         class="chart-layer chart-layer--interactive"
+        aria-hidden="true"
       >
         <!-- Invisible line so the crosshair has data points to snap to -->
         <VisLine :x="x" :y="clicks" color="transparent" :line-width="0" />
@@ -503,6 +531,31 @@ const position = (d: DataRow) => d.position
         </div>
       </template>
     </ClientOnly>
+    <div v-if="!loading && value.length >= 2" class="sr-only">
+      <table>
+        <caption>Search console performance chart</caption>
+        <thead>
+          <tr>
+            <th scope="col">
+              Date
+            </th>
+            <th v-for="metric in visibleMetrics" :key="metric" scope="col">
+              {{ metricLabels[metric] }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in accessibleRows" :key="row.date">
+            <th scope="row">
+              {{ row.date }}
+            </th>
+            <td v-for="metric in visibleMetrics" :key="metric">
+              {{ accessibleValue(row, metric) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 

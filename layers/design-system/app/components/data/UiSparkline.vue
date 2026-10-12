@@ -5,12 +5,14 @@ import { computed, useId } from 'vue'
 import { vizColorMap } from '../../composables/dataVizColors'
 import { semanticColors } from '../../composables/semanticColors'
 
-type Datum = Record<string, number | string>
+type Datum = Record<string, number | string | null | undefined>
+type Observation = number | null
+type Series = Array<number | null> | Array<Datum | null>
 
 interface Props {
-  data: number[] | Datum[]
+  data: Series
   /** Previous period data, when provided, gradient reflects per-point changes */
-  previousData?: number[] | Datum[]
+  previousData?: Series
   xAxis?: string
   yAxis?: string
   width?: number | string
@@ -105,20 +107,23 @@ const cssHeight = computed(() => height ?? defaults.value.h)
 const vbW = computed(() => typeof cssWidth.value === 'number' ? cssWidth.value : defaults.value.w)
 const vbH = computed(() => typeof cssHeight.value === 'number' ? cssHeight.value : defaults.value.h)
 
-function normalize(input: number[] | Datum[] | undefined, yAxis?: string): number[] {
+function observed(value: unknown): Observation {
+  if (value == null || value === '')
+    return null
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
+function normalize(input: Series | undefined, yAxis?: string): Observation[] {
   if (!input?.length)
     return []
-  if (typeof input[0] === 'number')
-    return input as number[]
-  const data = input as Datum[]
-  // A series can carry null/undefined holes (sparse data, gaps in a metric). Detect
-  // the key from the first real datum and treat holes as 0 so neither key-detection
-  // (`key in d`) nor access ever derefs null.
-  const first = data.find(d => d != null)
-  if (!first)
-    return []
-  const yKey = yAxis || guessYKey(first)
-  return data.map(d => (d == null ? 0 : Number(d[yKey]) || 0))
+  const first = input.find(value => value != null)
+  if (first == null)
+    return input.map(() => null)
+  if (typeof first === 'number')
+    return input.map(observed)
+  const key = yAxis || guessYKey(first)
+  return (input as Array<Datum | null>).map(datum => observed(datum?.[key]))
 }
 
 function guessYKey(d: Datum): string {
@@ -138,11 +143,13 @@ function guessYKey(d: Datum): string {
  * Largest Triangle Three Buckets — downsamples while preserving visual shape.
  * Keeps first and last points, selects most visually significant point per bucket.
  */
-function lttb(vals: number[], target: number): number[] {
+function lttbIndices(vals: number[], target: number): number[] {
   if (vals.length <= target)
-    return vals
+    return vals.map((_, index) => index)
+  if (target === 2)
+    return [0, vals.length - 1]
 
-  const result: number[] = [vals[0]!]
+  const result: number[] = [0]
   const bucketSize = (vals.length - 2) / (target - 2)
 
   let prevIndex = 0
@@ -176,31 +183,60 @@ function lttb(vals: number[], target: number): number[] {
       }
     }
 
-    result.push(vals[bestIndex]!)
+    result.push(bestIndex)
     prevIndex = bestIndex
   }
 
-  result.push(vals.at(-1)!)
+  result.push(vals.length - 1)
   return result
 }
 
+// Each contiguous observed run is sampled separately. Missing days remain
+// gaps, while original indices retain their place in the full reporting window.
+function sampleRuns(observations: Observation[], limit: number): number[][] {
+  const runs: number[][] = []
+  let start = 0
+  while (start < observations.length) {
+    if (observations[start] == null) {
+      start++
+      continue
+    }
+    let end = start + 1
+    while (end < observations.length && observations[end] != null) end++
+    const values = observations.slice(start, end) as number[]
+    const budget = Math.max(2, Math.round(limit * values.length / observations.length))
+    runs.push(lttbIndices(values, budget).map(index => start + index))
+    start = end
+  }
+  return runs
+}
+
 const fullValues = computed(() => normalize(data, yAxis))
-const values = computed(() => lttb(fullValues.value, maxPoints))
-const prevValues = computed(() => lttb(normalize(previousData, yAxis), maxPoints))
+const drawingLimit = computed(() => Number.isFinite(maxPoints) ? Math.max(2, Math.floor(maxPoints)) : 80)
+const sampledRuns = computed(() => sampleRuns(fullValues.value, drawingLimit.value))
+const sampledIndices = computed(() => sampledRuns.value.flat())
+const values = computed(() => sampledIndices.value.map(index => fullValues.value[index] as number))
+const fullPreviousValues = computed(() => normalize(previousData, yAxis))
+const previousRuns = computed(() => sampleRuns(fullPreviousValues.value, drawingLimit.value))
+const prevValues = computed(() => previousRuns.value.flat().map(index => fullPreviousValues.value[index] as number))
 const hasComparison = computed(() => prevValues.value.length > 0)
+const observedHalves = computed(() => {
+  const mid = Math.floor(fullValues.value.length / 2)
+  const mean = (observations: Observation[]) => {
+    const values = observations.filter((value): value is number => value != null)
+    return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null
+  }
+  return { early: mean(fullValues.value.slice(0, mid)), late: mean(fullValues.value.slice(mid)) }
+})
 
 // Trend from half-window MEANS, not endpoints: daily series are seasonal (a
 // weekend last point read as "downward" against a Wednesday first point) and
 // endpoint comparison also amplifies reporting-lag artifacts. A <2% relative
 // difference reads as flat.
 const trend = computed<-1 | 0 | 1>(() => {
-  const v = fullValues.value
-  if (v.length < 2)
+  const { early, late } = observedHalves.value
+  if (early == null || late == null)
     return 0
-  const mid = Math.floor(v.length / 2)
-  const mean = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length
-  const early = mean(v.slice(0, mid))
-  const late = mean(v.slice(mid))
   const base = Math.max(Math.abs(early), Math.abs(late))
   const dir = base === 0 || Math.abs(late - early) / base < 0.02 ? 0 : late > early ? 1 : -1
   // Not a double-negation with the flipped axis — the two cancel by design.
@@ -219,39 +255,35 @@ const trend = computed<-1 | 0 | 1>(() => {
 // plainly went up. "Worsening" is what actually happened to the rank, which is
 // the fact the reader wants; the shape of the line is the sighted proxy for it.
 const ariaLabel = computed(() => {
-  const v = fullValues.value
+  const { early, late } = observedHalves.value
+  if (early == null || late == null)
+    return 'Sparkline, trend unavailable'
   const dir = inverted
     ? (trend.value === 1 ? 'improving' : trend.value === -1 ? 'worsening' : 'flat')
     : (trend.value === 1 ? 'upward' : trend.value === -1 ? 'downward' : 'flat')
-  if (v.length < 2)
-    return `Sparkline, ${dir} trend`
   const fmt = (n: number) => Math.abs(n) >= 10 || Number.isInteger(n) ? String(Math.round(n)) : n.toFixed(2)
-  const mid = Math.floor(v.length / 2)
-  const mean = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length
-  return `Sparkline, ${dir} trend, averaging ${fmt(mean(v.slice(0, mid)))} early to ${fmt(mean(v.slice(mid)))} recently`
+  return `Sparkline, ${dir} trend, averaging ${fmt(early)} early to ${fmt(late)} recently`
 })
 
 // Per-point comparison colors: at each data point, compare current vs previous
 const comparisonGradientColors = computed<string[]>(() => {
   const curr = values.value
-  const prev = prevValues.value
+  const prev = fullPreviousValues.value
   if (!prev.length)
     return []
 
   const [up, down, flat] = comparisonColors
-  // `curr` and `prev` are LTTB-downsampled independently, so they pick
-  // different representative indices — `prev[i]` is NOT the same time bucket as
-  // `curr[i]`. Map by fractional position instead (both span the same period),
-  // so the per-point valence compares like-for-like.
+  // Compare original time positions. Sampling chooses different days for each
+  // history, so sampled array ordinals cannot identify matching observations.
   return curr.map((v, i) => {
-    const frac = curr.length > 1 ? i / (curr.length - 1) : 0
-    const pIdx = Math.round(frac * (prev.length - 1))
-    const p = prev[pIdx] ?? prev.at(-1) ?? 0
-    if (v > p)
-      return up
-    if (v < p)
-      return down
-    return flat
+    const originalIndex = sampledIndices.value[i]!
+    const fraction = fullValues.value.length > 1 ? originalIndex / (fullValues.value.length - 1) : 0
+    const previousIndex = Math.round(fraction * (prev.length - 1))
+    const previous = prev[previousIndex]
+    if (previous == null)
+      return flat
+    const difference = (v - previous) * (inverted ? -1 : 1)
+    return difference > 0 ? up : difference < 0 ? down : flat
   })
 })
 
@@ -273,11 +305,7 @@ const gradientColors = computed(() => {
 const prevPathD = computed(() => {
   if (!hasComparison.value || comparisonStyle !== 'ghost')
     return ''
-  if (prevValues.value.length < 2)
-    return ''
-  return variant === 'step'
-    ? buildStepPath(prevValues.value)
-    : buildPath(prevValues.value)
+  return buildSeriesPath(fullPreviousValues.value, previousRuns.value)
 })
 
 // Build gradient stops for SVG linearGradient (evenly spaced)
@@ -285,8 +313,9 @@ const gradientStops = computed(() => {
   const colors = gradientColors.value
   if (colors.length <= 1)
     return [{ offset: '0%', color: colors[0] || 'var(--ui-text-dimmed)' }, { offset: '100%', color: colors[0] || 'var(--ui-text-dimmed)' }]
+  const diverging = hasComparison.value && comparisonStyle === 'diverging' && comparisonGradientColors.value.length >= 2
   return colors.map((color, i) => ({
-    offset: `${(i / (colors.length - 1)) * 100}%`,
+    offset: `${(diverging ? sampledIndices.value[i]! / (fullValues.value.length - 1) : i / (colors.length - 1)) * 100}%`,
     color,
   }))
 })
@@ -351,7 +380,7 @@ function floorRange(bounds: { min: number, max: number }): { min: number, max: n
   return { min: mid - minRange / 2, max: mid + minRange / 2 }
 }
 
-function projectPoints(vals: number[], yScale?: { min: number, max: number }) {
+function projectPoints(vals: number[], indices: number[], originalLength: number, yScale?: { min: number, max: number }) {
   const padX = strokeWidth
   const padY = strokeWidth
   const chartW = vbW.value - padX * 2
@@ -374,7 +403,7 @@ function projectPoints(vals: number[], yScale?: { min: number, max: number }) {
     points: vals.map((v, i) => {
       const t = (v - min) / range
       return {
-        x: padX + (i / (vals.length - 1)) * chartW,
+        x: padX + (indices[i]! / (originalLength - 1)) * chartW,
         y: inverted ? padY + t * chartH : padY + chartH - t * chartH,
       }
     }),
@@ -383,19 +412,17 @@ function projectPoints(vals: number[], yScale?: { min: number, max: number }) {
 
 // Shared y-scale when rendering current + previous as overlay (ghost mode).
 const sharedYScale = computed<{ min: number, max: number } | undefined>(() => {
-  if (!hasComparison.value || comparisonStyle !== 'ghost')
-    return undefined
-  const all = [...values.value, ...prevValues.value]
-  if (!all.length)
-    return undefined
-  return minMax(all)
+  const all = hasComparison.value && comparisonStyle === 'ghost'
+    ? [...values.value, ...prevValues.value]
+    : values.value
+  return all.length ? minMax(all) : undefined
 })
 
-function buildPath(vals: number[]): string {
-  if (vals.length < 2)
+function buildPath(vals: number[], indices: number[], originalLength: number): string {
+  if (!vals.length)
     return ''
 
-  const { padY, chartH, points } = projectPoints(vals, sharedYScale.value)
+  const { padY, chartH, points } = projectPoints(vals, indices, originalLength, sharedYScale.value)
   // Catmull-Rom control points overshoot local extremes: at an asymmetric peak
   // (small step in, steep drop out) the control point lands above the chart top
   // and the SVG viewport clips the curve flat — the graph's max/min gets "cut
@@ -404,6 +431,8 @@ function buildPath(vals: number[]): string {
   // values beyond the data's actual range.
   const clampY = (y: number) => Math.min(padY + chartH, Math.max(padY, y))
 
+  if (points.length === 1)
+    return `M ${points[0]!.x} ${points[0]!.y} L ${points[0]!.x} ${points[0]!.y}`
   const segments: string[] = [`M ${points[0]!.x} ${points[0]!.y}`]
   for (let i = 0; i < points.length - 1; i++) {
     const p0 = points[Math.max(i - 1, 0)]!
@@ -412,9 +441,12 @@ function buildPath(vals: number[]): string {
     const p3 = points[Math.min(i + 2, points.length - 1)]!
 
     const tension = 0.3
-    const cp1x = p1.x + (p2.x - p0.x) * tension
+    // Sampling leaves uneven time gaps. Keep controls within this interval
+    // so a neighboring long gap cannot curl the line backwards in time.
+    const clampX = (x: number) => Math.min(p2.x, Math.max(p1.x, x))
+    const cp1x = clampX(p1.x + (p2.x - p0.x) * tension)
     const cp1y = clampY(p1.y + (p2.y - p0.y) * tension)
-    const cp2x = p2.x - (p3.x - p1.x) * tension
+    const cp2x = clampX(p2.x - (p3.x - p1.x) * tension)
     const cp2y = clampY(p2.y - (p3.y - p1.y) * tension)
 
     segments.push(`C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`)
@@ -423,10 +455,12 @@ function buildPath(vals: number[]): string {
   return segments.join(' ')
 }
 
-function buildStepPath(vals: number[]): string {
-  if (vals.length < 2)
+function buildStepPath(vals: number[], indices: number[], originalLength: number): string {
+  if (!vals.length)
     return ''
-  const { points } = projectPoints(vals, sharedYScale.value)
+  const { points } = projectPoints(vals, indices, originalLength, sharedYScale.value)
+  if (points.length === 1)
+    return `M ${points[0]!.x} ${points[0]!.y} L ${points[0]!.x} ${points[0]!.y}`
   const segments: string[] = [`M ${points[0]!.x} ${points[0]!.y}`]
   for (let i = 1; i < points.length; i++) {
     const p = points[i]!
@@ -439,11 +473,18 @@ function buildStepPath(vals: number[]): string {
 const strokeGradientId = useId()
 const areaGradientId = `${strokeGradientId}-area`
 
-const pathD = computed(() => {
-  if (values.value.length < 2)
+function buildSeriesPath(observations: Observation[], runs: number[][]): string {
+  if (observations.length < 2)
     return ''
-  return variant === 'step' ? buildStepPath(values.value) : buildPath(values.value)
-})
+  return runs.map((indices) => {
+    const values = indices.map(index => observations[index] as number)
+    return variant === 'step'
+      ? buildStepPath(values, indices, observations.length)
+      : buildPath(values, indices, observations.length)
+  }).join(' ')
+}
+
+const pathD = computed(() => buildSeriesPath(fullValues.value, sampledRuns.value))
 
 const areaPathD = computed(() => {
   // `inverted` used to be excluded here: with the y-axis unflipped the fill ran
@@ -453,9 +494,15 @@ const areaPathD = computed(() => {
   // so the carve-out is gone. A caller passing `area` gets an area.
   if (!pathD.value || !area)
     return ''
-  const padX = strokeWidth
   const closeY = vbH.value - strokeWidth
-  return `${pathD.value} L ${vbW.value - padX} ${closeY} L ${padX} ${closeY} Z`
+  return sampledRuns.value.map((indices) => {
+    const values = indices.map(index => fullValues.value[index] as number)
+    const runPath = variant === 'step'
+      ? buildStepPath(values, indices, fullValues.value.length)
+      : buildPath(values, indices, fullValues.value.length)
+    const { points } = projectPoints(values, indices, fullValues.value.length)
+    return `${runPath} L ${points.at(-1)!.x} ${closeY} L ${points[0]!.x} ${closeY} Z`
+  }).join(' ')
 })
 
 const endColor = computed(() => gradientColors.value.at(-1) || 'var(--ui-text-dimmed)')
@@ -480,7 +527,8 @@ const areaY2 = computed(() => trend.value === -1 ? '0' : '1')
     :aria-label="ariaLabel"
   >
     <defs>
-      <!-- A constant history has no bounding-box height. Use SVG coordinates. -->
+      <!-- A horizontal path has no bounding-box height. Use the line's SVG
+           coordinates so its gradient still paints a constant history. -->
       <linearGradient
         :id="strokeGradientId"
         gradientUnits="userSpaceOnUse"
