@@ -146,6 +146,18 @@ Each string names the failed step and the next action.
 
 ## Search Console status and reports
 
+### Saved URL Inspection descriptions
+
+These descriptions report saved observations, without inferring a cause or the current HTTP response.
+They replace older SDK and report descriptions for these two issue types.
+
+| Issue | Description |
+| --- | --- |
+| `crawled_not_indexed` | Saved URL Inspection results report these URLs as crawled but not indexed at their check times. This state alone does not establish why. |
+| `soft_404` | Saved URL Inspection results report these URLs as Soft 404 at their check times. Review the affected pages before choosing work. |
+
+### Status and report assets
+
 | Asset | String | Where it goes |
 | --- | --- | --- |
 | Search Console status read failure | Search Console status unavailable | Shared Search Console status alert |

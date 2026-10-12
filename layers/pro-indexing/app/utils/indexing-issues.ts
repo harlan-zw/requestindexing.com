@@ -5,6 +5,12 @@ import { issueDetails, issueGroups } from '@gscdump/sdk/indexing-issues'
 export type { IndexingIssue, IndexingIssueDetail, IssueGroup, IssueSeverity } from '@gscdump/sdk/indexing-issues'
 export { issueDetails, issueGroups, severityOrder } from '@gscdump/sdk/indexing-issues'
 
+// NuxtSEO #1631: saved Inspection states do not prove a cause or live response.
+export const observedIssueDescriptions: Partial<Record<string, string>> = {
+  crawled_not_indexed: 'Saved URL Inspection results report these URLs as crawled but not indexed at their check times. This state alone does not establish why.',
+  soft_404: 'Saved URL Inspection results report these URLs as Soft 404 at their check times. Review the affected pages before choosing work.',
+}
+
 export const nuxtSeoTips: Record<string, { modules: string[], tip: string }> = {
   blocked_robots: {
     modules: ['@nuxtjs/robots', '@nuxtjs/seo'],

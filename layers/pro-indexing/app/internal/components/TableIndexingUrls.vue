@@ -21,7 +21,7 @@ import {
   useProGscdumpInspectUrls,
 } from '#layers/pro-gsc/app/composables/useProGscdump'
 import CrawlPipeline from '#layers/pro-indexing/app/internal/components/CrawlPipeline.vue'
-import { issueDetails, issueIcons, severityConfig } from '#layers/pro-indexing/app/utils/indexing-issues'
+import { issueDetails, issueIcons, observedIssueDescriptions, severityConfig } from '#layers/pro-indexing/app/utils/indexing-issues'
 import { indexingActionForIssue } from '#layers/pro-indexing/app/utils/indexing-overview'
 import {
   crawlerLabels,
@@ -184,7 +184,7 @@ const activeIssueData = computed(() => {
   const details = issueDetails[issue.type]
   if (!details)
     return null
-  return { ...details, ...issue }
+  return { ...details, ...issue, description: observedIssueDescriptions[issue.type] ?? issue.description ?? details.description }
 })
 
 function isIssueActive(issueType: string): boolean {
