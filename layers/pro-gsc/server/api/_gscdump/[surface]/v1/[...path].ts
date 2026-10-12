@@ -9,6 +9,7 @@ import type { HttpV1OperationDefinition } from '@gscdump/contracts/v1/http'
 import type { GscdumpV1ProxyOperation } from '../../../../internal/gscdump-v1-browser-proxy'
 import process from 'node:process'
 import { eq } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/sqlite-core'
 import { createError, getQuery, getRequestHeader, getRequestURL, getRouterParam, readBody } from 'h3'
 import { teamSites } from '~~/layers/core/server/db/schema'
 import {
@@ -18,8 +19,10 @@ import {
   selectGscdumpV1SiteAccess,
 } from '#layers/pro-gsc/server/internal/gscdump-v1-browser-proxy'
 import { assertGscdumpBrowserUnsafeMethodOrigin } from '#layers/pro-gsc/server/utils/gscdump-browser-origin'
+import { useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
 import { getGscdumpApiUrl } from '#layers/pro-gsc/server/utils/gscdump-origin'
-import { sites, users } from '#layers/pro-saas/server/database'
+import { assertRegisteredGscSiteScope } from '#layers/pro-gsc/server/utils/registered-site-scope'
+import { sites, teams, users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 import { readProFeatureFlags } from '#layers/pro-shell/shared/manifest'
 
@@ -131,12 +134,22 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
   if (target._tag === 'self-missing')
     throw createError({ statusCode: 401, statusMessage: 'gscdump_api_key_missing' })
   if (target._tag === 'site') {
+    const teamOwner = alias(users, 'scope_team_owner')
+    const siteOwner = alias(users, 'scope_site_owner')
     const rows = await db.select({
+      localSiteId: sites.id,
+      domain: sites.domain,
+      property: sites.property,
+      teamPrincipalId: teamOwner.gscdumpUserId,
+      sitePrincipalId: siteOwner.gscdumpUserId,
       owningTeamId: sites.teamId,
       linkedTeamId: teamSites.teamId,
     })
       .from(sites)
       .leftJoin(teamSites, eq(teamSites.siteId, sites.id))
+      .leftJoin(teams, eq(teams.teamId, sites.teamId))
+      .leftJoin(teamOwner, eq(teamOwner.userId, teams.ownerId))
+      .leftJoin(siteOwner, eq(siteOwner.userId, sites.ownerId))
       .where(eq(sites.gscdumpSiteId, target.siteId))
       .all()
 
@@ -154,6 +167,13 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
       throw createError({ statusCode: 404, statusMessage: 'not_found' })
     if (access._tag === 'forbidden')
       throw createError({ statusCode: 403, statusMessage: 'forbidden' })
+    // An engine id can appear in another Team's mirror. Prove only the local
+    // Sites this caller can read, after the existing authorization check.
+    const visibleSites = [...new Map(rows.filter(row => selectGscdumpV1SiteAccess(caller, {
+      teamIds: [row.owningTeamId, ...(row.linkedTeamId === null ? [] : [row.linkedTeamId])],
+    }, false)._tag === 'allowed').map(row => [row.localSiteId, row])).values()]
+    const gscdump = useGscdumpClient()
+    await assertRegisteredGscSiteScope(target.siteId, visibleSites, principalId => gscdump.getUserLifecycle(principalId))
   }
 
   const apiKey = credentialRow?.apiKey ?? null
