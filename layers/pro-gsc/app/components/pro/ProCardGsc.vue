@@ -6,7 +6,7 @@ import { useChartBrush } from '#layers/design-system/app/composables/useChartBru
 
 import { compareRange, parseCustomPeriod, periodToDateRange } from '../../composables/useGscPeriod'
 import { useProGscFilters } from '../../composables/useProGscFilters'
-import { resolveCompareAligner, toUtcDay } from '../../utils/compare-align'
+import { calendarChartRows, resolveCompareAligner, toUtcDay } from '../../utils/compare-align'
 import ProGraphGsc from './ProGraphGsc.vue'
 
 const { loading: loadingProp, ...props } = defineProps<{
@@ -52,8 +52,9 @@ const emit = defineEmits<{
   zoom: [range: { start: string, end: string, prevStart?: string, prevEnd?: string } | null]
 }>()
 const { period: selectedPeriod, compareMode, stableData } = useProGscFilters()
+const chartDateRange = computed(() => periodToDateRange(props.dateRange ?? selectedPeriod.value, stableData.value))
 const comparisonOffset = computed(() => {
-  const current = periodToDateRange(props.dateRange ?? selectedPeriod.value, stableData.value)
+  const current = chartDateRange.value
   const previous = compareRange(current, compareMode.value)
   return previous ? (toUtcDay(current.start) - toUtcDay(previous.start)) / 86_400_000 : null
 })
@@ -143,7 +144,7 @@ const {
   onPointerDown: startBrush,
   cancel: cancelBrush,
 } = useChartBrush({
-  dates: () => props.dates.map(row => row.date),
+  dates: () => calendarDisplayedGraph().map(row => row.date),
   onCommit: (range) => {
     const align = resolveCompareAligner(compareMode.value, comparisonOffset.value)
     emit('zoom', {
@@ -226,6 +227,8 @@ function tooltipDelta(col: string): number {
     return 0
   const c = cur[col as keyof DateAnalytics] as number
   const p = prev[col as keyof DateAnalytics] as number
+  if (!Number.isFinite(c) || !Number.isFinite(p))
+    return 0
   if (col === 'position') {
     if (!c || !p)
       return 0
@@ -235,6 +238,8 @@ function tooltipDelta(col: string): number {
 }
 
 function formatMetricValue(col: string, data: PeriodTotals): string {
+  if (!Number.isFinite(data[col as keyof PeriodTotals]))
+    return '—'
   if ((col === 'position' || col === 'ctr') && (!(data.impressions > 0) || !Number.isFinite(data[col]) || (col === 'position' && data.position < 1)))
     return '—'
   if (col === 'clicks')
@@ -368,6 +373,9 @@ const displayedGraph = computed(() => {
   const idx = zoomIndices.value
   return idx ? graph.value.slice(idx.startIdx, idx.endIdx + 1) : graph.value
 })
+function calendarDisplayedGraph() {
+  return calendarChartRows(displayedGraph.value, chartDateRange.value)
+}
 
 // Chart line uses the full prev series so ProGraphGsc.mergedValue's calendar lookup
 // resolves pairs. Aggregate uses index slice.
@@ -756,6 +764,7 @@ const zoomRangeLabel = computed(() => {
           v-if="selectedColumns.length"
           :height="220"
           :value="displayedGraph"
+          :date-range="chartDateRange"
           :prev-value="displayedPrev"
           :compare-mode="compareMode"
           :compare-offset-days="comparisonOffset"

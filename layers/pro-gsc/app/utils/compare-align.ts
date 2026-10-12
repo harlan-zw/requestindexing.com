@@ -88,3 +88,36 @@ export function alignPrev<C extends { date: string }, P extends { date: string }
     return match ? { ...row, prev: match } : row
   })
 }
+
+interface CalendarChartRow {
+  date: string
+  clicks: number
+  impressions: number
+  position: number
+  ctr: number
+}
+
+/** Keep elapsed reporting days without inventing observations. */
+export function calendarChartRows(rows: readonly CalendarChartRow[], dateRange?: { start: string, end: string }): CalendarChartRow[] {
+  if (!rows.length)
+    return []
+  const byDate = new Map(rows.map(row => [row.date, row]))
+  const dates = [...byDate.keys()].sort()
+  const start = toUtcDay(dateRange?.start ?? dates[0]!)
+  const end = toUtcDay(dateRange?.end ?? dates.at(-1)!)
+  const days = Math.round((end - start) / DAY_MS) + 1
+  return Array.from({ length: days }, (_, index) => {
+    const date = fromUtcDay(start + index * DAY_MS)
+    return byDate.get(date) ?? { date, clicks: Number.NaN, impressions: Number.NaN, position: Number.NaN, ctr: Number.NaN }
+  })
+}
+
+/** Scatter accessors receive a series index, so identify isolated days by date. */
+export function isolatedChartValue<T extends { date: string }>(rows: readonly T[], value: (row: T) => number): (row: T) => number {
+  const values = rows.map(value)
+  const dates = new Set(rows.flatMap((row, index) => Number.isFinite(values[index])
+    && !Number.isFinite(values[index - 1]) && !Number.isFinite(values[index + 1])
+    ? [row.date]
+    : []))
+  return row => dates.has(row.date) ? value(row) : Number.NaN
+}
