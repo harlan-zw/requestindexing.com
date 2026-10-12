@@ -238,15 +238,19 @@ it('groups the issue filter by severity and filters on a pick', async () => {
   expect(fixture.navigate).toHaveBeenCalledWith({ query: { issue: 'not_found' } }, undefined)
 })
 
-it('shows what the filtered issue means, how to fix it, and the recommended remediation', () => {
+it.each([
+  ['crawled_not_indexed', 'Saved URL Inspection results report these URLs as crawled but not indexed at their check times. This state alone does not establish why.'],
+  ['soft_404', 'Saved URL Inspection results report these URLs as Soft 404 at their check times. Review the affected pages before choosing work.'],
+])('describes %s as saved evidence without asserting a cause or current response', (type, description) => {
   diagnostics.value = {
     summary: { totalUrls: 40, indexed: 20, indexedPercent: 50 },
-    issues: [{ type: 'crawled_not_indexed', label: 'Crawled but not indexed', severity: 'warning', count: 12, description: 'Google crawled these pages and chose not to index them.', fix: 'Improve the content or consolidate it.' }],
+    issues: [{ type, label: 'Inspection issue', severity: 'warning', count: 12, description: 'The content is low quality and returns HTTP 200 now.', fix: 'Improve the content or consolidate it.' }],
   }
-  const host = mount({ initialIssue: 'crawled_not_indexed' })
+  const host = mount({ initialIssue: type })
   const notice = host.querySelector('[data-testid="issue-remediation"]')!
   expect(notice.textContent).toContain('12 URLs affected')
-  expect(notice.textContent).toContain('Google crawled these pages and chose not to index them.')
+  expect(notice.textContent).toContain(description)
+  expect(notice.textContent).not.toContain('The content is low quality and returns HTTP 200 now.')
   expect(notice.textContent).toContain('Improve the content or consolidate it.')
   expect(host.querySelector('[aria-label="Recommended remediation"]')).not.toBeNull()
 })
