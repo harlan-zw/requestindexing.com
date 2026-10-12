@@ -55,6 +55,20 @@ it('splits missing days without losing observed zero values', () => {
   expect(host.querySelector('svg')?.getAttribute('aria-label')).toBe('Sparkline, upward trend, averaging 0 early to 7 recently')
 })
 
+it('retains a sparse peak when observed points fit the drawing budget', () => {
+  const host = document.createElement('div')
+  const data: Array<number | null> = Array.from<null>({ length: 180 }).fill(null)
+  data.splice(50, 3, 10, 100, 10)
+  app = createApp(UiSparkline, { data, maxPoints: 80, variant: 'step' })
+  app.mount(host)
+  const path = host.querySelector('path[stroke^="url("]')?.getAttribute('d') ?? ''
+  const points = [...path.matchAll(/(?:M|L) ([\d.e+-]+) ([\d.e+-]+)/gu)]
+    .map(match => ({ x: Number(match[1]), y: Number(match[2]) }))
+  const peak = points.reduce((best, point) => point.y < best.y ? point : best)
+  expect(peak.x).toBeCloseTo(1.5 + 51 / 179 * 117)
+  expect(peak.y).toBeLessThan(points[0]!.y)
+})
+
 it('colors lower rank comparisons as improvements', () => {
   const host = document.createElement('div')
   app = createApp(UiSparkline, {

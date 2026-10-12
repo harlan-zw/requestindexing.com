@@ -195,6 +195,7 @@ function lttbIndices(vals: number[], target: number): number[] {
 // gaps, while original indices retain their place in the full reporting window.
 function sampleRuns(observations: Observation[], limit: number): number[][] {
   const runs: number[][] = []
+  const observedCount = observations.reduce<number>((count, value) => count + Number(value != null), 0)
   let start = 0
   while (start < observations.length) {
     if (observations[start] == null) {
@@ -204,7 +205,7 @@ function sampleRuns(observations: Observation[], limit: number): number[][] {
     let end = start + 1
     while (end < observations.length && observations[end] != null) end++
     const values = observations.slice(start, end) as number[]
-    const budget = Math.max(2, Math.round(limit * values.length / observations.length))
+    const budget = Math.max(2, Math.round(limit * values.length / observedCount))
     runs.push(lttbIndices(values, budget).map(index => start + index))
     start = end
   }
