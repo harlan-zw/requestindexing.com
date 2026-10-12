@@ -10,13 +10,26 @@ function registeredHost(value: string): string | null {
   return parsed?.hostname && !parsed.username && !parsed.password ? parsed.hostname : null
 }
 
-/** A local link grants access only to the exact host in the authoritative registration. */
+/**
+ * A local link grants access only to the exact host in the authoritative
+ * registration.
+ *
+ * The registration lives under whoever ran the link: `link-gsc.post` hands the
+ * connecting member's grant in and the hourly reconcile runs under whoever
+ * reconciles, so neither the team owner nor the Site creator may hold it. The
+ * proxy relays with the caller's own stored credential, so the caller's own
+ * lifecycle is the last source consulted for the registration.
+ */
 export async function assertRegisteredGscSiteScope(
   siteId: string,
   linkedSites: readonly LinkedSite[],
   readLifecycle: (principalId: string) => Promise<{ sites: readonly Registration[] }>,
+  callerPrincipalId: string | null,
 ): Promise<void> {
-  const principals = [...new Set(linkedSites.flatMap(site => [site.teamPrincipalId, site.sitePrincipalId]).filter((id): id is string => !!id))]
+  const principals = [...new Set([
+    ...linkedSites.flatMap(site => [site.teamPrincipalId, site.sitePrincipalId]),
+    callerPrincipalId,
+  ].filter((id): id is string => !!id))]
   const registrations: Registration[] = []
   for (let offset = 0; offset < principals.length; offset += 4) {
     await Promise.all(principals.slice(offset, offset + 4).map(async (principalId) => {

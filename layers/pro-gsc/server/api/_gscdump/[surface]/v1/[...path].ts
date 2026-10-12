@@ -173,7 +173,15 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
       teamIds: [row.owningTeamId, ...(row.linkedTeamId === null ? [] : [row.linkedTeamId])],
     }, false)._tag === 'allowed').map(row => [row.localSiteId, row])).values()]
     const gscdump = useGscdumpClient()
-    await assertRegisteredGscSiteScope(target.siteId, visibleSites, principalId => gscdump.getUserLifecycle(principalId))
+    // The registration may sit under a member who is neither the Site's team
+    // owner nor its creator. The relay runs on the caller's own credential, so
+    // the caller's own lifecycle is the last eligible source for it.
+    await assertRegisteredGscSiteScope(
+      target.siteId,
+      visibleSites,
+      principalId => gscdump.getUserLifecycle(principalId),
+      credentialRow?.userId ?? null,
+    )
   }
 
   const apiKey = credentialRow?.apiKey ?? null
