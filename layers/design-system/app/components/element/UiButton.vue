@@ -246,7 +246,7 @@ function syncButtonWidth() {
   const el = buttonEl()
   if (!el)
     return
-  measuredWidth.value = Math.ceil(el.scrollWidth || el.getBoundingClientRect().width)
+  measuredWidth.value = Math.ceil(el.offsetWidth || el.getBoundingClientRect().width)
 }
 
 onMounted(() => {
@@ -308,7 +308,7 @@ watch(
       <div
         ref="clipEl"
         class="ui-motion-button__clip relative"
-        :class="[block ? 'flex w-full' : 'inline-flex w-max max-w-none whitespace-nowrap', { 'ui-motion-button__clip--active': showFx }]"
+        :class="[block ? 'flex w-full' : 'inline-flex w-max max-w-none shrink-0 whitespace-nowrap', { 'ui-motion-button__clip--active': showFx }]"
       >
         <UButton
           v-bind="{ ...resolvedButtonProps, ...$attrs } as ButtonProps"
