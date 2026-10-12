@@ -479,7 +479,15 @@ const areaY2 = computed(() => trend.value === -1 ? '0' : '1')
     :aria-label="ariaLabel"
   >
     <defs>
-      <linearGradient :id="strokeGradientId" x1="0" y1="0" x2="1" y2="0">
+      <!-- A constant history has no bounding-box height. Use SVG coordinates. -->
+      <linearGradient
+        :id="strokeGradientId"
+        gradientUnits="userSpaceOnUse"
+        :x1="strokeWidth"
+        y1="0"
+        :x2="vbW - strokeWidth"
+        y2="0"
+      >
         <stop
           v-for="stop in gradientStops"
           :key="stop.offset"
