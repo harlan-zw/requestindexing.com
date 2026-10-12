@@ -25,8 +25,8 @@ function loaded(indexed: number, totalUrls: number, trend: FleetIndexingData['tr
   }
 }
 
-function point(date: string, indexedPercent: number, indexedCount: number, errors = 0): FleetIndexingData['trend'][number] {
-  return { date, indexedPercent, indexedCount, issues: { notFound: errors } }
+function point(date: string, indexedPercent: number, indexedCount: number, errors = 0, totalUrls = 20): FleetIndexingData['trend'][number] {
+  return { date, indexedPercent, indexedCount, totalUrls, issues: { notFound: errors } }
 }
 
 function response(overrides: { indexedPercent: number, trendPercent: number }): GscdumpIndexingResponse {
@@ -81,6 +81,7 @@ describe('readSiteIndexing', () => {
       date: '2026-09-01',
       indexedPercent: 80,
       indexedCount: 0,
+      totalUrls: 10,
       issues: { notFound: undefined, soft404: 1, serverError: 3, blockedByRobots: undefined },
       coverage: { crawledNotIndexed: 4, discoveredNotCrawled: undefined },
       signals: { richResultsFail: 2 },
@@ -128,16 +129,29 @@ describe('aggregateIndexed', () => {
 })
 
 describe('aggregateIndexingTrend', () => {
-  it('averages the rate and sums the counts per day, in date order', () => {
+  it('weights historical shares by each day\'s inspected URLs and sums counts in date order', () => {
     const result = aggregateIndexingTrend([
       loaded(10, 20, [point('2026-09-02', 50, 10, 1), point('2026-09-01', 40, 8)]),
-      loaded(5, 5, [point('2026-09-02', 100, 5, 2)]),
+      loaded(5, 5, [point('2026-09-02', 100, 5, 2, 5)]),
       loaded(0, 0, [point('2026-09-02', 0, 0, 50)]),
     ])
     expect(result).toEqual([
       { date: '2026-09-01', indexedPercent: 40, indexedCount: 8, errors: 0 },
-      { date: '2026-09-02', indexedPercent: 75, indexedCount: 15, errors: 3 },
+      { date: '2026-09-02', indexedPercent: 60, indexedCount: 15, errors: 3 },
     ])
+  })
+
+  it('uses historical totals instead of today\'s inspected totals', () => {
+    const result = aggregateIndexingTrend([
+      loaded(1, 1, [point('2026-09-01', 50, 50, 0, 100)]),
+      loaded(900, 1000, [point('2026-09-01', 100, 1, 0, 1)]),
+    ])
+    expect(result[0]?.indexedPercent).toBeCloseTo(51 / 101 * 100)
+  })
+
+  it('reports zero when the daily inspected total is zero', () => {
+    const result = aggregateIndexingTrend([loaded(1, 1, [point('2026-09-01', 0, 0, 0, 0)])])
+    expect(result).toEqual([{ date: '2026-09-01', indexedPercent: 0, indexedCount: 0, errors: 0 }])
   })
 })
 

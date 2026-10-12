@@ -19,6 +19,7 @@ export interface FleetIndexingTrendPoint extends SiteIndexingTrendIssuePoint {
   date: string
   indexedPercent: number
   indexedCount: number
+  totalUrls: number
 }
 
 export interface FleetIndexingData {
@@ -80,6 +81,7 @@ export function readSiteIndexing(response: GscdumpIndexingResponse): FleetIndexi
       date: point.date,
       indexedPercent: clampRate(point.indexedPercent),
       indexedCount: point.indexedCount ?? 0,
+      totalUrls: point.totalUrls,
       issues: {
         notFound: orUndefined(point.issues.notFound),
         soft404: orUndefined(point.issues.soft404),
@@ -166,19 +168,19 @@ export function aggregateIndexed(reads: Iterable<SiteIndexingRead>): FleetIndexi
 }
 
 /**
- * One point per day across every observed Site: the mean index rate, and the
- * summed indexed URLs and crawl errors. Upstream averages the rate rather than
- * weighting it, so a small Site moves the line as much as a large one.
+ * One point per day across every observed Site, weighted by inspected URLs.
+ * Historical indexed counts and totals must come from the same daily sample.
+ * Today's totals cannot replace a historical denominator.
  */
 export function aggregateIndexingTrend(reads: Iterable<SiteIndexingRead>): FleetIndexingAggregatePoint[] {
-  const byDate = new Map<string, { rates: number[], indexedCount: number, errors: number }>()
+  const byDate = new Map<string, { totalUrls: number, indexedCount: number, errors: number }>()
   for (const read of reads) {
     const data = observedIndexing(read)
     if (!data)
       continue
     for (const point of data.trend) {
-      const day = byDate.get(point.date) ?? { rates: [], indexedCount: 0, errors: 0 }
-      day.rates.push(point.indexedPercent)
+      const day = byDate.get(point.date) ?? { totalUrls: 0, indexedCount: 0, errors: 0 }
+      day.totalUrls += point.totalUrls
       day.indexedCount += point.indexedCount
       day.errors += sumErrors(point.issues)
       byDate.set(point.date, day)
@@ -186,7 +188,7 @@ export function aggregateIndexingTrend(reads: Iterable<SiteIndexingRead>): Fleet
   }
   return Array.from(byDate, ([date, day]) => ({
     date,
-    indexedPercent: day.rates.reduce((sum, rate) => sum + rate, 0) / day.rates.length,
+    indexedPercent: day.totalUrls > 0 ? clampRate(day.indexedCount / day.totalUrls * 100) : 0,
     indexedCount: day.indexedCount,
     errors: day.errors,
   }))
