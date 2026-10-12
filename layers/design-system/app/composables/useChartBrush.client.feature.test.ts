@@ -30,9 +30,9 @@ function chart() {
   const el = host.firstElementChild as HTMLElement
   el.getBoundingClientRect = () => ({ left: 0, width: 100 }) as DOMRect
   cleanups.push(() => app.unmount())
-  const pointer = (type: string, x: number, y = 0, id = 1) => {
+  const pointer = (type: string, x: number, y = 0, id = 1, pointerType = 'mouse') => {
     const event = new Event(type, { bubbles: true })
-    Object.assign(event, { button: 0, clientX: x, clientY: y, pointerId: id })
+    Object.assign(event, { button: 0, clientX: x, clientY: y, pointerId: id, pointerType })
     ;(type === 'pointerdown' ? el : window).dispatchEvent(event)
     for (const [key, fn] of frames) {
       frames.delete(key)
@@ -52,9 +52,9 @@ it('commits a horizontal drag on release', () => {
 
 it('leaves vertical gestures to page scrolling', () => {
   const { commit, pointer } = chart()
-  pointer('pointerdown', 0)
-  pointer('pointermove', 30, 50)
-  pointer('pointerup', 30, 50)
+  pointer('pointerdown', 0, 0, 1, 'touch')
+  pointer('pointermove', 30, 50, 1, 'touch')
+  pointer('pointerup', 30, 50, 1, 'touch')
   expect(commit).not.toHaveBeenCalled()
 })
 
@@ -77,5 +77,14 @@ it('ignores another pointer release and keeps the original drag', () => {
   pointer('pointerup', 100, 0, 2)
   expect(commit).not.toHaveBeenCalled()
   pointer('pointerup', 100)
+  expect(commit).toHaveBeenCalledOnce()
+})
+
+it('keeps a mouse drag that starts with downward drift', () => {
+  const { commit, pointer } = chart()
+  pointer('pointerdown', 0)
+  pointer('pointermove', 3, 8)
+  pointer('pointermove', 100, 8)
+  pointer('pointerup', 100, 8)
   expect(commit).toHaveBeenCalledOnce()
 })

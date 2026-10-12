@@ -459,8 +459,7 @@ function resetZoom() {
 
 onKeyStroke('Escape', () => {
   if (isDragging.value || dragRange.value) {
-    isDragging.value = false
-    dragRange.value = null
+    cancelBrush()
     return
   }
   if (isZoomed.value)
