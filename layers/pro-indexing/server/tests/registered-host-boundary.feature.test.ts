@@ -240,6 +240,31 @@ describe('automatic links bind the requested host', () => {
 })
 
 describe('property association uses the local registered host', () => {
+  it.each(['https://www.example.com', 'https://example.com'])('keeps populated property state bound to its requested host: %s', async (requestedUrl) => {
+    sqlite.exec('UPDATE sites SET gscdump_site_id = NULL')
+    sqlite.exec('UPDATE users SET gscdump_api_key = \'user-key\'')
+    const progress = { completed: 30, total: 30, failed: 0, percent: 100 }
+    external.available.mockResolvedValue({ sites: [{ siteUrl: 'sc-domain:example.com', siteId: 's_engine', registered: true, permissionLevel: 'siteOwner', syncStatus: 'synced', syncProgress: progress, lastSyncAt: 12345, oldestDateSynced: '2026-09-01', newestDateSynced: '2026-10-01' }] })
+    external.lifecycle.mockResolvedValue({ account: { status: 'ready' }, sites: [{
+      siteId: 's_engine',
+      requestedUrl,
+      gscPropertyUrl: 'sc-domain:example.com',
+      permissionLevel: 'siteOwner',
+      property: { status: 'registered' },
+      analytics: { status: 'ready', queryable: true, progress, syncedRange: { oldest: '2026-09-01', newest: '2026-10-01' } },
+      indexing: { status: 'ready', eligible: true, reason: null, progress: null },
+      sitemaps: { status: 'ready' },
+      latestError: null,
+      updatedAt: '2026-10-01T00:00:00Z',
+    }] })
+    const result = await request({ route: properties, method: 'GET', query: '' }) as { properties: Array<Record<string, unknown>> }
+    const local = result.properties.find(property => property.matchingSite != null)
+    expect(local).toMatchObject(requestedUrl === 'https://example.com'
+      ? { gscdumpSiteId: 's_engine', syncProgress: progress, oldestDateSynced: '2026-09-01', newestDateSynced: '2026-10-01' }
+      : { gscdumpSiteId: null, syncStatus: null, syncProgress: null, lastSyncAt: null, oldestDateSynced: null, newestDateSynced: null })
+    if (requestedUrl === 'https://www.example.com')
+      expect(result.properties.some(property => property.matchingSite == null && property.gscdumpSiteId === 's_engine' && property.syncProgress === progress)).toBe(true)
+  })
   it.each([{ requestedUrl: 'https://www.example.com', matched: true }, { requestedUrl: 'https://example.com', matched: false }])('keeps www distinct from its broad Domain property: $requestedUrl', async ({ requestedUrl, matched }) => {
     sqlite.exec('UPDATE sites SET domain = \'www.example.com\'')
     sqlite.exec('UPDATE users SET gscdump_api_key = \'user-key\'')

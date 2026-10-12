@@ -204,11 +204,11 @@ export default defineProApiHandler({ team: true }, async ({ event, team: ctx }):
             gscdumpSiteId: matchingSite.gscdumpSiteId,
           }
         : null,
-      syncStatus: lifecycleSite ? lifecycleSyncStatus(lifecycleSite) : prop.syncStatus || (prop.registered || matchingSite?.gscdumpSiteId ? 'pending' : null),
-      syncProgress: lifecycleSite?.analytics.progress || prop.syncProgress,
-      lastSyncAt: lifecycleSite?.updatedAt ? Date.parse(lifecycleSite.updatedAt) : prop.lastSyncAt,
-      newestDateSynced: lifecycleSite?.analytics.syncedRange.newest ?? prop.newestDateSynced,
-      oldestDateSynced: lifecycleSite?.analytics.syncedRange.oldest ?? prop.oldestDateSynced,
+      syncStatus: lifecycleSite ? lifecycleSyncStatus(lifecycleSite) : null,
+      syncProgress: lifecycleSite?.analytics.progress ?? null,
+      lastSyncAt: lifecycleSite?.updatedAt ? Date.parse(lifecycleSite.updatedAt) : null,
+      newestDateSynced: lifecycleSite?.analytics.syncedRange.newest ?? null,
+      oldestDateSynced: lifecycleSite?.analytics.syncedRange.oldest ?? null,
       analytics: lifecycleSite?.analytics,
       sitemaps: lifecycleSite?.sitemaps,
       indexingEligible: lifecycleSite?.indexing.eligible,
@@ -218,7 +218,7 @@ export default defineProApiHandler({ team: true }, async ({ event, team: ctx }):
       indexingProgress: lifecycleSite?.indexing.progress,
       latestError: lifecycleSite?.latestError ?? null,
       canSync: !!matchingSite && !matchingSite.gscdumpSiteId && !prop.registered,
-      gscdumpSiteId: lifecycleSite?.siteId || matchingSite?.gscdumpSiteId || prop.siteId,
+      gscdumpSiteId: lifecycleSite?.siteId || matchingSite?.gscdumpSiteId || null,
     }
   })
 
