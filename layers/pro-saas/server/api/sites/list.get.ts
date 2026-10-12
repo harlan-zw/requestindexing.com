@@ -41,7 +41,7 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx, event }) 
 
   return {
     sites: rows.map(({ site }): SiteFleetRow => {
-      const lifecycleSite = lifecycleSiteFor(lifecycle, site.gscdumpSiteId)
+      const lifecycleSite = lifecycleSiteFor(lifecycle, site.gscdumpSiteId, site.domain ?? site.property)
       return {
         siteId: site.publicId,
         domain: site.domain,

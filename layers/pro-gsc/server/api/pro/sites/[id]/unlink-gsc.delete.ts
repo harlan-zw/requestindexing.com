@@ -14,7 +14,7 @@ export default defineProApiHandler({ site: { ability: 'write-data' } }, async ({
   // Delete the gscdump Site, unless a Site on another team still links to it.
   if (site.gscdumpSiteId) {
     const gscdump = useGscdumpClient()
-    await releaseGscdumpSite(db, { siteId, gscdumpSiteId: site.gscdumpSiteId }, id => gscdump.deleteSite(id)).catch((err) => {
+    await releaseGscdumpSite(db, { siteId, gscdumpSiteId: site.gscdumpSiteId, siteUrl: site.domain ?? site.property }, id => gscdump.deleteSite(id), id => gscdump.getRegisteredHostIdentity(id)).catch((err) => {
       // Best-effort: site may already be deleted on gscdump, or gscdump is
       // down. Local unlink still proceeds; reconciliation handles drift.
       logWarn('gscdump.unlink.remote_failed', err, { gscdumpSiteId: site.gscdumpSiteId, siteId })

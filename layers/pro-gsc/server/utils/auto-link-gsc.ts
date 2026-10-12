@@ -2,11 +2,13 @@ import type { EntitlementRefusal } from '@gscdump/contracts'
 import type { GscdumpAvailableSite, GscdumpSiteAccess } from './gscdump-client'
 import { eq } from 'drizzle-orm'
 import { isVerifiedGscPermission, matchGscSite, normalizeRegistrationTarget, pickBestGscProperty } from 'gscdump'
+import { isError } from 'h3'
 import { logWarn } from '~~/shared/logging'
 import { sites } from '#layers/pro-saas/server/database'
 import { useGscdumpClient } from './gscdump-client'
 import { getGscdumpWebhookUrl } from './gscdump-origin'
 import { updateOnboardingState } from './onboarding'
+import { assertLocalRegisteredGscSiteScope } from './registered-site-scope'
 import { markSiteRefused } from './site-registration-refusal'
 
 /**
@@ -61,13 +63,22 @@ export async function autoLinkGsc(opts: {
 
   // Idempotency guard: return early if already linked
   const [existing] = await db.select({ gscdumpSiteId: sites.gscdumpSiteId }).from(sites).where(eq(sites.id, siteId))
-  if (existing?.gscdumpSiteId)
-    return { _tag: 'Linked', gscdumpSiteId: existing.gscdumpSiteId }
-
   await gscdump.waitForUserReady(gscdumpUserId).catch((err) => {
     logWarn('auth.optional_probe_failed', err, { stage: 'autoLinkGsc_user_not_ready', gscdumpUserId })
     throw err
   })
+
+  if (existing?.gscdumpSiteId) {
+    const reusable = await assertLocalRegisteredGscSiteScope(db, siteId, existing.gscdumpSiteId, id => gscdump.getRegisteredHostIdentity(id), origin)
+      .then(() => true)
+      .catch((error: unknown) => {
+        if (isError(error) && error.statusCode === 403)
+          return false
+        throw error
+      })
+    if (reusable)
+      return { _tag: 'Linked', gscdumpSiteId: existing.gscdumpSiteId }
+  }
 
   // Use pre-fetched sites or fetch fresh
   const availableSites = opts.availableSites
@@ -104,11 +115,7 @@ export async function autoLinkGsc(opts: {
   let gscdumpSiteId: string | undefined
   let gscdumpSiteUrl: string | undefined
 
-  if (matchingGsc.registered && matchingGsc.siteId) {
-    gscdumpSiteId = matchingGsc.siteId
-    gscdumpSiteUrl = simpleDomain
-  }
-  else {
+  {
     const result = await gscdump.registerSite({
       userId: gscdumpUserId,
       requestedUrl: simpleDomain,

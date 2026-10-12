@@ -1,11 +1,11 @@
 import type { PartnerLifecycleSite } from '#layers/pro-gsc/shared/gscdump-api'
 import { GSC_STABLE_LATENCY_DAYS } from '@gscdump/sdk/gsc-constants'
 import { subDays } from 'date-fns'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { matchGscSite, normalizeRegistrationTarget, toIsoDate } from 'gscdump'
 import { getQuery } from 'h3'
 import { logger } from '~~/shared/server/logger'
-import { findLifecycleSite, lifecycleSiteToSyncStatus, useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
+import { findLifecycleSite, lifecycleSiteToSyncStatus, registeredSiteHostMatches, useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
 import { hasGscdumpConnection, readSearchConsoleProperties } from '#layers/pro-gsc/server/utils/search-console-properties'
 // TODO(pro-saas-cleanup): re-wire stats fetch when V1 site-signals lands.
 // The old `#layers/pro-saas/server/utils/site-signals` was deleted in Phase 1.
@@ -70,8 +70,9 @@ export default defineProApiHandler({ team: true }, async ({ event, team: ctx }):
     const userSites = await db
       .select({
         id: sites.id,
-        url: sites.property,
-        name: sites.property,
+        url: sql<string>`${sites.property}`.as('site_property'),
+        domain: sites.domain,
+        name: sql<string>`${sites.property}`.as('site_name'),
         gscdumpSiteId: sites.gscdumpSiteId,
         gscdumpSiteUrl: sites.gscdumpSiteUrl,
       })
@@ -85,7 +86,7 @@ export default defineProApiHandler({ team: true }, async ({ event, team: ctx }):
         siteId: s.id,
         siteName: s.name,
         siteUrl: s.url!,
-        domain: normalizeRegistrationTarget(s.url!) ?? s.url!,
+        domain: s.domain ?? normalizeRegistrationTarget(s.url!) ?? s.url!,
         gscdumpSiteId: s.gscdumpSiteId,
         gscdumpSiteUrl: s.gscdumpSiteUrl,
       }))
@@ -182,8 +183,13 @@ export default defineProApiHandler({ team: true }, async ({ event, team: ctx }):
   const seenLifecycleSiteIds = new Set<string>()
 
   const properties = availableSitesRes.sites.map((prop) => {
-    const matchingSite = siteDomains.find(sd => matchGscSite(sd.siteUrl, prop.siteUrl))
-    const lifecycleSite = findLifecycleSite(lifecycle, matchingSite?.gscdumpSiteId || prop.siteId || prop.siteUrl)
+    const localCandidate = siteDomains.find(sd => matchGscSite(sd.siteUrl, prop.siteUrl))
+    const matchingSite = localCandidate && (!localCandidate.gscdumpSiteId || lifecycle.sites.some(site => site.siteId === localCandidate.gscdumpSiteId && registeredSiteHostMatches(site.requestedUrl, localCandidate.domain)))
+      ? localCandidate
+      : undefined
+    const expectedSiteUrl = matchingSite?.domain ?? prop.siteUrl
+    const matchingLifecycle = { ...lifecycle, sites: lifecycle.sites.filter(site => registeredSiteHostMatches(site.requestedUrl, expectedSiteUrl)) }
+    const lifecycleSite = findLifecycleSite(matchingLifecycle, matchingSite?.gscdumpSiteId || prop.siteId || prop.siteUrl)
     if (lifecycleSite)
       seenLifecycleSiteIds.add(lifecycleSite.siteId)
 
@@ -221,9 +227,10 @@ export default defineProApiHandler({ team: true }, async ({ event, team: ctx }):
       continue
     const propUrl = lifecycleSite.gscPropertyUrl || lifecycleSite.requestedUrl
     const matchingSite = siteDomains.find(sd =>
-      sd.gscdumpSiteId === lifecycleSite.siteId
-      || matchGscSite(sd.siteUrl, propUrl)
-      || (sd.gscdumpSiteUrl != null && matchGscSite(sd.gscdumpSiteUrl, propUrl)),
+      registeredSiteHostMatches(lifecycleSite.requestedUrl, sd.domain)
+      && (sd.gscdumpSiteId === lifecycleSite.siteId
+        || matchGscSite(sd.siteUrl, propUrl)
+        || (sd.gscdumpSiteUrl != null && matchGscSite(sd.gscdumpSiteUrl, propUrl))),
     )
     properties.push({
       siteUrl: propUrl,

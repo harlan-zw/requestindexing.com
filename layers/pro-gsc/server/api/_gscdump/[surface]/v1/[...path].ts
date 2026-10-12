@@ -8,7 +8,7 @@
 import type { HttpV1OperationDefinition } from '@gscdump/contracts/v1/http'
 import type { GscdumpV1ProxyOperation } from '../../../../internal/gscdump-v1-browser-proxy'
 import process from 'node:process'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 import { createError, getQuery, getRequestHeader, getRequestURL, getRouterParam, readBody } from 'h3'
 import { teamSites } from '~~/layers/core/server/db/schema'
@@ -21,7 +21,7 @@ import {
 import { assertGscdumpBrowserUnsafeMethodOrigin } from '#layers/pro-gsc/server/utils/gscdump-browser-origin'
 import { useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
 import { getGscdumpApiUrl } from '#layers/pro-gsc/server/utils/gscdump-origin'
-import { assertRegisteredGscSiteScope } from '#layers/pro-gsc/server/utils/registered-site-scope'
+import { assertRegisteredGscSiteScope, registeredSiteTeamPrincipals } from '#layers/pro-gsc/server/utils/registered-site-scope'
 import { sites, teams, users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 import { readProFeatureFlags } from '#layers/pro-shell/shared/manifest'
@@ -140,10 +140,11 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
       localSiteId: sites.id,
       domain: sites.domain,
       property: sites.property,
-      teamPrincipalId: teamOwner.gscdumpUserId,
-      sitePrincipalId: siteOwner.gscdumpUserId,
-      owningTeamId: sites.teamId,
-      linkedTeamId: teamSites.teamId,
+      upstreamTeamId: teams.gscdumpTeamId,
+      teamPrincipalId: sql<string | null>`${teamOwner.gscdumpUserId}`.as('team_principal_id'),
+      sitePrincipalId: sql<string | null>`${siteOwner.gscdumpUserId}`.as('site_principal_id'),
+      owningTeamId: sql<number>`${sites.teamId}`.as('owning_team_id'),
+      linkedTeamId: sql<number | null>`${teamSites.teamId}`.as('linked_team_id'),
     })
       .from(sites)
       .leftJoin(teamSites, eq(teamSites.siteId, sites.id))
@@ -173,7 +174,11 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
       teamIds: [row.owningTeamId, ...(row.linkedTeamId === null ? [] : [row.linkedTeamId])],
     }, false)._tag === 'allowed').map(row => [row.localSiteId, row])).values()]
     const gscdump = useGscdumpClient()
-    await assertRegisteredGscSiteScope(target.siteId, visibleSites, principalId => gscdump.getUserLifecycle(principalId))
+    const linkedSites = await Promise.all(visibleSites.map(async site => ({
+      ...site,
+      principalIds: [...await registeredSiteTeamPrincipals(db, site.owningTeamId), ...[site.teamPrincipalId, site.sitePrincipalId].filter((id): id is string => !!id)],
+    })))
+    await assertRegisteredGscSiteScope(target.siteId, linkedSites, id => gscdump.getRegisteredHostIdentity(id))
   }
 
   const apiKey = credentialRow?.apiKey ?? null

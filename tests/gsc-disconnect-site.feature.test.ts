@@ -19,7 +19,7 @@ vi.mock('#layers/pro-saas/server/utils/get-caller', () => ({
   requireCaller: h.requireCaller,
 }))
 vi.mock('#layers/pro-gsc/server/utils/gscdump-client', () => ({
-  useGscdumpClient: () => ({ deleteSite: h.deleteSite }),
+  useGscdumpClient: () => ({ deleteSite: h.deleteSite, getRegisteredHostIdentity: async (siteId: string) => ({ identity: { siteId, requestedUrl: siteId === 'gsd_a' ? 'https://a.example' : 'https://b.example', userId: 'u_owner', teamId: 't_owner' } }) }),
 }))
 
 vi.stubGlobal('defineEventHandler', defineEventHandler)
@@ -56,6 +56,7 @@ beforeEach(() => {
   h.db = proDatabase(sqlite)
   seedUser(sqlite, 1)
   seedUser(sqlite, 2)
+  sqlite.exec('UPDATE users SET gscdump_user_id = \'u_owner\'')
   seedSite(sqlite, { id: 'site-a', teamId: 1, domain: 'a.example', gscdumpSiteId: 'gsd_a' })
   seedSite(sqlite, { id: 'site-b', teamId: 2, domain: 'b.example', gscdumpSiteId: 'gsd_b' })
 })

@@ -4,10 +4,11 @@ import type { TeamDeleteGscdump } from './team'
 import { readdirSync, readFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
+import { GscdumpV1Error } from '@gscdump/sdk/v1'
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { createError } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { sites, teams } from '../database'
+import { sites, teams, users } from '../database'
 import { createUserWithPersonalTeam } from '../utils/create-user-with-personal-team'
 import { deleteTeam } from './team'
 
@@ -50,6 +51,7 @@ type ProDatabase = CurrentTeamContext['db']
 function recordingGscdump(failSite: Record<string, number> = {}) {
   const calls: string[] = []
   const gscdump: TeamDeleteGscdump = {
+    getRegisteredHostIdentity: async siteId => ({ identity: { siteId, requestedUrl: siteId === 's_a' ? 'https://a.example' : 'https://b.example', userId: 'u_owner', teamId: 't_agency' } }),
     deleteSite: async (gscdumpSiteId) => {
       calls.push(`site:${gscdumpSiteId}`)
       const status = failSite[gscdumpSiteId]
@@ -91,6 +93,7 @@ describe('deleteTeam', () => {
       personalTeam: false,
       gscdumpTeamId: 't_agency',
     }).returning().get()
+    await db.update(users).set({ gscdumpUserId: 'u_owner' })
     await addSite(team.teamId, 'a.example', 's_a')
     await addSite(team.teamId, 'b.example', 's_b')
     await addSite(team.teamId, 'unlinked.example', null)
@@ -109,6 +112,31 @@ describe('deleteTeam', () => {
     expect(calls).toEqual(['site:s_a', 'site:s_b', 'team:t_agency'])
     expect(count('SELECT COUNT(*) AS n FROM teams WHERE team_id = ?', ctx.team.teamId)).toBe(0)
     expect(count('SELECT COUNT(*) AS n FROM sites WHERE team_id = ?', ctx.team.teamId)).toBe(0)
+  })
+
+  it('keeps the complete batch when any cached link names another host', async () => {
+    const { calls, gscdump } = recordingGscdump()
+    gscdump.getRegisteredHostIdentity = async siteId => ({ identity: { siteId, requestedUrl: siteId === 's_a' ? 'https://a.example' : 'https://other.test', userId: 'u_owner', teamId: 't_agency' } })
+    await expect(deleteTeam({} as H3Event, ctx, gscdump)).rejects.toMatchObject({ statusCode: 403 })
+    expect(calls).toEqual([])
+    expect(count('SELECT COUNT(*) AS n FROM teams WHERE team_id = ?', ctx.team.teamId)).toBe(1)
+    expect(count('SELECT COUNT(*) AS n FROM sites WHERE team_id = ?', ctx.team.teamId)).toBe(3)
+  })
+
+  it('finishes a retry when a prior successful deletion is absent from lifecycle', async () => {
+    const { calls, gscdump } = recordingGscdump({ s_b: 503 })
+    await expect(deleteTeam({} as H3Event, ctx, gscdump)).rejects.toMatchObject({ statusCode: 502 })
+    gscdump.getRegisteredHostIdentity = async (siteId) => {
+      if (siteId === 's_a')
+        throw new GscdumpV1Error({ code: 'site_not_found', status: 404, message: 'absent', retryable: false })
+      return { identity: { siteId, requestedUrl: 'https://b.example', userId: 'u_owner', teamId: 't_agency' } }
+    }
+    gscdump.deleteSite = async (id) => {
+      calls.push(`retry:${id}`)
+    }
+    await deleteTeam({} as H3Event, ctx, gscdump)
+    expect(calls).toEqual(['site:s_a', 'site:s_b', 'retry:s_b', 'team:t_agency'])
+    expect(count('SELECT COUNT(*) AS n FROM teams WHERE team_id = ?', ctx.team.teamId)).toBe(0)
   })
 
   it('treats a Site gscdump no longer has as already deleted', async () => {

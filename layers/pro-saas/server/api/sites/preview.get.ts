@@ -55,7 +55,7 @@ export default defineProApiHandler({}, async ({ db, caller, event }) => {
   const lifecycle = lifecycleOf(lifecycleRead)
 
   const previews = await Promise.all(ownedSites.map(async (site) => {
-    const lifecycleSite = lifecycleSiteFor(lifecycle, site.gscdumpSiteId)
+    const lifecycleSite = lifecycleSiteFor(lifecycle, site.gscdumpSiteId, site.domain ?? site.property)
     const syncStatus = syncStatusFor(lifecycleSite, site.gscdumpSyncStatus)
     const oldest = lifecycleSite?.analytics.syncedRange.oldest ?? null
 

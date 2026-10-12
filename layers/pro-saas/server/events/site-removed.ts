@@ -11,5 +11,6 @@ export default defineEvent({
     teamId: idSchema,
     userId: idSchema,
     gscdumpSiteId: z.string().nullable(),
+    siteUrl: z.string(),
   }),
 })

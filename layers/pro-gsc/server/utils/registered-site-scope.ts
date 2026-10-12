@@ -1,40 +1,75 @@
+import { isGscdumpV1Error } from '@gscdump/sdk/v1'
+import { eq, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/sqlite-core'
 import { createError } from 'h3'
 import { logWarn } from '~~/shared/logging'
+import { sites, teamMemberships, teams, users } from '#layers/pro-saas/server/database'
+import { registeredHost } from '../../shared/registered-site-host'
 
-interface Registration { siteId: string, requestedUrl: string }
-interface LinkedSite { localSiteId: string, domain: string | null, property: string, teamPrincipalId: string | null, sitePrincipalId: string | null }
+interface Registration { identity: { siteId: string, requestedUrl: string, userId: string, teamId: string } }
+interface LinkedSite { localSiteId: string, domain: string | null, property: string, principalIds: readonly string[], upstreamTeamId: string | null }
+export type RegisteredSiteAdmission = { _tag: 'Registered' } | { _tag: 'Absent' }
 
-function registeredHost(value: string): string | null {
-  const input = value.replace(/^sc-domain:/, '')
-  const parsed = URL.parse(/^https?:\/\//i.test(input) ? input : `https://${input}`)
-  return parsed?.hostname && !parsed.username && !parsed.password ? parsed.hostname : null
+/** Current Team memberships establish account scope without remote lifecycle fanout. */
+export async function registeredSiteTeamPrincipals(db: ReturnType<typeof useDrizzle>, teamId: number): Promise<string[]> {
+  const members = await db.select({ principalId: users.gscdumpUserId }).from(teamMemberships).innerJoin(users, eq(users.userId, teamMemberships.userId)).where(eq(teamMemberships.teamId, teamId)).all()
+  return members.flatMap(member => member.principalId ? [member.principalId] : [])
+}
+
+/** Resolve proof by the authorized local Site, never by an untrusted engine link alone. */
+export async function assertLocalRegisteredGscSiteScope(
+  db: ReturnType<typeof useDrizzle>,
+  localSiteId: string,
+  upstreamSiteId: string,
+  readIdentity: (siteId: string) => Promise<Registration>,
+  expectedSiteUrl?: string,
+  operation: 'read' | 'delete' = 'read',
+): Promise<RegisteredSiteAdmission> {
+  const teamOwner = alias(users, 'scope_team_owner')
+  const siteOwner = alias(users, 'scope_site_owner')
+  const row = await db.select({
+    localSiteId: sites.id,
+    upstreamSiteId: sites.gscdumpSiteId,
+    domain: sites.domain,
+    property: sites.property,
+    teamId: sites.teamId,
+    upstreamTeamId: teams.gscdumpTeamId,
+    teamPrincipalId: sql<string | null>`${teamOwner.gscdumpUserId}`.as('team_principal_id'),
+    sitePrincipalId: sql<string | null>`${siteOwner.gscdumpUserId}`.as('site_principal_id'),
+  }).from(sites).leftJoin(teams, eq(teams.teamId, sites.teamId)).leftJoin(teamOwner, eq(teamOwner.userId, teams.ownerId)).leftJoin(siteOwner, eq(siteOwner.userId, sites.ownerId)).where(eq(sites.id, localSiteId)).get()
+  const linked = row?.upstreamSiteId === upstreamSiteId
+    ? [{ ...row, principalIds: [...await registeredSiteTeamPrincipals(db, row.teamId), ...[row.teamPrincipalId, row.sitePrincipalId].filter((id): id is string => !!id)] }]
+    : []
+  if (expectedSiteUrl && row && registeredHost(expectedSiteUrl) !== registeredHost(row.domain ?? row.property))
+    throw createError({ statusCode: 403, statusMessage: 'gsc_site_host_mismatch' })
+  return assertRegisteredGscSiteScope(upstreamSiteId, linked, readIdentity, operation)
 }
 
 /** A local link grants access only to the exact host in the authoritative registration. */
 export async function assertRegisteredGscSiteScope(
   siteId: string,
   linkedSites: readonly LinkedSite[],
-  readLifecycle: (principalId: string) => Promise<{ sites: readonly Registration[] }>,
-): Promise<void> {
-  const principals = [...new Set(linkedSites.flatMap(site => [site.teamPrincipalId, site.sitePrincipalId]).filter((id): id is string => !!id))]
-  const registrations: Registration[] = []
-  for (let offset = 0; offset < principals.length; offset += 4) {
-    await Promise.all(principals.slice(offset, offset + 4).map(async (principalId) => {
-      const lifecycle = await readLifecycle(principalId).catch((error: unknown) => {
-        logWarn('gscdump.site_access.read_failed', error, { principalId, gscdumpSiteId: siteId })
-        return null
-      })
-      registrations.push(...(lifecycle?.sites ?? []))
-    }))
-  }
-  const matching = registrations.filter(site => site.siteId === siteId)
-  const hosts = new Set(matching.map(site => registeredHost(site.requestedUrl)))
-  const registered = hosts.size === 1 ? hosts.values().next().value : null
+  readIdentity: (siteId: string) => Promise<Registration>,
+  operation: 'read' | 'delete' = 'read',
+): Promise<RegisteredSiteAdmission> {
   const localHosts = linkedSites.map(site => registeredHost(site.domain ?? site.property))
-  if (!registered || !localHosts.length || localHosts.some(host => !host)) {
+  if (!localHosts.length || localHosts.some(host => !host))
     throw createError({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable' })
-  }
+  const registration = await readIdentity(siteId).catch((error: unknown) => {
+    if (operation === 'delete' && isGscdumpV1Error(error) && error.code === 'site_not_found' && error.status === 404)
+      return null
+    logWarn('gscdump.site_access.read_failed', error, { gscdumpSiteId: siteId })
+    throw createError({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable', cause: error })
+  })
+  if (!registration)
+    return { _tag: 'Absent' }
+  const registered = registeredHost(registration.identity.requestedUrl)
+  if (!registered || registration.identity.siteId !== siteId)
+    throw createError({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable' })
+  if (linkedSites.some(site => !site.principalIds.includes(registration.identity.userId) || (site.upstreamTeamId !== null && site.upstreamTeamId !== registration.identity.teamId)))
+    throw createError({ statusCode: 403, statusMessage: 'forbidden' })
   if (localHosts.some(host => host !== registered)) {
     throw createError({ statusCode: 403, statusMessage: 'gsc_site_host_mismatch' })
   }
+  return { _tag: 'Registered' }
 }

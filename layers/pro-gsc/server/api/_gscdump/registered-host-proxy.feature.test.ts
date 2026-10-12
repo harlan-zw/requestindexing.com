@@ -3,13 +3,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import proxy from './[surface]/v1/[...path]'
 
 const state = vi.hoisted(() => ({
-  rows: [{ localSiteId: 'local', domain: 'example.com', property: 'sc-domain:example.com', owningTeamId: 1, linkedTeamId: null, teamPrincipalId: 'u_owner', sitePrincipalId: 'u_owner' }],
+  rows: [{ localSiteId: 'local', domain: 'example.com', property: 'sc-domain:example.com', owningTeamId: 1, linkedTeamId: null as number | null, upstreamTeamId: null as string | null, teamPrincipalId: 'u_owner', sitePrincipalId: 'u_owner' }],
   lifecycle: vi.fn(),
   fetch: vi.fn(),
 }))
 vi.mock('#layers/pro-saas/server/utils/handler', () => ({ defineProApiHandler: (_options: unknown, handler: unknown) => handler }))
 vi.mock('#layers/pro-gsc/server/utils/gscdump-origin', () => ({ getGscdumpApiUrl: () => 'https://engine.test/api' }))
-vi.mock('#layers/pro-gsc/server/utils/gscdump-client', () => ({ useGscdumpClient: () => ({ getUserLifecycle: state.lifecycle }) }))
+vi.mock('#layers/pro-gsc/server/utils/gscdump-client', () => ({ useGscdumpClient: () => ({ getRegisteredHostIdentity: async (siteId: string) => {
+  const lifecycle = await state.lifecycle(siteId)
+  const matches = lifecycle.sites.filter((site: { siteId: string }) => site.siteId === siteId)
+  if (matches.length !== 1)
+    throw new Error('identity unavailable')
+  return { identity: { ...matches[0], userId: 'u_owner', teamId: 't_owner' } }
+} }) }))
 
 function request() {
   const db = {
@@ -17,6 +23,7 @@ function request() {
       const query = {
         from: () => query,
         leftJoin: () => query,
+        innerJoin: () => query,
         where: () => query,
         get: async () => ({ apiKey: 'caller-key', userId: 'u_caller' }),
         all: async () => state.rows,
@@ -35,10 +42,16 @@ beforeEach(() => {
   vi.stubGlobal('fetch', state.fetch)
   state.fetch.mockReset().mockResolvedValue(new Response('{"ok":true}'))
   state.lifecycle.mockReset()
-  state.rows = [{ localSiteId: 'local', domain: 'example.com', property: 'sc-domain:example.com', owningTeamId: 1, linkedTeamId: null, teamPrincipalId: 'u_owner', sitePrincipalId: 'u_owner' }]
+  state.rows = [{ localSiteId: 'local', domain: 'example.com', property: 'sc-domain:example.com', owningTeamId: 1, linkedTeamId: null, upstreamTeamId: null, teamPrincipalId: 'u_owner', sitePrincipalId: 'u_owner' }]
 })
 
 describe('browser proxy admits only the registered host', () => {
+  it('does not union account proof across unrelated visible local Sites', async () => {
+    state.rows.push({ ...state.rows[0]!, localSiteId: 'other-local', owningTeamId: 2, linkedTeamId: 1, teamPrincipalId: 'u_other', sitePrincipalId: 'u_other', upstreamTeamId: null })
+    state.lifecycle.mockResolvedValue({ sites: [{ siteId: 's_engine', requestedUrl: 'https://example.com' }] })
+    await expect(request()).rejects.toMatchObject({ statusCode: 403 })
+    expect(state.fetch).not.toHaveBeenCalled()
+  })
   it('refuses evidence from a different registered host before relaying', async () => {
     state.lifecycle.mockResolvedValue({ sites: [{ siteId: 's_engine', requestedUrl: 'https://other.example.com' }] })
     await expect(request()).rejects.toMatchObject({ statusCode: 403 })
@@ -48,7 +61,7 @@ describe('browser proxy admits only the registered host', () => {
   it('relays the exact host using the caller credential and owner lifecycle', async () => {
     state.lifecycle.mockResolvedValue({ sites: [{ siteId: 's_engine', requestedUrl: 'https://example.com/path' }] })
     expect((await request()).status).toBe(200)
-    expect(state.lifecycle).toHaveBeenCalledExactlyOnceWith('u_owner')
+    expect(state.lifecycle).toHaveBeenCalledExactlyOnceWith('s_engine')
     expect(state.fetch).toHaveBeenCalledWith(new URL('https://engine.test/api/partner/v1/sites/s_engine/indexing'), expect.objectContaining({
       headers: expect.objectContaining({ authorization: 'Bearer caller-key' }),
     }))
@@ -75,7 +88,7 @@ describe('browser proxy admits only the registered host', () => {
     state.rows.push({ ...state.rows[0]!, localSiteId: 'hidden', domain: 'other.test', owningTeamId: 2, teamPrincipalId: 'u_other', sitePrincipalId: 'u_other' })
     state.lifecycle.mockResolvedValue({ sites: [{ siteId: 's_engine', requestedUrl: 'https://example.com' }] })
     expect((await request()).status).toBe(200)
-    expect(state.lifecycle).toHaveBeenCalledExactlyOnceWith('u_owner')
+    expect(state.lifecycle).toHaveBeenCalledExactlyOnceWith('s_engine')
   })
 
   it('refuses a mirror with no principal to establish scope', async () => {

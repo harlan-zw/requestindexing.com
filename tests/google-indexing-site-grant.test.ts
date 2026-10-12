@@ -18,6 +18,8 @@ vi.hoisted(() => {
   vi.stubGlobal('requireTeamSite', async () => ({ site: { id: 'site-1', gscdumpSiteId: fixture.gscdumpSiteId } }))
 })
 vi.mock('#layers/pro-saas/server/utils/handler', () => ({ defineProApiHandler: (handler: unknown) => handler }))
+// The feature boundary suite covers local authorization and authoritative host proof.
+vi.mock('#layers/pro-gsc/server/utils/registered-site-scope', () => ({ assertLocalRegisteredGscSiteScope: async () => ({ _tag: 'Registered' }) }))
 vi.mock('~~/layers/pro-indexing/server/utils/google-indexing', () => ({
   googleIndexingClient: () => fixture.configured ? { clientId: 'client', clientSecret: 'secret' } : null,
   toGoogleSubmissionError: (error: unknown) => { throw error },

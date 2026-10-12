@@ -5,14 +5,16 @@
 import type { PartnerLifecycleResponse, PartnerLifecycleSite } from '#layers/pro-gsc/shared/gscdump-api'
 import { getOldestGscDate } from 'gscdump'
 import { findLifecycleSite, lifecycleSiteToSyncStatus } from '#layers/pro-gsc/server/utils/gscdump-client'
+import { registeredSiteHostMatches } from '#layers/pro-gsc/shared/registered-site-host'
 
 /** `refused`: gscdump refused to register the Site; it waits for the user. */
 export type SiteSyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error' | 'refused'
 
-export function lifecycleSiteFor(lifecycle: PartnerLifecycleResponse | null, gscdumpSiteId: string | null): PartnerLifecycleSite | null {
+export function lifecycleSiteFor(lifecycle: PartnerLifecycleResponse | null, gscdumpSiteId: string | null, expectedSiteUrl: string): PartnerLifecycleSite | null {
   if (!lifecycle || !gscdumpSiteId)
     return null
-  return findLifecycleSite(lifecycle, gscdumpSiteId)
+  const candidate = findLifecycleSite(lifecycle, gscdumpSiteId)
+  return candidate && registeredSiteHostMatches(candidate.requestedUrl, expectedSiteUrl) ? candidate : null
 }
 
 export function syncStatusFor(lifecycleSite: PartnerLifecycleSite | null, fallback: SiteSyncStatus | null): SiteSyncStatus {

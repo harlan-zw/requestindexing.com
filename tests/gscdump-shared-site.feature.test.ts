@@ -19,7 +19,7 @@ vi.mock('#layers/pro-saas/server/utils/get-caller', () => ({
   requireCaller: h.requireCaller,
 }))
 vi.mock('#layers/pro-gsc/server/utils/gscdump-client', () => ({
-  useGscdumpClient: () => ({ deleteSite: h.deleteSite }),
+  useGscdumpClient: () => ({ deleteSite: h.deleteSite, getRegisteredHostIdentity: async (siteId: string) => ({ identity: { siteId, requestedUrl: 'https://alone.example', userId: 'u_owner', teamId: 't_owner' } }) }),
 }))
 vi.mock('@harlan-zw/nuxt-domain-events/server', () => ({
   defineListener: (definition: unknown) => definition,
@@ -29,7 +29,7 @@ vi.stubGlobal('defineEventHandler', defineEventHandler)
 vi.stubGlobal('createError', createError)
 vi.stubGlobal('setResponseHeader', vi.fn())
 vi.stubGlobal('useDrizzle', () => h.db)
-vi.stubGlobal('useGscdumpClient', () => ({ deleteSite: h.deleteSite }))
+vi.stubGlobal('useGscdumpClient', () => ({ deleteSite: h.deleteSite, getRegisteredHostIdentity: async (siteId: string) => ({ identity: { siteId, requestedUrl: 'https://alone.example', userId: 'u_owner', teamId: 't_owner' } }) }))
 vi.stubGlobal('getRouterParam', (event: { params: Record<string, string> }, name: string) => event.params[name])
 
 function editorOf(teamId: number, userId: number): Caller {
@@ -48,13 +48,14 @@ async function unlink(siteId: string) {
   return handler({ context: {}, params: { id: `s_${siteId}` } } as unknown as H3Event)
 }
 
+let sqlite: DatabaseSync
+
 async function removeSite(siteId: string, teamId: number, gscdumpSiteId: string) {
   const { default: listener } = await import('../layers/pro-gsc/server/listeners/site-removed-unlink')
   const { handle } = listener as unknown as { handle: (payload: Record<string, unknown>) => Promise<void> }
-  await handle({ event: { context: {} }, siteId, teamId, userId: 3, gscdumpSiteId })
+  const row = sqlite.prepare('SELECT domain FROM sites WHERE id = ?').get(siteId) as { domain: string }
+  await handle({ event: { context: {} }, siteId, teamId, userId: 3, gscdumpSiteId, siteUrl: row.domain })
 }
-
-let sqlite: DatabaseSync
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -64,6 +65,7 @@ beforeEach(() => {
   seedUser(sqlite, 1)
   seedUser(sqlite, 2)
   seedUser(sqlite, 3)
+  sqlite.exec('UPDATE users SET gscdump_user_id = \'u_owner\'')
   seedMembership(sqlite, 2, 3, 'editor')
   seedSite(sqlite, { id: 'site-personal', teamId: 1, domain: 'shared.example', gscdumpSiteId: 'gsd_shared' })
   seedSite(sqlite, { id: 'site-team', teamId: 2, domain: 'shared.example', gscdumpSiteId: 'gsd_shared' })
