@@ -184,7 +184,8 @@ function lttb(vals: number[], target: number): number[] {
   return result
 }
 
-const values = computed(() => lttb(normalize(data, yAxis), maxPoints))
+const fullValues = computed(() => normalize(data, yAxis))
+const values = computed(() => lttb(fullValues.value, maxPoints))
 const prevValues = computed(() => lttb(normalize(previousData, yAxis), maxPoints))
 const hasComparison = computed(() => prevValues.value.length > 0)
 
@@ -193,7 +194,7 @@ const hasComparison = computed(() => prevValues.value.length > 0)
 // endpoint comparison also amplifies reporting-lag artifacts. A <2% relative
 // difference reads as flat.
 const trend = computed<-1 | 0 | 1>(() => {
-  const v = values.value
+  const v = fullValues.value
   if (v.length < 2)
     return 0
   const mid = Math.floor(v.length / 2)
@@ -218,7 +219,7 @@ const trend = computed<-1 | 0 | 1>(() => {
 // plainly went up. "Worsening" is what actually happened to the rank, which is
 // the fact the reader wants; the shape of the line is the sighted proxy for it.
 const ariaLabel = computed(() => {
-  const v = values.value
+  const v = fullValues.value
   const dir = inverted
     ? (trend.value === 1 ? 'improving' : trend.value === -1 ? 'worsening' : 'flat')
     : (trend.value === 1 ? 'upward' : trend.value === -1 ? 'downward' : 'flat')
