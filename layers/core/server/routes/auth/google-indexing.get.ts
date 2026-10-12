@@ -1,4 +1,4 @@
-import type { UserSession } from '~~/layers/core/app/types'
+import type { UserSession } from '#auth-utils'
 import { GSC_INDEXING_SCOPE, hasIndexingScope } from 'gscdump'
 import {
   createError,
@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
 
   if (error) {
     const session = await getUserSession(event) as unknown as UserSession
-    return sendRedirect(event, session.googleIndexingAuth?.returnTo || DEFAULT_RETURN_TO)
+    return sendRedirect(event, session.secure?.googleIndexingAuth?.returnTo || DEFAULT_RETURN_TO)
   }
 
   if (!code) {
@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
     // holds, so a link from another site cannot choose the return page.
     const returnTo = safeAuthRedirect(query.returnTo) ?? DEFAULT_RETURN_TO
     const oauthState = randomUUID()
-    await setUserSession(event, { googleIndexingAuth: { returnTo, state: oauthState } })
+    await setUserSession(event, { secure: { googleIndexingAuth: { returnTo, state: oauthState } } })
     return sendRedirect(event, withQuery(AUTHORIZATION_URL, {
       response_type: 'code',
       client_id: client.clientId,
@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const session = await getUserSession(event) as unknown as UserSession
-  const authPayload = session.googleIndexingAuth
+  const authPayload = session.secure?.googleIndexingAuth
   if (!authPayload || authPayload.state !== state)
     throw createError({ statusCode: 401, statusMessage: 'Invalid state' })
   const returnTo = authPayload.returnTo || DEFAULT_RETURN_TO

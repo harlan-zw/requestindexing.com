@@ -60,7 +60,14 @@ describe('the Search Console grant', () => {
     await connect({ scope: 'verify', returnTo: '/pro/dashboard/onboarding?step=sites&gsc_scope_granted=verify' })
 
     expect(h.setUserSession).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      googleOauthReturnTo: '/pro/dashboard/onboarding?step=sites&gsc_scope_granted=verify',
+      secure: expect.objectContaining({ googleOauthReturnTo: '/pro/dashboard/onboarding?step=sites&gsc_scope_granted=verify' }),
     }))
+  })
+
+  it('keeps the OAuth state in the server-only part of the cookie', async () => {
+    const location = await connect({ returnTo: '/pro/dashboard/account' })
+    expect(h.setUserSession).toHaveBeenCalledWith(expect.anything(), {
+      secure: { googleOauthState: location.searchParams.get('state'), googleOauthReturnTo: '/pro/dashboard/account' },
+    })
   })
 })

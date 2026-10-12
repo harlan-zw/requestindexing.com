@@ -56,6 +56,14 @@ module '#auth-utils' {
       personalTeam: boolean
     } | null
   }
+  export interface SecureSessionData {
+    googleOauthState?: string
+    googleOauthReturnTo?: string
+    googleIndexingAuth?: {
+      returnTo: string
+      state: string
+    }
+  }
 }
 
 module 'nitropack' {

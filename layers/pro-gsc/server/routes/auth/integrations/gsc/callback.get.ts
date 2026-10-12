@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const session = await getUserSession(event)
-  if (state !== session.googleOauthState) {
+  if (state !== session.secure?.googleOauthState) {
     throw createError({ statusCode: 422, statusMessage: 'Invalid state' })
   }
 
@@ -74,10 +74,12 @@ export default defineEventHandler(async (event) => {
   if (grant._tag === 'ScopeMissing') {
     logger.warn('[google auth] Search Console scope not granted for user:', session.user.id, 'granted:', grantedScope)
     // The connect route already parsed this; the session is still untrusted storage.
-    const returnTo = safeAuthRedirect(session.googleOauthReturnTo)
+    const returnTo = safeAuthRedirect(session.secure?.googleOauthReturnTo)
     await setUserSession(event, {
-      googleOauthState: undefined,
-      googleOauthReturnTo: undefined,
+      secure: {
+        googleOauthState: undefined,
+        googleOauthReturnTo: undefined,
+      },
     })
     return sendRedirect(event, gscScopeMissingRedirect(returnTo))
   }
@@ -303,7 +305,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Get return URL before clearing it
-  const returnTo = session.googleOauthReturnTo
+  const returnTo = session.secure?.googleOauthReturnTo
 
   // Identity hints only; teams/currentTeam come from /api/pro/caller on
   // first paint after the redirect (ADR-0001/0002).
@@ -314,8 +316,10 @@ export default defineEventHandler(async (event) => {
     },
     gscConnected: true,
     gscEmail: googleUser?.email,
-    googleOauthState: undefined,
-    googleOauthReturnTo: undefined,
+    secure: {
+      googleOauthState: undefined,
+      googleOauthReturnTo: undefined,
+    },
   })
 
   // Redirect back to original page or dashboard
