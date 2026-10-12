@@ -90,12 +90,7 @@ const summary = computed(() => {
   if (!d || !d.length)
     return ''
   const total = d.reduce((sum, n) => sum + n, 0)
-  const first = d[0] ?? 0
-  const last = d.at(-1) ?? 0
-  const rose = props.inverted ? last < first : last > first
-  const fell = props.inverted ? last > first : last < first
-  const direction = rose ? 'trending up' : fell ? 'trending down' : 'flat'
-  return `${props.label ? `${props.label}. ` : ''}${metricLabel.value}, ${dateRangeLabel.value}: ${total} total. ${direction}.`
+  return `${props.label ? `${props.label}. ` : ''}${metricLabel.value}, ${dateRangeLabel.value}: ${total} total.`
 })
 
 // --- Cursor-following card ----------------------------------------------------
