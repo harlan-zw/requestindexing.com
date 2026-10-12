@@ -8,12 +8,14 @@ export default defineListener({
   name: 'gsc.site-removed-unlink',
   event: 'pro:site:removed',
   execution: { _tag: 'sync', failure: 'isolate' },
-  handle: async ({ event, siteId, teamId, userId, gscdumpSiteId }: EventPayload<'pro:site:removed'>) => {
+  handle: async ({ event, siteId, teamId, userId, gscdumpSiteId, siteUrl }: EventPayload<'pro:site:removed'>) => {
     const db = useDrizzle(event)
     // This runs before the row purge, so the removed Site is left out of the
     // check. A Site on another team that links the same id keeps it alive.
-    if (gscdumpSiteId)
-      await releaseGscdumpSite(db, { siteId, gscdumpSiteId }, id => useGscdumpClient().deleteSite(id))
+    if (gscdumpSiteId) {
+      const client = useGscdumpClient()
+      await releaseGscdumpSite(db, { siteId, gscdumpSiteId, siteUrl }, id => client.deleteSite(id), id => client.getRegisteredHostIdentity(id))
+    }
     // A removed Site can free a place in the Free allowance, so a Site
     // gscdump refused may fit now. The next reconcile tries it again.
     await releaseRefusedSites(db, { teamIds: [teamId], ownerId: userId })

@@ -13,6 +13,7 @@ describe('pro event contracts', () => {
       teamId: 2,
       userId: 3,
       gscdumpSiteId: null,
+      siteUrl: 'example.com',
     })
 
     expect(payload.event).toBe(event)
@@ -26,6 +27,7 @@ describe('pro event contracts', () => {
       teamId: 2,
       userId: 3,
       gscdumpSiteId: null,
+      siteUrl: 'example.com',
     })).toThrow()
     expect(() => integrationLinked.input.parse({
       event,

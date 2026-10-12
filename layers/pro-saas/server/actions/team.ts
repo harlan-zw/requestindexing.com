@@ -8,6 +8,7 @@ import { and, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
 import { isError } from 'h3'
 import { logWarn } from '~~/shared/logging'
 import { dispatchEvent } from '#domain-events/server'
+import { assertLocalRegisteredGscSiteScope } from '#layers/pro-gsc/server/utils/registered-site-scope'
 import { findIdentityByProviderEmail } from '#layers/pro-saas-auth/server/utils/auth/identity'
 import { ProError } from '../../shared/errors'
 import {
@@ -90,12 +91,14 @@ export async function updateTeamName(event: H3Event, ctx: CurrentTeamContext, in
 
 // The gscdump calls a Team delete makes. Passed in so a test can drive them.
 export interface TeamDeleteGscdump {
+  getRegisteredHostIdentity: Parameters<typeof assertLocalRegisteredGscSiteScope>[3]
   deleteSite: (gscdumpSiteId: string) => Promise<unknown>
   deleteTeam: (gscdumpTeamId: string, mirror: MirrorCtx) => Promise<unknown>
 }
 
 function teamDeleteGscdump(event: H3Event): TeamDeleteGscdump {
   return {
+    getRegisteredHostIdentity: siteId => useGscdumpClient().getRegisteredHostIdentity(siteId),
     deleteSite: gscdumpSiteId => useGscdumpClient().deleteSite(gscdumpSiteId),
     deleteTeam: (gscdumpTeamId, mirror) => useGscdumpTeamsClient(event).deleteTeam(gscdumpTeamId, mirror),
   }
@@ -106,12 +109,12 @@ function teamDeleteGscdump(event: H3Event): TeamDeleteGscdump {
 // metered partner counts it against the owner's Free allowance. A gscdump
 // Site that a site on another team still points at stays: `autoLinkGsc`
 // reuses a registered Site.
-async function deleteTeamSitesFromGscdump(db: DB, teamId: number, deleteSite: TeamDeleteGscdump['deleteSite']) {
-  const owned = await db.selectDistinct({ gscdumpSiteId: sites.gscdumpSiteId })
+async function deleteTeamSitesFromGscdump(db: DB, teamId: number, gscdump: TeamDeleteGscdump) {
+  const owned = await db.select({ id: sites.id, gscdumpSiteId: sites.gscdumpSiteId })
     .from(sites)
     .where(and(eq(sites.teamId, teamId), isNotNull(sites.gscdumpSiteId)))
     .all()
-  const ids = owned.flatMap(row => row.gscdumpSiteId ? [row.gscdumpSiteId] : [])
+  const ids = [...new Set(owned.flatMap(row => row.gscdumpSiteId ? [row.gscdumpSiteId] : []))]
   if (!ids.length)
     return
 
@@ -120,9 +123,19 @@ async function deleteTeamSitesFromGscdump(db: DB, teamId: number, deleteSite: Te
     .where(and(inArray(sites.gscdumpSiteId, ids), ne(sites.teamId, teamId)))
     .all()
   const keep = new Set(shared.map(row => row.gscdumpSiteId))
+  const admitted = new Set<string>()
 
-  for (const gscdumpSiteId of ids.filter(id => !keep.has(id))) {
-    await deleteSite(gscdumpSiteId).catch((err: unknown) => {
+  // Admit the whole destructive batch before deleting its first Site.
+  for (const row of owned) {
+    if (row.gscdumpSiteId && !keep.has(row.gscdumpSiteId)) {
+      const admission = await assertLocalRegisteredGscSiteScope(db, row.id, row.gscdumpSiteId, gscdump.getRegisteredHostIdentity, undefined, 'delete')
+      if (admission._tag === 'Registered')
+        admitted.add(row.gscdumpSiteId)
+    }
+  }
+
+  for (const gscdumpSiteId of admitted) {
+    await gscdump.deleteSite(gscdumpSiteId).catch((err: unknown) => {
       // 404: gscdump no longer has the Site, which is the state this wants.
       if (isError(err) && err.statusCode === 404)
         return
@@ -148,7 +161,7 @@ export async function deleteTeam(
 
   // Before any local write, so a failure leaves the team and its sites in
   // place and a retry finds the same gscdump Sites. One already gone is a 404.
-  await deleteTeamSitesFromGscdump(ctx.db, ctx.team.teamId, gscdump.deleteSite)
+  await deleteTeamSitesFromGscdump(ctx.db, ctx.team.teamId, gscdump)
 
   await ctx.db.update(users)
     .set({

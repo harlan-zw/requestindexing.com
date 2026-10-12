@@ -26,7 +26,7 @@ vi.stubGlobal('setResponseHeader', vi.fn())
 vi.stubGlobal('useDrizzle', () => h.db)
 vi.stubGlobal('readBody', async (event: { body: unknown }) => event.body)
 vi.stubGlobal('getRouterParam', (event: { params: Record<string, string> }, name: string) => event.params[name])
-vi.stubGlobal('useGscdumpClient', () => ({ deleteSite: h.deleteSite }))
+vi.stubGlobal('useGscdumpClient', () => ({ deleteSite: h.deleteSite, getRegisteredHostIdentity: async (siteId: string) => ({ identity: { siteId, requestedUrl: 'https://a.example', userId: 'u_owner', teamId: 't_owner' } }) }))
 vi.stubGlobal('autoLinkGsc', h.autoLinkGsc)
 
 let sqlite: DatabaseSync
@@ -61,6 +61,7 @@ beforeEach(() => {
   h.db = proDatabase(sqlite)
   seedUser(sqlite, 1)
   seedUser(sqlite, 2)
+  sqlite.exec('UPDATE users SET gscdump_user_id = \'u_owner\'')
   sqlite.prepare('UPDATE users SET gscdump_user_id = \'gd-2\' WHERE user_id = 2').run()
   seedSite(sqlite, { id: 'site-a', teamId: 1, domain: 'a.example', gscdumpSiteId: 'gsd_a' })
 })

@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
+import { assertLocalRegisteredGscSiteScope } from '#layers/pro-gsc/server/utils/registered-site-scope'
 import { sites } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 import { resolveSiteAccess } from '#layers/pro-saas/shared/site-access'
@@ -36,14 +37,21 @@ export default defineProApiHandler({ body: bodySchema }, async ({ db, caller, bo
     throw createError({ statusCode: 403, message: 'Not authorized to disconnect this Site' })
 
   const gscdump = useGscdumpClient()
+  let registered = false
+  for (const site of matchingSites) {
+    const admission = await assertLocalRegisteredGscSiteScope(db, site.id, body.gscdumpSiteId, id => gscdump.getRegisteredHostIdentity(id), undefined, 'delete')
+    registered ||= admission._tag === 'Registered'
+  }
 
   // Delete site from gscdump (removes all synced data)
-  await gscdump.deleteSite(body.gscdumpSiteId).catch((err) => {
-    const status = err.statusCode || err.status || 500
-    // 404 is fine - site may already be deleted
-    if (status !== 404)
-      throw createError({ statusCode: status, message: err.data?.message || 'Failed to delete site from gscdump' })
-  })
+  if (registered) {
+    await gscdump.deleteSite(body.gscdumpSiteId).catch((err) => {
+      const status = err.statusCode || err.status || 500
+      // 404 is fine - site may already be deleted
+      if (status !== 404)
+        throw createError({ statusCode: status, message: err.data?.message || 'Failed to delete site from gscdump' })
+    })
+  }
 
   // Clear the link only where it still points at this id, in case a concurrent
   // relink moved a Site on while the partner call ran.

@@ -23,6 +23,7 @@ export default defineProApiHandler(async (event) => {
     teamId: team.teamId,
     userId: caller.user.id,
     gscdumpSiteId: site.gscdumpSiteId,
+    siteUrl: site.domain ?? site.property,
   }).catch(err => getProLogger(event).error('pro:site:removed hook failed', err))
 
   await purgeSiteChildren(db, [site.id])

@@ -15,7 +15,7 @@ export default defineProApiHandler(async (event) => {
     .where(eq(users.userId, caller.user.id))
 
   const syncStatus = (site.gscdumpSiteId && user?.gscdumpUserId)
-    ? await useGscdumpClient().getSiteSyncStatus(site.gscdumpSiteId, user.gscdumpUserId).catch(() => null)
+    ? await useGscdumpClient().getSiteSyncStatus(site.gscdumpSiteId, user.gscdumpUserId, site.domain ?? site.property).catch(() => null)
     : null
 
   return {

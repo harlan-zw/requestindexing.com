@@ -1,6 +1,6 @@
 import type { PartnerLifecycleResponse, PartnerLifecycleSite } from '#layers/pro-gsc/shared/gscdump-api'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { isNearRetentionLimit, readOptionalUserLifecycle, syncStatusFor } from './site-lifecycle'
+import { isNearRetentionLimit, lifecycleSiteFor, readOptionalUserLifecycle, syncStatusFor } from './site-lifecycle'
 
 describe('isNearRetentionLimit', () => {
   afterEach(() => vi.useRealTimers())
@@ -79,6 +79,26 @@ function lifecycleSite({ status, completed, failed, total, hold = null }: SiteIn
     updatedAt: null,
   } as unknown as PartnerLifecycleSite
 }
+
+describe('host-bound lifecycle', () => {
+  it('refuses another host even when its cached ID matches', () => {
+    const site = lifecycleSite({ status: 'ready', completed: 668, failed: 0, total: 668 })
+    const lifecycle = { sites: [site] } as unknown as PartnerLifecycleResponse
+    expect(lifecycleSiteFor(lifecycle, 's_test', 'other.test')).toBeNull()
+  })
+
+  it('keeps a same-host lifecycle entry', () => {
+    const site = lifecycleSite({ status: 'ready', completed: 668, failed: 0, total: 668 })
+    const lifecycle = { sites: [site] } as unknown as PartnerLifecycleResponse
+    expect(lifecycleSiteFor(lifecycle, 's_test', 'sc-domain:example.com')).toBe(site)
+  })
+
+  it('refuses malformed authoritative registration URLs', () => {
+    const site = { ...lifecycleSite({ status: 'ready', completed: 1, failed: 0, total: 1 }), requestedUrl: 'not a url' }
+    const lifecycle = { sites: [site] } as unknown as PartnerLifecycleResponse
+    expect(lifecycleSiteFor(lifecycle, 's_test', 'example.com')).toBeNull()
+  })
+})
 
 describe('site sync status', () => {
   it('reads a Site registered a second ago as pending, not synced', () => {

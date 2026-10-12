@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
+import { assertLocalRegisteredGscSiteScope } from '#layers/pro-gsc/server/utils/registered-site-scope'
 import { readIndexingCohortUrls } from '#layers/pro-indexing/server/utils/indexing-cohort-urls'
 import { indexCohortFilterSchema, parseIndexCohortFilter } from '#layers/pro-indexing/shared/contracts/index-cohorts'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
@@ -11,12 +12,13 @@ const querySchema = z.object({
   search: z.string().max(2048).optional(),
 })
 
-export default defineProApiHandler({ site: true }, async ({ event, site: access }) => {
+export default defineProApiHandler({ site: true }, async ({ db, event, site: access }) => {
   const query = await getValidatedQuery(event, querySchema.parse)
   const gscdumpSiteId = access.site.gscdumpSiteId
   if (!gscdumpSiteId)
     throw createError({ statusCode: 404 })
   const client = useGscdumpClient()
+  await assertLocalRegisteredGscSiteScope(db, access.site.id, gscdumpSiteId, id => client.getRegisteredHostIdentity(id))
   const result = await readIndexingCohortUrls(
     page => client.getIndexingUrls(gscdumpSiteId, page),
     query,

@@ -33,7 +33,9 @@ import {
   lifecycleSiteToSyncStatus as lifecycleSdkSiteToSyncStatus,
 } from '@gscdump/sdk/lifecycle'
 import { isGscdumpV1Error } from '@gscdump/sdk/v1'
+import { registeredSiteHostMatches } from '#layers/pro-gsc/shared/registered-site-host'
 import { refusalMessage } from '../../shared/entitlement-copy'
+
 import { createGscdumpPublicV1Client } from './gscdump-origin'
 
 export type { GscdumpAvailableSite }
@@ -65,6 +67,8 @@ export type SiteRegistrationResult
 export type GscdumpSiteAccess
   = | { _tag: 'Readable' }
     | { _tag: 'NotFound' }
+
+export { registeredSiteHostMatches }
 
 export function findLifecycleSite(lifecycle: PartnerLifecycleResponse, siteIdOrPropertyUrl: string): PartnerLifecycleSite | null {
   return findSdkLifecycleSite(lifecycle as never, siteIdOrPropertyUrl) as PartnerLifecycleSite | null
@@ -144,10 +148,10 @@ export function useGscdumpClient(options: GscdumpClientOptions = {}) {
       .catch(rethrowV1AsH3)
   }
 
-  async function getSiteSyncStatus(siteId: string, userId: string): Promise<GscdumpSyncStatusResponse> {
+  async function getSiteSyncStatus(siteId: string, userId: string, expectedSiteUrl: string): Promise<GscdumpSyncStatusResponse> {
     const lifecycle = await getUserLifecycle(userId)
     const site = findLifecycleSite(lifecycle, siteId)
-    if (!site)
+    if (!site || !registeredSiteHostMatches(site.requestedUrl, expectedSiteUrl))
       throw createError({ statusCode: 404, message: 'Site not found in gscdump lifecycle' })
     return lifecycleSiteToSyncStatus(site) as GscdumpSyncStatusResponse
   }
@@ -246,6 +250,8 @@ export function useGscdumpClient(options: GscdumpClientOptions = {}) {
       }),
     deleteSite: (siteId: string) =>
       client.deleteSite({ params: { siteId } }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
+    getRegisteredHostIdentity: (siteId: string) =>
+      client.getRegisteredHostIdentity({ params: { siteId } }, deadline()).then(response => response.data),
     // The IndexNow connection read is the cheapest Site read on the partner
     // surface. Its authorization is the answer; the body is not used.
     readSiteAccess: (siteId: string): Promise<GscdumpSiteAccess> =>

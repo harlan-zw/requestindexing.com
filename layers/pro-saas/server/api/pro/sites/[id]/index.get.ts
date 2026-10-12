@@ -17,7 +17,7 @@ export default defineProApiHandler(async (event) => {
   // page shows no sync status, as it did whenever gscdump failed.
   const syncStatus = (site.gscdumpSiteId && gscdumpUserId)
     ? await useGscdumpClient({ timeoutMs: RENDER_PATH_TIMEOUT_MS })
-        .getSiteSyncStatus(site.gscdumpSiteId, gscdumpUserId)
+        .getSiteSyncStatus(site.gscdumpSiteId, gscdumpUserId, site.domain ?? site.property)
         .catch((error: unknown) => {
           getProLogger(event).warn('[pro/sites/:id] gscdump sync status unavailable:', error)
           return null

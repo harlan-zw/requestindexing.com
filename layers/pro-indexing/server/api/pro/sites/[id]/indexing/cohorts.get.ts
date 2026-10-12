@@ -1,5 +1,6 @@
 import type { IndexCohortsResponse } from '#layers/pro-indexing/shared/contracts/index-cohorts'
 import { useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
+import { assertLocalRegisteredGscSiteScope } from '#layers/pro-gsc/server/utils/registered-site-scope'
 import { readIndexingUrlPages } from '#layers/pro-indexing/server/utils/indexing-url-pages'
 import { buildIndexCohortsFromIndexingUrls } from '#layers/pro-indexing/shared/index-cohort-source'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
@@ -25,12 +26,13 @@ import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 /** Above this the inspection set is too large to compare honestly in a request. */
 const MAX_COHORT_URLS = 2000
 
-export default defineProApiHandler({ site: true }, async ({ site: access }): Promise<IndexCohortsResponse> => {
+export default defineProApiHandler({ site: true }, async ({ db, site: access }): Promise<IndexCohortsResponse> => {
   const gscdumpSiteId = access.site.gscdumpSiteId
   if (!gscdumpSiteId)
     return { _tag: 'no-evidence', crawlSettingsId: null, asOf: null, reason: 'no-inspection-join', sample: null }
 
   const client = useGscdumpClient()
+  await assertLocalRegisteredGscSiteScope(db, access.site.id, gscdumpSiteId, id => client.getRegisteredHostIdentity(id))
   const [scan, diagnostics] = await Promise.all([
     readIndexingUrlPages(
       page => client.getIndexingUrls(gscdumpSiteId, { limit: page.limit, offset: page.offset }),
