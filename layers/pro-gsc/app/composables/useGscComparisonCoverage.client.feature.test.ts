@@ -113,3 +113,15 @@ it('hides an earlier successful comparison during a refresh or a failed check', 
   asyncData.status.value = 'error'
   expect(view.allowed.value).toBe(false)
 })
+
+it('distinguishes checking and failed reads from recorded incomplete coverage', async () => {
+  const { view, range } = useMount()
+  expect(view.state.value).toBe('checking')
+  asyncData.status.value = 'error'
+  expect(view.state.value).toBe('error')
+  upstream.mockResolvedValue({ searchType: 'web', current: { startDate: '2026-09-01', endDate: '2026-09-03', complete: true }, comparison: { startDate: '2026-08-29', endDate: '2026-08-31', complete: false } })
+  await complete()
+  expect(view.state.value).toBe('refused')
+  range.value = { start: '2026-09-02', end: '2026-09-04' }
+  expect(view.state.value).toBe('checking')
+})

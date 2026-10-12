@@ -98,6 +98,7 @@ const {
   columns: UiTableColumn<T>[]
   tableData: T[]
   hasPrevData?: boolean
+  comparisonRefused?: boolean
   warnings?: string[]
 }>()
 
@@ -333,7 +334,7 @@ function onApplySaved(id: string) {
     </div>
 
     <!-- No comparison data notice -->
-    <div v-if="!isLoading && compareMode !== 'none' && hasPrevData === false" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-elevated border border-default text-sm text-muted">
+    <div v-if="comparisonRefused && !isLoading && compareMode !== 'none' && hasPrevData === false" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-elevated border border-default text-sm text-muted">
       <UiIcon name="note" class="size-4 shrink-0" />
       <span>Comparison unavailable. Both periods need complete recorded Search Console data.</span>
     </div>

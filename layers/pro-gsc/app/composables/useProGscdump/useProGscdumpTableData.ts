@@ -74,6 +74,7 @@ export interface ProGscdumpTableResponse<T = GscdumpDataRow> {
   totalClicks: number
   totalImpressions: number
   hasPrevData: boolean
+  comparisonRefused: boolean
   warnings: string[]
   meta: GscdumpMeta | null
 }
@@ -173,7 +174,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
   const data = computed<ProGscdumpTableResponse<T>>(() => {
     const result = query.data.value
     if (!result || (isMoversFilter(filter.value) && !comparisonRange.value))
-      return { rows: [], total: 0, totalClicks: 0, totalImpressions: 0, hasPrevData: false, warnings: [], meta: null }
+      return { rows: [], total: 0, totalClicks: 0, totalImpressions: 0, hasPrevData: false, comparisonRefused: coverage.state.value === 'refused', warnings: [], meta: null }
 
     let rows = (loadMore ? accumulated.value : (result.rows ?? [])) as unknown as T[]
 
@@ -224,6 +225,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
       totalClicks,
       totalImpressions,
       hasPrevData,
+      comparisonRefused: coverage.state.value === 'refused',
       warnings: result.meta?.warnings ?? [],
       meta: result.meta ?? null,
     }
