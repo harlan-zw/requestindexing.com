@@ -76,7 +76,11 @@ export const users = sqliteTable('users', {
   onboardingCompletedAt: integer('onboarding_completed_at', { mode: 'timestamp' }),
 
   ...timestamps,
-})
+}, t => ({
+  // The webhook receiver resolves the engine user by this column on every
+  // delivery; without the index each delivery read the whole table.
+  gscdumpUserIdIdx: index('users_gscdump_user_id_idx').on(t.gscdumpUserId),
+}))
 
 export const googleOAuthClients = sqliteTable('google_oauth_clients', {
   googleOAuthClientId: integer('google_oauth_client_id').notNull().primaryKey(),
@@ -102,7 +106,10 @@ export const googleAccounts = sqliteTable('google_accounts', {
   tokens: text('tokens', { mode: 'json' }).notNull().$type<RequiredNonNullable<CredentialRequest>>(),
   googleOAuthClientId: integer('google_oauth_client_id').notNull().references(() => googleOAuthClients.googleOAuthClientId),
   ...timestamps,
-})
+}, t => ({
+  // The dashboard lists a user's linked accounts by user_id on every load.
+  userIdIdx: index('google_accounts_user_id_idx').on(t.userId),
+}))
 
 export type GoogleAccountsSelect = typeof googleAccounts.$inferSelect
 
@@ -187,6 +194,9 @@ export const sites = sqliteTable('sites', {
   unqTeamDomain: unique('sites_team_id_domain_unique').on(t.teamId, t.domain),
   unqPublicId: unique().on(t.publicId),
   teamIdx: index('sites_team_idx').on(t.teamId),
+  // The webhook receiver addresses a Site by its engine id on every delivery,
+  // and `requireSiteAccess` does the same for access checks.
+  gscdumpSiteIdIdx: index('sites_gscdump_site_id_idx').on(t.gscdumpSiteId),
 }))
 
 export type SiteInsert = typeof sites.$inferInsert
