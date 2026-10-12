@@ -139,8 +139,8 @@ export function useChartBrush(opts: UseChartBrushOptions): UseChartBrush {
       if (ev.pointerId !== pointerId)
         return
       pendingX = ev.clientX - chartRectLeft
-      // Vertical intent belongs to page scrolling, even with horizontal drift.
-      if (!isDragging.value && Math.abs(ev.clientY - startY) >= DRAG_THRESHOLD_PX
+      // Vertical touch intent belongs to page scrolling, even with horizontal drift.
+      if (e.pointerType === 'touch' && !isDragging.value && Math.abs(ev.clientY - startY) >= DRAG_THRESHOLD_PX
         && Math.abs(ev.clientY - startY) >= Math.abs(pendingX - dragStartX)) {
         cancel()
         return
