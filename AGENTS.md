@@ -55,6 +55,14 @@ New Markdown at the repository root is an error. Identity and filters only.
 
 ## Consumers
 
+- **Check cross-site parity before completing shared work.** Review recent merged PRs in
+  `~/sites/nuxtseo.com` and `~/sites/gscdump.com`.
+  Check shared authentication, design-system components, consumer protocol integration, and CI behavior.
+  Port applicable behavior in a separate PR for each affected site.
+  In the source PR, link each sibling port or explain why that site needs no change.
+  In each port PR, link the source PR.
+  Consumers adopt engine-owned fixes through published protocol pins, without copying engine internals.
+
 - The engine contract is `@gscdump/*`, pinned in the catalog. Bumping it is how new capability
   arrives, and a protocol change can move work out of this repo.
 - The `daily-checkin` Skill reads the authenticated report route. Changing required check ids
