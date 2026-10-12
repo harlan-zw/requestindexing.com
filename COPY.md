@@ -17,6 +17,7 @@ These exact strings. Do not paraphrase them per page.
 | --- | --- | --- |
 | Name | `Request Indexing`, title case, both words. Never RequestIndexing, Request Indexer, RI. | everywhere |
 | Domain | `requestindexing.com` | links, footers, canonical URLs |
+| Navigation drawer title | Navigation menu | `UiAppShell` mobile drawer accessible name |
 | Tagline | Get your pages indexed. | README, `VISION.md`, social card headline, site-wide `og:title` |
 | Landing H1 | Get your pages indexed. | `apps/marketing/app/pages/index.vue`; reuses the tagline |
 | Site description | Monitor and request Google indexing for your pages | `nuxt.config.ts` site description, which feeds every page's meta description |
