@@ -42,10 +42,12 @@ export default defineEventHandler(async (event) => {
 
   const state = randomUUID()
   await setUserSession(event, {
-    googleOauthState: state,
-    // Parsed once here: the callback redirects to whatever this holds, so an
-    // unchecked value is an open redirect off the back of a Google round trip.
-    googleOauthReturnTo: safeAuthRedirect(returnTo) ?? undefined,
+    secure: {
+      googleOauthState: state,
+      // Parsed once here: the callback redirects to whatever this holds, so an
+      // unchecked value is an open redirect off the back of a Google round trip.
+      googleOauthReturnTo: safeAuthRedirect(returnTo) ?? undefined,
+    },
   })
 
   const config = useRuntimeConfig(event)

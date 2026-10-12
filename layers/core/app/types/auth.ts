@@ -25,19 +25,4 @@ export interface UserOAuthToken {
 export interface UserSession {
   sub: string
   user: UserSelect
-  // used when redirecting to Indexing API OAuth
-  googleIndexingAuth?: {
-    /** Same-origin dashboard path, parsed by `safeAuthRedirect`. */
-    returnTo: string
-    state: string
-  }
-}
-
-declare module '#auth-utils' {
-  interface UserSession {
-    googleIndexingAuth?: {
-      returnTo: string
-      state: string
-    }
-  }
 }
