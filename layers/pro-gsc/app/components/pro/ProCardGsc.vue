@@ -1,7 +1,8 @@
 <script lang="ts" setup>
 import type { Period } from '../../composables/useGscPeriod'
-import { onKeyStroke, useResizeObserver } from '@vueuse/core'
+import { onKeyStroke } from '@vueuse/core'
 import { AnimatePresence, motion, useMotionValue, useSpring } from 'motion-v'
+import { useChartBrush } from '#layers/design-system/app/composables/useChartBrush'
 
 import { compareRange, parseCustomPeriod, periodToDateRange } from '../../composables/useGscPeriod'
 import { useProGscFilters } from '../../composables/useProGscFilters'
@@ -131,19 +132,30 @@ const TOOLTIP_WIDTH = 200
 const EDGE_PAD = 8
 const CURSOR_OFFSET = 32
 
-const chartWrapRef = ref<HTMLElement | null>(null)
+const {
+  wrapRef: chartWrapRef,
+  chartWidth,
+  isDragging,
+  dragRange,
+  selectionLeft,
+  selectionWidth,
+  onPointerDown: startBrush,
+  cancel: cancelBrush,
+} = useChartBrush({
+  dates: () => props.dates.map(row => row.date),
+  onCommit: (range) => {
+    const align = resolveCompareAligner(compareMode.value, comparisonOffset.value)
+    emit('zoom', {
+      start: range.startDate,
+      end: range.endDate,
+      prevStart: align?.(range.startDate),
+      prevEnd: align?.(range.endDate),
+    })
+  },
+})
 // Cached chart geometry — avoids synchronous layout reads on every pointermove.
 // Refreshed by ResizeObserver (size) and on pointerenter (scroll/offset drift).
-const chartWidth = ref(0)
 let chartRectLeft = 0
-useResizeObserver(chartWrapRef, ([entry]) => {
-  if (!entry)
-    return
-  chartWidth.value = entry.contentRect.width
-  const el = chartWrapRef.value
-  if (el)
-    chartRectLeft = el.getBoundingClientRect().left
-})
 function refreshChartRect() {
   const el = chartWrapRef.value
   if (!el)
@@ -239,16 +251,6 @@ function sparklineData(col: string): number[] {
   })
 }
 
-interface BrushRange {
-  startIdx: number
-  endIdx: number
-  startDate: string
-  endDate: string
-}
-
-const isDragging = ref(false)
-const dragRange = ref<BrushRange | null>(null)
-
 function onTooltip(data: DateAnalytics | null, prev: DateAnalytics | null, isEstimated: boolean) {
   // Suppress hover tooltip while dragging. The selection overlay owns the visual.
   if (isDragging.value) {
@@ -260,21 +262,6 @@ function onTooltip(data: DateAnalytics | null, prev: DateAnalytics | null, isEst
   tooltipPrev.value = prev
   tooltipEstimated.value = isEstimated
 }
-
-function idxToPixel(idx: number): number {
-  const len = props.dates?.length ?? 0
-  const width = chartWidth.value
-  if (len < 2 || width <= 0)
-    return 0
-  return (idx / (len - 1)) * width
-}
-
-const selectionLeft = computed(() => dragRange.value ? idxToPixel(dragRange.value.startIdx) : 0)
-const selectionWidth = computed(() => {
-  if (!dragRange.value)
-    return 0
-  return Math.max(0, idxToPixel(dragRange.value.endIdx) - idxToPixel(dragRange.value.startIdx))
-})
 
 function formatDragDate(iso: string): string {
   if (!iso)
@@ -292,90 +279,19 @@ const dragDurationLabel = computed(() => {
   return `${days} day${days === 1 ? '' : 's'}`
 })
 
-const DRAG_THRESHOLD_PX = 5
-
-function pixelToIdx(px: number): number {
-  const len = props.dates?.length ?? 0
-  const width = chartWidth.value
-  if (len < 2 || width <= 0)
-    return 0
-  return Math.max(0, Math.min(len - 1, Math.round((px / width) * (len - 1))))
-}
-
-function idxToDate(idx: number): string {
-  const rows = props.dates ?? []
-  const clamped = Math.max(0, Math.min(rows.length - 1, idx))
-  return rows[clamped]?.date ?? ''
-}
-
-let dragStartX = 0
-let dragStartIdx = 0
-let removeWindowListeners: (() => void) | null = null
-
-function onPointerDown(e: PointerEvent) {
-  // Only primary button
-  if (e.button !== 0)
-    return
-  const el = chartWrapRef.value
-  if (!el)
-    return
-  // Single BCR read on drag start; covers page scroll/offset drift since last observer tick.
+function onPointerDown(event: PointerEvent) {
   refreshChartRect()
-  dragStartX = e.clientX - chartRectLeft
-  dragStartIdx = pixelToIdx(dragStartX)
-
-  const onMove = (ev: PointerEvent) => {
-    const currentX = ev.clientX - chartRectLeft
-    if (!isDragging.value) {
-      if (Math.abs(currentX - dragStartX) < DRAG_THRESHOLD_PX)
-        return
-      isDragging.value = true
-      tooltipData.value = null
-      tooltipPrev.value = null
-    }
-    const currentIdx = pixelToIdx(currentX)
-    const startIdx = Math.min(dragStartIdx, currentIdx)
-    const endIdx = Math.max(dragStartIdx, currentIdx)
-    dragRange.value = {
-      startIdx,
-      endIdx,
-      startDate: idxToDate(startIdx),
-      endDate: idxToDate(endIdx),
-    }
-  }
-
-  const onUp = () => {
-    removeWindowListeners?.()
-    removeWindowListeners = null
-    const range = dragRange.value
-    isDragging.value = false
-    dragRange.value = null
-    if (range && range.endIdx > range.startIdx) {
-      // Pass the corresponding slice of the original prev so the server queries the
-      // comparison window the user actually expects (preserves original period semantics
-      // — e.g., zooming within a 12m+year view compares to the year-ago month slice).
-      const align = resolveCompareAligner(compareMode.value, comparisonOffset.value)
-      const prevStart = align?.(range.startDate)
-      const prevEnd = align?.(range.endDate)
-
-      emit('zoom', {
-        start: range.startDate,
-        end: range.endDate,
-        prevStart,
-        prevEnd,
-      })
-    }
-  }
-
-  window.addEventListener('pointermove', onMove)
-  window.addEventListener('pointerup', onUp, { once: true })
-  window.addEventListener('pointercancel', onUp, { once: true })
-  removeWindowListeners = () => {
-    window.removeEventListener('pointermove', onMove)
-    window.removeEventListener('pointerup', onUp)
-    window.removeEventListener('pointercancel', onUp)
-  }
+  startBrush(event)
 }
+
+watch(isDragging, (dragging) => {
+  if (dragging) {
+    tooltipData.value = null
+    tooltipPrev.value = null
+  }
+})
+
+watch(() => props.dates, cancelBrush)
 
 // Zoom state is owned by the parent (page-level useProGscFilters). ProCardGsc only:
 // 1. detects whether the current dateRange is a custom (zoomed) period
@@ -695,7 +611,7 @@ const zoomRangeLabel = computed(() => {
     <!-- Chart area -->
     <div
       ref="chartWrapRef"
-      class="relative select-none touch-none"
+      class="relative select-none touch-pan-y touch-pinch-zoom"
       :class="{ 'cursor-crosshair': !isDragging, 'cursor-ew-resize': isDragging }"
       @mousemove="onChartMove"
       @pointerenter="refreshChartRect"
