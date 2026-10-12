@@ -1,6 +1,7 @@
 import { googleSubmitV1Schema } from '@gscdump/contracts/v1'
 import { createError, readValidatedBody } from 'h3'
 import { toGoogleSubmissionError } from '~~/layers/pro-indexing/server/utils/google-indexing'
+import { RENDER_PATH_TIMEOUT_MS } from '#layers/pro-gsc/server/utils/gscdump-client'
 import { createGscdumpPublicV1Client } from '#layers/pro-gsc/server/utils/gscdump-origin'
 import { assertLocalRegisteredGscSiteScope } from '#layers/pro-gsc/server/utils/registered-site-scope'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
@@ -14,7 +15,7 @@ export default defineProApiHandler(async (event) => {
   if (!access.site.gscdumpSiteId)
     throw createError({ statusCode: 409, statusMessage: 'Connect this Site to Search Console before you submit a URL.' })
   const client = createGscdumpPublicV1Client(event)
-  await assertLocalRegisteredGscSiteScope(access.db, access.site.id, access.site.gscdumpSiteId, id => client.getRegisteredHostIdentity({ params: { siteId: id } }).then(response => response.data))
+  await assertLocalRegisteredGscSiteScope(access.db, access.site.id, access.site.gscdumpSiteId, id => client.getRegisteredHostIdentity({ params: { siteId: id } }, { signal: AbortSignal.timeout(RENDER_PATH_TIMEOUT_MS) }).then(response => response.data))
   const response = await client
     .createSiteGoogleSubmission({ params: { siteId: access.site.gscdumpSiteId }, body })
     .catch(toGoogleSubmissionError)

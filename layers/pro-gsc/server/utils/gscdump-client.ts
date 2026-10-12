@@ -251,7 +251,7 @@ export function useGscdumpClient(options: GscdumpClientOptions = {}) {
     deleteSite: (siteId: string) =>
       client.deleteSite({ params: { siteId } }, deadline()).then(response => response.data).catch(rethrowV1AsH3),
     getRegisteredHostIdentity: (siteId: string) =>
-      client.getRegisteredHostIdentity({ params: { siteId } }, deadline()).then(response => response.data),
+      client.getRegisteredHostIdentity({ params: { siteId } }, { signal: AbortSignal.timeout(Math.min(timeoutMs, RENDER_PATH_TIMEOUT_MS)) }).then(response => response.data),
     // The IndexNow connection read is the cheapest Site read on the partner
     // surface. Its authorization is the answer; the body is not used.
     readSiteAccess: (siteId: string): Promise<GscdumpSiteAccess> =>

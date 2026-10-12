@@ -5,6 +5,7 @@ import { useGscdumpClient } from './gscdump-client'
 const v1Client = vi.hoisted(() => ({
   getUserLifecycle: vi.fn(),
   createSite: vi.fn(),
+  getRegisteredHostIdentity: vi.fn(),
 }))
 
 vi.mock('./gscdump-origin', () => ({
@@ -12,6 +13,12 @@ vi.mock('./gscdump-origin', () => ({
 }))
 
 describe('useGscdumpClient', () => {
+  it('caps an unavailable identity read at the render deadline', async () => {
+    v1Client.getRegisteredHostIdentity.mockImplementationOnce((_input: unknown, options: { signal: AbortSignal }) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(new Error('identity deadline')), { once: true })
+    }))
+    await expect(useGscdumpClient().getRegisteredHostIdentity('s_1')).rejects.toThrow('identity deadline')
+  }, 3500)
   it('keeps the legacy sync-status operation on the canonical client', () => {
     expect(useGscdumpClient().getSiteSyncStatus).toBeTypeOf('function')
   })
