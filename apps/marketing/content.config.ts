@@ -1,9 +1,6 @@
 import { resolve } from 'node:path'
 import { defineCollection, defineContentConfig } from '@harlan-zw/comark-content'
-import { defineRobotsSchema } from '@nuxtjs/robots/content'
-import { defineSitemapSchema } from '@nuxtjs/sitemap/content'
-import { defineOgImageSchema } from 'nuxt-og-image/content'
-import { defineSchemaOrgSchema } from 'nuxt-schema-org/content'
+import { defineOgImageSchema, defineRobotsSchema, defineSchemaOrgSchema, defineSitemapSchema } from '@nuxtjs/seo/content'
 import { z } from 'zod'
 
 const schema = z.object({

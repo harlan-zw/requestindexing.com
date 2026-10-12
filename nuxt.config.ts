@@ -101,8 +101,6 @@ export default defineNuxtConfig({
     },
     '@harlan-zw/comark-content',
     '@nuxtjs/seo',
-    'nuxt-ai-ready',
-    'nuxt-skew-protection',
     '@nuxt/scripts',
     'nitro-cloudflare-dev',
     '@nuxt/fonts',
@@ -246,10 +244,6 @@ export default defineNuxtConfig({
     // `SkewNotification` in layers/core/app/app.vue; without that component this
     // strategy detects the stale build and then does nothing visible.
     reloadStrategy: 'prompt',
-  },
-
-  aiReady: {
-    database: { type: 'd1', bindingName: 'DB' },
   },
 
   // `prerender: false` comes from `RUNTIME_ONLY_ROUTE_PREFIXES` so the same list
