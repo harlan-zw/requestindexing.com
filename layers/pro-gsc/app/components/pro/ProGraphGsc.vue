@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import type { CompareMode } from '../../composables/useGscPeriod'
 import { Scale, TextAlign } from '@unovis/ts'
-import { VisArea, VisAxis, VisCrosshair, VisLine, VisTooltip, VisXYContainer } from '@unovis/vue'
+import { VisArea, VisAxis, VisCrosshair, VisLine, VisScatter, VisTooltip, VisXYContainer } from '@unovis/vue'
 import { gscMetricColors } from '~~/layers/design-system/app/composables/dataVizColors'
 import { GSC_STABLE_LATENCY_DAYS } from '../../composables/useGscPeriod'
-import { alignPrev, resolveCompareAligner } from '../../utils/compare-align'
+import { alignPrev, calendarChartRows, isolatedChartValue, resolveCompareAligner, toUtcDay } from '../../utils/compare-align'
 
 interface DataRow {
   date: string
@@ -14,8 +14,10 @@ interface DataRow {
   ctr: number
 }
 
-const { value, prevValue, fullValue, fullPrevValue, columns, height, compareMode, compareOffsetDays, loading: loadingProp } = defineProps<{
+const { value, dateRange, prevValue, fullValue, fullPrevValue, columns, height, compareMode, compareOffsetDays, loading: loadingProp } = defineProps<{
   value: DataRow[]
+  /** Requested reporting days, including unknown days at either edge. */
+  dateRange?: { start: string, end: string }
   prevValue: DataRow[] | null
   compareMode?: CompareMode
   compareOffsetDays?: number | null
@@ -54,6 +56,7 @@ const gscColors = {
 
 // Shared config for overlaid containers
 const margin = { left: 0, right: 0, top: 0, bottom: 36 }
+const plotBleed = { left: 0, right: 0 }
 const chartHeight = computed(() => Number(height) || 220)
 const chartInnerHeight = computed(() => chartHeight.value - margin.top - margin.bottom)
 
@@ -69,7 +72,11 @@ const svgDefs = `
 
 // Pair comparison rows using the selected window, including sparse series.
 type MergedRow = DataRow & { prev?: DataRow }
-const mergedValue = computed<MergedRow[]>(() => alignPrev(value, prevValue, resolveCompareAligner(compareMode, compareOffsetDays ?? null)))
+const calendarValue = computed(() => calendarChartRows(value, dateRange))
+// Unovis Area converts missing values to zero. Fill only observed calendars.
+const clicksComplete = computed(() => calendarValue.value.every(row => Number.isFinite(row.clicks)))
+const impressionsComplete = computed(() => calendarValue.value.every(row => Number.isFinite(row.impressions)))
+const mergedValue = computed<MergedRow[]>(() => alignPrev(calendarValue.value, prevValue, resolveCompareAligner(compareMode, compareOffsetDays ?? null)))
 
 const hasComparison = computed(() => mergedValue.value.some(r => r.prev))
 
@@ -104,20 +111,23 @@ const monthFmt = new Intl.DateTimeFormat(undefined, { month: 'short' })
 const monthYearFmt = new Intl.DateTimeFormat(undefined, { month: 'short', year: '2-digit' })
 
 const tickPlan = computed<TickPlan>(() => {
-  const len = value.length
+  const len = calendarValue.value.length
   if (len <= 1)
     return { indices: [0], format: d => monthDayFmt.format(d) }
 
   if (len <= 10) {
-    return { indices: value.map((_, i) => i), format: d => weekdayDayFmt.format(d) }
+    return { indices: calendarValue.value.map((_, i) => i), format: d => weekdayDayFmt.format(d) }
   }
 
   if (len <= 35) {
     const step = Math.max(1, Math.ceil(len / 5))
     const indices: number[] = []
     for (let i = 0; i < len; i += step) indices.push(i)
-    if (indices[indices.length - 1] !== len - 1)
+    if (indices[indices.length - 1] !== len - 1) {
+      if (len - 1 - indices[indices.length - 1]! < step)
+        indices.pop()
       indices.push(len - 1)
+    }
     return { indices, format: d => monthDayFmt.format(d) }
   }
 
@@ -132,7 +142,7 @@ const tickPlan = computed<TickPlan>(() => {
   const indices: number[] = []
   let lastMonth = ''
   for (let i = 0; i < len; i++) {
-    const m = value[i]?.date.slice(0, 7) ?? ''
+    const m = calendarValue.value[i]?.date.slice(0, 7) ?? ''
     if (m !== lastMonth) {
       indices.push(i)
       lastMonth = m
@@ -162,16 +172,16 @@ const tickPlan = computed<TickPlan>(() => {
 
 const firstTickYear = computed(() => {
   const first = tickPlan.value.indices[0]
-  if (first == null || !value[first]?.date)
+  if (first == null || !calendarValue.value[first]?.date)
     return new Date().getFullYear()
-  return Number(value[first].date.slice(0, 4))
+  return Number(calendarValue.value[first]!.date.slice(0, 4))
 })
 
 function tickFormat(d: number) {
   const idx = Math.round(d)
-  if (idx < 0 || idx >= value.length)
+  if (idx < 0 || idx >= calendarValue.value.length)
     return ''
-  const row = value[idx]
+  const row = calendarValue.value[idx]
   if (!row?.date)
     return ''
   const tickIdx = tickPlan.value.indices.indexOf(idx)
@@ -191,12 +201,12 @@ const unstableCutoffDate = computed(() => {
 })
 
 const unstableCount = computed(() => {
-  if (!value.length)
+  if (!calendarValue.value.length)
     return 0
   const cutoff = unstableCutoffDate.value
   let count = 0
-  for (let i = value.length - 1; i >= 0; i--) {
-    if ((value[i]?.date ?? '') > cutoff)
+  for (let i = calendarValue.value.length - 1; i >= 0; i--) {
+    if ((calendarValue.value[i]?.date ?? '') > cutoff)
       count++
     else break
   }
@@ -205,9 +215,9 @@ const unstableCount = computed(() => {
 
 // Width percentage for the unstable overlay (from right edge)
 const unstableWidthPct = computed(() => {
-  if (!unstableCount.value || value.length < 2)
+  if (!unstableCount.value || calendarValue.value.length < 2)
     return 0
-  return Math.min(100, (unstableCount.value - 0.5) / (value.length - 1) * 100)
+  return Math.min(100, (unstableCount.value - 0.5) / (calendarValue.value.length - 1) * 100)
 })
 
 // Crosshair tooltip — emit current + comparison data to parent, render nothing inline
@@ -286,23 +296,36 @@ const positionScale = computed(() => {
 // Force re-mount all containers when data changes (date range switch)
 // Use length + first/last date to catch same-length but different-range transitions
 const chartKey = computed(() => {
-  const len = value.length
-  const first = value[0]?.date ?? ''
-  const last = value[len - 1]?.date ?? ''
+  const len = calendarValue.value.length
+  const first = calendarValue.value[0]?.date ?? ''
+  const last = calendarValue.value[len - 1]?.date ?? ''
   return `${len}-${first}-${last}`
 })
 
 // Accessors
-const x = (_d: DataRow, i: number) => i
+const calendarStart = computed(() => toUtcDay(calendarValue.value[0]?.date ?? '1970-01-01'))
+const x = (d: DataRow) => (toUtcDay(d.date) - calendarStart.value) / 86_400_000
 const clicks = (d: DataRow) => d.clicks
 const impressions = (d: DataRow) => d.impressions
 const ctr = (d: DataRow) => (observedMetric(d, 'ctr') ?? Number.NaN) * 100
 const position = (d: DataRow) => observedMetric(d, 'position') ?? Number.NaN
 
+const isolatedClicks = computed(() => isolatedChartValue(mergedValue.value, clicks))
+const isolatedPrevClicks = computed(() => isolatedChartValue(mergedValue.value, prevClicks))
+const isolatedImpressions = computed(() => isolatedChartValue(mergedValue.value, impressions))
+const isolatedPrevImpressions = computed(() => isolatedChartValue(mergedValue.value, prevImpressions))
+const isolatedCtr = computed(() => isolatedChartValue(mergedValue.value, ctr))
+const isolatedPrevCtr = computed(() => isolatedChartValue(mergedValue.value, prevCtr))
+const isolatedPosition = computed(() => isolatedChartValue(mergedValue.value, position))
+const isolatedPrevPosition = computed(() => isolatedChartValue(mergedValue.value, prevPosition))
+
 const metricLabels = { clicks: 'Clicks', impressions: 'Impressions', ctr: 'CTR', position: 'Avg. position' }
 type Metric = keyof typeof metricLabels
 const visibleMetrics = computed(() => (columns ?? []).filter((metric): metric is Metric => Object.hasOwn(metricLabels, metric)))
-const accessibleRows = computed(() => mergedValue.value.flatMap(row => row.prev ? [row, row.prev] : [row]))
+const accessibleRows = computed(() => mergedValue.value.flatMap((row) => {
+  const current = { period: 'Current period', value: row }
+  return row.prev ? [current, { period: 'Previous period', value: row.prev }] : [current]
+}))
 function accessibleValue(row: DataRow, metric: Metric): string {
   const value = metric === 'ctr' || metric === 'position' ? observedMetric(row, metric) : row[metric]
   if (value == null || !Number.isFinite(value))
@@ -316,7 +339,7 @@ function accessibleValue(row: DataRow, metric: Metric): string {
 </script>
 
 <template>
-  <div data-ui="ProGraphGsc" :class="{ 'tick-edge-last': tickPlan.indices.at(-1) === value.length - 1 }" class="gsc-chart" :aria-busy="loading || undefined" :style="{ height: `${chartHeight}px` }" @pointermove="handlePointerMove" @mouseleave="handleMouseLeave">
+  <div data-ui="ProGraphGsc" :class="{ 'tick-edge-last': tickPlan.indices.at(-1) === calendarValue.length - 1 }" class="gsc-chart" :aria-busy="loading || undefined" :style="{ height: `${chartHeight}px` }" @pointermove="handlePointerMove" @mouseleave="handleMouseLeave">
     <!-- Loading skeleton -->
     <div v-if="loading" class="loading-skeleton">
       <div class="flex-1 flex items-end gap-1">
@@ -364,6 +387,8 @@ function accessibleValue(row: DataRow, metric: Metric): string {
         :svg-defs="svgDefs"
         :margin="margin"
         :auto-margin="false"
+        :bleed="plotBleed"
+        :clip-path-extend="4"
         class="chart-layer"
         aria-hidden="true"
         :y-domain="impressionsDomain"
@@ -378,6 +403,7 @@ function accessibleValue(row: DataRow, metric: Metric): string {
           :line-dash-array="[6, 4]"
         />
         <VisArea
+          v-if="impressionsComplete"
           :color="gscColors.impressions.area"
           curve-type="monotoneX"
           :x="x"
@@ -390,6 +416,8 @@ function accessibleValue(row: DataRow, metric: Metric): string {
           :color="gscColors.impressions.line"
           :line-width="2"
         />
+        <VisScatter v-if="hasComparison" :x="x" :y="isolatedPrevImpressions" :color="gscColors.impressions.prev" :size="6" />
+        <VisScatter :x="x" :y="isolatedImpressions" :color="gscColors.impressions.line" :size="6" />
       </VisXYContainer>
 
       <!-- Layer 2: Clicks -->
@@ -401,6 +429,8 @@ function accessibleValue(row: DataRow, metric: Metric): string {
         :svg-defs="svgDefs"
         :margin="margin"
         :auto-margin="false"
+        :bleed="plotBleed"
+        :clip-path-extend="4"
         class="chart-layer"
         aria-hidden="true"
         :y-domain="clicksDomain"
@@ -415,6 +445,7 @@ function accessibleValue(row: DataRow, metric: Metric): string {
           :line-dash-array="[6, 4]"
         />
         <VisArea
+          v-if="clicksComplete"
           :color="gscColors.clicks.area"
           curve-type="monotoneX"
           :x="x"
@@ -427,6 +458,8 @@ function accessibleValue(row: DataRow, metric: Metric): string {
           :color="gscColors.clicks.line"
           :line-width="2"
         />
+        <VisScatter v-if="hasComparison" :x="x" :y="isolatedPrevClicks" :color="gscColors.clicks.prev" :size="6" />
+        <VisScatter :x="x" :y="isolatedClicks" :color="gscColors.clicks.line" :size="6" />
       </VisXYContainer>
 
       <!-- Layer 3: CTR metric -->
@@ -437,6 +470,8 @@ function accessibleValue(row: DataRow, metric: Metric): string {
         :data="mergedValue"
         :margin="margin"
         :auto-margin="false"
+        :bleed="plotBleed"
+        :clip-path-extend="4"
         class="chart-layer"
         aria-hidden="true"
       >
@@ -458,6 +493,8 @@ function accessibleValue(row: DataRow, metric: Metric): string {
           :color="gscColors.ctr.line"
           :line-width="2"
         />
+        <VisScatter v-if="hasComparison" :x="x" :y="isolatedPrevCtr" :y-scale="ctrScale" :color="gscColors.ctr.prev" :size="6" />
+        <VisScatter :x="x" :y="isolatedCtr" :y-scale="ctrScale" :color="gscColors.ctr.line" :size="6" />
       </VisXYContainer>
 
       <!-- Layer 4: Position metric (inverted scale) -->
@@ -468,6 +505,8 @@ function accessibleValue(row: DataRow, metric: Metric): string {
         :data="mergedValue"
         :margin="margin"
         :auto-margin="false"
+        :bleed="plotBleed"
+        :clip-path-extend="4"
         class="chart-layer"
         aria-hidden="true"
       >
@@ -489,6 +528,8 @@ function accessibleValue(row: DataRow, metric: Metric): string {
           :color="gscColors.position.line"
           :line-width="2"
         />
+        <VisScatter v-if="hasComparison" :x="x" :y="isolatedPrevPosition" :y-scale="positionScale" :color="gscColors.position.prev" :size="6" />
+        <VisScatter :x="x" :y="isolatedPosition" :y-scale="positionScale" :color="gscColors.position.line" :size="6" />
       </VisXYContainer>
 
       <!-- Layer 5: X-Axis + Crosshair (topmost, captures all pointer events) -->
@@ -498,6 +539,8 @@ function accessibleValue(row: DataRow, metric: Metric): string {
         :data="mergedValue"
         :margin="margin"
         :auto-margin="false"
+        :bleed="plotBleed"
+        :clip-path-extend="4"
         class="chart-layer chart-layer--interactive"
         aria-hidden="true"
       >
@@ -539,18 +582,22 @@ function accessibleValue(row: DataRow, metric: Metric): string {
             <th scope="col">
               Date
             </th>
+            <th scope="col">
+              Period
+            </th>
             <th v-for="metric in visibleMetrics" :key="metric" scope="col">
               {{ metricLabels[metric] }}
             </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in accessibleRows" :key="row.date">
+          <tr v-for="row in accessibleRows" :key="`${row.period}-${row.value.date}`">
             <th scope="row">
-              {{ row.date }}
+              {{ row.value.date }}
             </th>
+            <td>{{ row.period }}</td>
             <td v-for="metric in visibleMetrics" :key="metric">
-              {{ accessibleValue(row, metric) }}
+              {{ accessibleValue(row.value, metric) }}
             </td>
           </tr>
         </tbody>
