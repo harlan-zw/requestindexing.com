@@ -5,14 +5,13 @@ const props = defineProps<{
 
 // `useProGscStatus` polls while a sync runs and stops on purpose for a held
 // Site, so the bar reads no status on a timer of its own.
-const { data, refresh, isProcessing, isFullySynced, daysSynced } = useProGscStatus(() => props.siteId)
+const { data, refresh, isProcessing, isFullySynced } = useProGscStatus(() => props.siteId)
 
 const progressPercent = computed(() => data.value?.syncProgress?.percent || 0)
 const progressText = computed(() => {
   if (!data.value?.syncProgress)
-    return 'Starting sync...'
-  const { completed, total, percent } = data.value.syncProgress
-  return `Syncing ${percent}% (${completed}/${total} jobs)${daysSynced.value > 0 ? ` · ${daysSynced.value} days synced` : ''}`
+    return 'Preparing Search Console data…'
+  return `Preparing Search Console data: ${data.value.syncProgress.percent}%`
 })
 </script>
 
@@ -29,6 +28,7 @@ const progressText = computed(() => {
         variant="ghost"
         color="neutral"
         icon="i-lucide-refresh-cw"
+        aria-label="Refresh Search Console status"
         @click="refresh"
       />
     </template>

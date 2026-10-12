@@ -62,6 +62,11 @@ it('says nothing about a previous period when the table has no comparison', () =
   expect(host.textContent).not.toContain('Comparison unavailable.')
 })
 
+it('describes a returned empty period without promising future data', () => {
+  const host = mount({ rows: [], tableData: [], total: 0 })
+  expect(host.textContent).toContain('No data was returned for this period. Try a wider date range.')
+})
+
 it('requires recorded coverage when the table cannot compare', () => {
   const host = mount({ hasPrevData: false, comparisonRefused: true })
   expect(host.textContent).toContain('Comparison unavailable.')

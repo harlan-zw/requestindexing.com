@@ -7,7 +7,7 @@ const props = defineProps<{
   siteId: string
 }>()
 
-const { data: status, refresh, fetchStatus, isNotConnected, isTokenRevoked, isPermissionLost, hasError } = useProGscStatus(() => props.siteId)
+const { data: status, refresh, fetchStatus, isNotConnected, isTokenRevoked, isPermissionLost, hasError, hasSyncError } = useProGscStatus(() => props.siteId)
 const { site } = useSite()
 const { recoverSitePermission } = useProGscdump()
 const toast = useToast()
@@ -131,14 +131,17 @@ function reconnectGoogle() {
     </template>
   </ProAlert>
 
-  <!-- Sync error -->
+  <!-- Refresh reads status. It does not restart collection. -->
   <ProAlert
-    v-else-if="hasError"
+    v-else-if="hasError || hasSyncError"
     color="error"
     icon="i-lucide-circle-alert"
-    title="Sync error"
-    :description="statusMessage"
+    :title="hasError ? 'Search Console status unavailable' : 'Search Console collection failed'"
+    :description="hasError ? 'Could not read the Search Console status. Retry this check.' : 'Search Console data collection failed. Refresh status to check for changes.'"
   >
+    <p v-if="!hasError && statusMessage" class="mt-2 text-sm text-muted">
+      {{ statusMessage }}
+    </p>
     <template #action>
       <UButton
         size="xs"
@@ -148,7 +151,7 @@ function reconnectGoogle() {
         :loading="isRefreshing || fetchStatus === 'pending'"
         @click="handleRefresh"
       >
-        Retry
+        {{ hasError ? 'Retry status check' : 'Refresh status' }}
       </UButton>
     </template>
   </ProAlert>
