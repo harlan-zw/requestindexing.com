@@ -5,7 +5,7 @@ import { globbySync } from 'globby'
 import { externalCheckin } from './shared/checkin-external'
 import { CLOUDFLARE_REQUIRED_SECRETS } from './shared/cloudflare'
 import { disableDeferredPrefetch } from './shared/deferred-prefetch'
-import { redirectRouteRules, runtimeOnlyRouteRules } from './shared/routes'
+import { markdownVaryRouteRules, redirectRouteRules, runtimeOnlyRouteRules } from './shared/routes'
 import { reportPolicy, SENTRY_DSN } from './shared/sentry'
 
 // read all the folders at the server/app path
@@ -218,6 +218,12 @@ export default defineNuxtConfig({
     runOnBuild: false,
   },
 
+  aiReady: {
+    // Writes the Content-Signal line into robots.txt. An unset `aiTrain`
+    // emits `ai-train=no`, so all three are explicit.
+    contentSignal: { search: true, aiInput: true, aiTrain: true },
+  },
+
   seo: {
     redirectToCanonicalSiteUrl: false,
     // Unhead deprecates every `twitter:*` meta tag. X reads Open Graph metadata
@@ -252,6 +258,7 @@ export default defineNuxtConfig({
   // never disagree.
   routeRules: {
     ...runtimeOnlyRouteRules(),
+    ...markdownVaryRouteRules(),
     '/_alt/**': { robots: false, prerender: false },
     ...redirectRouteRules(),
     // `/dashboard/**` and `/account/**` are 301'd to the one tree by
@@ -391,6 +398,9 @@ export default defineNuxtConfig({
       meta: [
         { name: 'theme-color', content: '#18181b', media: '(prefers-color-scheme: dark)' },
         { name: 'theme-color', content: 'white', media: '(prefers-color-scheme: light)' },
+        // `seo.automaticTwitterTags: false` drops every inferred `twitter:*`
+        // tag. X still reads the card type from this one.
+        { name: 'twitter:card', content: 'summary_large_image' },
       ],
     },
   },

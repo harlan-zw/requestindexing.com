@@ -37,6 +37,44 @@ export function runtimeOnlyRouteRules(): Record<string, { prerender: false }> {
 }
 
 /**
+ * Every page the build writes to disk. Cloudflare serves these files before the
+ * worker runs, so the worker cannot answer `Accept: text/markdown` on them.
+ *
+ * A zone URL Rewrite Rule serves each page's `.md` file instead. It matches
+ * these exact paths, as `docs/arch/README.md` describes. A page missing from
+ * that rule answers Markdown requests with HTML.
+ */
+export const PRERENDERED_PAGE_PATHS = [
+  '/',
+  '/bulk-submit-urls-google-indexing-api',
+  '/comparisons',
+  '/comparisons/vs-indexly',
+  '/comparisons/vs-seo-gets',
+  '/comparisons/vs-tagparrot',
+  '/google-indexing-api',
+  '/google-indexing-api-node-js',
+  '/google-indexing-api-quota',
+  '/google-indexing-api-tutorial',
+  '/guides',
+  '/indexing-api-for-blog-posts',
+  '/login',
+  '/privacy',
+  '/terms',
+  '/tools',
+  '/tools/bulk-indexing-checker',
+  '/tools/google-indexing-checker',
+  '/tools/site-indexing-report',
+] as const
+
+/**
+ * `Vary: Accept` rules for every prerendered page. The zone rewrite answers
+ * HTML and Markdown on one URL, so a cache must key on the Accept header.
+ */
+export function markdownVaryRouteRules(paths: readonly string[] = PRERENDERED_PAGE_PATHS): Record<string, { headers: { vary: 'Accept' } }> {
+  return Object.fromEntries(paths.map(path => [path, { headers: { vary: 'Accept' } }]))
+}
+
+/**
  * Moved paths, old path to new path. Each one answers with a real 301.
  *
  * A prerendered redirect is written to disk as a `<meta http-equiv="refresh">`

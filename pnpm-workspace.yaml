@@ -9,7 +9,6 @@ minimumReleaseAgeExclude:
   - '@harlan-zw/nuxt-dx@0.3.0'
   - '@harlan-zw/nuxt-sentry@0.3.0'
   - '@nuxt/kit@4.6.0'
-  - '@nuxt/schema@4.6.0'
   - '@gscdump/sdk@5.8.0'
   - '@gscdump/contracts@5.8.0'
   - '@gscdump/engine@5.8.0'
@@ -17,20 +16,23 @@ minimumReleaseAgeExclude:
   - gscdump@5.8.0
   - '@vitejs/plugin-vue@6.0.9'
   - '@nuxtjs/seo@6.0.1'
-  - '@nuxtjs/robots@7.0.0'
-  - '@nuxtjs/sitemap@9.0.1'
-  - nuxt-og-image@7.0.1
-  - nuxt-ai-ready@3.0.1
-  - nuxt-skew-protection@2.0.1
-  - nuxt-schema-org@7.0.0
+  - '@nuxtjs/robots@7.0.2'
+  - '@nuxtjs/sitemap@9.0.2'
+  - nuxt-og-image@7.0.3
+  - nuxt-ai-ready@3.0.4
+  - nuxt-skew-protection@2.0.2
+  - nuxt-schema-org@7.0.1
   - nuxt-seo-utils@9.0.0
-  - nuxt-link-checker@6.0.0
-  - nuxt-site-config@5.0.1
-  - nuxt-site-config-kit@5.0.1
-  - site-config-stack@5.0.1
-  - nuxtseo-shared@6.0.0 || 6.0.1
-  - nuxtseo-devtools-host@1.0.0
-  - nuxtseo-layer-devtools@6.0.0
+  - nuxt-link-checker@6.0.1
+  - nuxt-site-config@5.0.3
+  - nuxt-site-config-kit@5.0.3
+  - site-config-stack@5.0.3
+  - nuxtseo-shared@6.0.2
+  - nuxtseo-devtools-host@1.0.2
+  - nuxtseo-layer-devtools@6.0.2
+  - unhead@3.4.3
+  - '@unhead/vue@3.4.3'
+  - '@unhead/bundler@3.4.3'
   - '@takumi-rs/core-darwin-arm64@2.15.0'
   - '@takumi-rs/core-darwin-x64@2.15.0'
   - '@takumi-rs/core-linux-arm64-gnu@2.15.0'
@@ -78,9 +80,6 @@ trustPolicyExclude:
   - postcss-svgo@9.0.6
   - postcss-unique-selectors@9.0.6
   - stylehacks@9.0.8
-  # The maintainer published this release by hand, without provenance.
-  # `nuxtseo-devtools-host` pins it, and only development loads it.
-  - nuxtseo-layer-devtools@6.0.0
   # Nuxt's vite-plugin-checker still resolves this release without provenance.
   - chokidar@4.0.3
   # Existing Babel transitive predates npm provenance.
@@ -192,7 +191,7 @@ catalog:
   nitro-cloudflare-dev: ^0.2.2
   nuxt: ^4.6.1
   nuxt-auth-utils: ^0.5.30
-  nuxtseo-devtools-host: ^1.0.0
+  nuxtseo-devtools-host: ^1.0.2
   ohash: ^2.0.12
   oxc-parser: 0.151.0
   postmark: ^5.1.0
