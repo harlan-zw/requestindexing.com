@@ -252,6 +252,18 @@ interface PublicFetchDependencies {
   fetchDestination: (url: URL, init: RequestInit, destination: PublicDestination) => Promise<Response>
 }
 
+function waitForDns(promise: Promise<string[]>, signal?: AbortSignal): Promise<string[]> {
+  if (!signal)
+    return promise
+  signal.throwIfAborted()
+  let onAbort: () => void
+  const aborted = new Promise<never>((_resolve, reject) => {
+    onAbort = () => reject(signal.reason)
+    signal.addEventListener('abort', onAbort, { once: true })
+  })
+  return Promise.race([promise, aborted]).finally(() => signal.removeEventListener('abort', onAbort))
+}
+
 /** Check every DNS answer before contacting each redirect destination. */
 export async function publicFetch(rawUrl: string, init: RequestInit = {}, dependencies: PublicFetchDependencies = {
   resolveHostname: resolvePublicHostname,
@@ -265,7 +277,7 @@ export async function publicFetch(rawUrl: string, init: RequestInit = {}, depend
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     init.signal?.throwIfAborted()
     const hostname = current.hostname.replace(/^\[|\]$/g, '')
-    const addresses = isIP(hostname) ? [hostname] : await dependencies.resolveHostname(hostname)
+    const addresses = isIP(hostname) ? [hostname] : await waitForDns(dependencies.resolveHostname(hostname), init.signal ?? undefined)
     if (addresses.length === 0)
       throw createSsrfError('DNS returned no public addresses')
     for (const address of addresses) {
