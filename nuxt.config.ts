@@ -222,11 +222,6 @@ export default defineNuxtConfig({
     // Writes the Content-Signal line into robots.txt. An unset `aiTrain`
     // emits `ai-train=no`, so all three are explicit.
     contentSignal: { search: true, aiInput: true, aiTrain: true },
-    // Routes the prerendered pages through the Worker, so `Accept:
-    // text/markdown` gets Markdown on them too. Without it, Cloudflare serves
-    // the static HTML first. The module adds two `run_worker_first` patterns
-    // per page and fails the build past Cloudflare's limit of 100.
-    contentNegotiation: true,
   },
 
   seo: {
