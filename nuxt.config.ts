@@ -219,6 +219,7 @@ export default defineNuxtConfig({
   },
 
   aiReady: {
+    llmsTxt: { directive: { html: true } },
     // Writes the Content-Signal line into robots.txt. An unset `aiTrain`
     // emits `ai-train=no`, so all three are explicit.
     contentSignal: { search: true, aiInput: true, aiTrain: true },
