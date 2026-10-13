@@ -1,4 +1,5 @@
 import type { SitemapLiveness } from '../../shared/contracts/sitemap-liveness'
+import { assertPublicUrl, publicFetch } from '../../../../server/utils/public-fetch'
 
 // The sitemap liveness probe. gscdump reports what Google last managed to
 // fetch; this asks the origin right now. A sitemap that hangs or 404s while
@@ -44,14 +45,10 @@ function isTimeoutError(error: unknown): boolean {
  * network. Same-origin alone is not enough: a site can resolve to a loopback
  * address in development.
  */
-const PRIVATE_HOST = /^(?:localhost|.*\.local|.*\.internal|\[?::1\]?|0\.0\.0\.0|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|169\.254\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+)$/i
-
 export function isPublicProbeTarget(target: string): boolean {
   try {
-    const url = new URL(target)
-    if (url.protocol !== 'https:' && url.protocol !== 'http:')
-      return false
-    return !PRIVATE_HOST.test(url.hostname)
+    assertPublicUrl(target)
+    return true
   }
   catch {
     return false
@@ -114,7 +111,7 @@ export async function probeSitemap(
   deps: SitemapProbeDeps = {},
   submittedSitemapUrl?: string,
 ): Promise<SitemapLiveness> {
-  const doFetch = deps.fetch ?? ((input: string, init?: RequestInit) => globalThis.fetch(input, init))
+  const doFetch = deps.fetch ?? publicFetch
   const now = deps.now ?? Date.now
 
   const resolved = probeOrigin(siteUrl)
