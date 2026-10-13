@@ -17,7 +17,14 @@ permissions:
   actions: read
 
 concurrency:
-  group: deploy-cloudflare-production
+  group: >-
+    ${{ ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_branch == 'main')) &&
+      'deploy-cloudflare-production' || format('deploy-cloudflare-production-isolated-{0}', github.run_id) }}
   # A deploy in flight must finish. Wrangler uploads and activates a Worker
   # version, and cancelling part-way leaves it uploaded but not activated.
   cancel-in-progress: false
