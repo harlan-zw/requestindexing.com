@@ -107,6 +107,8 @@ jobs:
         run: pnpm db:migrate
 
       - run: pnpm deploy
+        env:
+          PUBLIC_EGRESS_VERSION_TAG: public-egress-v1-${{ github.event.workflow_run.head_sha || github.sha }}
 
       # Sentry shows "No deploys found" until a deploy is recorded against the
       # release, so already-fixed checks cannot cite a production deploy. The
