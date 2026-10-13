@@ -24,7 +24,7 @@ type OnSuccess = (event: H3Event, context: unknown) => unknown
 
 for (const name of ['defineEventHandler', 'createError', 'getRouterParam', 'getQuery', 'getCookie', 'setCookie', 'deleteCookie', 'sendRedirect'] as const)
   vi.stubGlobal(name, h3[name])
-vi.stubGlobal('useAppConfig', () => ({}))
+vi.stubGlobal('useAppConfig', () => ({ proSaas: { features: { googleSignIn: true, githubSignIn: true } } }))
 vi.stubGlobal('$fetch', h.githubEmails)
 vi.stubGlobal('defineOAuthGitHubEventHandler', ({ onSuccess }: { onSuccess: OnSuccess }) =>
   (event: H3Event) => onSuccess(event, { tokens: { access_token: 'gho_test' }, user: h.githubUser }))
@@ -35,6 +35,7 @@ function callbackEvent(provider: string, query: string): H3Event {
   const req = new IncomingMessage(new Socket())
   req.method = 'GET'
   req.url = `/auth/${provider}?${query}`
+  req.headers.cookie = 'nuxt-auth-state=xyz'
   const event = h3.createEvent(req, new ServerResponse(req))
   event.context.params = { provider }
   return event
