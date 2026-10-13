@@ -17,12 +17,12 @@ minimumReleaseAgeExclude:
   - '@vitejs/plugin-vue@6.0.9'
   - '@nuxtjs/seo@6.0.1'
   - '@nuxtjs/robots@7.0.2'
-  - '@nuxtjs/sitemap@9.0.2'
+  - '@nuxtjs/sitemap@9.1.0'
   - nuxt-og-image@7.0.3
-  - nuxt-ai-ready@3.0.4
+  - nuxt-ai-ready@3.1.0
   - nuxt-skew-protection@2.0.2
   - nuxt-schema-org@7.0.1
-  - nuxt-seo-utils@9.0.0
+  - nuxt-seo-utils@9.0.1
   - nuxt-link-checker@6.0.1
   - nuxt-site-config@5.0.3
   - nuxt-site-config-kit@5.0.3
