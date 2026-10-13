@@ -41,6 +41,8 @@ beforeEach(() => {
 describe.each(['google', 'github'])('%s browser OAuth transaction', (provider) => {
   it.each([
     ['?code=dummy', undefined],
+    ['?code=', undefined],
+    ['?code=&state=', ''],
     ['?code=dummy&state=', ''],
     ['?code=dummy&state=expected', undefined],
     ['?code=dummy', 'expected'],

@@ -97,7 +97,7 @@ export default defineEventHandler(async (event) => {
 
   // A callback must belong to a browser transaction. The provider wrapper
   // accepts two absent state values as equal, so reject them before exchange.
-  if (query.code && (typeof query.state !== 'string' || !query.state || !stateCookie || query.state !== stateCookie)) {
+  if ('code' in query && (typeof query.state !== 'string' || !query.state || !stateCookie || query.state !== stateCookie)) {
     deleteCookie(event, 'nuxt-auth-state', { path: '/' })
     throw createError({ statusCode: 401, statusMessage: 'Invalid state' })
   }
