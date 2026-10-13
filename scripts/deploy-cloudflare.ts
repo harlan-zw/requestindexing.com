@@ -18,6 +18,10 @@ function runCommand(command: string, args: string[]): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  const publicEgressVersionTag = process.env.PUBLIC_EGRESS_VERSION_TAG
+  if (!publicEgressVersionTag || !/^public-egress-v1-[a-f0-9]{40}$/.test(publicEgressVersionTag))
+    throw new Error('Invalid public egress deployment tag')
+
   const resolvedSecrets = resolveWorkerSecrets(CLOUDFLARE_REQUIRED_SECRETS, process.env)
   if (resolvedSecrets._tag === 'missing')
     throw new Error(`Missing Worker secrets: ${resolvedSecrets.names.join(', ')}`)
@@ -30,7 +34,7 @@ async function main(): Promise<void> {
     secrets: { ...resolvedSecrets.secrets, ...optionalSecrets },
     use: secretsPath => runCommand(
       resolve(process.cwd(), 'node_modules/.bin/wrangler'),
-      ['--cwd', '.output', 'deploy', '--secrets-file', secretsPath],
+      ['--cwd', '.output', 'deploy', '--tag', publicEgressVersionTag, '--secrets-file', secretsPath],
     ),
   })
 }
