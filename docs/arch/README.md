@@ -80,6 +80,17 @@ Site and account state is a cache, never the record. The webhook receiver mirror
 - **Webhooks**: `layers/pro-gsc/server/api/webhooks/gscdump.post.ts` verifies the HMAC, dedupes by delivery id, and treats deliveries as invalidation signals. The one exception is `user.allowance.notice`: gscdump sends no email to a partner's user, so this app sends its own.
 - **Realtime**: tickets minted through the same proxy; the socket only ever says state changed.
 
+## Markdown for agents
+
+Cloudflare serves a prerendered page from static assets before the worker runs, so `nuxt-ai-ready` cannot answer `Accept: text/markdown` on it. A zone URL Rewrite Rule does that instead.
+
+- Ruleset `9f2f4573cc2147118ab7028830f191a8` runs in the `http_request_transform` phase, before the cache.
+- It matches a request whose `Accept` header contains `text/markdown` and whose path is one of `PRERENDERED_PAGE_PATHS` in `shared/routes.ts`.
+- It rewrites the path to the page's static Markdown file: `/` to `/index.md`, and any other path to `<path>.md`.
+- `markdownVaryRouteRules()` adds `Vary: Accept` to the same paths, because one URL now answers in two formats.
+
+A new prerendered page needs its path in `PRERENDERED_PAGE_PATHS` and in the zone rule. If the rule misses a path, agents that ask for Markdown get HTML for that page.
+
 ## Not built
 
 Recorded so the question stops being reopened: AI crawler observability, LLM citation tracking, injecting `llms.txt` into customer sites, SPA prerendering, an edge Worker in the request path, embedding search, and billing. See VISION.md for why.
