@@ -27,9 +27,13 @@ jobs:
     # `github.sha` is the default branch tip for a `workflow_run` event, not the
     # commit the run covered, so it cannot be compared against `head_sha` and
     # cannot be checked out. Use `head_sha` throughout.
+    # Reject fork and pull request runs before checkout, build, or deployment.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-24.04
     timeout-minutes: 60
