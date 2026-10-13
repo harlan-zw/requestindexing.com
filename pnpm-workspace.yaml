@@ -1,8 +1,23 @@
 minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
+  - '@mdream/js@2.0.3'
+  - '@mdream/rust-android-arm-eabi@2.0.3'
+  - '@mdream/rust-android-arm64@2.0.3'
+  - '@mdream/rust-darwin-arm64@2.0.3'
+  - '@mdream/rust-darwin-x64@2.0.3'
+  - '@mdream/rust-freebsd-x64@2.0.3'
+  - '@mdream/rust-linux-arm-gnueabihf@2.0.3'
+  - '@mdream/rust-linux-arm64-gnu@2.0.3'
+  - '@mdream/rust-linux-arm64-musl@2.0.3'
+  - '@mdream/rust-linux-x64-gnu@2.0.3'
+  - '@mdream/rust-linux-x64-musl@2.0.3'
+  - '@mdream/rust-wasm32-wasi@2.0.3'
+  - '@mdream/rust-win32-arm64-msvc@2.0.3'
+  - '@mdream/rust-win32-x64-msvc@2.0.3'
+  - mdream@2.0.3
   - '@harlan-zw/comark-content@0.2.0'
   - '@harlan-zw/nuxt-checkin@0.4.1'
-  - '@harlan-zw/nuxt-domain-events@0.2.0'
+  - '@harlan-zw/nuxt-domain-events@0.2.1'
   - '@harlan-zw/nuxt-use-query@0.3.0'
   - '@harlan-zw/nuxt-wide-events@0.2.0'
   - '@harlan-zw/nuxt-cloudflare@0.5.1'
@@ -19,7 +34,7 @@ minimumReleaseAgeExclude:
   - '@nuxtjs/robots@7.0.2'
   - '@nuxtjs/sitemap@9.1.0'
   - nuxt-og-image@7.0.4
-  - nuxt-ai-ready@3.2.0
+  - nuxt-ai-ready@3.3.1
   - nuxt-skew-protection@2.0.2
   - nuxt-schema-org@7.0.1
   - nuxt-seo-utils@9.0.1
@@ -134,7 +149,7 @@ catalog:
   '@harlan-zw/comark-content': 0.2.0
   '@harlan-zw/nuxt-checkin': 0.4.1
   '@harlan-zw/nuxt-cloudflare': 0.5.1
-  '@harlan-zw/nuxt-domain-events': 0.2.0
+  '@harlan-zw/nuxt-domain-events': 0.2.1
   '@harlan-zw/nuxt-dx': 0.3.0
   '@harlan-zw/nuxt-sentry': 0.3.0
   '@harlan-zw/nuxt-use-query': 0.3.0
