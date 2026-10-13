@@ -100,7 +100,6 @@ export default defineEventHandler(async (event) => {
     hasState: !!query.state,
     hasStateCookie: !!stateCookie,
     intent: query.intent,
-    path: event.path,
   })
 
   // Store the signup source for attribution before bouncing to provider.
