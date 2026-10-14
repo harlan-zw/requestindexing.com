@@ -19,6 +19,7 @@ export interface ReconcileGscdumpOnboardingOptions {
   userId: number
   gscdumpUserId: string
   waitForReady?: boolean
+  linkScope?: 'unreported' | 'all'
 }
 
 export interface ReconcileGscdumpOnboardingResult {
@@ -124,6 +125,7 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
   await unlinkUnreadableGscdumpSites({
     db,
     teamId: currentTeamId,
+    linkScope: opts.linkScope,
     readableSiteIds: new Set(lifecycle.sites.map(site => site.siteId)),
     readSiteAccess: gscdump.readSiteAccess,
   })

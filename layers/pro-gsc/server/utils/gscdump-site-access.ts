@@ -32,6 +32,8 @@ export function unreportedGscdumpLink() {
 export async function unlinkUnreadableGscdumpSites(opts: {
   db: Db
   teamId: number
+  /** Account recovery checks every link. Routine reconciliation checks unreported links. */
+  linkScope?: 'unreported' | 'all'
   /** gscdump Sites in the reconciling user's lifecycle. This partner can read them. */
   readableSiteIds: ReadonlySet<string>
   readSiteAccess: (gscdumpSiteId: string) => Promise<GscdumpSiteAccess>
@@ -39,7 +41,7 @@ export async function unlinkUnreadableGscdumpSites(opts: {
   const { db, teamId, readableSiteIds, readSiteAccess } = opts
   const linked = await db.select({ gscdumpSiteId: sites.gscdumpSiteId })
     .from(sites)
-    .where(and(eq(sites.teamId, teamId), unreportedGscdumpLink()))
+    .where(and(eq(sites.teamId, teamId), opts.linkScope === 'all' ? isNotNull(sites.gscdumpSiteId) : unreportedGscdumpLink()))
 
   // Another member's Site is readable but absent from this user's lifecycle,
   // so only a Site read can tell it apart from another pool's Site.

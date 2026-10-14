@@ -79,8 +79,8 @@ describe('a linked Site this partner cannot read', () => {
     return sqlite.prepare('SELECT gscdump_site_id AS linked, gscdump_sync_status AS status FROM sites WHERE id = \'site-nwa\'').get()
   }
 
-  function reconcile() {
-    return reconcileGscdumpOnboardingForUser({ userId, gscdumpUserId: 'u_harlan', currentTeamId: teamId, waitForReady: false })
+  function reconcile(linkScope: 'unreported' | 'all' = 'unreported') {
+    return reconcileGscdumpOnboardingForUser({ userId, gscdumpUserId: 'u_harlan', waitForReady: false, linkScope })
   }
 
   it.each([
@@ -102,6 +102,34 @@ describe('a linked Site this partner cannot read', () => {
     await reconcile()
 
     expect(siteState()).toEqual({ linked: 's_teammate', status: 'pending' })
+    expect(gscdump.registerSite).not.toHaveBeenCalled()
+  })
+
+  it('restores a previously synced Site after its engine account was recreated', async () => {
+    linkSite('s_deleted', 'synced')
+
+    const result = await reconcile('all')
+
+    expect(result).toMatchObject({ attemptedSites: 1, linkedSites: 1 })
+    expect(siteState()).toEqual({ linked: 's_ri', status: 'pending' })
+  })
+
+  it('keeps a synced teammate Site when checking all links after account recovery', async () => {
+    linkSite('s_teammate', 'synced')
+    gscdump.readable.add('s_teammate')
+
+    await reconcile('all')
+
+    expect(siteState()).toEqual({ linked: 's_teammate', status: 'synced' })
+    expect(gscdump.registerSite).not.toHaveBeenCalled()
+  })
+
+  it('leaves reported links outside the routine hourly check', async () => {
+    linkSite('s_synced', 'synced')
+
+    await reconcile()
+
+    expect(siteState()).toEqual({ linked: 's_synced', status: 'synced' })
     expect(gscdump.registerSite).not.toHaveBeenCalled()
   })
 
