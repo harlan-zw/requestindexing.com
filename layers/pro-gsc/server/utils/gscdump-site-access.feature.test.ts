@@ -124,6 +124,24 @@ describe('a linked Site this partner cannot read', () => {
     expect(gscdump.registerSite).not.toHaveBeenCalled()
   })
 
+  it('repairs stale links in every writable Team after account recovery', async () => {
+    sqlite.prepare('INSERT INTO teams (team_id, public_id, name, owner_id, personal_team) VALUES (?, ?, ?, ?, 0)')
+      .run(2, 't_second', 'Second Team', userId)
+    sqlite.prepare('INSERT INTO sites (id, public_id, team_id, owner_id, property, domain, active, gscdump_site_id, gscdump_site_url, gscdump_sync_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 0, 0)')
+      .run('site-second', 's_second', 2, userId, 'https://newworldartists.net', 'newworldartists.net', 's_deleted_second', 'newworldartists.net', 'synced')
+    sqlite.prepare('INSERT INTO sites (id, public_id, team_id, owner_id, property, domain, active, gscdump_site_id, gscdump_site_url, gscdump_sync_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 0, 0)')
+      .run('site-teammate', 's_teammate', 2, userId, 'https://teammate.example', 'teammate.example', 's_teammate', 'teammate.example', 'synced')
+    linkSite('s_deleted_first', 'synced')
+    gscdump.readable.add('s_teammate')
+
+    const result = await reconcile('all')
+
+    expect(result).toMatchObject({ attemptedSites: 2, linkedSites: 2 })
+    expect(siteState()).toEqual({ linked: 's_ri', status: 'pending' })
+    expect(sqlite.prepare('SELECT gscdump_site_id AS linked, gscdump_sync_status AS status FROM sites WHERE id = ?').get('site-second')).toEqual({ linked: 's_ri', status: 'pending' })
+    expect(sqlite.prepare('SELECT gscdump_site_id AS linked, gscdump_sync_status AS status FROM sites WHERE id = ?').get('site-teammate')).toEqual({ linked: 's_teammate', status: 'synced' })
+  })
+
   it('leaves reported links outside the routine hourly check', async () => {
     linkSite('s_synced', 'synced')
 

@@ -1,6 +1,6 @@
 import type { H3Event } from 'h3'
 import { GSCDUMP_HTTP_V1_VERSION } from '@gscdump/contracts/v1'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, or } from 'drizzle-orm'
 import { logger } from '~~/shared/server/logger'
 import { dispatchEvent } from '#domain-events/server'
 import { sites, teamMemberships, teams } from '#layers/pro-saas/server/database'
@@ -101,7 +101,7 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
   // linking that team's Sites to this grant would block its members from
   // linking their own.
   const currentTeamId = (await readCurrentTeam(db, userId))?.teamId ?? null
-  if (!currentTeamId) {
+  if (!currentTeamId && opts.linkScope !== 'all') {
     return {
       userId,
       gscdumpUserId,
@@ -111,37 +111,44 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     }
   }
 
-  // A current membership does not give a viewer permission to change Sites.
-  const membership = await db.select({ ownerId: teams.ownerId, role: teamMemberships.role })
+  // Account recovery replaces one global engine identity. It must repair every
+  // Site the user can write, not only the Team selected in their session.
+  const memberships = await db.select({ teamId: teams.teamId, ownerId: teams.ownerId, role: teamMemberships.role })
     .from(teams)
     .leftJoin(teamMemberships, and(eq(teamMemberships.teamId, teams.teamId), eq(teamMemberships.userId, userId)))
-    .where(eq(teams.teamId, currentTeamId))
-    .get()
-  if (!membership || !can({ isOwner: membership.ownerId === userId, role: membership.role }, 'write-data'))
+    .where(opts.linkScope === 'all'
+      ? or(eq(teams.ownerId, userId), eq(teamMemberships.userId, userId))
+      : eq(teams.teamId, currentTeamId!))
+  const writableTeamIds = memberships
+    .filter(membership => can({ isOwner: membership.ownerId === userId, role: membership.role }, 'write-data'))
+    .map(membership => membership.teamId)
+
+  if (!writableTeamIds.length)
     return { userId, gscdumpUserId, teamId: currentTeamId, linkedSites: 0, attemptedSites: 0 }
 
   // A Site linked to a gscdump Site this partner cannot read never gets data.
   // Unlink it first, so the query below links it again in this partner's pool.
-  await unlinkUnreadableGscdumpSites({
-    db,
-    teamId: currentTeamId,
-    linkScope: opts.linkScope,
-    readableSiteIds: new Set(lifecycle.sites.map(site => site.siteId)),
-    readSiteAccess: gscdump.readSiteAccess,
-  })
+  const readableSiteIds = new Set(lifecycle.sites.map(site => site.siteId))
+  for (const teamId of writableTeamIds) {
+    await unlinkUnreadableGscdumpSites({
+      db,
+      teamId,
+      linkScope: opts.linkScope,
+      readableSiteIds,
+      readSiteAccess: gscdump.readSiteAccess,
+    })
+  }
 
-  // Reconcile every unlinked site on the user's current team, not just the
-  // ones they created: the grant being reconciled belongs to the team. A Site
-  // gscdump refused waits for the user, so the hourly run cannot spend the
-  // shared registration budget asking the same question again.
-  const unlinkedSites = await db
+  // Reconcile every unlinked Site in scope, not just ones the user created.
+  // A refused Site waits for the user, so hourly runs preserve registration budget.
+  const unlinkedSites = (await Promise.all(writableTeamIds.map(teamId => db
     .select({ id: sites.id, url: sites.property })
     .from(sites)
     .where(and(
-      eq(sites.teamId, currentTeamId),
+      eq(sites.teamId, teamId),
       isNull(sites.gscdumpSiteId),
       notRefused(),
-    ))
+    ))))).flat()
 
   if (!unlinkedSites.length) {
     return {
