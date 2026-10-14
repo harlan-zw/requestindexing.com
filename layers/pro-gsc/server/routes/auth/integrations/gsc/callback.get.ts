@@ -131,7 +131,7 @@ export default defineEventHandler(async (event) => {
   let gscdumpSyncFailed = false
   let gscdumpSyncReason: string | null = null
   let gscdumpSyncMessage: string | null = null
-  let recoveredMissingUserId: string | null = null
+  let recoveredMissingGscdumpUser = false
   if (googleUser?.id && refreshToken) {
     const gscdump = useGscdumpClient()
     const tokenParams = {
@@ -186,7 +186,7 @@ export default defineEventHandler(async (event) => {
           // together, then let reconciliation restore this Team's Site links.
           gscdumpUserId = recovery.userId
           gscdumpApiKey = recovery.apiKey
-          recoveredMissingUserId = recovery.userId
+          recoveredMissingGscdumpUser = true
           mintedThisRequest = true
           logger.log('[google auth] missing gscdump user recovered:', gscdumpUserId)
         }
@@ -284,6 +284,7 @@ export default defineEventHandler(async (event) => {
       .set({
         ...(gscdumpUserId && { gscdumpUserId }),
         ...(gscdumpApiKey && { gscdumpApiKey }),
+        ...(recoveredMissingGscdumpUser && { gscdumpRecoveryLinkReconcileUserId: gscdumpUserId }),
         updatedAt: Date.now(),
       })
       .where(eq(schema.users.userId, session.user.id))
@@ -320,7 +321,7 @@ export default defineEventHandler(async (event) => {
     scheduleGscdumpOnboardingReconcile(event, {
       userId: session.user.id,
       gscdumpUserId,
-      ...(recoveredMissingUserId === gscdumpUserId && { linkScope: 'all' }),
+      ...(recoveredMissingGscdumpUser && { linkScope: 'all' }),
     })
   }
 

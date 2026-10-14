@@ -3,7 +3,7 @@ import { GSCDUMP_HTTP_V1_VERSION } from '@gscdump/contracts/v1'
 import { and, eq, isNull, or } from 'drizzle-orm'
 import { logger } from '~~/shared/server/logger'
 import { dispatchEvent } from '#domain-events/server'
-import { sites, teamMemberships, teams } from '#layers/pro-saas/server/database'
+import { sites, teamMemberships, teams, users } from '#layers/pro-saas/server/database'
 import { readCurrentTeam } from '#layers/pro-saas/server/utils/current-team'
 import { can } from '#layers/pro-saas/shared/policies/team-policy'
 import { autoLinkGsc } from './auto-link-gsc'
@@ -34,6 +34,11 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
   const { event, userId, gscdumpUserId } = opts
   const db = useDrizzle(event)
   const gscdump = useGscdumpClient()
+  const recovery = await db.select({ userId: users.gscdumpRecoveryLinkReconcileUserId })
+    .from(users)
+    .where(eq(users.userId, userId))
+    .get()
+  const repairingRecoveredLinks = opts.linkScope === 'all' && recovery?.userId === gscdumpUserId
 
   const lifecycle = await gscdump.getUserLifecycle(gscdumpUserId)
   // The session reads this status to decide whether the grant is usable. This
@@ -123,20 +128,28 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     .filter(membership => can({ isOwner: membership.ownerId === userId, role: membership.role }, 'write-data'))
     .map(membership => membership.teamId)
 
-  if (!writableTeamIds.length)
+  if (!writableTeamIds.length) {
+    if (repairingRecoveredLinks) {
+      await db.update(users)
+        .set({ gscdumpRecoveryLinkReconcileUserId: null, updatedAt: Date.now() })
+        .where(and(eq(users.userId, userId), eq(users.gscdumpRecoveryLinkReconcileUserId, gscdumpUserId)))
+    }
     return { userId, gscdumpUserId, teamId: currentTeamId, linkedSites: 0, attemptedSites: 0 }
+  }
 
   // A Site linked to a gscdump Site this partner cannot read never gets data.
   // Unlink it first, so the query below links it again in this partner's pool.
   const readableSiteIds = new Set(lifecycle.sites.map(site => site.siteId))
+  let accessReadFailed = false
   for (const teamId of writableTeamIds) {
-    await unlinkUnreadableGscdumpSites({
+    const access = await unlinkUnreadableGscdumpSites({
       db,
       teamId,
       linkScope: opts.linkScope,
       readableSiteIds,
       readSiteAccess: gscdump.readSiteAccess,
     })
+    accessReadFailed ||= access.accessReadFailed
   }
 
   // Reconcile every unlinked Site in scope, not just ones the user created.
@@ -151,6 +164,11 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     ))))).flat()
 
   if (!unlinkedSites.length) {
+    if (repairingRecoveredLinks && !accessReadFailed) {
+      await db.update(users)
+        .set({ gscdumpRecoveryLinkReconcileUserId: null, updatedAt: Date.now() })
+        .where(and(eq(users.userId, userId), eq(users.gscdumpRecoveryLinkReconcileUserId, gscdumpUserId)))
+    }
     return {
       userId,
       gscdumpUserId,
@@ -190,9 +208,16 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
 
   const linkedSites = results.filter(result => result.status === 'fulfilled' && result.value._tag === 'Linked').length
   const refusedSites = results.filter(result => result.status === 'fulfilled' && result.value._tag === 'Refused').length
+  const failedSites = results.filter(result => result.status === 'rejected').length
   if (refusedSites)
     logger.log(`[gscdump reconcile] gscdump refused ${refusedSites} Site registrations (Free allowance or duplicate property)`)
   logger.log(`[gscdump reconcile] auto-link complete: ${linkedSites}/${unlinkedSites.length}`)
+
+  if (repairingRecoveredLinks && !accessReadFailed && !failedSites) {
+    await db.update(users)
+      .set({ gscdumpRecoveryLinkReconcileUserId: null, updatedAt: Date.now() })
+      .where(and(eq(users.userId, userId), eq(users.gscdumpRecoveryLinkReconcileUserId, gscdumpUserId)))
+  }
 
   return {
     userId,

@@ -62,7 +62,7 @@ async function reconnect() {
 }
 
 function storedConnection() {
-  return sqlite.prepare('SELECT gscdump_user_id AS userId, gscdump_api_key AS apiKey FROM users WHERE user_id = 42').get()
+  return sqlite.prepare('SELECT gscdump_user_id AS userId, gscdump_api_key AS apiKey, gscdump_recovery_link_reconcile_user_id AS recoveryUserId FROM users WHERE user_id = 42').get()
 }
 
 describe('reconnecting a stale engine account', () => {
@@ -70,7 +70,7 @@ describe('reconnecting a stale engine account', () => {
     state.updateTokens.mockRejectedValue(createError({ statusCode: 404, message: 'User not found', data: { code: 'user_not_found' } }))
 
     expect(await reconnect()).toBe('/pro/dashboard/onboarding?step=sites')
-    expect(storedConnection()).toEqual({ userId: 'u_recreated', apiKey: 'gsd_new' })
+    expect(storedConnection()).toEqual({ userId: 'u_recreated', apiKey: 'gsd_new', recoveryUserId: 'u_recreated' })
     expect(state.register).toHaveBeenCalledWith(expect.objectContaining({ userGoogleId: 'google-42', refreshToken: 'refresh' }))
     expect(state.reconcile).toHaveBeenCalledWith(expect.anything(), { userId: 42, gscdumpUserId: 'u_recreated', linkScope: 'all' })
   })
@@ -80,7 +80,7 @@ describe('reconnecting a stale engine account', () => {
     state.updateTokens.mockRejectedValue(createError({ statusCode, message: 'Read failed', data: { code: 'temporarily_unavailable' } }))
 
     expect(await reconnect()).toContain('gsc_sync_warning=1')
-    expect(storedConnection()).toEqual({ userId: 'u_deleted', apiKey: 'gsd_stale' })
+    expect(storedConnection()).toEqual({ userId: 'u_deleted', apiKey: 'gsd_stale', recoveryUserId: null })
     expect(state.register).not.toHaveBeenCalled()
   })
 
@@ -89,7 +89,7 @@ describe('reconnecting a stale engine account', () => {
     state.register.mockRejectedValue(createError({ statusCode: 503, message: 'Try again' }))
 
     expect(await reconnect()).toContain('gsc_sync_warning=1')
-    expect(storedConnection()).toEqual({ userId: 'u_deleted', apiKey: 'gsd_stale' })
+    expect(storedConnection()).toEqual({ userId: 'u_deleted', apiKey: 'gsd_stale', recoveryUserId: null })
   })
 
   it('preserves both fields if registration returns no credential', async () => {
@@ -97,13 +97,13 @@ describe('reconnecting a stale engine account', () => {
     state.register.mockResolvedValue({ userId: 'u_recreated' })
 
     expect(await reconnect()).toContain('gsc_sync_warning=1')
-    expect(storedConnection()).toEqual({ userId: 'u_deleted', apiKey: 'gsd_stale' })
+    expect(storedConnection()).toEqual({ userId: 'u_deleted', apiKey: 'gsd_stale', recoveryUserId: null })
   })
 
   it('rejects a different id when only the old key was rejected', async () => {
     state.updateTokens.mockResolvedValue({ userId: 'u_deleted', updated: true, sites: [] })
 
     await reconnect()
-    expect(storedConnection()).toEqual({ userId: 'u_deleted', apiKey: 'gsd_stale' })
+    expect(storedConnection()).toEqual({ userId: 'u_deleted', apiKey: 'gsd_stale', recoveryUserId: null })
   })
 })

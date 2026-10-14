@@ -26,8 +26,7 @@ export function unreportedGscdumpLink() {
 
 /**
  * Unlink every unreported Site of a Team whose gscdump Site this partner cannot
- * read, so the reconcile links it again in this partner's pool. Returns the
- * number of gscdump Sites unlinked.
+ * read, so the reconcile links it again in this partner's pool.
  */
 export async function unlinkUnreadableGscdumpSites(opts: {
   db: Db
@@ -37,7 +36,7 @@ export async function unlinkUnreadableGscdumpSites(opts: {
   /** gscdump Sites in the reconciling user's lifecycle. This partner can read them. */
   readableSiteIds: ReadonlySet<string>
   readSiteAccess: (gscdumpSiteId: string) => Promise<GscdumpSiteAccess>
-}): Promise<number> {
+}): Promise<{ unlinked: number, accessReadFailed: boolean }> {
   const { db, teamId, readableSiteIds, readSiteAccess } = opts
   const linked = await db.select({ gscdumpSiteId: sites.gscdumpSiteId })
     .from(sites)
@@ -47,10 +46,12 @@ export async function unlinkUnreadableGscdumpSites(opts: {
   // so only a Site read can tell it apart from another pool's Site.
   const unknown = [...new Set(linked.map(site => site.gscdumpSiteId!))].filter(id => !readableSiteIds.has(id))
   let unlinked = 0
+  let accessReadFailed = false
   for (const gscdumpSiteId of unknown) {
     const access = await readSiteAccess(gscdumpSiteId).catch((err: unknown) => {
       // Keep the link. The next reconcile asks again.
       logWarn('gscdump.site_access.read_failed', err, { gscdumpSiteId })
+      accessReadFailed = true
       return null
     })
     if (access?._tag !== 'NotFound')
@@ -60,5 +61,5 @@ export async function unlinkUnreadableGscdumpSites(opts: {
       .where(and(eq(sites.teamId, teamId), eq(sites.gscdumpSiteId, gscdumpSiteId)))
     unlinked++
   }
-  return unlinked
+  return { unlinked, accessReadFailed }
 }
