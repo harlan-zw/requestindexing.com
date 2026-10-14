@@ -185,6 +185,19 @@ describe('a linked Site this partner cannot read', () => {
     expect(siteState()).toEqual({ linked: 's_ri_old', status: 'pending' })
   })
 
+  it('reconnects the saved www host through its broader Domain property', async () => {
+    linkSite(null, null)
+    sqlite.exec("UPDATE sites SET property = 'sc-domain:newworldartists.net', domain = 'www.newworldartists.net'")
+
+    await reconcile()
+
+    expect(gscdump.registerSite).toHaveBeenCalledWith(expect.objectContaining({
+      requestedUrl: 'www.newworldartists.net',
+      gscPropertyUrl: 'sc-domain:newworldartists.net',
+    }))
+    expect(sqlite.prepare('SELECT gscdump_site_url FROM sites WHERE id = ?').get('site-nwa')).toEqual({ gscdump_site_url: 'www.newworldartists.net' })
+  })
+
   it('heals in the hourly run when every Site on the Team is linked', async () => {
     linkSite('s_nuxtseo', null)
 
