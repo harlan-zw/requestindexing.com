@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "010473a4-03a6-424f-a091-2b8e5ae91b12",
+  "id": "7a70ae73-e910-41df-8cfa-2e65c487a019",
   "prevId": "2f764e34-080f-4752-9d4c-3ded5ced6280",
   "tables": {
     "admin_events": {
@@ -2455,7 +2455,15 @@
           "default": "(CURRENT_TIMESTAMP)"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "teams_owner_id_idx": {
+          "name": "teams_owner_id_idx",
+          "columns": [
+            "owner_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "teams_owner_id_users_user_id_fk": {
           "name": "teams_owner_id_users_user_id_fk",

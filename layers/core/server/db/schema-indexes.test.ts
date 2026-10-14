@@ -3,12 +3,13 @@ import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-// Three equality lookups run on every webhook delivery and access check, and
+// Four equality lookups run on every webhook delivery and access check, and
 // each of their columns carried no index, so sqlite read the whole table:
 //
 //   sites by gscdump_site_id    webhook receiver + `requireSiteAccess`
 //   users by gscdump_user_id    webhook receiver resolving the owner
 //   google_accounts by user_id  account reads on the dashboard
+//   teams by owner_id           caller resolution
 //
 // A missed index is a query-plan regression, so the fixture seeds
 // representative row counts (a one-row table makes the optimizer scan
@@ -33,7 +34,7 @@ function migratedDatabase(): DatabaseSync {
 }
 
 function explain(db: DatabaseSync, sql: string): string[] {
-  return db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all().map((row: { detail: string }) => row.detail)
+  return db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all().map(row => String(row.detail))
 }
 
 function seedTeam(db: DatabaseSync): void {
@@ -75,6 +76,23 @@ describe('engine mirror and account lookup indexes', () => {
     const plan = explain(db, `SELECT user_id FROM users WHERE gscdump_user_id = 'gs-user-1'`)
     expect(plan.some(detail => detail.includes('INDEX users_gscdump_user_id_idx'))).toBe(true)
     expect(plan.some(detail => detail.includes('SCAN users'))).toBe(false)
+  })
+
+  it('searches teams by owner_id instead of scanning', () => {
+    const db = migratedDatabase()
+    seedUsers(db)
+    db.exec(`UPDATE teams SET owner_id = 1 WHERE team_id = 1`)
+    for (let i = 2; i <= ROWS; i++) {
+      db.exec(`INSERT INTO teams (team_id, public_id, name, personal_team, owner_id)
+        VALUES (${i}, 't_${i}', 'team-${i}', 0, ${i})`)
+    }
+
+    const rows = db.prepare(`SELECT team_id FROM teams WHERE owner_id = ?`).all(1)
+    expect(rows).toEqual([{ team_id: 1 }])
+
+    const plan = explain(db, `SELECT team_id FROM teams WHERE owner_id = 1`)
+    expect(plan.some(detail => detail.includes('SEARCH teams') && detail.includes('teams_owner_id_idx'))).toBe(true)
+    expect(plan.some(detail => detail.includes('SCAN teams'))).toBe(false)
   })
 
   it('searches google_accounts by user_id instead of scanning', () => {
