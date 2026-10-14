@@ -36,7 +36,9 @@ export const teams = sqliteTable('teams', {
   // gscdump partner team mirror id
   gscdumpTeamId: text('gscdump_team_id'),
   ...timestamps,
-})
+}, t => ({
+  ownerIdIdx: index('teams_owner_id_idx').on(t.ownerId),
+}))
 
 export const users = sqliteTable('users', {
   userId: integer('user_id').notNull().primaryKey(),

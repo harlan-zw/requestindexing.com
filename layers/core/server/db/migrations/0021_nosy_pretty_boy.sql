@@ -1,0 +1,1 @@
+CREATE INDEX `teams_owner_id_idx` ON `teams` (`owner_id`);
