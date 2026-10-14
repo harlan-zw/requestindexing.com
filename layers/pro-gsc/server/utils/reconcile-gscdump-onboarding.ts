@@ -3,8 +3,9 @@ import { GSCDUMP_HTTP_V1_VERSION } from '@gscdump/contracts/v1'
 import { and, eq, isNull } from 'drizzle-orm'
 import { logger } from '~~/shared/server/logger'
 import { dispatchEvent } from '#domain-events/server'
-import { sites } from '#layers/pro-saas/server/database'
+import { sites, teamMemberships, teams } from '#layers/pro-saas/server/database'
 import { readCurrentTeam } from '#layers/pro-saas/server/utils/current-team'
+import { can } from '#layers/pro-saas/shared/policies/team-policy'
 import { autoLinkGsc } from './auto-link-gsc'
 import { rememberGscdumpAccountStatus } from './gscdump-account-status'
 import { useGscdumpClient } from './gscdump-client'
@@ -108,6 +109,15 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
       attemptedSites: 0,
     }
   }
+
+  // A current membership does not give a viewer permission to change Sites.
+  const membership = await db.select({ ownerId: teams.ownerId, role: teamMemberships.role })
+    .from(teams)
+    .leftJoin(teamMemberships, and(eq(teamMemberships.teamId, teams.teamId), eq(teamMemberships.userId, userId)))
+    .where(eq(teams.teamId, currentTeamId))
+    .get()
+  if (!membership || !can({ isOwner: membership.ownerId === userId, role: membership.role }, 'write-data'))
+    return { userId, gscdumpUserId, teamId: currentTeamId, linkedSites: 0, attemptedSites: 0 }
 
   // A Site linked to a gscdump Site this partner cannot read never gets data.
   // Unlink it first, so the query below links it again in this partner's pool.

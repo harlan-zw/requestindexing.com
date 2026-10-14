@@ -10,6 +10,7 @@ import { releaseRefusedSites } from './site-registration-refusal'
 // partner can read every Site it registered.
 const gscdump = vi.hoisted(() => ({
   registerSite: vi.fn(),
+  readSiteAccess: vi.fn(),
 }))
 
 vi.mock('./gscdump-client', () => ({
@@ -23,7 +24,7 @@ vi.mock('./gscdump-client', () => ({
       ],
     }),
     registerSite: gscdump.registerSite,
-    readSiteAccess: async () => ({ _tag: 'Readable' }),
+    readSiteAccess: gscdump.readSiteAccess,
   }),
 }))
 vi.mock('./gscdump-origin', () => ({ getGscdumpWebhookUrl: () => 'https://requestindexing.test/api/webhooks/gscdump' }))
@@ -53,6 +54,7 @@ describe('reconcileGscdumpOnboardingForUser and refused Sites', () => {
     db = proDatabase(sqlite) as unknown as ProDatabase
     vi.stubGlobal('useDrizzle', () => db)
     gscdump.registerSite.mockReset()
+    gscdump.readSiteAccess.mockReset().mockResolvedValue({ _tag: 'Readable' })
     gscdump.registerSite.mockImplementation(async ({ requestedUrl }: { requestedUrl: string }) =>
       requestedUrl === 'full.example'
         ? { _tag: 'Refused', refusal: { reason: 'site_allowance', limit: 3 } }
@@ -109,6 +111,32 @@ describe('reconcileGscdumpOnboardingForUser and refused Sites', () => {
 
     expect(result).toMatchObject({ attemptedSites: 0, linkedSites: 0 })
     expect(registeredUrls()).toEqual([])
+  })
+
+  it.each(['viewer', 'admin', 'editor'] as const)('uses the current %s role before unlinking or registering Sites', async (role) => {
+    const bob = await createUserWithPersonalTeam(
+      db,
+      { name: 'Bob', email: 'bob@example.test', avatar: '', lastLogin: 1, sub: 'sub-bob' },
+      { provider: 'google', providerUserId: 'sub-bob', email: 'bob@example.test', emailVerified: true, displayName: 'Bob' },
+    )
+    sqlite.prepare('INSERT INTO team_memberships (team_id, user_id, role) VALUES (?, ?, ?)').run(bob.team.teamId, userId, role)
+    sqlite.prepare('UPDATE users SET current_team_id = ? WHERE user_id = ?').run(bob.team.teamId, userId)
+    sqlite.prepare('INSERT INTO sites (id, public_id, team_id, owner_id, property, domain, active, gscdump_site_id, gscdump_sync_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, 0, 0)')
+      .run('site-bob', 's_bob', bob.team.teamId, userId, 'https://fits.example/', 'fits.example', 's_old', 'pending')
+    gscdump.readSiteAccess.mockResolvedValue({ _tag: 'NotFound' })
+
+    const result = await reconcile()
+    if (role === 'viewer') {
+      expect(result).toMatchObject({ attemptedSites: 0, linkedSites: 0 })
+      expect(registeredUrls()).toEqual([])
+      expect(gscdump.readSiteAccess).not.toHaveBeenCalled()
+      expect(sqlite.prepare('SELECT gscdump_site_id FROM sites WHERE id = ?').get('site-bob')).toEqual({ gscdump_site_id: 's_old' })
+    }
+    else {
+      expect(result).toMatchObject({ attemptedSites: 1, linkedSites: 1 })
+      expect(registeredUrls()).toEqual(['fits.example'])
+      expect(sqlite.prepare('SELECT gscdump_site_id FROM sites WHERE id = ?').get('site-bob')).toEqual({ gscdump_site_id: 's_fits' })
+    }
   })
 
   it('tries a refused Site again once the user acts', async () => {
