@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `gscdump_recovery_link_reconcile_user_id` text;

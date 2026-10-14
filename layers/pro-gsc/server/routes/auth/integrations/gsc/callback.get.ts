@@ -5,6 +5,7 @@ import { logger } from '~~/shared/server/logger'
 import { forgetGscdumpAccountStatus } from '#layers/pro-gsc/server/utils/gscdump-account-status'
 import { probeGscdumpUserKey, shouldRepairGscdumpKey } from '#layers/pro-gsc/server/utils/gscdump-key-repair'
 import { scheduleGscdumpOnboardingReconcile } from '#layers/pro-gsc/server/utils/reconcile-gscdump-onboarding'
+import { recoverMissingGscdumpUser } from '#layers/pro-gsc/server/utils/recover-missing-gscdump-user'
 import { releaseRefusedSites } from '#layers/pro-gsc/server/utils/site-registration-refusal'
 import { resolveGscGrant } from '#layers/pro-gsc/shared/gsc-grant'
 import { safeAuthRedirect } from '#layers/pro-saas-auth/shared/utils/auth-redirect'
@@ -130,6 +131,7 @@ export default defineEventHandler(async (event) => {
   let gscdumpSyncFailed = false
   let gscdumpSyncReason: string | null = null
   let gscdumpSyncMessage: string | null = null
+  let recoveredMissingGscdumpUser = false
   if (googleUser?.id && refreshToken) {
     const gscdump = useGscdumpClient()
     const tokenParams = {
@@ -173,11 +175,28 @@ export default defineEventHandler(async (event) => {
         // which the repair block below drives.
       }
       else {
-        const details = errorDetails(lastError)
-        logger.error('[google auth] gscdump token update failed after retries for user:', gscdumpUserId, details.data)
-        gscdumpSyncFailed = true
-        gscdumpSyncReason = details.reason || 'UNKNOWN'
-        gscdumpSyncMessage = details.message
+        const recovery = await recoverMissingGscdumpUser(lastError, () => gscdump.registerUser({
+          userGoogleId: googleUser.id,
+          userEmail: googleUser.email,
+          userName: googleUser.name,
+          ...tokenParams,
+        }))
+        if (recovery._tag === 'Recovered') {
+          // The engine confirmed the old user is absent. Adopt both fields
+          // together, then let reconciliation restore this Team's Site links.
+          gscdumpUserId = recovery.userId
+          gscdumpApiKey = recovery.apiKey
+          recoveredMissingGscdumpUser = true
+          mintedThisRequest = true
+          logger.log('[google auth] missing gscdump user recovered:', gscdumpUserId)
+        }
+        else {
+          const details = errorDetails(recovery._tag === 'Failed' ? recovery.error : lastError)
+          logger.error('[google auth] gscdump token update failed for user:', gscdumpUserId, details.data)
+          gscdumpSyncFailed = true
+          gscdumpSyncReason = details.reason || 'UNKNOWN'
+          gscdumpSyncMessage = details.message
+        }
       }
     }
     else {
@@ -214,7 +233,7 @@ export default defineEventHandler(async (event) => {
     // Registration is gscdump's repair path: idempotent, and scoped to this
     // partner, so re-minting here cannot disturb another partner's credential
     // for the same person.
-    if (gscdumpUserId && !mintedThisRequest) {
+    if (gscdumpUserId && !mintedThisRequest && !gscdumpSyncFailed) {
       const probe = keyProbe ?? (gscdumpApiKey
         ? await probeGscdumpUserKey(event, gscdumpUserId, gscdumpApiKey)
         : 'skipped')
@@ -265,6 +284,7 @@ export default defineEventHandler(async (event) => {
       .set({
         ...(gscdumpUserId && { gscdumpUserId }),
         ...(gscdumpApiKey && { gscdumpApiKey }),
+        ...(recoveredMissingGscdumpUser && { gscdumpRecoveryLinkReconcileUserId: gscdumpUserId }),
         updatedAt: Date.now(),
       })
       .where(eq(schema.users.userId, session.user.id))
@@ -301,6 +321,7 @@ export default defineEventHandler(async (event) => {
     scheduleGscdumpOnboardingReconcile(event, {
       userId: session.user.id,
       gscdumpUserId,
+      ...(recoveredMissingGscdumpUser && { linkScope: 'all' }),
     })
   }
 

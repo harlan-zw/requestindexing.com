@@ -2878,6 +2878,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "gscdump_recovery_link_reconcile_user_id": {
+          "name": "gscdump_recovery_link_reconcile_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "source": {
           "name": "source",
           "type": "text",

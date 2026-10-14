@@ -18,6 +18,7 @@ const gscdump = vi.hoisted(() => ({
   lifecycleSiteIds: [] as string[],
   readable: new Set<string>(),
   registration: { siteId: 's_ri', status: 'pending', existing: false } as { siteId: string, status: string, existing?: boolean },
+  readSiteAccess: vi.fn(),
   registerSite: vi.fn(),
 }))
 
@@ -30,7 +31,7 @@ vi.mock('./gscdump-client', () => ({
       getAvailableSites: async () => ({
         sites: [{ siteUrl: 'sc-domain:newworldartists.net', permissionLevel: 'siteOwner', registered: false }],
       }),
-      readSiteAccess: async (siteId: string) => gscdump.readable.has(siteId) ? { _tag: 'Readable' } : { _tag: 'NotFound' },
+      readSiteAccess: gscdump.readSiteAccess,
       registerSite: gscdump.registerSite,
     }
   },
@@ -57,6 +58,7 @@ describe('a linked Site this partner cannot read', () => {
     gscdump.readable = new Set()
     gscdump.registration = { siteId: 's_ri', status: 'pending', existing: false }
     gscdump.registerSite.mockReset()
+    gscdump.readSiteAccess.mockReset().mockImplementation(async (siteId: string) => gscdump.readable.has(siteId) ? { _tag: 'Readable' } : { _tag: 'NotFound' })
     gscdump.registerSite.mockImplementation(async () => ({ _tag: 'Registered', registration: gscdump.registration }))
 
     const created = await createUserWithPersonalTeam(
@@ -79,8 +81,8 @@ describe('a linked Site this partner cannot read', () => {
     return sqlite.prepare('SELECT gscdump_site_id AS linked, gscdump_sync_status AS status FROM sites WHERE id = \'site-nwa\'').get()
   }
 
-  function reconcile() {
-    return reconcileGscdumpOnboardingForUser({ userId, gscdumpUserId: 'u_harlan', currentTeamId: teamId, waitForReady: false })
+  function reconcile(linkScope: 'unreported' | 'all' = 'unreported') {
+    return reconcileGscdumpOnboardingForUser({ userId, gscdumpUserId: 'u_harlan', waitForReady: false, linkScope })
   }
 
   it.each([
@@ -102,6 +104,64 @@ describe('a linked Site this partner cannot read', () => {
     await reconcile()
 
     expect(siteState()).toEqual({ linked: 's_teammate', status: 'pending' })
+    expect(gscdump.registerSite).not.toHaveBeenCalled()
+  })
+
+  it('restores a previously synced Site after its engine account was recreated', async () => {
+    linkSite('s_deleted', 'synced')
+
+    const result = await reconcile('all')
+
+    expect(result).toMatchObject({ attemptedSites: 1, linkedSites: 1 })
+    expect(siteState()).toEqual({ linked: 's_ri', status: 'pending' })
+  })
+
+  it('keeps a synced teammate Site when checking all links after account recovery', async () => {
+    linkSite('s_teammate', 'synced')
+    gscdump.readable.add('s_teammate')
+
+    await reconcile('all')
+
+    expect(siteState()).toEqual({ linked: 's_teammate', status: 'synced' })
+    expect(gscdump.registerSite).not.toHaveBeenCalled()
+  })
+
+  it('repairs stale links in every writable Team after account recovery', async () => {
+    sqlite.prepare('INSERT INTO teams (team_id, public_id, name, owner_id, personal_team) VALUES (?, ?, ?, ?, 0)')
+      .run(2, 't_second', 'Second Team', userId)
+    sqlite.prepare('INSERT INTO sites (id, public_id, team_id, owner_id, property, domain, active, gscdump_site_id, gscdump_site_url, gscdump_sync_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 0, 0)')
+      .run('site-second', 's_second', 2, userId, 'https://newworldartists.net', 'newworldartists.net', 's_deleted_second', 'newworldartists.net', 'synced')
+    sqlite.prepare('INSERT INTO sites (id, public_id, team_id, owner_id, property, domain, active, gscdump_site_id, gscdump_site_url, gscdump_sync_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 0, 0)')
+      .run('site-teammate', 's_teammate', 2, userId, 'https://teammate.example', 'teammate.example', 's_teammate', 'teammate.example', 'synced')
+    linkSite('s_deleted_first', 'synced')
+    gscdump.readable.add('s_teammate')
+
+    const result = await reconcile('all')
+
+    expect(result).toMatchObject({ attemptedSites: 2, linkedSites: 2 })
+    expect(siteState()).toEqual({ linked: 's_ri', status: 'pending' })
+    expect(sqlite.prepare('SELECT gscdump_site_id AS linked, gscdump_sync_status AS status FROM sites WHERE id = ?').get('site-second')).toEqual({ linked: 's_ri', status: 'pending' })
+    expect(sqlite.prepare('SELECT gscdump_site_id AS linked, gscdump_sync_status AS status FROM sites WHERE id = ?').get('site-teammate')).toEqual({ linked: 's_teammate', status: 'synced' })
+  })
+
+  it('retries a failed recovery link repair in the scheduled reconciliation', async () => {
+    linkSite('s_deleted', 'synced')
+    sqlite.prepare('UPDATE users SET gscdump_recovery_link_reconcile_user_id = ? WHERE user_id = ?').run('u_harlan', userId)
+    gscdump.readSiteAccess.mockRejectedValueOnce(new Error('transient access failure'))
+
+    await reconcile('all')
+    await reconcileTask.run!({ name: 'reconcile-gscdump-onboarding', context: {}, payload: {} } as never)
+
+    expect(siteState()).toEqual({ linked: 's_ri', status: 'pending' })
+    expect(sqlite.prepare('SELECT gscdump_recovery_link_reconcile_user_id AS pending FROM users WHERE user_id = ?').get(userId)).toEqual({ pending: null })
+  })
+
+  it('leaves reported links outside the routine hourly check', async () => {
+    linkSite('s_synced', 'synced')
+
+    await reconcile()
+
+    expect(siteState()).toEqual({ linked: 's_synced', status: 'synced' })
     expect(gscdump.registerSite).not.toHaveBeenCalled()
   })
 

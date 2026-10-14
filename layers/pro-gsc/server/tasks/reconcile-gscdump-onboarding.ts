@@ -25,24 +25,26 @@ export default defineTask({
   },
   async run(): Promise<{ result: { usersProcessed: number, usersFailed: number, attemptedSites: number, linkedSites: number } }> {
     const db = useDrizzle()
-    // Only users with an unlinked site on their current team, or a linked
-    // site gscdump has not reported on: it may point at a gscdump Site this
-    // partner cannot read. A user whose sites all report has nothing to
-    // reconcile, and a `scope_missing` user with no site is read by the
-    // session when it matters. Random order, so a user whose property never
-    // verifies cannot starve the rest of the batch.
+    // A recovered account stays selected until its full writable-Team repair
+    // succeeds. Otherwise select users with an unlinked Site on their current
+    // Team, or a linked Site gscdump has not reported on. Random order keeps
+    // a user whose property never verifies from starving the rest of the batch.
     const rows = await db.selectDistinct({
       userId: users.userId,
       gscdumpUserId: users.gscdumpUserId,
+      gscdumpRecoveryLinkReconcileUserId: users.gscdumpRecoveryLinkReconcileUserId,
     })
       .from(users)
-      .innerJoin(sites, eq(sites.teamId, users.currentTeamId))
+      .leftJoin(sites, eq(sites.teamId, users.currentTeamId))
       .where(and(
         isNotNull(users.gscdumpUserId),
         or(
-          // A refused Site waits for its user, so it alone never selects them.
-          and(isNull(sites.gscdumpSiteId), notRefused()),
-          unreportedGscdumpLink(),
+          isNotNull(users.gscdumpRecoveryLinkReconcileUserId),
+          and(
+            isNotNull(sites.id),
+            // A refused Site waits for its user, so it alone never selects them.
+            or(and(isNull(sites.gscdumpSiteId), notRefused()), unreportedGscdumpLink()),
+          ),
         ),
       ))
       .orderBy(sql`random()`)
@@ -61,6 +63,7 @@ export default defineTask({
         userId: row.userId,
         gscdumpUserId: row.gscdumpUserId,
         waitForReady: false,
+        ...(row.gscdumpRecoveryLinkReconcileUserId === row.gscdumpUserId && { linkScope: 'all' }),
       }).catch((error: unknown) => {
         // One user's failure (a 429, an engine error) must not stop the batch.
         // The next run picks them again, since the site is still unlinked.

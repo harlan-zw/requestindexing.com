@@ -67,6 +67,9 @@ export const users = sqliteTable('users', {
   // gscdump partner integration
   gscdumpUserId: text('gscdump_user_id'),
   gscdumpApiKey: text('gscdump_api_key'),
+  // A recovered engine account needs one full Site-link pass. The engine id
+  // binds this request to its replacement, so an older worker cannot clear it.
+  gscdumpRecoveryLinkReconcileUserId: text('gscdump_recovery_link_reconcile_user_id'),
 
   // Agent-native auth: per-user API key for MCP/CLI/webhook hosts.
   // Nullable for additive migration; backfilled via nanoid in 0004 then enforced.
