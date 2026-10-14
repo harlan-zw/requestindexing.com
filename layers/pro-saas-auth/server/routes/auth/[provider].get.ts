@@ -95,6 +95,13 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const stateCookie = getCookie(event, 'nuxt-auth-state')
 
+  // A callback must belong to a browser transaction. The provider wrapper
+  // accepts two absent state values as equal, so reject them before exchange.
+  if ('code' in query && (typeof query.state !== 'string' || !query.state || !stateCookie || query.state !== stateCookie)) {
+    deleteCookie(event, 'nuxt-auth-state', { path: '/' })
+    throw createError({ statusCode: 401, statusMessage: 'Invalid state' })
+  }
+
   logger.log(`[auth/${providerId}] request:`, {
     hasCode: !!query.code,
     hasState: !!query.state,
@@ -119,7 +126,7 @@ export default defineEventHandler(async (event) => {
 
   // Workaround for nuxt-auth-utils stale state cookie:
   // https://github.com/atinux/nuxt-auth-utils/issues/461
-  if (!query.state && stateCookie) {
+  if (!query.code && !query.state && stateCookie) {
     logger.log(`[auth/${providerId}] clearing stale state cookie`)
     deleteCookie(event, 'nuxt-auth-state')
     return sendRedirect(event, event.path)
