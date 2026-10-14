@@ -1,6 +1,6 @@
 import type { H3Event } from 'h3'
 import { GSCDUMP_HTTP_V1_VERSION } from '@gscdump/contracts/v1'
-import { and, eq, isNull, or } from 'drizzle-orm'
+import { and, eq, isNull, or, sql } from 'drizzle-orm'
 import { logger } from '~~/shared/server/logger'
 import { dispatchEvent } from '#domain-events/server'
 import { sites, teamMemberships, teams, users } from '#layers/pro-saas/server/database'
@@ -155,7 +155,14 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
   // Reconcile every unlinked Site in scope, not just ones the user created.
   // A refused Site waits for the user, so hourly runs preserve registration budget.
   const unlinkedSites = (await Promise.all(writableTeamIds.map(teamId => db
-    .select({ id: sites.id, url: sites.property })
+    .select({
+      id: sites.id,
+      // A Domain property covers many hosts. Reconnect the saved Site host.
+      // A URL-prefix property retains its explicit host and path.
+      url: sql<string>`CASE WHEN ${sites.property} LIKE 'sc-domain:%'
+        THEN coalesce(nullif(${sites.domain}, ''), ${sites.property})
+        ELSE ${sites.property} END`,
+    })
     .from(sites)
     .where(and(
       eq(sites.teamId, teamId),
