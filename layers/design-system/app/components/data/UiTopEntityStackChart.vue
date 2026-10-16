@@ -74,6 +74,7 @@ function shareLabel(share: number): string {
 }
 
 const x = (_d: TopEntityStackRow, i: number) => i
+const totalY = (d: TopEntityStackRow) => d.total > 0 ? 100 : 0
 
 // The plot box is `overflow-hidden` at a fixed height, and the crosshair
 // tooltip lists one row per series plus a header. Rendered inside the plot it
@@ -221,7 +222,7 @@ const ariaLabel = computed(() => `100% stacked bar chart of ${series.map(s => s.
           :x-domain="interactiveXDomain"
           class="chart-layer chart-layer--interactive"
         >
-          <VisLine :x="x" :y="(d: TopEntityStackRow) => d.total > 0 ? 100 : 0" color="transparent" :line-width="0" />
+          <VisLine :x="x" :y="totalY" color="transparent" :line-width="0" />
           <VisAxis
             type="x"
             :tick-line="false"
@@ -234,7 +235,7 @@ const ariaLabel = computed(() => `100% stacked bar chart of ${series.map(s => s.
             tick-text-color="var(--ui-text-dimmed)"
           />
           <VisTooltip :container="tooltipContainer" :class-name="TOOLTIP_CLASS" :follow-cursor="false" horizontal-placement="right" />
-          <VisCrosshair color="none" :template="crosshairTemplate" />
+          <VisCrosshair :x="x" :y="totalY" color="none" :template="crosshairTemplate" />
         </VisXYContainer>
 
         <!-- Day-anchored annotation markers (shared overlay; root is position:relative). -->

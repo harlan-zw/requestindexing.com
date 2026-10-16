@@ -159,6 +159,9 @@ function num(v: unknown) {
 
 // x accessor is the row index — keeps spacing even regardless of x type (dates, labels, …).
 const x = (_d: T, i: number) => i
+// Crosshair can render before its container inherits the line accessors.
+// Give it the complete series so snapping also works during data changes.
+const crosshairY = computed(() => resolvedSeries.value.map(s => (d: T) => num(d[s.key])))
 
 const yDomain = computed<[number, number]>(() => {
   return sharedLineDomain(data, resolvedSeries.value.map(series => series.key))
@@ -310,7 +313,7 @@ function tooltipTemplate(d: T): string {
         />
         <!-- A vertical guide plus the tooltip carries the multi-series read;
              the selected crawl marker remains the only persistent point. -->
-        <VisCrosshair v-if="!annotationInteracting" color="none" :template="tooltipTemplate" />
+        <VisCrosshair v-if="!annotationInteracting" :x="x" :y="crosshairY" color="none" :template="tooltipTemplate" />
         <VisTooltip v-if="!annotationInteracting" />
       </VisXYContainer>
 
