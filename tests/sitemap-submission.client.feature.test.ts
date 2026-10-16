@@ -90,6 +90,10 @@ function mount() {
       onClick: () => emit('click'),
     }, slots.default?.()),
   }))
+  for (const name of ['ConnectSearchConsoleButton', 'UiIcon', 'UiSeverityDot', 'UiSyncDot'])
+    app.component(name, defineComponent({ render: () => null }))
+  for (const name of ['ClientOnly', 'UiTooltip'])
+    app.component(name, defineComponent({ setup: (_, { slots }) => () => slots.default?.() }))
   app.mount(host)
 }
 function button(label: string) {

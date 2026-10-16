@@ -55,6 +55,8 @@ export default defineNuxtConfig({
   ],
   nuxtDx: {
     report: true,
+    // The published llms route needs its observed, explicit middleware budget.
+    sizeBudget: { overridesKb: { 'nuxt-ai-ready': 211 } },
   },
 
   nuxtSentry: {

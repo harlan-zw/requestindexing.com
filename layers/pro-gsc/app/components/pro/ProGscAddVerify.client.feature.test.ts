@@ -14,7 +14,7 @@ const api = vi.hoisted(() => ({
 
 vi.mock('#layers/pro-saas/app/components/pro/team/ProAbilityGate.vue', async () => {
   const { defineComponent } = await import('vue')
-  return { default: defineComponent({ setup: (_, { slots }) => () => slots.default?.() }) }
+  return { default: defineComponent({ props: ['ability'], setup: (_, { slots }) => () => slots.default?.() }) }
 })
 vi.mock('@vueuse/core', async () => {
   const { ref } = await import('vue')
