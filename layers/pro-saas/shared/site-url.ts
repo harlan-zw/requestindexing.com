@@ -34,7 +34,7 @@ export function parseSiteUrlInput(raw: string): SiteUrlParse {
   if (url.protocol !== 'https:' && url.protocol !== 'http:')
     return { _tag: 'Err', message: 'Use an http or https address.' }
 
-  const host = url.hostname.replace(/^www\./, '').toLowerCase()
+  const host = url.hostname.toLowerCase()
   if (!host || host.includes(' '))
     return { _tag: 'Err', message: 'That is not a valid site address.' }
   // A single label with no dot is only a host on a development machine.
@@ -43,4 +43,10 @@ export function parseSiteUrlInput(raw: string): SiteUrlParse {
 
   const port = url.port ? `:${url.port}` : ''
   return { _tag: 'Ok', origin: `${url.protocol}//${host}${port}`, domain: host }
+}
+
+/** Imported Sites may have only a Search Console property, with no domain. */
+export function connectedSiteDomain(site: { domain: string | null, property: string | null, gscdumpSiteUrl?: string | null }): string | null {
+  const parsed = parseSiteUrlInput(site.domain || site.gscdumpSiteUrl || site.property || '')
+  return parsed._tag === 'Ok' ? parsed.domain : null
 }

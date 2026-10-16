@@ -22,7 +22,7 @@ export type VerificationMethod = typeof VERIFICATION_METHODS[number]
 
 /** The property the reader asked to add, and how they prove ownership. */
 export interface VerificationTarget {
-  /** The bare host, as the Site list and the property list key it. */
+  /** The verification record's key; DNS and meta methods share the bare host. */
   domain: string
   /** The property gscdump adds: `sc-domain:` for a DNS record, a URL prefix for a meta tag. */
   siteUrl: string
@@ -48,13 +48,14 @@ export function parseVerificationTarget(raw: string, method: VerificationMethod)
   if (parsed.domain === 'localhost')
     return { _tag: 'Err', message: ADD_VERIFY_REFUSED.localhost }
 
+  // Verification keeps a shared record for the two methods. Site registration
+  // preserves the exact host; only this Domain-property key removes www.
+  const domain = parsed.domain.replace(/^www\./, '')
   if (method === 'DNS_TXT')
-    return { _tag: 'Ok', target: { domain: parsed.domain, siteUrl: `sc-domain:${parsed.domain}`, method } }
+    return { _tag: 'Ok', target: { domain, siteUrl: `sc-domain:${domain}`, method } }
 
   const origin = new URL(parsed.origin)
-  const typedWww = /^(?:[a-z][\w+.-]*:\/\/)?www\./i.test(raw.trim())
-  const host = typedWww ? `www.${origin.host}` : origin.host
-  return { _tag: 'Ok', target: { domain: parsed.domain, siteUrl: `${origin.protocol}//${host}/`, method } }
+  return { _tag: 'Ok', target: { domain, siteUrl: `${origin.protocol}//${origin.host}/`, method } }
 }
 
 /** What the reader places so Google can find it. */

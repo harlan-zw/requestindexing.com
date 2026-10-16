@@ -100,6 +100,53 @@ describe('registerSite and the Free allowance', () => {
 
     expect(again._tag).toBe('AlreadyConnected')
   })
+
+  it('refuses a duplicate imported URL-prefix Site before reading Google or the allowance', async () => {
+    await connect('https://example.com', { _tag: 'Uncapped' })
+    sqlite.prepare('UPDATE sites SET domain = NULL, property = ?').run('https://example.com/')
+    const read = vi.fn(async () => {
+      throw new Error('Duplicate must not reach upstream')
+    })
+
+    const result = await registerSite({} as H3Event, ctx, { url: 'https://example.com' }, {
+      readSiteAllowance: read,
+      readSearchConsoleProperties: read,
+    })
+
+    expect(result._tag).toBe('AlreadyConnected')
+    expect(siteCount(sqlite)).toBe(1)
+    expect(read).not.toHaveBeenCalled()
+  })
+
+  it('registers a www URL-prefix Site with its exact host, separately from the root host', async () => {
+    let properties = owns(property('https://www.example.com/'))
+    const register = (url: string) => registerSite({} as H3Event, ctx, { url }, {
+      readSiteAllowance: async () => ({ _tag: 'Uncapped' }),
+      readSearchConsoleProperties: properties,
+    })
+
+    const www = await register('https://www.example.com')
+    expect(www).toMatchObject({ _tag: 'Ok', site: { domain: 'www.example.com', property: 'https://www.example.com' } })
+    expect(vi.mocked(dispatchEvent)).toHaveBeenLastCalledWith('pro:site:added', expect.objectContaining({
+      url: 'https://www.example.com',
+      gscProperty: expect.objectContaining({ siteUrl: 'https://www.example.com/' }),
+    }))
+    // An imported www Site must still leave the root host connectable.
+    sqlite.prepare('UPDATE sites SET domain = NULL, property = ?').run('https://www.example.com/')
+    properties = owns(property('https://www.example.com/'), property('https://example.com/'))
+    expect(await register('https://example.com')).toMatchObject({ _tag: 'Ok', site: { domain: 'example.com' } })
+    expect(siteCount(sqlite)).toBe(2)
+    expect((await register('https://www.example.com'))._tag).toBe('AlreadyConnected')
+  })
+
+  it('matches an imported Domain property by its saved registered host', async () => {
+    await connect('https://example.com', { _tag: 'Uncapped' })
+    sqlite.prepare('UPDATE sites SET domain = NULL, property = ?, gscdump_site_url = ?').run('sc-domain:example.com', 'www.example.com')
+
+    expect((await connect('https://www.example.com', { _tag: 'Uncapped' }))._tag).toBe('AlreadyConnected')
+    expect((await connect('https://example.com', { _tag: 'Uncapped' }))._tag).toBe('Ok')
+    expect(siteCount(sqlite)).toBe(2)
+  })
 })
 
 describe('registerSite and Search Console ownership', () => {

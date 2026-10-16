@@ -74,6 +74,7 @@ export default defineProApiHandler({}, async ({ db, caller, event }) => {
         // Search Console property is the only label those rows carry, so it
         // ships with the preview and `siteLabel()` falls back to it.
         property: site.property,
+        gscdumpSiteUrl: site.gscdumpSiteUrl,
         pageCount30Day,
         startOfData: oldest,
         isLosingData: isNearRetentionLimit(oldest),
