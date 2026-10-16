@@ -18,7 +18,11 @@ export async function resolvePublicHostname(hostname: string): Promise<string[]>
   const addresses: string[] = []
   for (const answer of answers) {
     if (answer.status === 'fulfilled') {
-      addresses.push(...answer.value)
+      // Workerd's node:dns resolver includes CNAME Answer.data values in A
+      // and AAAA responses (cloudflare/workerd#6886). Only address records
+      // belong here; publicFetch still validates every returned IP against
+      // the private-network policy before any connection is attempted.
+      addresses.push(...answer.value.filter(address => isIP(address) !== 0))
       continue
     }
     const code = (answer.reason as NodeJS.ErrnoException)?.code
