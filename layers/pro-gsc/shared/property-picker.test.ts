@@ -1,5 +1,6 @@
 import type { PropertyPickerInput } from './property-picker'
 import { describe, expect, it } from 'vitest'
+import { connectedSiteDomain } from '#layers/pro-saas/shared/site-url'
 import { projectPropertyPicker, propertyPickerBlocksConnect } from './property-picker'
 
 function loaded(data: PropertyPickerInput['data'], connectedDomains: string[] = []): PropertyPickerInput {
@@ -53,6 +54,34 @@ describe('projectPropertyPicker', () => {
     ))
 
     expect(state).toEqual({ _tag: 'AllConnected' })
+  })
+
+  it('leaves out an imported URL-prefix Site without hiding its distinct www host', () => {
+    const domain = connectedSiteDomain({ domain: null, property: 'https://example.com/' })!
+    expect(projectPropertyPicker(loaded({
+      connected: true,
+      properties: [
+        { siteUrl: 'https://example.com/', permissionLevel: 'siteOwner' },
+        { siteUrl: 'https://www.example.com/', permissionLevel: 'siteOwner' },
+      ],
+    }, [domain]))).toEqual({
+      _tag: 'Properties',
+      properties: [{ siteUrl: 'https://www.example.com/', domain: 'www.example.com', verified: true }],
+    })
+  })
+
+  it('uses the saved registered host of an imported Domain property', () => {
+    const domain = connectedSiteDomain({ domain: null, property: 'sc-domain:example.com', gscdumpSiteUrl: 'www.example.com' })!
+    expect(projectPropertyPicker(loaded({
+      connected: true,
+      properties: [
+        { siteUrl: 'sc-domain:example.com', permissionLevel: 'siteOwner' },
+        { siteUrl: 'https://www.example.com/', permissionLevel: 'siteOwner' },
+      ],
+    }, [domain]))).toEqual({
+      _tag: 'Properties',
+      properties: [{ siteUrl: 'sc-domain:example.com', domain: 'example.com', verified: true }],
+    })
   })
 
   it.each([

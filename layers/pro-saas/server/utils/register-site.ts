@@ -3,12 +3,12 @@ import type { SiteSelect } from '~~/layers/core/server/db/schema'
 import type { SiteAllowance, SiteAllowanceRefusal } from '#layers/pro-gsc/shared/free-allowance'
 import type { SearchConsolePropertyRead, SiteAddress, SitePropertyMatch, SitePropertyRefusal } from '#layers/pro-gsc/shared/site-property'
 import type { CurrentTeamContext } from './require-current-team'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull, or } from 'drizzle-orm'
 import { dispatchEvent } from '#domain-events/server'
 import { decideSiteConnect } from '#layers/pro-gsc/shared/free-allowance'
 import { isStalePropertyRefusal, matchSiteProperty } from '#layers/pro-gsc/shared/site-property'
 import { sites } from '#layers/pro-saas/server/database'
-import { parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
+import { connectedSiteDomain, parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
 import { emitFirstProEvent } from './pro-events'
 
 export interface RegisterSiteInput {
@@ -73,10 +73,11 @@ export async function registerSite(
   if (parsed._tag === 'Err')
     return { _tag: 'InvalidUrl', message: parsed.message }
 
-  const existing = await db.select()
+  const candidates = await db.select()
     .from(sites)
-    .where(and(eq(sites.teamId, team.teamId), eq(sites.domain, parsed.domain)))
-    .get()
+    .where(and(eq(sites.teamId, team.teamId), or(eq(sites.domain, parsed.domain), isNull(sites.domain))))
+    .all()
+  const existing = candidates.find(site => connectedSiteDomain(site) === parsed.domain)
   if (existing)
     return { _tag: 'AlreadyConnected', site: existing }
 

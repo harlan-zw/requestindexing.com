@@ -18,11 +18,11 @@ describe('parseSiteUrlInput', () => {
     })
   })
 
-  it('keeps a subdomain but strips www', () => {
+  it('keeps subdomains including www as distinct hosts', () => {
     expect(parseSiteUrlInput('https://www.example.com')).toEqual({
       _tag: 'Ok',
-      origin: 'https://example.com',
-      domain: 'example.com',
+      origin: 'https://www.example.com',
+      domain: 'www.example.com',
     })
     expect(parseSiteUrlInput('blog.example.com')).toEqual({
       _tag: 'Ok',

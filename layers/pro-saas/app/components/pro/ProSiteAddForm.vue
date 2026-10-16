@@ -7,7 +7,7 @@ import ProGscAddVerify from '#layers/pro-gsc/app/components/pro/ProGscAddVerify.
 import { ADD_VERIFY_ACTION } from '#layers/pro-gsc/shared/add-verify-copy'
 import { siteAllowanceReached, siteAllowanceSummary } from '#layers/pro-gsc/shared/entitlement-copy'
 import { projectPropertyPicker, propertyPickerBlocksConnect } from '#layers/pro-gsc/shared/property-picker'
-import { parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
+import { connectedSiteDomain, parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
 import ProNoPropertyNotice from './ProNoPropertyNotice.vue'
 
 // Connect a Site from the caller's Search Console properties.
@@ -49,6 +49,7 @@ interface ConnectedSite {
   siteId: string
   domain: string | null
   property: string | null
+  gscdumpSiteUrl?: string | null
 }
 
 interface SitesPreviewResponse {
@@ -116,7 +117,7 @@ const atLimit = computed(() => !!cappedAllowance.value && cappedAllowance.value.
 // control is disabled under it, so no click can fail with the same message.
 const allowanceFullNotice = computed(() => atLimit.value && cappedAllowance.value ? siteAllowanceReached(cappedAllowance.value.allowance) : null)
 
-const connectedDomains = computed(() => new Set(connectedSites.value.map(s => s.domain).filter(Boolean) as string[]))
+const connectedDomains = computed(() => new Set(connectedSites.value.map(connectedSiteDomain).filter((domain): domain is string => domain !== null)))
 
 // The Search Console section as one tagged state.
 const picker = computed(() => projectPropertyPicker({
