@@ -75,7 +75,9 @@ describe('useGscdumpClient', () => {
 
   it('admits a fresh identity that takes longer than the optional-render budget', async () => {
     delayedIdentity()
-    const started = new Promise<void>((resolve) => { notifyFetchStarted = resolve })
+    const started = new Promise<void>((resolve) => {
+      notifyFetchStarted = resolve
+    })
     const client = useGscdumpClient({ timeoutMs: 5000 })
     const readData = vi.fn(async () => 'authorized data')
     const read = assertRegisteredGscSiteScope('s_engine', linkedSites, id => client.getRegisteredHostIdentity(id)).then(readData)
@@ -91,7 +93,9 @@ describe('useGscdumpClient', () => {
 
   it('fails closed before reading data when the configured identity budget expires', async () => {
     delayedIdentity()
-    const started = new Promise<void>((resolve) => { notifyFetchStarted = resolve })
+    const started = new Promise<void>((resolve) => {
+      notifyFetchStarted = resolve
+    })
     const client = useGscdumpClient({ timeoutMs: 1000 })
     const readData = vi.fn()
     const read = assertRegisteredGscSiteScope('s_engine', linkedSites, id => client.getRegisteredHostIdentity(id)).then(readData)
@@ -104,9 +108,11 @@ describe('useGscdumpClient', () => {
   })
 
   it('keeps an optional lifecycle read on its caller-specified render budget', async () => {
-    const started = new Promise<void>((resolve) => { notifyFetchStarted = resolve })
-    const result = expect(useGscdumpClient({ timeoutMs: RENDER_PATH_TIMEOUT_MS }).getUserLifecycle('u_1'))
-      .rejects.toMatchObject({ statusCode: 504, data: { code: 'aborted' } })
+    const started = new Promise<void>((resolve) => {
+      notifyFetchStarted = resolve
+    })
+    const read = useGscdumpClient({ timeoutMs: RENDER_PATH_TIMEOUT_MS }).getUserLifecycle('u_1')
+    const result = expect(read).rejects.toMatchObject({ statusCode: 504, data: { code: 'aborted' } })
     await started
     await vi.advanceTimersByTimeAsync(RENDER_PATH_TIMEOUT_MS)
     await result
