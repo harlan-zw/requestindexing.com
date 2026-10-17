@@ -251,7 +251,9 @@ const overviewModel = computed(() => {
     indexed: diagnosisIndexed.value,
     issues: diagnosticsData.value?.issues ?? [],
     indexingStatus: indexingStatus.value,
-    inspectedCount: inspectedCount.value,
+    // Pair indexed/reason counts with their own snapshot's denominator. The
+    // independently refreshed URL listing can already contain more inspections.
+    inspectedCount: diagnosisTotalUrls.value,
     sitemapTotal: sitemapTotal.value,
     sitemapHistory: scopedSitemapUrlHistory.value,
     sampleUrls: indexingUrlsData.value?.urls,
