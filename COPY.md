@@ -176,6 +176,21 @@ They replace older SDK and report descriptions for these two issue types.
 
 The lifecycle adapter aliases completed jobs as `daysSynced`. Do not label that value as recorded days.
 
+### Indexing overview collection failure
+
+A successful read can report that the latest sitemap collection failed. Keep that failure visible,
+retain any observed indexing evidence, and distinguish it from a request that could not load.
+Refreshing status only reads the current evidence; it does not retry collection.
+
+| Asset | String |
+| --- | --- |
+| Sitemap collection failure | Latest sitemap collection failed |
+| Collection failure with retained evidence | Showing the last available indexing evidence. Refresh status to check for changes. |
+| Collection failure without enough evidence | Sitemap collection failed. Refresh status to check for changes. |
+| Collection status action | Refresh status |
+| Sitemap read failure | Sitemap evidence failed to load |
+| Overview read retry | Retry loading |
+
 ## Free tool assets
 
 These assets apply to the result of each free `/tools` page.
