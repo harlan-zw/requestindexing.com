@@ -13,12 +13,12 @@ vi.mock('./gscdump-origin', () => ({
 }))
 
 describe('useGscdumpClient', () => {
-  it('caps an unavailable identity read at the render deadline', async () => {
+  it('honors a caller-configured short identity deadline', async () => {
     v1Client.getRegisteredHostIdentity.mockImplementationOnce((_input: unknown, options: { signal: AbortSignal }) => new Promise((_resolve, reject) => {
       options.signal.addEventListener('abort', () => reject(new Error('identity deadline')), { once: true })
     }))
-    await expect(useGscdumpClient().getRegisteredHostIdentity('s_1')).rejects.toThrow('identity deadline')
-  }, 3500)
+    await expect(useGscdumpClient({ timeoutMs: 20 }).getRegisteredHostIdentity('s_1')).rejects.toThrow('identity deadline')
+  })
   it('keeps the legacy sync-status operation on the canonical client', () => {
     expect(useGscdumpClient().getSiteSyncStatus).toBeTypeOf('function')
   })
