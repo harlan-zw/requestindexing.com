@@ -138,14 +138,14 @@ const diagnosisIndexed = computed(() =>
     : completeUrlSnapshot.value?.urls.filter(row => row.verdict === 'PASS').length ?? 0,
 )
 const sitemapSourceFailed = computed(() => gscData.value?.sitemapStatus === 'failed')
-const overviewError = computed<'diagnosis' | 'sitemap' | 'coverage' | null>(() => {
+const overviewError = computed<'diagnosis' | 'sitemap' | 'coverage' | 'sitemap-collection' | null>(() => {
   if (diagnosticsError.value)
     return 'diagnosis'
   if (sitemapsError.value)
     return 'sitemap'
   if (gscStatusError.value)
     return 'coverage'
-  return sitemapSourceFailed.value ? 'sitemap' : null
+  return sitemapSourceFailed.value ? 'sitemap-collection' : null
 })
 // A successful read of empty snapshots cannot establish absence after the
 // authoritative source failed. Previously observed inspections remain useful.
@@ -157,8 +157,11 @@ const overviewErrorTitle = computed(() => (
     ? 'Indexing diagnosis failed to load'
     : overviewError.value === 'sitemap'
       ? 'Sitemap evidence failed to load'
-      : 'Indexing coverage failed to load'
+      : overviewError.value === 'sitemap-collection'
+        ? 'Latest sitemap collection failed'
+        : 'Indexing coverage failed to load'
 ))
+const overviewErrorAction = computed(() => overviewError.value === 'sitemap-collection' ? 'Refresh status' : 'Retry loading')
 async function retryOverview() {
   await Promise.all([
     refreshGscStatus(),
@@ -515,10 +518,16 @@ const diagnosisFreshness = computed(() => {
     return age ? `refreshing · ${age}` : 'refreshing'
   return age
 })
-const overviewErrorDescription = computed(() => overviewModel.value
-  ? 'Showing the last available indexing evidence. Retry to refresh it.'
-  : 'Required indexing evidence could not be loaded. Retry to rebuild the diagnosis.',
-)
+const overviewErrorDescription = computed(() => {
+  if (overviewError.value === 'sitemap-collection') {
+    return overviewModel.value
+      ? 'Showing the last available indexing evidence. Refresh status to check for changes.'
+      : 'Sitemap collection failed. Refresh status to check for changes.'
+  }
+  return overviewModel.value
+    ? 'Showing the last available indexing evidence. Retry to refresh it.'
+    : 'Required indexing evidence could not be loaded. Retry to rebuild the diagnosis.'
+})
 </script>
 
 <template>
@@ -531,7 +540,7 @@ const overviewErrorDescription = computed(() => overviewModel.value
       >
         <template #action>
           <UiButton purpose="secondary" size="xs" class="min-h-11" @click="retryOverview">
-            Retry
+            {{ overviewErrorAction }}
           </UiButton>
         </template>
       </UiAlert>
@@ -556,7 +565,7 @@ const overviewErrorDescription = computed(() => overviewModel.value
       >
         <template #action>
           <UiButton purpose="secondary" size="xs" class="min-h-11" @click="retryOverview">
-            Retry
+            {{ overviewErrorAction }}
           </UiButton>
         </template>
       </UiAlert>
