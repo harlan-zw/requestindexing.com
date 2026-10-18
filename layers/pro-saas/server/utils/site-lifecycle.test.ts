@@ -1,3 +1,4 @@
+import type { sites } from '~~/layers/core/server/db/schema'
 import type { PartnerLifecycleResponse, PartnerLifecycleSite } from '#layers/pro-gsc/shared/gscdump-api'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { isNearRetentionLimit, lifecycleSiteFor, readOptionalUserLifecycle, syncStatusFor } from './site-lifecycle'
@@ -101,6 +102,19 @@ describe('host-bound lifecycle', () => {
 })
 
 describe('site sync status', () => {
+  it('maps a cached partial registration to error when lifecycle is unavailable', () => {
+    const storedStatus: typeof sites.$inferSelect.gscdumpSyncStatus = 'partial'
+
+    expect(syncStatusFor(null, storedStatus)).toBe('error')
+  })
+
+  it('prefers the authoritative lifecycle over a cached partial registration', () => {
+    const storedStatus: typeof sites.$inferSelect.gscdumpSyncStatus = 'partial'
+    const site = lifecycleSite({ status: 'ready', completed: 668, failed: 0, total: 668 })
+
+    expect(syncStatusFor(site, storedStatus)).toBe('synced')
+  })
+
   it('reads a Site registered a second ago as pending, not synced', () => {
     expect(syncStatusFor(lifecycleSite({ status: 'queryable_live', completed: 0, failed: 0, total: 0 }), null)).toBe('pending')
   })
