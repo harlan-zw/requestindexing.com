@@ -138,7 +138,7 @@ export interface SiteFleetRow {
   sitemaps: SitemapSummary[]
   gscdumpSiteId: string | null
   /** `refused`: gscdump refused to register the Site, so it has no Search Console link. */
-  syncStatus: 'idle' | 'pending' | 'syncing' | 'synced' | 'error' | 'refused'
+  syncStatus: 'idle' | 'pending' | 'syncing' | 'partial' | 'synced' | 'error' | 'refused'
   /** Live import percentage, or null when the lifecycle could not be read. */
   syncProgress: number | null
   /** Why gscdump holds the Site before its first import, read live from its lifecycle. */

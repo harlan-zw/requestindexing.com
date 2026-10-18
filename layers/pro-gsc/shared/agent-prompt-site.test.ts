@@ -8,6 +8,10 @@ describe('agentPromptSite', () => {
     expect(agentPromptSite([LINKED])).toEqual({ gscdumpSiteId: 's_abc', host: 'example.com' })
   })
 
+  it('keeps the linked Site available when the cached sync is partial', () => {
+    expect(agentPromptSite([{ ...LINKED, syncStatus: 'partial' }])).toEqual({ gscdumpSiteId: 's_abc', host: 'example.com' })
+  })
+
   // An account with no linked Site has nothing for the prompt to read, so the
   // page offers no prompt (UX replay A7).
   it.each([

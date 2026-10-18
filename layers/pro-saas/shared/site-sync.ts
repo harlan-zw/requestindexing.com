@@ -8,6 +8,7 @@ export const SITE_SYNC_LABELS: Record<SiteSyncStatus, string> = {
   idle: 'Waiting to sync',
   pending: 'Waiting to sync',
   syncing: 'Syncing',
+  partial: 'Partially synced',
   synced: 'Synced',
   error: 'Sync failed',
   refused: SITE_NOT_LINKED_LABEL,

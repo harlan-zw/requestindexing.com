@@ -126,6 +126,16 @@ describe('site sync status', () => {
 
   it('falls back to the stored status without a lifecycle row', () => {
     expect(syncStatusFor(null, 'syncing')).toBe('syncing')
+    expect(syncStatusFor(null, 'partial')).toBe('partial')
     expect(syncStatusFor(null, null)).toBe('pending')
+  })
+
+  it.each([
+    [{ status: 'ready', completed: 668, failed: 0, total: 668 }, 'synced'],
+    [{ status: 'queryable_partial', completed: 667, failed: 1, total: 668 }, 'error'],
+    [{ status: 'failed', completed: 0, failed: 1, total: 1 }, 'error'],
+    [{ status: 'queued', completed: 0, failed: 0, total: 0 }, 'pending'],
+  ] as const)('keeps authoritative lifecycle ahead of a partial cache: %j', (input, expected) => {
+    expect(syncStatusFor(lifecycleSite(input), 'partial')).toBe(expected)
   })
 })

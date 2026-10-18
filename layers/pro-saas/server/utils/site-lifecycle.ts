@@ -8,7 +8,7 @@ import { findLifecycleSite, lifecycleSiteToSyncStatus } from '#layers/pro-gsc/se
 import { registeredSiteHostMatches } from '#layers/pro-gsc/shared/registered-site-host'
 
 /** `refused`: gscdump refused to register the Site; it waits for the user. */
-export type SiteSyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error' | 'refused'
+export type SiteSyncStatus = 'idle' | 'pending' | 'syncing' | 'partial' | 'synced' | 'error' | 'refused'
 
 export function lifecycleSiteFor(lifecycle: PartnerLifecycleResponse | null, gscdumpSiteId: string | null, expectedSiteUrl: string): PartnerLifecycleSite | null {
   if (!lifecycle || !gscdumpSiteId)

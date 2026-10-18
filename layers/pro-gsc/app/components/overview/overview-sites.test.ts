@@ -1,6 +1,6 @@
 import type { OverviewSite, OverviewSiteEntry } from './overview-sites'
 import { describe, expect, it } from 'vitest'
-import { invalidatedTargets, isSiteBroken, overviewColumnPage, overviewSiteStatus, soleSiteLandingPath } from './overview-sites'
+import { invalidatedTargets, isOverviewReadTarget, isSiteBroken, overviewColumnPage, overviewSiteStatus, soleSiteLandingPath } from './overview-sites'
 
 function site(overrides: Partial<OverviewSite> & { siteId: string }): OverviewSite {
   return {
@@ -26,6 +26,7 @@ describe('overviewSiteStatus', () => {
 
   it.each([
     ['error', 'Sync failed', true],
+    ['partial', 'Partially synced', true],
     ['syncing', 'Syncing', false],
     ['pending', 'Waiting to sync', false],
     ['idle', 'Waiting to sync', false],
@@ -60,6 +61,14 @@ describe('invalidatedTargets', () => {
 })
 
 describe('isSiteBroken', () => {
+  it('keeps a partially synced Site visible for attention without claiming that data is ready', () => {
+    const partial = site({ siteId: 'partial', syncStatus: 'partial', syncedRange: { oldest: null, newest: null } })
+    expect(isSiteBroken(partial)).toBe(true)
+    expect(overviewSiteStatus(partial)).toMatchObject({ tone: 'warning', summary: 'Some Search Console sync jobs failed.' })
+    expect(isOverviewReadTarget({ ...partial, gscdumpSiteId: 's_engine' })).toBe(false)
+    expect(isOverviewReadTarget({ ...partial, gscdumpSiteId: 's_engine', syncedRange: { oldest: '2026-10-01', newest: '2026-10-10' } })).toBe(true)
+  })
+
   it('counts a Site gscdump refused to link, because it needs its owner before it can collect', () => {
     expect(isSiteBroken({ syncStatus: 'refused', permissionLost: false })).toBe(true)
   })
@@ -73,8 +82,9 @@ describe('overviewColumnPage', () => {
       entry({ siteId: 'busy' }, 900),
       entry({ siteId: 'lost', permissionLost: true }, 0),
       entry({ siteId: 'failed', syncStatus: 'error' }, 5),
+      entry({ siteId: 'partial', syncStatus: 'partial' }, 3),
     ], 0)
-    expect(rows.map(row => row.site.siteId)).toEqual(['failed', 'lost', 'busy', 'quiet', 'new'])
+    expect(rows.map(row => row.site.siteId)).toEqual(['failed', 'partial', 'lost', 'busy', 'quiet', 'new'])
   })
 
   it('breaks a clicks tie by label so the order is stable', () => {

@@ -188,7 +188,7 @@ export const sites = sqliteTable('sites', {
   gscdumpSiteUrl: text('gscdump_site_url'),
   // `refused`: gscdump refused to register the Site (a full Free allowance or
   // a duplicate property). It waits for the user; see `site-registration-refusal.ts`.
-  gscdumpSyncStatus: text('gscdump_sync_status').$type<'pending' | 'syncing' | 'synced' | 'error' | 'refused'>(),
+  gscdumpSyncStatus: text('gscdump_sync_status').$type<'pending' | 'syncing' | 'partial' | 'synced' | 'error' | 'refused'>(),
 
   ...timestamps,
 }, t => ({

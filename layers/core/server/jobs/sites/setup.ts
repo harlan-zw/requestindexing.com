@@ -40,6 +40,7 @@ export default defineJob({
       return
     }
     const { registration } = result
+    // Preserve completed-with-failures as partial; it is neither queued nor a full success.
     const syncStatus = registration.status === 'idle' ? 'pending' : registration.status
 
     await db.update(sites).set({
