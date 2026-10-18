@@ -2,6 +2,7 @@
 // the "match a local site row against its gscdump lifecycle entry" logic used
 // by list/preview/stats so each route only needs to fetch the lifecycle once
 // per request and reuse the same derivation.
+import type { sites } from '~~/layers/core/server/db/schema'
 import type { PartnerLifecycleResponse, PartnerLifecycleSite } from '#layers/pro-gsc/shared/gscdump-api'
 import { getOldestGscDate } from 'gscdump'
 import { findLifecycleSite, lifecycleSiteToSyncStatus } from '#layers/pro-gsc/server/utils/gscdump-client'
@@ -17,7 +18,7 @@ export function lifecycleSiteFor(lifecycle: PartnerLifecycleResponse | null, gsc
   return candidate && registeredSiteHostMatches(candidate.requestedUrl, expectedSiteUrl) ? candidate : null
 }
 
-export function syncStatusFor(lifecycleSite: PartnerLifecycleSite | null, fallback: SiteSyncStatus | null): SiteSyncStatus {
+export function syncStatusFor(lifecycleSite: PartnerLifecycleSite | null, fallback: typeof sites.$inferSelect.gscdumpSyncStatus): SiteSyncStatus {
   if (lifecycleSite)
     return lifecycleSiteToSyncStatus(lifecycleSite).syncStatus
   return fallback ?? 'pending'

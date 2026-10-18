@@ -1,3 +1,4 @@
+import type { GscdumpSiteRegistration } from '@gscdump/contracts'
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { RequiredNonNullable } from '~~/layers/core/app/types/util'
 import type { GoogleOAuthUser } from '~~/layers/core/server/app/utils/auth'
@@ -188,7 +189,8 @@ export const sites = sqliteTable('sites', {
   gscdumpSiteUrl: text('gscdump_site_url'),
   // `refused`: gscdump refused to register the Site (a full Free allowance or
   // a duplicate property). It waits for the user; see `site-registration-refusal.ts`.
-  gscdumpSyncStatus: text('gscdump_sync_status').$type<'pending' | 'syncing' | 'partial' | 'synced' | 'error' | 'refused'>(),
+  // Registration maps `idle` to `pending`; preserve every other engine status.
+  gscdumpSyncStatus: text('gscdump_sync_status').$type<Exclude<GscdumpSiteRegistration['status'], 'idle'> | 'refused'>(),
 
   ...timestamps,
 }, t => ({
