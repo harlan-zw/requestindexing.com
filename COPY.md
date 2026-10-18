@@ -20,6 +20,8 @@ These exact strings. Do not paraphrase them per page.
 | Navigation drawer title | Navigation menu | `UiAppShell` mobile drawer accessible name |
 | Tagline | Get your pages indexed. | README, `VISION.md`, social card headline, site-wide `og:title` |
 | Landing H1 | Get your pages indexed. | `apps/marketing/app/pages/index.vue`; reuses the tagline |
+| Partial Search Console sync status | `Partially synced` | Cached partial sync fallback in the Site list; authoritative lifecycle takes precedence |
+| Partial Search Console sync detail | Some Search Console sync jobs failed. | Site overview tooltip; does not assert data availability |
 | Site description | Monitor and request Google indexing for your pages | `nuxt.config.ts` site description, which feeds every page's meta description |
 | Landing meta description | Request Google indexing for your pages, then see which URLs Google has indexed, which it has not, and the reason it gives. Free and open source. | the landing page only |
 

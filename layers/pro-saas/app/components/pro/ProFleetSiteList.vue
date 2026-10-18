@@ -252,12 +252,12 @@ const gridStyle = computed(() => gridCols ? { gridTemplateColumns: gridCols } : 
           <div class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             <ProSiteIdentity :url="site.domain" :name="site.name" :to="site.href" v-bind="identityBind" class="min-w-0 flex-1" />
           </div>
-          <UiSyncDot v-if="isSiteSyncing(site.syncStatus) || site.syncStatus === 'error'" :status="site.syncStatus" size="2" />
+          <UiSyncDot v-if="isSiteSyncing(site.syncStatus) || site.syncStatus === 'error' || site.syncStatus === 'partial'" :status="site.syncStatus === 'partial' ? 'error' : site.syncStatus" size="2" />
         </div>
         <div class="flex items-center justify-between mt-3">
           <div class="flex items-center gap-4">
             <UiSyncDot v-if="isSiteSyncing(site.syncStatus)" :status="site.syncStatus" :label="syncLabel(site)" />
-            <NuxtLink v-else-if="site.syncStatus === 'error'" :to="site.href" class="flex items-center gap-1 hover:underline">
+            <NuxtLink v-else-if="site.syncStatus === 'error' || site.syncStatus === 'partial'" :to="site.href" class="flex items-center gap-1 hover:underline">
               <UiSyncDot status="error" :label="syncLabel(site)" />
             </NuxtLink>
             <NuxtLink

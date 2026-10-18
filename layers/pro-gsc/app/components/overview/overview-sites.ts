@@ -101,7 +101,7 @@ export function invalidatedTargets<T extends { gscdumpSiteId: string }>(
 
 /** True when the Site needs its owner before it can collect again. */
 export function isSiteBroken(site: Pick<OverviewSite, 'syncStatus' | 'permissionLost'>): boolean {
-  return site.permissionLost || site.syncStatus === 'error' || site.syncStatus === 'refused'
+  return site.permissionLost || site.syncStatus === 'error' || site.syncStatus === 'partial' || site.syncStatus === 'refused'
 }
 
 /**
@@ -128,6 +128,8 @@ export function overviewSiteStatus(site: OverviewSite): OverviewSiteStatus {
       return { label: SITE_NOT_LINKED_LABEL, tone: 'error', urgent: true, summary: SITE_LINK_REFUSED, action: null }
     case 'error':
       return { label: 'Sync failed', tone: 'error', urgent: true, summary: 'The last Search Console sync failed.', action: 'Open the Site to see the error and retry.' }
+    case 'partial':
+      return { label: 'Partially synced', tone: 'warning', urgent: true, summary: 'Some Search Console sync jobs failed.', action: 'Open the Site to see the error and retry.' }
     case 'syncing':
       return { label: 'Syncing', tone: 'neutral', urgent: false, summary: 'The Search Console sync is running.', action: null }
     case 'synced':

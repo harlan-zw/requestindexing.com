@@ -2,13 +2,14 @@
 // the "match a local site row against its gscdump lifecycle entry" logic used
 // by list/preview/stats so each route only needs to fetch the lifecycle once
 // per request and reuse the same derivation.
+import type { sites } from '~~/layers/core/server/db/schema'
 import type { PartnerLifecycleResponse, PartnerLifecycleSite } from '#layers/pro-gsc/shared/gscdump-api'
 import { getOldestGscDate } from 'gscdump'
 import { findLifecycleSite, lifecycleSiteToSyncStatus } from '#layers/pro-gsc/server/utils/gscdump-client'
 import { registeredSiteHostMatches } from '#layers/pro-gsc/shared/registered-site-host'
 
 /** `refused`: gscdump refused to register the Site; it waits for the user. */
-export type SiteSyncStatus = 'idle' | 'pending' | 'syncing' | 'synced' | 'error' | 'refused'
+export type SiteSyncStatus = 'idle' | 'pending' | 'syncing' | 'partial' | 'synced' | 'error' | 'refused'
 
 export function lifecycleSiteFor(lifecycle: PartnerLifecycleResponse | null, gscdumpSiteId: string | null, expectedSiteUrl: string): PartnerLifecycleSite | null {
   if (!lifecycle || !gscdumpSiteId)
@@ -17,7 +18,7 @@ export function lifecycleSiteFor(lifecycle: PartnerLifecycleResponse | null, gsc
   return candidate && registeredSiteHostMatches(candidate.requestedUrl, expectedSiteUrl) ? candidate : null
 }
 
-export function syncStatusFor(lifecycleSite: PartnerLifecycleSite | null, fallback: SiteSyncStatus | null): SiteSyncStatus {
+export function syncStatusFor(lifecycleSite: PartnerLifecycleSite | null, fallback: typeof sites.$inferSelect.gscdumpSyncStatus): SiteSyncStatus {
   if (lifecycleSite)
     return lifecycleSiteToSyncStatus(lifecycleSite).syncStatus
   return fallback ?? 'pending'

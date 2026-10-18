@@ -7,7 +7,7 @@ export interface AgentPromptCandidate {
   property: string
   gscdumpSiteId: string | null
   /** `refused`: gscdump refused to link the Site. */
-  syncStatus: 'idle' | 'pending' | 'syncing' | 'synced' | 'error' | 'refused'
+  syncStatus: 'idle' | 'pending' | 'syncing' | 'partial' | 'synced' | 'error' | 'refused'
   hold: SiteHoldReason | null
 }
 
