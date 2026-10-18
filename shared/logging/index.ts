@@ -20,12 +20,13 @@
 
 import type { LogName } from './catalog'
 import { LOG_CATALOG } from './catalog'
+import { consoleClassification } from './console-classification'
 
 // Local shim for evlog (package not yet installed). Mirrors the surface used
 // below: `log.warn(payload)`, `log.error(payload)`, and `parseError(err)`.
 const log = {
-  warn: (payload: unknown) => console.warn('[evlog:warn]', payload),
-  error: (payload: unknown) => console.error('[evlog:error]', payload),
+  warn: (payload: unknown, classification: string) => console.warn(`[evlog:warn]${classification ? ` ${classification}` : ''}`, payload),
+  error: (payload: unknown, classification: string) => console.error(`[evlog:error]${classification ? ` ${classification}` : ''}`, payload),
 }
 function parseError(error: unknown): { message: string, stack?: string } {
   if (error instanceof Error)
@@ -57,6 +58,7 @@ export function removeLogSink(sink: LogSink): void {
 }
 
 function emit(level: 'warn' | 'error', name: LogName, error: unknown, ctx?: Record<string, unknown>): void {
+  const classification = consoleClassification(name, error, ctx)
   const parsed = error == null ? null : parseError(error)
   const description = LOG_CATALOG[name]
 
@@ -66,7 +68,7 @@ function emit(level: 'warn' | 'error', name: LogName, error: unknown, ctx?: Reco
     description,
     error: parsed,
     ...(ctx ? { ctx } : {}),
-  })
+  }, classification)
 
   // Server-installed sinks (D1, Sentry, ...). Wrapped per sink so a
   // misbehaving sink can never re-enter the catch path that called us,

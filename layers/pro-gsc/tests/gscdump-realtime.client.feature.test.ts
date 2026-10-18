@@ -1,3 +1,4 @@
+import type { CreateGscdumpRealtimeV1ClientOptions } from '@gscdump/sdk/v1'
 import { useEventListener } from '@vueuse/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, onScopeDispose, reactive, ref, watch } from 'vue'
@@ -57,6 +58,45 @@ async function mount(path: string, connected: boolean) {
 }
 
 describe('dashboard realtime activation', () => {
+  it('keeps SDK error classification readable through the real observation logger', async () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      await mount('/pro/dashboard/sites', true)
+      await vi.waitFor(() => expect(sdk.start).toHaveBeenCalledOnce())
+      const { GscdumpRealtimeV1Error, GscdumpV1Error } = await vi.importActual<typeof import('@gscdump/sdk/v1')>('@gscdump/sdk/v1')
+      const error = new GscdumpRealtimeV1Error({
+        code: 'ticket_provider_failed',
+        message: 'Synthetic ticket failure',
+        retryable: true,
+        terminal: false,
+        cause: new GscdumpV1Error({
+          code: 'realtime_unavailable',
+          message: 'Synthetic HTTP failure',
+          status: 503,
+          retryable: true,
+          details: {},
+        }),
+      })
+      const options = sdk.create.mock.calls[0]![0] as CreateGscdumpRealtimeV1ClientOptions
+      options.onObservation!({
+        type: 'error',
+        error,
+        state: { transport: 'ticketing', freshness: 'unknown', attempt: 0, streamId: null, cursor: null, head: null, error },
+      })
+
+      expect(warning).toHaveBeenCalledOnce()
+      const [prefix, payload] = warning.mock.calls[0]!
+      expect(prefix).toContain('event=gscdump.integration.probe_failed source=realtime')
+      expect(prefix).toContain('code=ticket_provider_failed')
+      expect(prefix).toContain('cause_code=realtime_unavailable cause_status=503')
+      expect(payload.error).toEqual({ message: error.message, stack: error.stack })
+      expect(payload.ctx).toEqual({ source: 'realtime' })
+    }
+    finally {
+      warning.mockRestore()
+    }
+  })
+
   it('keeps the SDK unloaded on public pages and disconnected dashboards', async () => {
     await mount('/', true)
     await mount('/pro/dashboard/sites', false)
