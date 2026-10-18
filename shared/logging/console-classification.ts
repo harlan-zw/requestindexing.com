@@ -42,8 +42,8 @@ const ERROR_CODES = new Set<string>([
 const ERROR_TYPES = new Set(['Error', 'TypeError', 'AbortError', 'FetchError', 'GscdumpV1Error', 'GscdumpRealtimeV1Error'])
 const CONTEXT_VALUES: Record<string, readonly string[]> = {
   source: ['realtime'],
-  stage: ['connect', 'load'],
-  trigger: ['activate', 'focus', 'interval'],
+  stage: ['connect', 'load', 'ticket'],
+  trigger: ['activate', 'focus', 'interval', 'realtime'],
   probe: ['refreshCaller'],
   fn: ['invalidateNuxtQueries'],
   read: ['top-association'],
