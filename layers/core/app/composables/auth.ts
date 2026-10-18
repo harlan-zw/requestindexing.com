@@ -20,9 +20,12 @@ export function useAuthenticatedUser() {
 export function createSessionExpiredHandler() {
   const { clear } = useUserSession()
   const route = useRoute()
-  return async () => {
+  return async (isCurrent: () => boolean = () => true) => {
+    if (!isCurrent())
+      return
     await clear()
-    await navigateTo({ path: '/login', query: { redirect: route.fullPath } })
+    if (isCurrent())
+      await navigateTo({ path: '/login', query: { redirect: route.fullPath } })
   }
 }
 

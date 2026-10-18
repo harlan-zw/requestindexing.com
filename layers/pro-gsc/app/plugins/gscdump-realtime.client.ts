@@ -47,9 +47,11 @@ export default defineNuxtPlugin({
   // Run after `00.gscdump-auth.client.ts` so the integration state is hydrated.
   dependsOn: ['pro-gscdump-auth'],
   setup() {
+    const nuxtApp = useNuxtApp()
     const route = useRoute()
     let activated = false
     let stopWatch: (() => void) | null = null
+    let stopRecoveryWatch: (() => void) | null = null
     let realtime: GscdumpRealtimeV1Client | null = null
 
     function invalidateAffectedSites(event: RealtimeV1Event): void {
@@ -74,10 +76,16 @@ export default defineNuxtPlugin({
       activated = true
 
       const integration = useNuxtData<GscdumpIntegration | null>(GSCDUMP_INTEGRATION_KEY).data
+      const refreshRevision = useState(`${GSCDUMP_INTEGRATION_KEY}:refresh-revision`, () => 0)
+      const rejectedAtRevision = ref<number | null>(null)
       const { user } = useUserSession()
+      stopRecoveryWatch = watch(() => integration.value?.connected ?? false, (connected) => {
+        if (!connected)
+          rejectedAtRevision.value = null
+      })
 
       stopWatch = watch(
-        () => integration.value?.connected ?? false,
+        () => !!integration.value?.connected && (rejectedAtRevision.value === null || refreshRevision.value > rejectedAtRevision.value),
         (connected, _previous, onCleanup) => {
           if (realtime) {
             realtime.stop()
@@ -93,7 +101,7 @@ export default defineNuxtPlugin({
 
           // Public pages never use the realtime SDK. Load its code only when
           // a connected dashboard needs it, outside the initial page bundle.
-          void import('../internal/gscdump-realtime-runtime').then(({ createGscdumpRealtimeV1Client, createGscdumpV1Client, createRealtimeV1Schemas }) => {
+          void import('../internal/gscdump-realtime-runtime').then(({ createGscdumpRealtimeV1Client, createGscdumpV1Client, createRealtimeV1Schemas, isGscdumpV1Error }) => {
             // Integration loss or scope disposal can happen during the load.
             if (cancelled)
               return
@@ -111,7 +119,7 @@ export default defineNuxtPlugin({
               },
             })
             const userId = user.value?.id
-            const client = createGscdumpRealtimeV1Client({
+            const client: GscdumpRealtimeV1Client = createGscdumpRealtimeV1Client({
               // Without a signed-in id there is no account to key the cursor
               // by, so the SDK keeps it in memory for this page load only.
               ...(userId != null && {
@@ -121,7 +129,26 @@ export default defineNuxtPlugin({
               // so the proxy substitutes its own request origin; sending one from
               // the browser is rejected as an unexpected body and the ticket
               // never minted. Same call shape as nuxtseo.com.
-              ticketProvider: () => http.createRealtimeTicket({ body: {} }),
+              ticketProvider: async () => {
+                try {
+                  return await http.createRealtimeTicket({ body: {} })
+                }
+                catch (error) {
+                  if (!cancelled && realtime === client && isGscdumpV1Error(error) && (error.status === 401 || error.status === 403)) {
+                    // The SDK retries rejected providers. Stop first so a
+                    // permanent auth rejection cannot re-arm that loop, and
+                    // retain the original typed failure in the warning.
+                    client.stop()
+                    // Retry only after a later successful normal host refresh,
+                    // not the401 verification below. Healthy streams stay open.
+                    rejectedAtRevision.value = refreshRevision.value
+                    logWarn('gscdump.integration.probe_failed', error, { source: 'realtime', stage: 'ticket' })
+                    if (error.status === 401)
+                      await nuxtApp.$refreshGscdumpIntegration()
+                  }
+                  throw error
+                }
+              },
               applyEvent: async event => invalidateAffectedSites(event),
               resync: async () => refreshNuxtData(),
               onObservation: (observation) => {
@@ -146,6 +173,7 @@ export default defineNuxtPlugin({
 
       useEventListener(window, 'beforeunload', () => {
         stopWatch?.()
+        stopRecoveryWatch?.()
         realtime?.stop()
         realtime = null
       })
@@ -165,6 +193,7 @@ export default defineNuxtPlugin({
 
     onScopeDispose(() => {
       stopWatch?.()
+      stopRecoveryWatch?.()
       realtime?.stop()
       realtime = null
     })

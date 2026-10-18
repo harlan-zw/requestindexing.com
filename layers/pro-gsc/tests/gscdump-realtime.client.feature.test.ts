@@ -32,6 +32,8 @@ beforeEach(() => {
   sdk.start.mockResolvedValue(undefined)
   sdk.create.mockImplementation(() => ({ start: sdk.start, stop: sdk.stop }))
   vi.stubGlobal('defineNuxtPlugin', (plugin: unknown) => plugin)
+  vi.stubGlobal('useNuxtApp', () => ({ $refreshGscdumpIntegration: vi.fn() }))
+  vi.stubGlobal('useState', () => ref(0))
   vi.stubGlobal('watch', watch)
   vi.stubGlobal('onScopeDispose', onScopeDispose)
   vi.stubGlobal('useEventListener', useEventListener)
