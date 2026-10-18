@@ -18,6 +18,10 @@ const links: NavigationMenuItem[] = [{
   to: '/admin',
   exact: true,
 }, {
+  label: 'Signup funnel',
+  icon: 'chart',
+  to: '/admin/funnel',
+}, {
   label: 'Users',
   icon: 'i-lucide-users',
   to: '/admin/users',
