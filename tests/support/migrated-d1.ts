@@ -24,8 +24,8 @@ export function migratedDatabase(): DatabaseSync {
 // Drizzle's remote driver speaks the same async shape D1 does, so the code under
 // test runs unchanged. Rows go back positionally, which is what the driver reads.
 // The schema is the one `useDrizzle` passes, so `db.query.*` reads work too.
-export function proDatabase(sqlite: DatabaseSync) {
-  return drizzle(async (sql, params, method) => {
+export function proDatabase(sqlite: DatabaseSync, observe?: (statements: readonly { sql: string }[]) => void) {
+  const execute = (sql: string, params: unknown[], method: string) => {
     const statement = sqlite.prepare(sql)
     const args = params as never[]
     if (method === 'run') {
@@ -36,5 +36,21 @@ export function proDatabase(sqlite: DatabaseSync) {
     // A `get` hands back one row, or nothing when the query matched no row.
     // The driver's type says `any[]`, but it reads an absent `get` row as none.
     return { rows: (method === 'get' ? rows[0] : rows) as never[] }
+  }
+  return drizzle(async (sql, params, method) => {
+    observe?.([{ sql }])
+    return execute(sql, params, method)
+  }, async (statements) => {
+    observe?.(statements)
+    sqlite.exec('BEGIN')
+    try {
+      const results = statements.map(({ sql, params, method }) => execute(sql, params, method))
+      sqlite.exec('COMMIT')
+      return results
+    }
+    catch (error) {
+      sqlite.exec('ROLLBACK')
+      throw error
+    }
   }, { schema })
 }

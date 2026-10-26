@@ -1,5 +1,5 @@
 import type { AuthProviderId, NewUser } from '../database'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { logWarn } from '~~/shared/logging'
 import { teams, userIdentities, users } from '../database'
 import { emitFirstProEvent } from './pro-events'
@@ -26,8 +26,8 @@ export interface CreateUserIdentityInput {
  * Every signup site MUST use this helper so no user ever exists without a
  * personal team.
  *
- * D1 has no real transactions; we sequence carefully and best-effort rollback
- * if the team insert succeeds but the currentTeamId update fails.
+ * D1 batches execute sequentially in one transaction. A failed link rolls back
+ * both inserts.
  *
  * The `identity` arg is optional: signup paths that already know a provider
  * identity can write the `user_identities` row inline so the user can
@@ -38,41 +38,20 @@ export async function createUserWithPersonalTeam(
   userInsert: CreateUserInput,
   identity?: CreateUserIdentityInput,
 ) {
-  // Team first, owner backfilled second. `users.current_team_id` is NOT NULL in
-  // the live database (migration 0000 created it that way; schema.ts was later
-  // relaxed to nullable but no migration ever carried that across, and drizzle's
-  // snapshot already records it as nullable so it will never generate one).
-  // Inserting the user first therefore failed the constraint and every signup
-  // died with "Failed to create account". `teams.owner_id` is nullable, so
-  // ordering it this way satisfies both sides of the circular reference without
-  // rebuilding the table on production.
+  // Team first satisfies the required User link. Each statement can use the
+  // preceding insert's numeric ID inside the same D1 transaction.
   const teamName = personalTeamName(userInsert, identity)
-  const teamRow = await db.insert(teams).values({
-    name: teamName,
-    personalTeam: true,
-  }).returning().get()
+  const [, [userRow], [teamRow]] = await db.batch([
+    db.insert(teams).values({ name: teamName, personalTeam: true }),
+    db.insert(users).values({ ...userInsert, currentTeamId: sql<number>`last_insert_rowid()` }).returning(),
+    db.update(teams)
+      .set({ ownerId: sql<number>`last_insert_rowid()`, updatedAt: Date.now() })
+      .where(eq(teams.teamId, sql<number>`(SELECT ${users.currentTeamId} FROM ${users} WHERE ${users.userId} = last_insert_rowid())`))
+      .returning(),
+  ])
 
-  if (!teamRow)
-    throw new Error('createUserWithPersonalTeam: team insert returned no row')
-
-  const userRow = await db.insert(users)
-    .values({ ...userInsert, currentTeamId: teamRow.teamId })
-    .returning()
-    .get()
-    .catch(async (err: unknown) => {
-      // Do not leave an ownerless team behind if the user insert fails.
-      await db.delete(teams).where(eq(teams.teamId, teamRow.teamId)).catch(cleanupErr => logWarn('create_user.orphan_cleanup_failed', cleanupErr, { teamId: teamRow.teamId }))
-      throw err
-    })
-
-  if (!userRow) {
-    await db.delete(teams).where(eq(teams.teamId, teamRow.teamId)).catch(err => logWarn('create_user.orphan_cleanup_failed', err, { teamId: teamRow.teamId }))
-    throw new Error('createUserWithPersonalTeam: user insert returned no row')
-  }
-
-  await db.update(teams)
-    .set({ ownerId: userRow.userId, updatedAt: Date.now() })
-    .where(eq(teams.teamId, teamRow.teamId))
+  if (!userRow || !teamRow)
+    throw new Error('createUserWithPersonalTeam: account batch returned no row')
 
   if (identity) {
     const now = new Date()
