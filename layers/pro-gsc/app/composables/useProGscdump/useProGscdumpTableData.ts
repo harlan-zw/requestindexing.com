@@ -142,7 +142,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
     moversFilter: isMoversFilter(filter.value) ? filter.value as GscComparisonFilter : undefined,
   }))
 
-  const query = useProGscdumpData(_siteId, request)
+  const query = useProGscdumpData(_siteId, request, { loadMore })
 
   const isLoading = computed(() => query.pending.value)
   const isInitialLoading = computed(() => query.pending.value && query.data.value === null)

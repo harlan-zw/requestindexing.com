@@ -51,7 +51,7 @@ function capture(input: string | URL | Request, init?: RequestInit) {
       const payload = list === secondaryReads ? { totals: report().totals, meta: reportMeta, ...(data as object) } : data
       resolve(Response.json({ data: payload, meta: { requestId: 'req_fixture', surface: 'analytics', version: '1.0', sourceName: 'hosted-report', sourceKind: 'sql', queryMs: 0 } }))
     },
-    reject: cause => resolve(Response.json({ error: { code: 'forbidden', message: cause.message, requestId: 'req_fixture', retryable: false, details: {} } }, { status: 403 })),
+    reject: cause => resolve(Response.json({ error: { code: 'temporarily_unavailable', message: cause.message, requestId: 'req_fixture', retryable: true, details: {} } }, { status: 503 })),
   }))
 }
 vi.mock('#layers/pro-gsc/app/composables/useGscComparisonCoverage', () => ({ useGscComparisonCoverage: () => ({ allowed: ref(false), state: ref('off') }) }))
