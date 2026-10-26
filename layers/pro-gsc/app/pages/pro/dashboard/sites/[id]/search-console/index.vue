@@ -147,7 +147,7 @@ const MOVER_ROWS = 3
 // ── Search Queries: a lead list plus the Growing and Declining movers ───────
 // New and Lost rankings live on the Queries tab as filter chips; the lead
 // list's "View all" is the doorway.
-const { rows: keywordRows, isLoading: keywordsLoading, setSort: setKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
+const keywordsTable = useProGscdumpTableData<GscdumpDataRow>({
   siteId: detailSiteId,
   dimension: 'queryCanonical',
   period,
@@ -158,8 +158,10 @@ const { rows: keywordRows, isLoading: keywordsLoading, setSort: setKeywordSort }
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
+const { rows: keywordRows, isInitialLoading: keywordsLoading, setSort: setKeywordSort } = keywordsTable
+
 // Grouped by queryCanonical so variants stay merged.
-const { rows: improvingKeywordRows, isLoading: improvingKeywordsLoading, setSort: setImprovingKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
+const improvingKeywordsTable = useProGscdumpTableData<GscdumpDataRow>({
   siteId: detailSiteId,
   dimension: 'queryCanonical',
   period,
@@ -171,7 +173,8 @@ const { rows: improvingKeywordRows, isLoading: improvingKeywordsLoading, setSort
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
-const { rows: decliningKeywordRows, isLoading: decliningKeywordsLoading, setSort: setDecliningKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
+const { rows: improvingKeywordRows, isInitialLoading: improvingKeywordsLoading, setSort: setImprovingKeywordSort } = improvingKeywordsTable
+const decliningKeywordsTable = useProGscdumpTableData<GscdumpDataRow>({
   siteId: detailSiteId,
   dimension: 'queryCanonical',
   period,
@@ -183,6 +186,8 @@ const { rows: decliningKeywordRows, isLoading: decliningKeywordsLoading, setSort
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
+const { rows: decliningKeywordRows, isInitialLoading: decliningKeywordsLoading, setSort: setDecliningKeywordSort } = decliningKeywordsTable
+
 // Growing and Declining render the same list, so they share one template.
 const queryMovers = computed(() => [
   { key: 'improving', title: 'Growing', tooltip: 'Queries with the biggest click gains vs the previous period.', rows: improvingKeywordRows.value, loading: improvingKeywordsLoading.value, empty: 'No growing queries this period' },
@@ -192,7 +197,7 @@ const queryMovers = computed(() => [
 // ── Pages: the lead list only ───────────────────────────────────────────────
 // Queries are the diagnosis; pages are where it landed. The page movers sit one
 // click away on the Pages tab, where Improving and Declining are filter chips.
-const { rows: pageRows, isLoading: pagesLoading, setSort: setPageSort } = useProGscdumpTableData<GscdumpDataRow>({
+const pagesTable = useProGscdumpTableData<GscdumpDataRow>({
   siteId: detailSiteId,
   dimension: 'page',
   period,
@@ -202,8 +207,10 @@ const { rows: pageRows, isLoading: pagesLoading, setSort: setPageSort } = usePro
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
+const { rows: pageRows, isInitialLoading: pagesLoading, setSort: setPageSort } = pagesTable
+
 // ── Countries and Devices ───────────────────────────────────────────────────
-const { rows: countryRows, isLoading: countriesLoading, setSort: setCountrySort } = useProGscdumpTableData<GscdumpDataRow>({
+const countriesTable = useProGscdumpTableData<GscdumpDataRow>({
   siteId: detailSiteId,
   dimension: 'country',
   period,
@@ -213,7 +220,8 @@ const { rows: countryRows, isLoading: countriesLoading, setSort: setCountrySort 
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
-const { rows: deviceRows, isLoading: devicesLoading } = useProGscdumpTableData<GscdumpDataRow>({
+const { rows: countryRows, isInitialLoading: countriesLoading, setSort: setCountrySort } = countriesTable
+const devicesTable = useProGscdumpTableData<GscdumpDataRow>({
   siteId: detailSiteId,
   dimension: 'device',
   period,
@@ -222,6 +230,8 @@ const { rows: deviceRows, isLoading: devicesLoading } = useProGscdumpTableData<G
   pageSize: 10,
   defaultSort: { column: 'impressions', direction: 'desc' },
 })
+
+const { rows: deviceRows, isInitialLoading: devicesLoading } = devicesTable
 
 // Every follow-up read below filters on the row's clustering key. The report
 // writes the group's top raw variant over `queryCanonical`, and that label
@@ -288,7 +298,7 @@ const heroEntityCounts = computed(() => [
     description: 'Distinct search queries this site ranked for in the selected period. Variants are grouped, so this counts canonical terms.',
     icon: 'search',
     value: queryCount.count.value,
-    loading: detailPending.value || siteLoading.value || queryCount.isLoading.value,
+    loading: detailPending.value || siteLoading.value || (queryCount.isLoading.value && queryCount.count.value === null),
   },
   {
     key: 'pages',
@@ -297,9 +307,22 @@ const heroEntityCounts = computed(() => [
     description: 'Distinct pages of this site that appeared in Google Search results in the selected period.',
     icon: 'file',
     value: pageCount.count.value,
-    loading: detailPending.value || siteLoading.value || pageCount.isLoading.value,
+    loading: detailPending.value || siteLoading.value || (pageCount.isLoading.value && pageCount.count.value === null),
   },
 ])
+
+const detailTables = [keywordsTable, improvingKeywordsTable, decliningKeywordsTable, pagesTable, countriesTable, devicesTable]
+const detailCounts = [queryCount, pageCount]
+const detailColdError = computed(() => detailTables.find(read => read.error.value && !read.response.value)?.error.value
+  ?? detailCounts.find(read => read.error.value && read.count.value === null)?.error.value ?? null)
+const detailRefreshFailed = computed(() => detailTables.some(read => read.error.value && read.response.value !== null)
+  || detailCounts.some(read => read.error.value && read.count.value !== null))
+async function retryDetails() {
+  await Promise.all([
+    ...detailTables.filter(read => read.error.value).map(read => read.refresh()),
+    ...detailCounts.filter(read => read.error.value).map(read => read.refresh()),
+  ])
+}
 
 // Re-sort when primary metric changes
 watch(primaryMetric, (metric) => {
@@ -438,6 +461,15 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
       <!-- The Search Console read failed. Distinct from the site-load error
            above: the Site is fine, the upstream read is not. -->
       <ProGscReadError v-if="searchState._tag === 'Ready'" :error="datesError" />
+      <ProGscReadError v-if="searchState._tag === 'Ready'" :error="detailColdError" />
+      <div v-if="detailRefreshFailed" class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p class="text-xs text-muted" role="status">
+          Search Console data could not refresh. Previous values remain visible. Retry to read them again.
+        </p>
+        <UiButton purpose="link" size="xs" @click="retryDetails">
+          Retry
+        </UiButton>
+      </div>
 
       <!-- Not linked, held, or in its first sync: show the live nuxtseo.com preview -->
       <UiSampleDataOverlay
