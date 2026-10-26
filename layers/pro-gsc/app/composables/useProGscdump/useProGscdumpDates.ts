@@ -2,6 +2,7 @@ import type { GscSearchType } from '@gscdump/contracts'
 import type { DailyReportInput, DailySeriesFilter } from '../../../shared/analytics-requests'
 import type { CompareMode, Period } from '../useGscPeriod'
 import { useGscComparisonCoverage } from '../useGscComparisonCoverage'
+import { compareRange, periodToDateRange } from '../useGscPeriod'
 import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdumpDataDetail } from './useProGscdumpDataDetail'
 
@@ -12,8 +13,8 @@ export type { DailySeriesFilter }
  *
  * Without `filter` → site-wide overview (current + prev daily series, totals).
  * With `filter` → drill-down (single dimension value, e.g. one page or keyword).
- * When `withPrevSeries: false` (default when `filter` is set), skips the prev
- * daily-series fetch — callers that don't render an overlay save a round-trip.
+ * One prior report supplies comparison totals and the optional daily overlay.
+ * The current report never waits for comparison coverage or its prior read.
  *
  * Both paths inherit the hosted v1/server routing from
  * `useProGscdumpDataDetail`.
@@ -49,12 +50,11 @@ export function useProGscdumpDates(
   const currentRequest = computed<DailyReportInput>(() => ({
     searchType: _searchType.value,
     range: range.value,
-    comparisonRange: cmp.value,
+    comparisonRange: null,
     pin: _filter.value,
   }))
 
-  // The previous window's own daily series, for the chart overlay. With no
-  // comparison it repeats the current read, and its result is not shown.
+  // The report stays disabled until recorded coverage permits comparison.
   const prevRequest = computed<DailyReportInput>(() => ({
     searchType: _searchType.value,
     range: cmp.value ?? range.value,
@@ -63,23 +63,24 @@ export function useProGscdumpDates(
   }))
 
   const current = useProGscdumpDataDetail(_siteId, currentRequest)
-  const prev = withPrevSeries
-    ? useProGscdumpDataDetail(_siteId, prevRequest)
-    : null
+  const prev = useProGscdumpDataDetail(computed(() => cmp.value ? _siteId.value : ''), prevRequest)
 
   const data = computed(() => {
     const result = current.data.value
     if (!result)
       return null
-    const hasPrevData = !!cmp.value && !current.pending.value && !current.error.value
+    const previous = cmp.value && !current.pending.value && !current.error.value && !prev.pending.value && !prev.error.value
+      ? prev.data.value
+      : null
     return {
       dates: result.daily,
-      prevDates: hasPrevData && !prev?.pending.value && !prev?.error.value ? prev?.data.value?.daily ?? [] : null,
+      prevDates: withPrevSeries ? previous?.daily ?? null : null,
       period: result.totals,
-      prevPeriod: hasPrevData ? result.previousTotals ?? { clicks: 0, impressions: 0, ctr: 0, position: 0 } : null,
+      prevPeriod: previous?.totals ?? null,
       meta: result.meta,
-      hasPrevData,
+      hasPrevData: previous !== null,
       comparisonRefused: coverage.state.value === 'refused',
+      comparisonReadFailed: coverage.state.value === 'error' || (!!cmp.value && !prev.pending.value && !!prev.error.value),
     }
   })
 
@@ -90,7 +91,7 @@ export function useProGscdumpDates(
     pending: current.pending,
     error: current.error,
     refresh: async () => {
-      await Promise.all([current.refresh(), prev ? prev.refresh() : Promise.resolve()])
+      await Promise.all([current.refresh(), cmp.value ? prev.refresh() : Promise.resolve()])
     },
   }
 }

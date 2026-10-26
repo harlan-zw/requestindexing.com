@@ -410,4 +410,5 @@ section above, then delete it from this list.
 | Asset | Canonical string |
 | --- | --- |
 | Search Console comparison unavailable | Comparison unavailable. Both periods need complete recorded Search Console data. |
+| Search Console comparison read failed | Comparison data could not load. Growth values are hidden. Reload to try again. |
 | Search Console refresh failed with retained data | Search Console data could not refresh. Previous values remain visible. Retry to read them again. |

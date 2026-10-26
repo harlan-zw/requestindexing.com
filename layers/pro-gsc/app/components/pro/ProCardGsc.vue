@@ -20,6 +20,7 @@ const { loading: loadingProp, ...props } = defineProps<{
   period: PeriodTotals | null
   prevPeriod: PeriodTotals | null
   comparisonRefused?: boolean
+  comparisonReadFailed?: boolean
   /** Raw read failure, if any. The hero shows no figures while it is set. */
   error?: unknown
   /** Current period filter for tooltip labels */
@@ -453,7 +454,7 @@ const loading = computed(() => {
     return false
   if (isZoomed.value && hasEverHadData.value && displayedGraph.value.length > 0)
     return false
-  return loadingProp || devSkeleton.value
+  return (loadingProp && !props.period) || devSkeleton.value
 })
 
 function getTrend(col: string): number {
@@ -619,7 +620,10 @@ const zoomRangeLabel = computed(() => {
       </template>
     </div>
 
-    <p v-if="comparisonRefused && period && !prevPeriod && compareMode !== 'none' && !loadingProp" class="px-4 pb-3 text-xs text-muted">
+    <p v-if="comparisonReadFailed && period && !prevPeriod && compareMode !== 'none' && !loadingProp" class="px-4 pb-3 text-xs text-muted" role="status">
+      Comparison data could not load. Growth values are hidden. Reload to try again.
+    </p>
+    <p v-else-if="comparisonRefused && period && !prevPeriod && compareMode !== 'none' && !loadingProp" class="px-4 pb-3 text-xs text-muted">
       Comparison unavailable. Both periods need complete recorded Search Console data.
     </p>
 

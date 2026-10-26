@@ -1,5 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, onMounted, ref, useId } from 'vue'
+import UiSkeleton from '#layers/design-system/app/components/element/UiSkeleton.vue'
+import { gscMetricColors } from '#layers/design-system/app/composables/dataVizColors'
 import ProCardGsc from './ProCardGsc.vue'
 
 vi.mock('../../composables/useProGscFilters', () => ({ useProGscFilters: () => ({ period: ref('28d'), compareMode: ref('previous'), stableData: ref(false) }) }))
@@ -56,4 +58,40 @@ it('escape cancels pending animation and cannot commit the abandoned selection',
   pointer(window, 'pointerup', 100)
   expect(zoom).not.toHaveBeenCalled()
   expect(document.documentElement.style.userSelect).not.toBe('none')
+})
+
+it('keeps known totals during refresh and explains a failed comparison', async () => {
+  vi.stubGlobal('onMounted', onMounted)
+  vi.stubGlobal('useId', useId)
+  vi.stubGlobal('useProDevSkeleton', () => ref(false))
+  vi.stubGlobal('useProHumanFriendlyNumber', (value: number) => String(value))
+  const period = { clicks: 42, impressions: 100, ctr: 0.42, position: 3 }
+  const props = ref({
+    dates: [{ date: '2026-10-23', ...period }],
+    prevDates: null,
+    period: period as typeof period | null,
+    prevPeriod: null,
+    loading: true,
+    comparisonReadFailed: false,
+    columns: ['clicks'],
+    showButtons: true,
+  })
+  app = createApp({ setup: () => () => h(ProCardGsc, props.value) })
+  Object.assign(app.config.globalProperties, { gscMetricColors, useProHumanFriendlyNumber: (value: number) => String(value) })
+  const pass = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
+  for (const name of ['UiPopover', 'ClientOnly', 'UiSparkline', 'UiTrend', 'UIcon', 'UiIcon', 'ProFavicon'])
+    app.component(name, pass)
+  app.component('UiSkeleton', UiSkeleton)
+  const host = document.createElement('div')
+  app.mount(host)
+  await nextTick()
+  expect(host.textContent).toContain('42')
+  expect(host.querySelectorAll('.ui-skeleton')).toHaveLength(0)
+  props.value = { ...props.value, loading: false, comparisonReadFailed: true }
+  await nextTick()
+  expect(host.querySelector('[role="status"]')?.textContent?.trim()).toBe('Comparison data could not load. Growth values are hidden. Reload to try again.')
+  expect(host.textContent).toContain('42')
+  props.value = { ...props.value, dates: [], period: null, loading: true }
+  await nextTick()
+  expect(host.querySelectorAll('.ui-skeleton').length).toBeGreaterThan(0)
 })
