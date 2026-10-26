@@ -38,7 +38,9 @@ export function useCaller() {
     server: true,
     deep: false,
     immediate: initiallyEnabled,
-    getCachedData: (key, nuxtApp) => nuxtApp.payload.data[key] ?? nuxtApp.static.data[key],
+    getCachedData: (key, nuxtApp, context) => context.cause === 'initial'
+      ? nuxtApp.payload.data[key] ?? nuxtApp.static.data[key]
+      : undefined,
     onResponseError: ({ response }) => {
       if (response?.status !== 401 || !import.meta.client)
         return
@@ -73,7 +75,5 @@ export function useCaller() {
  * caller (role flip, team rename).
  */
 export async function useRefreshCaller(): Promise<void> {
-  const nuxt = useNuxtApp()
   await refreshNuxtData(FETCH_KEY).catch(err => logWarn('auth.optional_probe_failed', err, { probe: 'refreshCaller' }))
-  delete nuxt.payload.data[FETCH_KEY]
 }
