@@ -2,6 +2,7 @@ import type { AnalysisParams } from '@gscdump/engine/analysis-types'
 import type { ComputedRef, MaybeRefOrGetter, Ref, WatchSource } from 'vue'
 import { classifyGscError } from '@gscdump/sdk/gsc-error'
 import { computed, onScopeDispose, ref, shallowRef, toValue, watch } from 'vue'
+import { useGscQueryIdentity } from './useGscQueryIdentity'
 
 export type GscQueryEngine = 'auto' | 'browser' | 'server'
 
@@ -45,6 +46,8 @@ export interface UseGscQueryOptions<T> {
   watchSources?: WatchSource[]
   extractMeta?: (out: T) => Record<string, unknown> | null | undefined
   enabled?: MaybeRefOrGetter<boolean>
+  /** Non-secret principal identity for callers outside the web session. */
+  identityScope?: MaybeRefOrGetter<string>
 }
 
 export interface UseGscQueryReturn<T> {
@@ -84,6 +87,10 @@ function errorStatus(error: unknown): GscQueryStatus {
  * there is no hidden legacy endpoint or nested pre-v1 package graph.
  */
 export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryReturn<T> {
+  const suppliedIdentity = options.identityScope
+  const identity = suppliedIdentity === undefined
+    ? useGscQueryIdentity()
+    : computed(() => ({ _tag: 'Available' as const, scope: toValue(suppliedIdentity) }))
   const data = shallowRef<T | null>(null)
   const status = ref<GscQueryStatus>('idle')
   const error = ref<Error | null>(null)
@@ -110,7 +117,7 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
       lastDecision.value = { mode: null, reason: 'ssr' }
       return
     }
-    const scope = JSON.stringify([toValue(options.site), toValue(options.params)])
+    const scope = JSON.stringify([identity.value.scope, toValue(options.site), toValue(options.params)])
     if (scope !== dataScope) {
       dataScope = scope
       data.value = null
@@ -132,6 +139,12 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
     if (!siteId) {
       status.value = 'idle'
       lastDecision.value = { mode: null, reason: 'idle' }
+      return
+    }
+    if (identity.value._tag === 'Unavailable') {
+      data.value = null
+      status.value = 'auth-missing'
+      lastDecision.value = { mode: null, reason: 'disabled' }
       return
     }
 
@@ -161,6 +174,7 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
   }
 
   const sources: WatchSource[] = [
+    () => identity.value.scope,
     () => toValue(options.site),
     () => toValue(options.params),
     ...(options.watchSources ?? []),

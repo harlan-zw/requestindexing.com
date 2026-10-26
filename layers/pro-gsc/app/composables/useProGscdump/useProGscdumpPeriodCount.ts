@@ -1,4 +1,4 @@
-import type { ComputedRef, MaybeRefOrGetter } from 'vue'
+import type { ComputedRef, MaybeRefOrGetter, Ref } from 'vue'
 import type { BreakdownDimension } from '../../../shared/analytics-requests'
 import type { GscFacet } from '../../../shared/utils/gsc-facets'
 import type { Period } from '../useGscPeriod'
@@ -23,6 +23,8 @@ export interface UseProGscdumpPeriodCountOptions {
 export function useProGscdumpPeriodCount(options: UseProGscdumpPeriodCountOptions): {
   count: ComputedRef<number | null>
   isLoading: ComputedRef<boolean>
+  error: Ref<Error | null>
+  refresh: () => Promise<void>
 } {
   const filters = useProGscFilters()
   const query = useProGscdumpData(
@@ -37,5 +39,7 @@ export function useProGscdumpPeriodCount(options: UseProGscdumpPeriodCountOption
   return {
     count: computed(() => query.data.value?.totalCount ?? null),
     isLoading: computed(() => query.pending.value),
+    error: query.error,
+    refresh: query.refresh,
   }
 }

@@ -8,6 +8,12 @@ import { logWarn } from '~~/shared/logging'
 const FETCH_KEY = 'app:caller'
 const LOGIN_PATH = '/login'
 
+/** Read the existing Caller payload without starting another request. */
+export function useCallerState() {
+  const { data } = useNuxtData<Caller | null>(FETCH_KEY)
+  return computed(() => data.value ?? null)
+}
+
 function isProLoginPath(path: string): boolean {
   return path === LOGIN_PATH || path.startsWith(`${LOGIN_PATH}/`) || path.startsWith(`${LOGIN_PATH}?`)
 }

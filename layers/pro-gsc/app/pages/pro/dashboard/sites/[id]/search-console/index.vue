@@ -1,12 +1,13 @@
 <script lang="ts" setup>
 import type { GscdumpDataRow } from '#layers/pro-gsc/app/composables/useProGscdump'
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { fmtGscMetric, formatNumber, getPath } from '~~/layers/design-system/app/composables/formatting'
 import ProCardGsc from '#layers/pro-gsc/app/components/pro/ProCardGsc.vue'
 import ProGscReadError from '#layers/pro-gsc/app/components/pro/ProGscReadError.vue'
 import ProGscSurfaceBar from '#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue'
 import ProQueryLabel from '#layers/pro-gsc/app/components/pro/ProQueryLabel.vue'
 import { periodToDateRange } from '#layers/pro-gsc/app/composables/useGscPeriod'
+import { useGscQueryIdentity } from '#layers/pro-gsc/app/composables/useGscQueryIdentity'
 import {
   useProEntitySparklines,
   useProGscdumpDates,
@@ -85,17 +86,23 @@ interface DemoDatesResponse {
 interface DemoDataResponse {
   rows: { keyword?: string, page?: string, clicks: number, impressions: number }[]
 }
-const { data: demoDates } = useFetch<DemoDatesResponse>('/api/pro/public/demo/dates', {
+const { data: demoDates } = useNuxtQuery<DemoDatesResponse>('/api/pro/public/demo/dates', {
+  key: () => `gsc-demo-dates:${period.value}`,
   query: computed(() => ({ period: period.value })),
   lazy: true,
+  enabled: () => !!overlay.value,
 })
-const { data: demoKeywords } = useFetch<DemoDataResponse>('/api/pro/public/demo/data', {
+const { data: demoKeywords } = useNuxtQuery<DemoDataResponse>('/api/pro/public/demo/data', {
+  key: () => `gsc-demo-keywords:${period.value}`,
   query: computed(() => ({ dimension: 'queryCanonical', period: period.value, limit: 5 })),
   lazy: true,
+  enabled: () => !!overlay.value,
 })
-const { data: demoPages } = useFetch<DemoDataResponse>('/api/pro/public/demo/data', {
+const { data: demoPages } = useNuxtQuery<DemoDataResponse>('/api/pro/public/demo/data', {
+  key: () => `gsc-demo-pages:${period.value}`,
   query: computed(() => ({ dimension: 'page', period: period.value, limit: 5 })),
   lazy: true,
+  enabled: () => !!overlay.value,
 })
 
 const demoHeroStats = computed(() => {
@@ -113,6 +120,22 @@ const demoHeroStats = computed(() => {
 // read render as a synced site with zero traffic.
 const { data: dates, status: datesStatus, error: datesError } = useProGscdumpDates(analyticsSiteId, period, { stableData, compareMode })
 
+// Current data gets the first read. Optional panels stay released during a
+// same-scope refresh, including terminal failures, but never across identities.
+const identity = useGscQueryIdentity()
+const detailScope = computed(() => JSON.stringify([siteId.value, analyticsSiteId.value, period.value, stableData.value, searchType.value, identity.value.scope]))
+const releasedDetailScope = ref<string | null>(null)
+watch(detailScope, () => {
+  releasedDetailScope.value = null
+}, { flush: 'sync' })
+watch([detailScope, datesStatus, dates, datesError], ([scope, status, result, error]) => {
+  if (analyticsSiteId.value && !overlay.value && identity.value._tag === 'Available' && status !== 'pending' && (result || error))
+    releasedDetailScope.value = scope
+}, { immediate: true, flush: 'post' })
+const detailsReady = computed(() => !overlay.value && releasedDetailScope.value === detailScope.value)
+const detailSiteId = computed(() => detailsReady.value ? analyticsSiteId.value : undefined)
+const detailPending = computed(() => !overlay.value && !detailsReady.value && datesStatus.value === 'pending')
+
 // Primary metric only: the overview stays clean, detail pages show every
 // column. A clicks-less slice (Images, Video, News) leads with impressions.
 const lead = computed(() => overviewLead({ columns: columns.value, searchType: searchType.value, totals: dates.value?.period }))
@@ -124,8 +147,8 @@ const MOVER_ROWS = 3
 // ── Search Queries: a lead list plus the Growing and Declining movers ───────
 // New and Lost rankings live on the Queries tab as filter chips; the lead
 // list's "View all" is the doorway.
-const { rows: keywordRows, isLoading: keywordsLoading, setSort: setKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: analyticsSiteId,
+const keywordsTable = useProGscdumpTableData<GscdumpDataRow>({
+  siteId: detailSiteId,
   dimension: 'queryCanonical',
   period,
   stableData,
@@ -135,9 +158,11 @@ const { rows: keywordRows, isLoading: keywordsLoading, setSort: setKeywordSort }
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
+const { rows: keywordRows, isInitialLoading: keywordsLoading, setSort: setKeywordSort } = keywordsTable
+
 // Grouped by queryCanonical so variants stay merged.
-const { rows: improvingKeywordRows, isLoading: improvingKeywordsLoading, setSort: setImprovingKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: analyticsSiteId,
+const improvingKeywordsTable = useProGscdumpTableData<GscdumpDataRow>({
+  siteId: detailSiteId,
   dimension: 'queryCanonical',
   period,
   stableData,
@@ -148,8 +173,9 @@ const { rows: improvingKeywordRows, isLoading: improvingKeywordsLoading, setSort
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
-const { rows: decliningKeywordRows, isLoading: decliningKeywordsLoading, setSort: setDecliningKeywordSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: analyticsSiteId,
+const { rows: improvingKeywordRows, isInitialLoading: improvingKeywordsLoading, setSort: setImprovingKeywordSort } = improvingKeywordsTable
+const decliningKeywordsTable = useProGscdumpTableData<GscdumpDataRow>({
+  siteId: detailSiteId,
   dimension: 'queryCanonical',
   period,
   stableData,
@@ -160,6 +186,8 @@ const { rows: decliningKeywordRows, isLoading: decliningKeywordsLoading, setSort
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
+const { rows: decliningKeywordRows, isInitialLoading: decliningKeywordsLoading, setSort: setDecliningKeywordSort } = decliningKeywordsTable
+
 // Growing and Declining render the same list, so they share one template.
 const queryMovers = computed(() => [
   { key: 'improving', title: 'Growing', tooltip: 'Queries with the biggest click gains vs the previous period.', rows: improvingKeywordRows.value, loading: improvingKeywordsLoading.value, empty: 'No growing queries this period' },
@@ -169,8 +197,8 @@ const queryMovers = computed(() => [
 // ── Pages: the lead list only ───────────────────────────────────────────────
 // Queries are the diagnosis; pages are where it landed. The page movers sit one
 // click away on the Pages tab, where Improving and Declining are filter chips.
-const { rows: pageRows, isLoading: pagesLoading, setSort: setPageSort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: analyticsSiteId,
+const pagesTable = useProGscdumpTableData<GscdumpDataRow>({
+  siteId: detailSiteId,
   dimension: 'page',
   period,
   stableData,
@@ -179,9 +207,11 @@ const { rows: pageRows, isLoading: pagesLoading, setSort: setPageSort } = usePro
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
+const { rows: pageRows, isInitialLoading: pagesLoading, setSort: setPageSort } = pagesTable
+
 // ── Countries and Devices ───────────────────────────────────────────────────
-const { rows: countryRows, isLoading: countriesLoading, setSort: setCountrySort } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: analyticsSiteId,
+const countriesTable = useProGscdumpTableData<GscdumpDataRow>({
+  siteId: detailSiteId,
   dimension: 'country',
   period,
   stableData,
@@ -190,8 +220,9 @@ const { rows: countryRows, isLoading: countriesLoading, setSort: setCountrySort 
   defaultSort: { column: primaryMetric.value, direction: primaryMetric.value === 'position' ? 'asc' : 'desc' },
 })
 
-const { rows: deviceRows, isLoading: devicesLoading } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: analyticsSiteId,
+const { rows: countryRows, isInitialLoading: countriesLoading, setSort: setCountrySort } = countriesTable
+const devicesTable = useProGscdumpTableData<GscdumpDataRow>({
+  siteId: detailSiteId,
   dimension: 'device',
   period,
   stableData,
@@ -199,6 +230,8 @@ const { rows: deviceRows, isLoading: devicesLoading } = useProGscdumpTableData<G
   pageSize: 10,
   defaultSort: { column: 'impressions', direction: 'desc' },
 })
+
+const { rows: deviceRows, isInitialLoading: devicesLoading } = devicesTable
 
 // Every follow-up read below filters on the row's clustering key. The report
 // writes the group's top raw variant over `queryCanonical`, and that label
@@ -238,7 +271,7 @@ const pageSparklines = useProEntitySparklines({
 const positionSparklines = useProQueryPositionSparklines({ gscdumpSiteId: analyticsSiteId, range: sparkRange })
 
 // Consider loading when site hasn't resolved yet (siteId null = no request fired = isLoading false)
-const siteLoading = computed(() => siteStatus.value === 'pending')
+const siteLoading = computed(() => siteStatus.value === 'pending' && !dates.value)
 
 // "Most Clicks" label adapts to whatever the primary metric is
 const topLabel = computed(() => {
@@ -255,8 +288,8 @@ const topLabel = computed(() => {
 // chart series. Each is its own one-period read: the lead lists compare, and a
 // compared read counts every row either window has. No delta: the comparison
 // window's distinct count is not fetched.
-const queryCount = useProGscdumpPeriodCount({ siteId: analyticsSiteId, dimension: 'queryCanonical', period, stableData, facets: queryFacets })
-const pageCount = useProGscdumpPeriodCount({ siteId: analyticsSiteId, dimension: 'page', period, stableData })
+const queryCount = useProGscdumpPeriodCount({ siteId: detailSiteId, dimension: 'queryCanonical', period, stableData, facets: queryFacets })
+const pageCount = useProGscdumpPeriodCount({ siteId: detailSiteId, dimension: 'page', period, stableData })
 const heroEntityCounts = computed(() => [
   {
     key: 'queries',
@@ -265,7 +298,7 @@ const heroEntityCounts = computed(() => [
     description: 'Distinct search queries this site ranked for in the selected period. Variants are grouped, so this counts canonical terms.',
     icon: 'search',
     value: queryCount.count.value,
-    loading: siteLoading.value || queryCount.isLoading.value,
+    loading: detailPending.value || siteLoading.value || (queryCount.isLoading.value && queryCount.count.value === null),
   },
   {
     key: 'pages',
@@ -274,9 +307,22 @@ const heroEntityCounts = computed(() => [
     description: 'Distinct pages of this site that appeared in Google Search results in the selected period.',
     icon: 'file',
     value: pageCount.count.value,
-    loading: siteLoading.value || pageCount.isLoading.value,
+    loading: detailPending.value || siteLoading.value || (pageCount.isLoading.value && pageCount.count.value === null),
   },
 ])
+
+const detailTables = [keywordsTable, improvingKeywordsTable, decliningKeywordsTable, pagesTable, countriesTable, devicesTable]
+const detailCounts = [queryCount, pageCount]
+const detailColdError = computed(() => detailTables.find(read => read.error.value && !read.response.value)?.error.value
+  ?? detailCounts.find(read => read.error.value && read.count.value === null)?.error.value ?? null)
+const detailRefreshFailed = computed(() => detailTables.some(read => read.error.value && read.response.value !== null)
+  || detailCounts.some(read => read.error.value && read.count.value !== null))
+async function retryDetails() {
+  await Promise.all([
+    ...detailTables.filter(read => read.error.value).map(read => read.refresh()),
+    ...detailCounts.filter(read => read.error.value).map(read => read.refresh()),
+  ])
+}
 
 // Re-sort when primary metric changes
 watch(primaryMetric, (metric) => {
@@ -415,6 +461,15 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
       <!-- The Search Console read failed. Distinct from the site-load error
            above: the Site is fine, the upstream read is not. -->
       <ProGscReadError v-if="searchState._tag === 'Ready'" :error="datesError" />
+      <ProGscReadError v-if="searchState._tag === 'Ready'" :error="detailColdError" />
+      <div v-if="detailRefreshFailed" class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p class="text-xs text-muted" role="status">
+          Search Console data could not refresh. Previous values remain visible. Retry to read them again.
+        </p>
+        <UiButton purpose="link" size="xs" @click="retryDetails">
+          Retry
+        </UiButton>
+      </div>
 
       <!-- Not linked, held, or in its first sync: show the live nuxtseo.com preview -->
       <UiSampleDataOverlay
@@ -476,7 +531,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
         <!-- Hero: Metrics + Chart -->
         <ProPageZone tier="primary" first>
           <ProCardGsc
-            :key="siteId"
+            :key="JSON.stringify([siteId, identity.scope])"
             :dates="dates?.dates || []"
             :prev-dates="dates?.prevDates || null"
             :period="dates?.period ?? null"
@@ -487,7 +542,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
             :date-range="period"
             :columns="lead.heroColumns"
             :entity-counts="heroEntityCounts"
-            :loading="datesStatus === 'pending' || siteStatus === 'pending'"
+            :loading="datesStatus === 'pending' || siteLoading"
             show-buttons
             @zoom="onZoom"
           />
@@ -503,7 +558,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               :title="topLabel"
               subtle
               tooltip="Top search queries for this period. Variants, such as plural and singular spellings, are grouped together. The #N badge is the term's average Google position."
-              :loading="siteLoading || keywordsLoading"
+              :loading="detailPending || siteLoading || keywordsLoading"
               :loading-count="5"
               :items="keywordRows"
               :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries`"
@@ -570,7 +625,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               :title="mover.title"
               subtle
               :tooltip="mover.tooltip"
-              :loading="siteLoading || mover.loading"
+              :loading="detailPending || siteLoading || mover.loading"
               :loading-count="MOVER_ROWS"
               :items="mover.rows"
               :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries?filter=${mover.key}`"
@@ -658,7 +713,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               :title="topLabel"
               subtle
               tooltip="Pages receiving the most search traffic this period."
-              :loading="siteLoading || pagesLoading"
+              :loading="detailPending || siteLoading || pagesLoading"
               :loading-count="5"
               :items="pageRows"
               :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/pages`"
@@ -714,7 +769,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               title="Countries"
               subtle
               tooltip="Where your search traffic comes from, based on the searcher's location."
-              :loading="siteLoading || countriesLoading"
+              :loading="detailPending || siteLoading || countriesLoading"
               :loading-count="5"
               :items="countryRows"
               :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/countries`"
@@ -749,7 +804,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               title="Devices"
               subtle
               tooltip="How your search traffic is split across desktop, mobile, and tablet devices."
-              :loading="siteLoading || devicesLoading"
+              :loading="detailPending || siteLoading || devicesLoading"
               :loading-count="3"
               :items="deviceStats"
               empty-icon="smartphone"

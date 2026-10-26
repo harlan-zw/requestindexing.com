@@ -145,6 +145,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
   const query = useProGscdumpData(_siteId, request)
 
   const isLoading = computed(() => query.pending.value)
+  const isInitialLoading = computed(() => query.pending.value && query.data.value === null)
   /** True only while fetching page 2 or later, so the table stays put. */
   const isLoadingMore = computed(() => loadMore && query.pending.value && page.value > 1)
 
@@ -278,6 +279,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
     filter,
     sort,
     isLoading,
+    isInitialLoading,
     isLoadingMore,
     error: query.error,
     status: query.status,
