@@ -1,0 +1,1 @@
+CREATE INDEX `team_sites_site_id_idx` ON `team_sites` (`site_id`);

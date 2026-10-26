@@ -3,13 +3,14 @@ import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-// Four equality lookups run on every webhook delivery and access check, and
+// Five equality lookups run on every webhook delivery and access check, and
 // each of their columns carried no index, so sqlite read the whole table:
 //
 //   sites by gscdump_site_id    webhook receiver + `requireSiteAccess`
 //   users by gscdump_user_id    webhook receiver resolving the owner
 //   google_accounts by user_id  account reads on the dashboard
 //   teams by owner_id           caller resolution
+//   team_sites by site_id       gscdump proxy site-scope join
 //
 // A missed index is a query-plan regression, so the fixture seeds
 // representative row counts (a one-row table makes the optimizer scan
@@ -110,5 +111,29 @@ describe('engine mirror and account lookup indexes', () => {
     const plan = explain(db, `SELECT google_account_id FROM google_accounts WHERE user_id = 1`)
     expect(plan.some(detail => detail.includes('INDEX google_accounts_user_id_idx'))).toBe(true)
     expect(plan.some(detail => detail.includes('SCAN google_accounts'))).toBe(false)
+  })
+
+  it('searches team_sites by site_id instead of scanning', () => {
+    const db = migratedDatabase()
+    seedUsers(db)
+    db.exec(`INSERT INTO google_oauth_clients (client_id, client_secret, label) VALUES ('cid', 'secret', 'l')`)
+    db.exec(`INSERT INTO google_accounts (user_id, type, payload, tokens, google_oauth_client_id)
+      VALUES (1, 'auth', '{}', '{}', 1)`)
+    for (let i = 1; i <= ROWS; i++) {
+      db.exec(`INSERT INTO sites (id, public_id, team_id, property, active, gscdump_site_id)
+        VALUES ('s${i}', 's_${i}', 1, 'https://${i}.com/', 1, '${i === 1 ? 'gs-site-1' : 'gs-site-other'}')`)
+      db.exec(`INSERT INTO team_sites (team_id, site_id, google_account_id) VALUES (1, 's${i}', 1)`)
+    }
+
+    // The gscdump proxy resolves site scope through this join on every call.
+    const query = `SELECT sites.id, team_sites.team_id FROM sites
+      LEFT JOIN team_sites ON team_sites.site_id = sites.id
+      WHERE sites.gscdump_site_id = 'gs-site-1'`
+    const rows = db.prepare(query).all()
+    expect(rows).toEqual([{ id: 's1', team_id: 1 }])
+
+    const plan = explain(db, query)
+    expect(plan.some(detail => detail.includes('SEARCH team_sites') && detail.includes('team_sites_site_id_idx'))).toBe(true)
+    expect(plan.some(detail => detail.includes('SCAN team_sites'))).toBe(false)
   })
 })

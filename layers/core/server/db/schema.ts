@@ -233,6 +233,9 @@ export const teamSites = sqliteTable('team_sites', {
 }, t => ({
   unq: unique().on(t.teamId, t.siteId),
   googleAccountIdIdx: index('google_account_id_idx').on(t.googleAccountId),
+  // The gscdump proxy and webhook site-scope lookups join on `site_id`; without
+  // the index each lookup read the whole link table.
+  teamSitesSiteIdIdx: index('team_sites_site_id_idx').on(t.siteId),
 }))
 
 export type TeamSitesSelect = typeof teamSites.$inferSelect
