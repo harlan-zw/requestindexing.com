@@ -38,7 +38,7 @@ const {
   rowClickable = false,
   tableSize = 'md',
   sortable = false,
-  hasCachedData,
+  hasCachedData = undefined,
   // Vue casts an absent boolean prop to `false`, which reads as "the previous
   // period has no data". A table with no comparison (the indexing URLs) never
   // passes it, so absent must stay `undefined` and the notice stays hidden.

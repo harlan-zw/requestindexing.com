@@ -16,15 +16,24 @@ import { useProGscdump } from './useProGscdump'
 export function useProGscdumpData(
   siteId: MaybeRefOrGetter<string>,
   input: MaybeRefOrGetter<BreakdownInput>,
+  options: { loadMore?: boolean } = {},
 ) {
   const _input = computed(() => toValue(input))
   const _siteId = computed(() => toValue(siteId))
+  const dataScope = computed(() => {
+    if (!options.loadMore)
+      return _input.value
+    // A larger top-N window contains the loaded prefix. Every other input
+    // remains scoped, including offsets, filters, periods, and search type.
+    const { rowLimit: _rowLimit, ...scope } = _input.value
+    return scope
+  })
 
   const gscdump = useProGscdump()
 
   return useGscQuery<GscdumpDataResponse>({
     site: _siteId,
-    params: computed(() => ({ type: 'data-query' as const, searchType: _input.value.searchType, request: _input.value })),
+    params: computed(() => ({ type: 'data-query' as const, searchType: _input.value.searchType, request: dataScope.value })),
     enabled: computed(() => !!_siteId.value),
     watchSources: [useGscSiteInvalidation(_siteId), _input],
     serverFallback: async id => gscdump.queryAnalyticsReport({

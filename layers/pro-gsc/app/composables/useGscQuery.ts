@@ -169,7 +169,12 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
       error.value = cause instanceof Error ? cause : new Error(String(cause))
       engine.value = 'server'
       elapsedMs.value = performance.now() - startedAt
-      status.value = errorStatus(cause)
+      const failureStatus = errorStatus(cause)
+      if (failureStatus === 'auth-missing') {
+        data.value = null
+        meta.value = { raw: null }
+      }
+      status.value = failureStatus
     }
   }
 

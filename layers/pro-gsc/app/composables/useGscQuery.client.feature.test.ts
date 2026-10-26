@@ -47,6 +47,26 @@ function use(read: () => Promise<{ clicks: number }>) {
 }
 
 describe('hosted query identity', () => {
+  it.each([401, 403])('clears retained values and metadata after a %s access refusal', async (statusCode) => {
+    const read = vi.fn().mockResolvedValueOnce({ clicks: 42, meta: { source: 'retained' } }).mockRejectedValueOnce(Object.assign(new Error('Access lost'), { statusCode }))
+    const view = use(read)
+    await settle()
+    expect(view.data.value).toEqual({ clicks: 42, meta: { source: 'retained' } })
+    await view.refresh()
+    expect(view.data.value).toBeNull()
+    expect(view.meta.value.raw).toBeNull()
+    expect(view.status.value).toBe('auth-missing')
+  })
+
+  it('keeps retained values after a temporary hosted failure', async () => {
+    const read = vi.fn().mockResolvedValueOnce({ clicks: 42 }).mockRejectedValueOnce(Object.assign(new Error('Temporary failure'), { statusCode: 503 }))
+    const view = use(read)
+    await settle()
+    await view.refresh()
+    expect(view.data.value).toEqual({ clicks: 42 })
+    expect(view.status.value).toBe('network')
+  })
+
   it.each(['success', 'error'] as const)('rejects a late %s after the session user changes before Caller refreshes', async (outcome) => {
     const first = deferred<{ clicks: number }>()
     const second = deferred<{ clicks: number }>()
