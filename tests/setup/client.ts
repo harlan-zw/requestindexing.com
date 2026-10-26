@@ -7,7 +7,14 @@ import { computed, ref, shallowRef, watch } from 'vue'
 const g = globalThis as Record<string, unknown>
 
 // Vue's own reactivity is auto-imported inside a Nuxt component.
-Object.assign(g, { ref, shallowRef, computed, watch })
+Object.assign(g, {
+  ref,
+  shallowRef,
+  computed,
+  watch,
+  useNuxtData: () => ({ data: ref(null) }),
+  useUserSession: () => ({ session: ref({ user: { id: 1 } }), loggedIn: ref(true) }),
+})
 
 // `useToast` reaches `#imports` in the real @nuxt/ui build. Each test gets a
 // fresh spy so one test's toasts cannot leak into the next.
