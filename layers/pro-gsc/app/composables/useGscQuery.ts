@@ -94,6 +94,7 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
   const meta = ref<GscQueryMeta>({ raw: null })
   const pending = computed(() => status.value === 'pending')
   let generation = 0
+  let dataScope: string | undefined
 
   function captureMeta(output: T): void {
     const raw = options.extractMeta?.(output)
@@ -104,10 +105,19 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
 
   async function runQuery(): Promise<void> {
     const currentGeneration = ++generation
-    if (!import.meta.client) {
+    if (import.meta.server) {
       status.value = 'idle'
       lastDecision.value = { mode: null, reason: 'ssr' }
       return
+    }
+    const scope = JSON.stringify([toValue(options.site), toValue(options.params)])
+    if (scope !== dataScope) {
+      dataScope = scope
+      data.value = null
+      error.value = null
+      engine.value = null
+      elapsedMs.value = null
+      meta.value = { raw: null }
     }
     if (options.enabled !== undefined && !toValue(options.enabled)) {
       data.value = null

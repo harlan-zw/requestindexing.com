@@ -119,6 +119,7 @@ const pagesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-co
         :period="pageDates.period"
         :prev-period="pageDates.prevPeriod"
         :comparison-refused="pageDates.comparisonRefused"
+        :comparison-read-failed="pageDates.comparisonReadFailed"
         :columns="columns"
         @zoom="onZoom"
       />

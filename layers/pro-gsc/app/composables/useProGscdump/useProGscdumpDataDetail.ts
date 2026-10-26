@@ -24,7 +24,7 @@ export function useProGscdumpDataDetail(
 
   return useGscQuery<GscdumpDataDetailResponse>({
     site: _siteId,
-    params: computed(() => ({ type: 'data-detail' as const, searchType: _input.value.searchType })),
+    params: computed(() => ({ type: 'data-detail' as const, searchType: _input.value.searchType, request: _input.value })),
     enabled: computed(() => !!_siteId.value),
     watchSources: [useGscSiteInvalidation(_siteId), _input],
     serverFallback: async id => gscdump.queryAnalyticsReportDetail({
