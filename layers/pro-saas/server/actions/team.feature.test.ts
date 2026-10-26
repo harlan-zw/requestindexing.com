@@ -1,13 +1,11 @@
 import type { H3Event } from 'h3'
+import type { DatabaseSync } from 'node:sqlite'
 import type { CurrentTeamContext } from '../utils/require-current-team'
 import type { TeamDeleteGscdump } from './team'
-import { readdirSync, readFileSync } from 'node:fs'
-import { DatabaseSync } from 'node:sqlite'
-import { fileURLToPath } from 'node:url'
 import { GscdumpV1Error } from '@gscdump/sdk/v1'
-import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { createError } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { migratedDatabase, proDatabase } from '~~/tests/support/migrated-d1'
 import { sites, teams, users } from '../database'
 import { createUserWithPersonalTeam } from '../utils/create-user-with-personal-team'
 import { deleteTeam } from './team'
@@ -15,34 +13,6 @@ import { deleteTeam } from './team'
 vi.mock('#domain-events/server', () => ({
   dispatchEvent: vi.fn(async () => undefined),
 }))
-
-const MIGRATIONS_DIR = fileURLToPath(new URL('../../../core/server/db/migrations', import.meta.url))
-
-function migratedDatabase(): DatabaseSync {
-  const db = new DatabaseSync(':memory:')
-  const files = readdirSync(MIGRATIONS_DIR).filter(name => name.endsWith('.sql')).sort()
-  for (const name of files) {
-    for (const statement of readFileSync(`${MIGRATIONS_DIR}/${name}`, 'utf8').split('--> statement-breakpoint')) {
-      const sql = statement.trim()
-      if (sql)
-        db.exec(sql)
-    }
-  }
-  return db
-}
-
-function proDatabase(sqlite: DatabaseSync) {
-  return drizzle(async (sql, params, method) => {
-    const statement = sqlite.prepare(sql)
-    const args = params as never[]
-    if (method === 'run') {
-      statement.run(...args)
-      return { rows: [] }
-    }
-    const rows = statement.all(...args).map(row => Object.values(row))
-    return { rows: method === 'get' ? rows[0] : rows }
-  })
-}
 
 type ProDatabase = CurrentTeamContext['db']
 
