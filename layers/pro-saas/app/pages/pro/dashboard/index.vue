@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { OverviewSiteEntry } from '#layers/pro-gsc/app/components/overview/overview-sites'
-import type { OverviewSnapshotSite } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
+import type { OverviewSnapshotKey, OverviewSnapshotSite } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
 import { useJobListener } from '~~/layers/core/app/composables/events'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { isOverviewReadTarget, overviewSiteLabel, soleSiteLandingPath } from '#layers/pro-gsc/app/components/overview/overview-sites'
@@ -51,13 +51,13 @@ const noProperty = useNoSearchConsoleProperty(() => !sites.value.length)
 
 const range = overviewReadRange()
 // A redirecting page reads nothing: the Site page owns that Site's reads.
-const { reads, loading: readsLoading, refresh: refreshReads } = useProOverviewReads(() => landing ? [] : sites.value, range)
+const { reads, pendingSources, refresh: refreshReads } = useProOverviewReads(() => landing ? [] : sites.value, range)
 
 const entries = computed<OverviewSiteEntry[]>(() => sites.value.map((site): OverviewSiteEntry => {
   const daily = reads.value[site.siteId]?.daily
-  if (daily?._tag === 'Ok')
+  if (daily?._tag === 'Ok' || daily?._tag === 'Stale')
     return { site, clicks: { _tag: 'Read', ...overviewSiteClicks(daily.value, range) } }
-  if (!daily && readsLoading.value && isOverviewReadTarget(site))
+  if ((!daily || daily._tag === 'Pending') && isOverviewReadTarget(site))
     return { site, clicks: { _tag: 'Reading' } }
   return { site, clicks: { _tag: 'Unread' } }
 }))
@@ -68,14 +68,21 @@ const snapshotSites = computed<OverviewSnapshotSite[]>(() => sites.value.flatMap
     return []
   return [{
     label: overviewSiteLabel(site),
-    daily: read.daily._tag === 'Ok' ? read.daily.value : null,
-    indexing: read.indexing._tag === 'Ok' ? read.indexing.value : null,
+    daily: read.daily._tag === 'Ok' || read.daily._tag === 'Stale' ? read.daily.value : null,
+    indexing: read.indexing._tag === 'Ok' || read.indexing._tag === 'Stale' ? read.indexing.value : null,
   }]
 }))
-const cards = computed(() => overviewSnapshotCards(snapshotSites.value, range.window))
+const pendingKeys = computed<OverviewSnapshotKey[]>(() => [
+  ...(pendingSources.value.daily ? ['clicks', 'impressions', 'ctr', 'position'] as const : []),
+  ...(pendingSources.value.indexing ? ['indexed', 'not-indexed'] as const : []),
+])
+const cards = computed(() => overviewSnapshotCards(snapshotSites.value, range.window)
+  .filter(card => !pendingKeys.value.includes(card.key)))
 const failedSites = computed(() => Object.values(reads.value)
   .filter(read => read.daily._tag === 'Err' || read.indexing._tag === 'Err')
   .length)
+const refreshFailed = computed(() => Object.values(reads.value)
+  .some(read => read.daily._tag === 'Stale' || read.indexing._tag === 'Stale'))
 
 // A finished sync changes the lifecycle on the Sites list and that Site's
 // rows, so the event refetches the list and that one Site's reads.
@@ -109,7 +116,7 @@ useJobListener('sites/sync-finished', async ({ siteId }) => {
       <ProOverviewOnboardingCard v-if="gscNotConnected" step="connect-search-console" />
       <ProLiveJobProgress :sites="sites" />
       <ProOverviewSitesColumn :entries="entries" />
-      <ProOverviewSnapshot :cards="cards" :loading="readsLoading" :failed-sites="failedSites" @retry="refreshReads()" />
+      <ProOverviewSnapshot :cards="cards" :pending-keys="pendingKeys" :failed-sites="failedSites" :refresh-failed="refreshFailed" @retry="refreshReads()" />
     </template>
   </div>
 </template>
