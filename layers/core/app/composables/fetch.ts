@@ -14,8 +14,9 @@ export async function fetchSites() {
   const { user } = useUserSession()
   const logout = createLogoutHandler()
   const fetchFn = useRequestFetch()
-  return useAsyncData<{ sites: SiteFleetRow[] }>(SITES_DATA_KEY, async () => {
+  return useAsyncData<{ sites: SiteFleetRow[] }>(SITES_DATA_KEY, async (_, { signal }) => {
     return fetchFn(`/api/sites/list`, {
+      signal: import.meta.client ? signal : undefined,
       query: {
         teamId: user.value?.currentTeamId,
       },
@@ -33,6 +34,7 @@ export async function fetchSites() {
       },
     })
   }, {
+    timeout: import.meta.client ? 25_000 : undefined,
     // The dashboard layout and most dashboard pages both call `fetchSites()`.
     // On the server, Nuxt runs the handler again for the second call, so every
     // signed-in render read the roster twice, one after the other: 1.6 to
