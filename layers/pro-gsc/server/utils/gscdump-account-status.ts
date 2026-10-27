@@ -8,6 +8,7 @@ import { RENDER_PATH_TIMEOUT_MS, useGscdumpClient } from './gscdump-client'
 const CACHE_READ_BUDGET_MS = 250
 
 type CacheOperation = { _tag: 'Done' | 'Retired' } | { _tag: 'Failed', cause: unknown }
+type CacheWrite = { _tag: 'Optional', revision: symbol } | { _tag: 'Authoritative' }
 type AccountStatusRead
   = | { _tag: 'Computing', revision: symbol, promise: Promise<AccountStatus | null> }
     | { _tag: 'Persisting', revision: symbol, promise: Promise<AccountStatus | null>, entry: CachedAccountStatus }
@@ -48,10 +49,10 @@ function release(key: string, owner: AccountCacheOwner) {
   evict(key, owner)
 }
 
-function enqueue(key: string, owner: AccountCacheOwner, revision: symbol, operation: () => Promise<unknown>): Promise<CacheOperation> {
+function enqueue(key: string, owner: AccountCacheOwner, write: CacheWrite, operation: () => Promise<unknown>): Promise<CacheOperation> {
   const previous = owner.persisting
   const task = Promise.resolve(previous).then((): Promise<CacheOperation> | CacheOperation => {
-    if (owner.revision !== revision)
+    if (write._tag === 'Optional' && owner.revision !== write.revision)
       return { _tag: 'Retired' }
     return Promise.resolve().then(operation).then(
       (): CacheOperation => ({ _tag: 'Done' }),
@@ -76,7 +77,7 @@ async function mutate(gscdumpUserId: string, operation: (key: string) => Promise
   owner.revision = revision
   owner.mutation = revision
   try {
-    const result = await enqueue(key, owner, revision, () => operation(key))
+    const result = await enqueue(key, owner, { _tag: 'Authoritative' }, () => operation(key))
     if (result._tag === 'Failed')
       throw result.cause
   }
@@ -143,7 +144,7 @@ async function readStatus(event: H3Event, gscdumpUserId: string, key: string, ow
     : null
   if (retained)
     owner.reading = retained
-  const writing = enqueue(key, owner, revision, () => useStorage('cache').setItem(key, entry)).then((result) => {
+  const writing = enqueue(key, owner, { _tag: 'Optional', revision }, () => useStorage('cache').setItem(key, entry)).then((result) => {
     if (result._tag === 'Failed')
       logger.error('[gscdump account status] optional cache write unavailable:', result.cause)
   }).finally(() => {

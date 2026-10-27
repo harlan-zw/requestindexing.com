@@ -208,6 +208,30 @@ it('orders invalidation after a detached write before confirming removal', async
   await invalidated
   expect(values.has(`gscdump-account-status:${id}`)).toBe(false)
 })
+it('confirms invalidation even when a concurrent replacement fails', async () => {
+  values.set(`gscdump-account-status:${id}`, { _tag: 'Read', status: 'scope_missing', readAt: Date.now() })
+  const cause = new Error('Synthetic replacement outage')
+  put.mockRejectedValueOnce(cause)
+  const outcomes = await Promise.allSettled([
+    forgetGscdumpAccountStatus(id),
+    rememberGscdumpAccountStatus(id, 'ready'),
+  ])
+  expect(outcomes).toEqual([{ status: 'fulfilled', value: undefined }, { status: 'rejected', reason: cause }])
+  expect(remove).toHaveBeenCalledOnce()
+  expect(values.has(`gscdump-account-status:${id}`)).toBe(false)
+})
+it('confirms a replacement even when the following invalidation fails', async () => {
+  values.set(`gscdump-account-status:${id}`, { _tag: 'Read', status: 'ready', readAt: Date.now() })
+  const cause = new Error('Synthetic removal outage')
+  remove.mockRejectedValueOnce(cause)
+  const outcomes = await Promise.allSettled([
+    rememberGscdumpAccountStatus(id, 'scope_missing'),
+    forgetGscdumpAccountStatus(id),
+  ])
+  expect(outcomes).toEqual([{ status: 'fulfilled', value: undefined }, { status: 'rejected', reason: cause }])
+  expect(put).toHaveBeenCalledOnce()
+  expect(values.get(`gscdump-account-status:${id}`)).toMatchObject({ status: 'scope_missing' })
+})
 it('does not publish a former upstream answer after invalidation completes', async () => {
   const response = held<ReturnType<typeof ready>>()
   upstream.mockReturnValueOnce(response.promise)
