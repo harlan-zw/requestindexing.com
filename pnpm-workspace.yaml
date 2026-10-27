@@ -18,7 +18,7 @@ minimumReleaseAgeExclude:
   - '@harlan-zw/comark-content@0.2.0'
   - '@harlan-zw/nuxt-checkin@0.4.1'
   - '@harlan-zw/nuxt-domain-events@0.2.1'
-  - '@harlan-zw/nuxt-use-query@0.3.0'
+  - '@harlan-zw/nuxt-use-query@0.3.3'
   - '@harlan-zw/nuxt-wide-events@0.2.0'
   - '@harlan-zw/nuxt-cloudflare@0.5.1'
   - '@harlan-zw/nuxt-dx@0.3.0'
@@ -152,7 +152,7 @@ catalog:
   '@harlan-zw/nuxt-domain-events': 0.2.1
   '@harlan-zw/nuxt-dx': 0.3.0
   '@harlan-zw/nuxt-sentry': 0.3.0
-  '@harlan-zw/nuxt-use-query': 0.3.0
+  '@harlan-zw/nuxt-use-query': 0.3.3
   '@harlan-zw/nuxt-wide-events': 0.2.0
   '@iconify-json/carbon': ^1.2.28
   '@iconify-json/circle-flags': ^1.2.11

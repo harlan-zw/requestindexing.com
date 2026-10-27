@@ -198,8 +198,8 @@ catalogs:
       specifier: 0.3.0
       version: 0.3.0
     '@harlan-zw/nuxt-use-query':
-      specifier: 0.3.0
-      version: 0.3.0
+      specifier: 0.3.3
+      version: 0.3.3
     '@harlan-zw/nuxt-wide-events':
       specifier: 0.2.0
       version: 0.2.0
@@ -446,7 +446,7 @@ importers:
         version: 0.2.1(6509e6f8f84552d20b10013631bba06a)
       '@harlan-zw/nuxt-use-query':
         specifier: 'catalog:'
-        version: 0.3.0(9dc15d84be5e30cc1c1b5fd2c6ec4a14)
+        version: 0.3.3(9dc15d84be5e30cc1c1b5fd2c6ec4a14)
       '@harlan-zw/nuxt-wide-events':
         specifier: 'catalog:'
         version: 0.2.0(6509e6f8f84552d20b10013631bba06a)
@@ -1848,8 +1848,8 @@ packages:
       nitro:
         optional: true
 
-  '@harlan-zw/nuxt-use-query@0.3.0':
-    resolution: {integrity: sha512-sv6h9Wvgdokxj88bYHzOBBZOlAB61Y1rluigWgqdEOQwJUwEksB4LOurRe/rFRZuqMWIW1iM9YK66hgRPd2Ljw==}
+  '@harlan-zw/nuxt-use-query@0.3.3':
+    resolution: {integrity: sha512-PUFyG0MZPgNjX94hYA/1jgL2/BMjTIOtin6z5+p46ZhmV6/Wa1DPMmDEogb9NLhV1ivRllUgYSEAqi26OUQVWg==}
     engines: {node: ^22.22.3 || ^24.15.0 || >=26.0.0}
     peerDependencies:
       nitro: ^3.0.0-0
@@ -10556,9 +10556,9 @@ snapshots:
       - rolldown
       - unplugin
 
-  '@harlan-zw/nuxt-use-query@0.3.0(9dc15d84be5e30cc1c1b5fd2c6ec4a14)':
+  '@harlan-zw/nuxt-use-query@0.3.3(9dc15d84be5e30cc1c1b5fd2c6ec4a14)':
     dependencies:
-      '@nuxt/kit': 4.6.0(@nuxt/schema@4.6.1)(confbox@0.3.1)(dotenv@17.4.2)(giget@3.3.1)(jiti@2.7.0)(magic-string@1.4.2)(mlly@1.8.2)(oxc-parser@0.151.0)(rolldown@1.2.11)(unplugin@3.4.0(esbuild@0.28.1)(rolldown@1.2.11)(rollup@4.62.4)(vite@8.3.2(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1)))
+      '@nuxt/kit': 4.6.1(@nuxt/schema@4.6.1)(confbox@0.3.1)(dotenv@17.4.2)(giget@3.3.1)(jiti@2.7.0)(magic-string@1.4.2)(mlly@1.8.2)(oxc-parser@0.151.0)(rolldown@1.2.11)(unplugin@3.4.0(esbuild@0.28.1)(rolldown@1.2.11)(rollup@4.62.4)(vite@8.3.2(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1)))
       '@vueuse/core': 14.4.0(vue@3.5.43(typescript@6.0.3))
       consola: 3.4.2
       nitropack: 2.13.4(patch_hash=df91176649b904c944d2587187f91a3e2eb5bee5a9bb00fe515b2c7585fa959d)(drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260929.1)(@opentelemetry/api@1.9.1))(oxc-parser@0.151.0)(rolldown@1.2.11)(srvx@0.12.5)(supports-color@10.2.2)(vite@8.3.2(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1))
