@@ -87,7 +87,7 @@ export default defineNitroPlugin(() => {
     // wizard and the shell decide what to show, rather than mirroring it onto
     // a column that a missed webhook would leave wrong. Cached per user.
     session.gscdumpAccountStatus = session.gscdumpConnected && user.gscdumpUserId
-      ? await readGscdumpAccountStatus(user.gscdumpUserId).catch((error: unknown) => {
+      ? await readGscdumpAccountStatus(user.gscdumpUserId, event).catch((error: unknown) => {
           logger.error('[session] gscdump account status unavailable, stored credential decides:', error)
           return null
         })
