@@ -8,6 +8,9 @@ describe('isRuntimeOnlyRoute', () => {
     '/pro/dashboard/sites/1/indexing',
     // The sign-up door, moved off the prerendered `/get-started` page.
     '/pro/onboarding',
+    '/login',
+    '/login?redirect=%2Fpro%2Fdashboard%2Fsites%2Fs_example%2Findexing%2Furls',
+    '/login?error=use_existing_provider&provider=github',
     '/account',
     '/admin/users',
     '/kit/buttons',
@@ -21,7 +24,6 @@ describe('isRuntimeOnlyRoute', () => {
 
   it.each([
     '/',
-    '/login',
     '/guides',
     '/tools/google-indexing-checker',
     '/comparisons/some-rival',
