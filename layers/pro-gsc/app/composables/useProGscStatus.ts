@@ -1,8 +1,13 @@
 import type { SiteHoldReason } from '@gscdump/contracts'
+import type { MaybeRefOrGetter, Ref } from 'vue'
 import type { PartnerLifecycleSite } from '../../shared/gscdump-api'
+import { classifyGscError } from '@gscdump/sdk/gsc-error'
 import { lifecycleSiteToSyncStatus } from '@gscdump/sdk/lifecycle'
+import { useDocumentVisibility, useTimeoutFn } from '@vueuse/core'
+import { computed, effectScope, getCurrentInstance, getCurrentScope, onMounted, onScopeDispose, ref, shallowRef, toValue, watch } from 'vue'
 import { useProSiteInjection } from '#layers/pro-saas/app/composables/useProSiteInjection'
-import { useGscSiteInvalidation } from '../internal/composables/useGscInvalidation'
+import { useGscInvalidationMap } from '../internal/composables/useGscInvalidation'
+import { useGscQueryIdentity } from './useGscQueryIdentity'
 
 interface TableProgress {
   name: string
@@ -62,182 +67,255 @@ export function computeIsNotConnected(gscdumpSiteId: string | null | undefined):
   return !gscdumpSiteId
 }
 
-export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
-  // The layout's Site, not a second read of the same endpoint. This used to
-  // keep its own `pro-gsc:site:` key and its own `.catch(() => null)`, so the
-  // same Site was fetched twice and a 404 arrived here as "no Site", which the
-  // pages then read as "not connected". nuxtseo.com's `useProGscStatus` reads
-  // the same injection (ADR-0012 names it a sanctioned direct consumer).
-  const proFetch = useProFetch()
-  const { site } = useProSiteInjection(siteId)
-  const gscdumpSiteId = computed(() => site.value?.gscdumpSiteId)
-
-  const syncData = ref<GscSyncStatus | null>(null)
-  const fetchStatus = ref<'idle' | 'pending' | 'success' | 'error'>('idle')
-  const error = ref<Error | null>(null)
-  // True once any lifecycle read has finished. A poll sets `fetchStatus` back
-  // to pending every few seconds, so a page that waits for the first answer
-  // cannot read it from `fetchStatus`.
-  const settled = ref(false)
-  let statusSiteId: string | null | undefined
-  let requestId = 0
-
-  async function refresh() {
-    const siteIdVal = gscdumpSiteId.value
-    const currentRequest = ++requestId
-    if (statusSiteId !== siteIdVal) {
-      statusSiteId = siteIdVal
-      syncData.value = null
-      error.value = null
-      fetchStatus.value = 'idle'
-      settled.value = false
+async function readSyncStatus(proFetch: ReturnType<typeof useProFetch>, siteId: string): Promise<GscSyncStatus | null> {
+  if (import.meta.dev && siteId === DEMO_GSCDUMP_SITE_ID) {
+    return {
+      syncStatus: 'synced',
+      permissionLost: false,
+      oldestDateSynced: '2025-01-01',
+      newestDateSynced: new Date().toISOString().slice(0, 10),
+      lastSyncAt: Date.now(),
+      lastError: null,
+      progress: 100,
+      daysSynced: 120,
+      daysAvailable: 120,
+      isSyncing: false,
+      hasData: true,
+      isComplete: true,
+      phase: 'complete',
+      totalRowsSynced: 1200,
+      hasMinimumData: true,
+      tablesProgress: [],
+      indexing: null,
+      hold: null,
     }
-    if (!siteIdVal) {
-      syncData.value = null
-      return
-    }
-
-    if (import.meta.dev && siteIdVal === DEMO_GSCDUMP_SITE_ID) {
-      syncData.value = {
-        syncStatus: 'synced',
-        permissionLost: false,
-        oldestDateSynced: '2025-01-01',
-        newestDateSynced: new Date().toISOString().slice(0, 10),
-        lastSyncAt: Date.now(),
-        lastError: null,
-        progress: 100,
-        daysSynced: 120,
-        daysAvailable: 120,
-        isSyncing: false,
-        hasData: true,
-        isComplete: true,
-        phase: 'complete',
-        totalRowsSynced: 1200,
-        hasMinimumData: true,
-        tablesProgress: [],
-        indexing: null,
-        hold: null,
-      }
-      fetchStatus.value = 'success'
-      settled.value = true
-      return
-    }
-
-    fetchStatus.value = 'pending'
-    error.value = null
-
-    const result = await proFetch<{ site: PartnerLifecycleSite | null }>('/api/pro/gsc-lifecycle', {
-      query: { siteId: siteIdVal },
-    }).then((res) => {
-      const lifecycleSite = res.site
-      if (!lifecycleSite)
-        return null
-      const lifecycleStatus = lifecycleSiteToSyncStatus(lifecycleSite)
-      const syncStatus = lifecycleStatus.syncStatus
-      // A held Site reads `pending` but runs nothing until its owner acts, so the
-      // SDK's `isSyncing` decides, not the status.
-      const activeAnalytics = lifecycleStatus.isSyncing
-      const activeSitemaps = ['discovering', 'syncing'].includes(lifecycleSite.sitemaps.status)
-      const activeIndexing = ['discovering', 'checking', 'waiting_for_sitemaps'].includes(lifecycleSite.indexing.status)
-      return {
-        syncStatus,
-        permissionLost: lifecycleSite.latestError?.code === 'permission_lost',
-        oldestDateSynced: lifecycleStatus.oldestDateSynced,
-        newestDateSynced: lifecycleStatus.newestDateSynced,
-        lastSyncAt: lifecycleStatus.lastSyncAt,
-        lastError: lifecycleStatus.lastError,
-        progress: lifecycleStatus.progress,
-        daysSynced: lifecycleStatus.daysSynced,
-        daysAvailable: lifecycleStatus.daysAvailable,
-        isSyncing: activeAnalytics || activeSitemaps || activeIndexing,
-        hasData: lifecycleStatus.hasData,
-        isComplete: lifecycleStatus.isComplete,
-        phase: syncStatus === 'error' ? 'error' : activeIndexing ? 'indexing' : activeAnalytics || activeSitemaps ? 'syncing' : 'complete',
-        totalRowsSynced: lifecycleStatus.daysSynced,
-        hasMinimumData: lifecycleStatus.hasData,
-        tablesProgress: [],
-        indexing: {
-          queued: 0,
-          processing: activeIndexing ? 1 : 0,
-          completed: lifecycleSite.indexing.progress.completed,
-          failed: lifecycleSite.indexing.progress.failed,
-          total: lifecycleSite.indexing.progress.total,
-          progress: lifecycleSite.indexing.progress.percent,
-        },
-        queryable: lifecycleSite.analytics.queryable,
-        sourceMode: lifecycleSite.analytics.sourceMode,
-        sitemapStatus: lifecycleSite.sitemaps.status,
-        indexingStatus: lifecycleSite.indexing.status,
-        hold: lifecycleSite.hold,
-      } satisfies GscSyncStatus
-    }).then(data => ({ _tag: 'Ok' as const, data })).catch((cause: unknown) => ({ _tag: 'Err' as const, cause }))
-
-    if (currentRequest !== requestId || gscdumpSiteId.value !== siteIdVal)
-      return
-    if (result._tag === 'Err') {
-      error.value = result.cause instanceof Error ? result.cause : new Error(String(result.cause))
-      fetchStatus.value = 'error'
-    }
-    else {
-      syncData.value = result.data
-      fetchStatus.value = 'success'
-    }
-
-    // A lifecycle that does not list this Site is a finished read too. Gating
-    // this on `syncData` left such a read pending for good.
-    settled.value = true
   }
-
-  // The realtime plugin bumps this Site's token on each durable gscdump
-  // lifecycle event: a sync batch landed, a sync failed, access was lost. Re-read
-  // then, so a transition shows without waiting for the next poll, and still
-  // shows once polling has stopped. HTTP stays authoritative: the polls below
-  // still converge after a dropped frame. Only the client ever bumps, so this
-  // never fires during SSR.
-  watch(useGscSiteInvalidation(gscdumpSiteId), () => {
-    void refresh()
+  return proFetch<{ site: PartnerLifecycleSite | null }>('/api/pro/gsc-lifecycle', {
+    query: { siteId },
+  }).then((res) => {
+    const lifecycleSite = res.site
+    if (!lifecycleSite)
+      return null
+    const lifecycleStatus = lifecycleSiteToSyncStatus(lifecycleSite)
+    const syncStatus = lifecycleStatus.syncStatus
+    // A held Site reads `pending` but runs nothing until its owner acts, so the
+    // SDK's `isSyncing` decides, not the status.
+    const activeAnalytics = lifecycleStatus.isSyncing
+    const activeSitemaps = ['discovering', 'syncing'].includes(lifecycleSite.sitemaps.status)
+    const activeIndexing = ['discovering', 'checking', 'waiting_for_sitemaps'].includes(lifecycleSite.indexing.status)
+    return {
+      syncStatus,
+      permissionLost: lifecycleSite.latestError?.code === 'permission_lost',
+      oldestDateSynced: lifecycleStatus.oldestDateSynced,
+      newestDateSynced: lifecycleStatus.newestDateSynced,
+      lastSyncAt: lifecycleStatus.lastSyncAt,
+      lastError: lifecycleStatus.lastError,
+      progress: lifecycleStatus.progress,
+      daysSynced: lifecycleStatus.daysSynced,
+      daysAvailable: lifecycleStatus.daysAvailable,
+      isSyncing: activeAnalytics || activeSitemaps || activeIndexing,
+      hasData: lifecycleStatus.hasData,
+      isComplete: lifecycleStatus.isComplete,
+      phase: syncStatus === 'error' ? 'error' : activeIndexing ? 'indexing' : activeAnalytics || activeSitemaps ? 'syncing' : 'complete',
+      totalRowsSynced: lifecycleStatus.daysSynced,
+      hasMinimumData: lifecycleStatus.hasData,
+      tablesProgress: [],
+      indexing: {
+        queued: 0,
+        processing: activeIndexing ? 1 : 0,
+        completed: lifecycleSite.indexing.progress.completed,
+        failed: lifecycleSite.indexing.progress.failed,
+        total: lifecycleSite.indexing.progress.total,
+        progress: lifecycleSite.indexing.progress.percent,
+      },
+      queryable: lifecycleSite.analytics.queryable,
+      sourceMode: lifecycleSite.analytics.sourceMode,
+      sitemapStatus: lifecycleSite.sitemaps.status,
+      indexingStatus: lifecycleSite.indexing.status,
+      hold: lifecycleSite.hold,
+    } satisfies GscSyncStatus
   })
+}
 
-  // Auto-poll during active sync. gscdump defines `site.lifecycle.progress`
-  // but does not emit it, so per-job progress has no realtime signal and the
-  // fast poll stays.
-  let _pollTimer: ReturnType<typeof setInterval> | null = null
+/** One mounted reader per Nuxt app, security identity, and Site. */
+interface StatusEntry { readers: number, store: ReturnType<typeof createStatusStore> }
+const stores = new WeakMap<object, Map<string, StatusEntry>>()
 
-  function startPolling(intervalMs: number = POLL_INTERVAL_SYNCING) {
-    stopPolling()
-    _pollTimer = setInterval(refresh, intervalMs)
-  }
+function createStatusStore(proFetch: ReturnType<typeof useProFetch>, siteId: string, invalidation: Ref<Record<string, number>>) {
+  const lifetime = effectScope(true)
+  let active = true
+  const store = lifetime.run(() => {
+    const syncData = ref<GscSyncStatus | null>(null)
+    const fetchStatus = ref<'idle' | 'pending' | 'success' | 'error'>('idle')
+    const error = ref<Error | null>(null)
+    const settled = ref(false)
+    const mounted = ref(0)
+    const visibility = useDocumentVisibility()
+    let pending: Promise<void> | undefined
+    let requiredRevision = 0
 
-  function stopPolling() {
-    if (_pollTimer) {
-      clearInterval(_pollTimer)
-      _pollTimer = null
+    const pollInterval = computed(() => {
+      const data = syncData.value
+      if (data?.hold === 'size_pending')
+        return POLL_INTERVAL_SLOW
+      if (data?.hold)
+        return 0
+      if (data?.isSyncing)
+        return POLL_INTERVAL_SYNCING
+      return data?.permissionLost ? POLL_INTERVAL_SLOW : 0
+    })
+    const timer = useTimeoutFn(() => {
+      void refresh()
+    }, pollInterval, { immediate: false })
+    function scheduleFallback() {
+      timer.stop()
+      if (active && mounted.value > 0 && visibility.value === 'visible' && pollInterval.value > 0)
+        timer.start()
     }
-  }
 
-  // Only fetch gscdump data on the client - raw $fetch to gscdump.com
-  // doesn't have user cookies during SSR, causing false AUTH errors
-  if (import.meta.client) {
-    watch(gscdumpSiteId, refresh, { immediate: true })
+    function refresh(): Promise<void> {
+      if (!active)
+        return Promise.resolve()
+      if (pending)
+        return pending
+      timer.stop()
+      fetchStatus.value = 'pending'
+      error.value = null
+      let revision = requiredRevision
+      pending = Promise.resolve().then(async () => {
+        do {
+          if (!active)
+            return
+          revision = requiredRevision
+          fetchStatus.value = 'pending'
+          error.value = null
+          const result = await readSyncStatus(proFetch, siteId)
+            .then(data => ({ _tag: 'Ok' as const, data }))
+            .catch((cause: unknown) => ({ _tag: 'Err' as const, cause }))
+          if (!active)
+            return
+          if (result._tag === 'Err') {
+            if (classifyGscError(result.cause).status === 'auth-missing')
+              syncData.value = null
+            error.value = result.cause instanceof Error ? result.cause : new Error(String(result.cause))
+            fetchStatus.value = 'error'
+          }
+          else {
+            syncData.value = result.data
+            fetchStatus.value = 'success'
+          }
+          // Empty and failed reads also settle. An active poll cannot reset this.
+          settled.value = true
+        } while (revision !== requiredRevision)
+      }).finally(() => {
+        pending = undefined
+        // The watcher can deliver an invalidation after the loop exits but
+        // before this promise releases ownership. Keep that required read.
+        if (active && revision !== requiredRevision)
+          return refresh()
+        scheduleFallback()
+      })
+      return pending
+    }
 
-    // Auto-manage polling based on phase / permission state
-    watch(() => [syncData.value?.phase, syncData.value?.permissionLost, syncData.value?.sitemapStatus, syncData.value?.indexingStatus, syncData.value?.hold] as const, ([phase, permissionLost, sitemapStatus, indexingStatus, hold]) => {
-      // A held Site does not import, so a fast poll would never see progress.
-      // Only a pending size measurement can clear on its own; check it slowly.
-      if (hold === 'size_pending')
-        startPolling(POLL_INTERVAL_SLOW)
-      else if (hold)
-        stopPolling()
-      else if (phase === 'preparing' || phase === 'syncing' || phase === 'indexing' || sitemapStatus === 'discovering' || sitemapStatus === 'syncing' || indexingStatus === 'discovering' || indexingStatus === 'checking' || indexingStatus === 'waiting_for_sitemaps')
-        startPolling(POLL_INTERVAL_SYNCING)
-      else if (permissionLost)
-        startPolling(POLL_INTERVAL_SLOW)
-      else
-        stopPolling()
+    watch(() => invalidation.value[siteId] ?? 0, () => {
+      if (mounted.value === 0 && fetchStatus.value === 'idle')
+        return
+      // A read started before this event cannot satisfy its invalidation.
+      // Several events during one read share a single serial follow-up.
+      requiredRevision++
+      void refresh()
+    })
+    watch(visibility, (value) => {
+      timer.stop()
+      if (value === 'visible' && mounted.value > 0)
+        void refresh()
     })
 
-    onUnmounted(stopPolling)
+    return {
+      syncData,
+      fetchStatus,
+      error,
+      settled,
+      refresh,
+      mount() {
+        mounted.value++
+        if (mounted.value === 1 && visibility.value === 'visible')
+          void refresh()
+      },
+      unmount() {
+        mounted.value--
+        if (mounted.value === 0)
+          timer.stop()
+      },
+      dispose() {
+        active = false
+        timer.stop()
+        lifetime.stop()
+      },
+    }
+  })!
+  return store
+}
+
+export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
+  const nuxtApp = useNuxtApp()
+  const proFetch = useProFetch()
+  const { site } = useProSiteInjection(siteId)
+  const identity = useGscQueryIdentity()
+  const invalidation = useGscInvalidationMap()
+  const gscdumpSiteId = computed(() => site.value?.gscdumpSiteId)
+  const scope = computed(() => identity.value._tag === 'Available' && gscdumpSiteId.value
+    ? { key: JSON.stringify([identity.value.scope, toValue(siteId), gscdumpSiteId.value]), siteId: gscdumpSiteId.value }
+    : null)
+  const appStores = stores.get(nuxtApp) ?? new Map<string, StatusEntry>()
+  stores.set(nuxtApp, appStores)
+  const bound = shallowRef<{ key: string, entry: StatusEntry } | null>(null)
+  let mounted = false
+  function release() {
+    const old = bound.value
+    bound.value = null
+    if (!old)
+      return
+    if (mounted)
+      old.entry.store.unmount()
+    old.entry.readers--
+    if (old.entry.readers === 0) {
+      old.entry.store.dispose()
+      appStores.delete(old.key)
+    }
   }
+  watch(scope, (next) => {
+    if (next?.key === bound.value?.key)
+      return
+    // Retire before checking visibility. Hidden account changes cannot reuse data.
+    release()
+    if (!next)
+      return
+    let entry = appStores.get(next.key)
+    if (!entry) {
+      entry = { readers: 0, store: createStatusStore(proFetch, next.siteId, invalidation) }
+      appStores.set(next.key, entry)
+    }
+    entry.readers++
+    bound.value = { key: next.key, entry }
+    if (mounted)
+      entry.store.mount()
+  }, { immediate: true, flush: 'sync' })
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      mounted = true
+      bound.value?.entry.store.mount()
+    })
+  }
+  if (getCurrentScope())
+    onScopeDispose(release)
+  const current = computed(() => bound.value?.key === scope.value?.key ? bound.value?.entry.store : undefined)
+  const syncData = computed(() => current.value?.syncData.value ?? null)
+  const fetchStatus = computed(() => current.value?.fetchStatus.value ?? 'idle')
+  const error = computed(() => current.value?.error.value ?? null)
+  const settled = computed(() => current.value?.settled.value ?? false)
+  const refresh = () => current.value?.refresh() ?? Promise.resolve()
 
   // Computed status helpers
   const data = computed(() => {
