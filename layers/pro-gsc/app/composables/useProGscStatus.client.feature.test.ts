@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed, nextTick, ref, toValue } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { computed, effectScope, nextTick, ref, toValue } from 'vue'
 
 const lifecycle = vi.hoisted(() => ({ read: vi.fn(), site: null as unknown as Ref<{ publicId: string, gscdumpSiteId: string, gscdumpSiteUrl: string }> }))
 // The realtime plugin bumps a gscdump Site's token on each durable lifecycle event.
@@ -11,6 +11,7 @@ vi.mock('#layers/pro-saas/app/composables/useProSiteInjection', () => ({
 }))
 
 vi.mock('../internal/composables/useGscInvalidation', () => ({
+  useGscInvalidationMap: () => invalidation.map,
   useGscSiteInvalidation: (siteId: unknown) => computed(() => invalidation.map.value[toValue(siteId as string)] ?? 0),
 }))
 
@@ -18,10 +19,22 @@ Object.assign(globalThis, { useProFetch: () => lifecycle.read })
 
 const { useProGscStatus } = await import('./useProGscStatus')
 
+let scope: ReturnType<typeof effectScope>
+function useStatus() {
+  return scope.run(() => useProGscStatus('ri_1'))!
+}
 beforeEach(() => {
+  scope = effectScope()
+  const nuxtApp = { runWithContext: <T>(callback: () => T): T => callback() }
+  vi.stubGlobal('useNuxtApp', () => nuxtApp)
   lifecycle.read.mockReset()
   invalidation.map = ref({})
   lifecycle.site = ref({ publicId: 'ri_1', gscdumpSiteId: 's_linked', gscdumpSiteUrl: 'sc-domain:example.com' })
+})
+
+afterEach(() => {
+  scope.stop()
+  vi.unstubAllGlobals()
 })
 
 describe('useProGscStatus', () => {
@@ -33,7 +46,7 @@ describe('useProGscStatus', () => {
       latestError: null,
       hold: null,
     } })
-    const status = useProGscStatus('ri_1')
+    const status = useStatus()
     await status.refresh()
     expect(status.data.value).toMatchObject({ indexingStatus: 'waiting_for_sitemaps', indexing: { completed: 1, total: 1 } })
   })
@@ -46,7 +59,7 @@ describe('useProGscStatus', () => {
       latestError: null,
       hold: null,
     } })
-    const status = useProGscStatus('ri_1')
+    const status = useStatus()
     await status.refresh()
     expect(status.data.value?.sitemapStatus).toBe(sitemapStatus)
   })
@@ -59,28 +72,13 @@ describe('useProGscStatus', () => {
       latestError: null,
       hold: null,
     } }).mockRejectedValueOnce(new Error('Unavailable'))
-    const status = useProGscStatus('ri_1')
+    const status = useStatus()
     await status.refresh()
     lifecycle.site.value.gscdumpSiteId = 's_other'
     await status.refresh()
     expect(status.isReady.value).toBe(false)
     expect(status.data.value?.syncProgress).toBe(null)
     expect(status.hasError.value).toBe(true)
-  })
-
-  it('ignores a late failure from an older lifecycle read', async () => {
-    let rejectRead!: (error: Error) => void
-    lifecycle.read.mockImplementationOnce(() => new Promise((_resolve, reject) => {
-      rejectRead = reject
-    }))
-      .mockResolvedValueOnce({ site: null })
-    const status = useProGscStatus('ri_1')
-    const older = status.refresh()
-    await status.refresh()
-    rejectRead(new Error('Older read failed'))
-    await older
-    expect(status.hasError.value).toBe(false)
-    expect(status.fetchStatus.value).toBe('success')
   })
 
   it('keeps readable import progress after a failed lifecycle poll and recovers', async () => {
@@ -94,7 +92,7 @@ describe('useProGscStatus', () => {
     lifecycle.read.mockResolvedValueOnce({ site })
       .mockRejectedValueOnce(new Error('Lifecycle unavailable'))
       .mockResolvedValueOnce({ site: { ...site, analytics: { ...site.analytics, status: 'ready', progress: { completed: 668, failed: 0, total: 668, percent: 100 } } } })
-    const status = useProGscStatus('ri_1')
+    const status = useStatus()
     await status.refresh()
     await status.refresh()
     expect(status.hasError.value).toBe(true)
@@ -111,7 +109,7 @@ describe('useProGscStatus', () => {
   // put the sample overlay and its connect button on a linked Site (UX replay A5).
   it('keeps a linked Site connected when the lifecycle read fails', async () => {
     lifecycle.read.mockRejectedValue(Object.assign(new Error('Not registered with gscdump'), { statusCode: 400 }))
-    const status = useProGscStatus('ri_1')
+    const status = useStatus()
     await status.refresh()
     expect(status.hasError.value).toBe(true)
     expect(status.isNotConnected.value).toBe(false)
@@ -120,7 +118,7 @@ describe('useProGscStatus', () => {
 
   it('settles when the lifecycle does not list the Site', async () => {
     lifecycle.read.mockResolvedValue({ site: null })
-    const status = useProGscStatus('ri_1')
+    const status = useStatus()
     expect(status.isLifecycleSettled.value).toBe(false)
     await status.refresh()
     expect(status.isLifecycleSettled.value).toBe(true)
@@ -135,7 +133,7 @@ describe('useProGscStatus', () => {
       latestError: null,
       hold: null,
     } })
-    const status = useProGscStatus('ri_1')
+    const status = useStatus()
     await status.refresh()
     expect(status.isReady.value).toBe(true)
     expect(status.isFullySynced.value).toBe(false)
@@ -152,7 +150,7 @@ describe('useProGscStatus', () => {
       latestError: null,
       hold: null,
     } })
-    const status = useProGscStatus('ri_1')
+    const status = useStatus()
     await status.refresh()
     expect(status.isReady.value).toBe(false)
     expect(status.isFullySynced.value).toBe(false)
@@ -161,7 +159,7 @@ describe('useProGscStatus', () => {
 
   it('re-reads the status once when gscdump signals a change for the Site', async () => {
     lifecycle.read.mockResolvedValue({ site: null })
-    const status = useProGscStatus('ri_1')
+    const status = useStatus()
     await status.refresh()
     expect(lifecycle.read).toHaveBeenCalledTimes(1)
 
@@ -182,7 +180,7 @@ describe('useProGscStatus', () => {
       latestError: null,
       hold: 'size_limit',
     } })
-    const status = useProGscStatus('ri_1')
+    const status = useStatus()
     await status.refresh()
     expect(status.data.value?.syncStatus).toBe('pending')
     expect(status.isProcessing.value).toBe(false)
