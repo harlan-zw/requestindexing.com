@@ -8,18 +8,20 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscdump', () => ({
   useProGscdump: () => ({ queryAnalyticsReportDetail: engine.daily, getSiteIndexing: engine.indexing }),
 }))
 const sites = ref<SiteFleetRow[]>([])
+const rosterStatus = ref<'success' | 'pending' | 'error'>('success')
+const rosterError = ref<Error | null>(null)
 const invalidation = ref<Record<string, number>>({})
 vi.mock('#layers/pro-gsc/app/internal/composables/useGscInvalidation', () => ({ useGscInvalidationMap: () => invalidation }))
 vi.mock('~~/layers/core/app/composables/fetch', () => ({ fetchSites: async () => ({
   data: computed(() => ({ sites: sites.value })),
-  status: ref('success'),
-  error: ref(null),
+  status: rosterStatus,
+  error: rosterError,
   refresh: vi.fn(),
 }) }))
 vi.mock('~~/layers/core/app/composables/events', () => ({ useJobListener: () => {} }))
 vi.mock('#layers/pro-saas/app/composables/useNoSearchConsoleProperty', () => ({ useNoSearchConsoleProperty: () => ref(false) }))
 vi.mock('#layers/pro-gsc/app/components/overview/ProLiveJobProgress.vue', () => ({ default: defineComponent(() => () => null) }))
-vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewOnboardingCard.vue', () => ({ default: defineComponent(() => () => null) }))
+vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewOnboardingCard.vue', () => ({ default: defineComponent(() => () => h('aside', { 'data-onboarding': true })) }))
 vi.mock('#layers/pro-saas/app/components/pro/ProNoPropertyNotice.vue', () => ({ default: defineComponent(() => () => null) }))
 vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewSitesColumn.vue', () => ({ default: defineComponent({
   props: ['entries'],
@@ -63,7 +65,8 @@ async function mount() {
   const host = document.createElement('div')
   document.body.appendChild(host)
   const app = createApp({ render: () => h(Suspense, null, { default: () => h(Dashboard) }) })
-  for (const name of ['UiButton', 'UiAlert', 'UiLoadingState', 'UiCard'])
+  app.component('UiAlert', defineComponent({ props: ['title'], setup: (props, { slots }) => () => h('div', { role: 'alert' }, [props.title, slots.default?.(), slots.action?.()]) }))
+  for (const name of ['UiButton', 'UiLoadingState', 'UiCard'])
     app.component(name, defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) }))
   app.mount(host)
   apps.push(app)
@@ -81,6 +84,8 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-10-26T12:00:00Z'))
   sites.value = [site('a'), site('b')]
+  rosterStatus.value = 'success'
+  rosterError.value = null
   invalidation.value = {}
   engine.daily.mockReset()
   engine.indexing.mockReset()
@@ -92,6 +97,29 @@ afterEach(() => {
 })
 
 describe('dashboard reads publish independently', () => {
+  it('keeps existing Sites and totals beside a failed roster refresh', async () => {
+    engine.daily.mockResolvedValue(daily(42))
+    engine.indexing.mockResolvedValue(indexing)
+    const host = await mount()
+    rosterStatus.value = 'error'
+    rosterError.value = new Error('Failed to fetch')
+    await flush()
+    expect(host.querySelectorAll('[data-site]')).toHaveLength(2)
+    expect(host.querySelector('section')?.textContent).toContain('84')
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Your Sites could not be loaded')
+  })
+
+  it('shows the error without empty-state onboarding when the first roster read fails', async () => {
+    sites.value = []
+    rosterStatus.value = 'error'
+    rosterError.value = new Error('Failed to fetch')
+    const host = await mount()
+    expect(host.querySelectorAll('[data-site]')).toHaveLength(0)
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Your Sites could not be loaded')
+    expect(host.querySelector('[data-onboarding]')).toBeNull()
+    expect(engine.daily).not.toHaveBeenCalled()
+  })
+
   it('shows each Site early, then complete search totals while indexing waits', async () => {
     const a = deferred<ReturnType<typeof daily>>()
     const b = deferred<ReturnType<typeof daily>>()
