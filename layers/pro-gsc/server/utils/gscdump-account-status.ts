@@ -8,16 +8,20 @@ import { RENDER_PATH_TIMEOUT_MS, useGscdumpClient } from './gscdump-client'
 const CACHE_READ_BUDGET_MS = 250
 
 type CacheOperation = { _tag: 'Done' | 'Retired' } | { _tag: 'Failed', cause: unknown }
+type AccountStatusRead
+  = | { _tag: 'Computing', revision: symbol, promise: Promise<AccountStatus | null> }
+    | { _tag: 'Persisting', revision: symbol, promise: Promise<AccountStatus | null>, entry: CachedAccountStatus }
 interface AccountCacheOwner {
   revision: symbol
   readers: number
   mutation: symbol | null
-  reading: { revision: symbol, promise: Promise<AccountStatus | null> } | null
+  reading: AccountStatusRead | null
   persisting: Promise<CacheOperation> | null
 }
 
 // Coordinate only active reads and writes in this isolate. KV retains its
-// existing cross-isolate consistency. No settled result lives in this map.
+// existing cross-isolate consistency. Results remain only while their write
+// is pending, within the original freshness. No expiry timer is scheduled.
 const owners = new Map<string, AccountCacheOwner>()
 
 function cacheKey(gscdumpUserId: string): string {
@@ -118,8 +122,8 @@ async function readCache(key: string) {
   return Promise.race([read, deadline]).finally(() => clearTimeout(timer))
 }
 
-async function readStatus(event: H3Event, gscdumpUserId: string, key: string, owner: AccountCacheOwner, revision: symbol): Promise<AccountStatus | null> {
-  const cached = owner.mutation ? { _tag: 'Miss' as const } : await readCache(key)
+async function readStatus(event: H3Event, gscdumpUserId: string, key: string, owner: AccountCacheOwner, revision: symbol, cacheMode: 'read' | 'skip'): Promise<AccountStatus | null> {
+  const cached = owner.mutation || cacheMode === 'skip' ? { _tag: 'Miss' as const } : await readCache(key)
   if (owner.revision !== revision)
     return null
   if (cached._tag === 'Hit')
@@ -133,9 +137,19 @@ async function readStatus(event: H3Event, gscdumpUserId: string, key: string, ow
     return null
 
   const entry: CachedAccountStatus = status ? { _tag: 'Read', status, readAt: Date.now() } : { _tag: 'Failed', readAt: Date.now() }
+  const active = owner.reading
+  const retained: AccountStatusRead | null = active?._tag === 'Computing' && active.revision === revision
+    ? { _tag: 'Persisting', revision, promise: active.promise, entry }
+    : null
+  if (retained)
+    owner.reading = retained
   const writing = enqueue(key, owner, revision, () => useStorage('cache').setItem(key, entry)).then((result) => {
     if (result._tag === 'Failed')
       logger.error('[gscdump account status] optional cache write unavailable:', result.cause)
+  }).finally(() => {
+    if (owner.reading === retained)
+      owner.reading = null
+    evict(key, owner)
   })
   event.waitUntil(writing)
   return status
@@ -149,16 +163,28 @@ async function readStatus(event: H3Event, gscdumpUserId: string, key: string, ow
 export function readGscdumpAccountStatus(gscdumpUserId: string, event: H3Event): Promise<AccountStatus | null> {
   const key = cacheKey(gscdumpUserId)
   const owner = retain(key)
-  if (owner.reading?.revision === owner.revision) {
-    release(key, owner)
-    return owner.reading.promise
+  const active = owner.reading
+  let cacheMode: 'read' | 'skip' = 'read'
+  if (active?.revision === owner.revision) {
+    if (active._tag === 'Computing') {
+      release(key, owner)
+      return active.promise
+    }
+    const current = lookupCachedAccountStatus(active.entry, Date.now())
+    if (current._tag === 'Hit') {
+      release(key, owner)
+      return Promise.resolve(current.status)
+    }
+    // An expired pending write cannot make the older KV answer current.
+    owner.reading = null
+    cacheMode = 'skip'
   }
   const revision = owner.revision
-  const promise = readStatus(event, gscdumpUserId, key, owner, revision).finally(() => {
-    if (owner.reading?.promise === promise)
+  const promise = readStatus(event, gscdumpUserId, key, owner, revision, cacheMode).finally(() => {
+    if (owner.reading?._tag === 'Computing' && owner.reading.promise === promise)
       owner.reading = null
     release(key, owner)
   })
-  owner.reading = { revision, promise }
+  owner.reading = { _tag: 'Computing', revision, promise }
   return promise
 }

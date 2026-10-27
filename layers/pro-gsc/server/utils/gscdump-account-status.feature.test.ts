@@ -88,6 +88,80 @@ it('returns fresh status while the runtime retains a slow cache write', async ()
   await read
   expect(values.get(`gscdump-account-status:${id}`)).toMatchObject({ _tag: 'Read', status: 'ready' })
 })
+it('keeps fresh status ahead of an older KV answer while its write is pending', async () => {
+  values.set(`gscdump-account-status:${id}`, { _tag: 'Read', status: 'scope_missing', readAt: Date.now() })
+  const cached = held<unknown>()
+  get.mockReturnValueOnce(cached.promise)
+  releases.push(() => cached.finish(null))
+  const written = held<void>()
+  put.mockImplementationOnce(async (key: string, value: unknown) => {
+    await written.promise
+    values.set(key, value)
+  })
+  releases.push(() => written.finish())
+  const fresh = readGscdumpAccountStatus(id, event)
+  await vi.advanceTimersByTimeAsync(250)
+  expect(await fresh).toBe('ready')
+  expect(await readGscdumpAccountStatus(id, event)).toBe('ready')
+  expect(upstream).toHaveBeenCalledOnce()
+  expect(get).toHaveBeenCalledOnce()
+  expect(put).toHaveBeenCalledOnce()
+  expect(vi.getTimerCount()).toBe(0)
+})
+it.each([['ready', 600000], [null, 60000]] as const)('reuses pending persistence only within the original freshness: %s', async (status, maxAge) => {
+  const written = held<void>()
+  put.mockImplementationOnce(async (key: string, value: unknown) => {
+    await written.promise
+    values.set(key, value)
+  })
+  releases.push(() => written.finish())
+  if (status === null)
+    upstream.mockRejectedValueOnce(new Error('Synthetic outage'))
+  expect(await readGscdumpAccountStatus(id, event)).toBe(status)
+  await vi.advanceTimersByTimeAsync(maxAge)
+  expect(await readGscdumpAccountStatus(id, event)).toBe(status)
+  expect(upstream).toHaveBeenCalledOnce()
+  await vi.advanceTimersByTimeAsync(1)
+  upstream.mockResolvedValueOnce(ready('scope_missing'))
+  expect(await readGscdumpAccountStatus(id, event)).toBe('scope_missing')
+  expect(upstream).toHaveBeenCalledTimes(2)
+})
+it('does not clear the replacement result when an older write completes', async () => {
+  const firstWrite = held<void>()
+  const replacementWrite = held<void>()
+  put.mockImplementationOnce(async (key: string, value: unknown) => {
+    await firstWrite.promise
+    values.set(key, value)
+  }).mockImplementationOnce(async (key: string, value: unknown) => {
+    await replacementWrite.promise
+    values.set(key, value)
+  })
+  releases.push(() => firstWrite.finish(), () => replacementWrite.finish())
+  upstream.mockRejectedValueOnce(new Error('Synthetic outage'))
+  expect(await readGscdumpAccountStatus(id, event)).toBeNull()
+  await vi.advanceTimersByTimeAsync(60001)
+  upstream.mockResolvedValueOnce(ready('scope_missing'))
+  expect(await readGscdumpAccountStatus(id, event)).toBe('scope_missing')
+  firstWrite.finish()
+  await settle()
+  expect(await readGscdumpAccountStatus(id, event)).toBe('scope_missing')
+  expect(upstream).toHaveBeenCalledTimes(2)
+  expect(put).toHaveBeenCalledTimes(2)
+})
+it('removes the retained result when persistence finishes', async () => {
+  const written = held<void>()
+  put.mockImplementationOnce(async (key: string, value: unknown) => {
+    await written.promise
+    values.set(key, value)
+  })
+  releases.push(() => written.finish())
+  expect(await readGscdumpAccountStatus(id, event)).toBe('ready')
+  written.finish()
+  await Promise.all(background)
+  values.set(`gscdump-account-status:${id}`, { _tag: 'Read', status: 'scope_missing', readAt: Date.now() })
+  expect(await readGscdumpAccountStatus(id, event)).toBe('scope_missing')
+  expect(get).toHaveBeenCalledTimes(2)
+})
 it('joins concurrent same-account reads without sharing other accounts', async () => {
   const response = held<ReturnType<typeof ready>>()
   upstream.mockReturnValueOnce(response.promise)
