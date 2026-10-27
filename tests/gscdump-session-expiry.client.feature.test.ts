@@ -1,7 +1,8 @@
 // Actual auth/realtime plugins and HTTP/realtime SDKs; fake only browser IO.
 import { useEventListener, useIntervalFn } from '@vueuse/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { effectScope, nextTick, onScopeDispose, reactive, ref, watch } from 'vue'
+import { effectScope, nextTick, onScopeDispose, reactive, ref, toValue, watch } from 'vue'
+import { useGscQuery } from '../layers/pro-gsc/app/composables/useGscQuery'
 
 vi.mock('../layers/pro-gsc/app/composables/useGscdumpIntegration', () => ({
   GSCDUMP_INTEGRATION_KEY: 'app:gscdump-integration',
@@ -102,6 +103,7 @@ beforeEach(() => {
   vi.stubGlobal('refreshNuxtData', resync)
   vi.stubGlobal('defineNuxtPlugin', (plugin: unknown) => plugin)
   vi.stubGlobal('watch', watch)
+  vi.stubGlobal('toValue', toValue)
   vi.stubGlobal('onScopeDispose', onScopeDispose)
   vi.stubGlobal('useEventListener', useEventListener)
   vi.stubGlobal('useIntervalFn', useIntervalFn)
@@ -114,8 +116,8 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-async function mount() {
-  const integration = ref({ connected: true, browserAnalyzerEnabled: true })
+async function mount(options: { cold?: boolean, waitForTicket?: boolean } = {}) {
+  const integration = ref<{ connected: boolean, browserAnalyzerEnabled: boolean } | null>(options.cold ? null : { connected: true, browserAnalyzerEnabled: true })
   const states = new Map()
   const route = reactive({ path: '/pro/dashboard/sites/site-synthetic/indexing', fullPath: '/pro/dashboard/sites/site-synthetic/indexing' })
   const app: Record<string, unknown> = {}
@@ -127,7 +129,10 @@ async function mount() {
       states.set(key, ref(init()))
     return states.get(key)
   })
-  vi.stubGlobal('useUserSession', () => ({ user: ref({ id: 'synthetic-user' }), clear: clearSession }))
+  const user = ref({ id: 'synthetic-user' })
+  const session = ref({ user: user.value })
+  const loggedIn = ref(true)
+  vi.stubGlobal('useUserSession', () => ({ user, session, loggedIn, clear: clearSession }))
   const scope = effectScope()
   scopes.push(scope)
   const auth = (await import('../layers/pro-gsc/app/plugins/gscdump-auth.client')).default
@@ -136,7 +141,8 @@ async function mount() {
   for (const [key, value] of Object.entries(result?.provide ?? {})) app[`$${key}`] = value
   scope.run(() => (realtime as unknown as { setup: () => void }).setup())
   // Dynamic import needs the host event loop, not just fake timer advancement.
-  await vi.waitFor(() => expect(ticketFetch).toHaveBeenCalled(), { timeout: 5_000 })
+  if (options.waitForTicket !== false)
+    await vi.waitFor(() => expect(ticketFetch).toHaveBeenCalled(), { timeout: 5_000 })
   await flush()
   return { integration, states, scope }
 }
@@ -148,6 +154,35 @@ function ticketError(status: number, code: string, retryable: boolean) {
 }
 
 describe('host session and realtime ticket recovery', () => {
+  it('reads the current chart before cold metadata and starts one resumed stream after it resolves', async () => {
+    let release!: (value: unknown) => void
+    authFetch.mockReturnValueOnce(new Promise((resolve) => {
+      release = resolve
+    }))
+    const { integration, scope } = await mount({ cold: true, waitForTicket: false })
+    const currentRead = vi.fn(async () => ({ rows: [{ clicks: 9 }] }))
+    const current = scope.run(() => useGscQuery({
+      site: 's_synthetic',
+      params: { type: 'data-detail' },
+      identityScope: 'sealed-synthetic-user',
+      serverFallback: currentRead,
+    }))!
+    await vi.advanceTimersByTimeAsync(6000)
+    await flush()
+    expect(current.data.value).toEqual({ rows: [{ clicks: 9 }] })
+    expect(currentRead).toHaveBeenCalledOnce()
+    expect(authFetch).toHaveBeenCalledOnce()
+    expect(ticketFetch).not.toHaveBeenCalled()
+    expect(integration.value).toBeNull()
+    release({ connected: true, browserAnalyzerEnabled: false })
+    await vi.waitFor(() => expect(ticketFetch).toHaveBeenCalledOnce())
+    await flush()
+    expect(sockets).toHaveLength(1)
+    expect(resync).not.toHaveBeenCalled()
+    expect(currentRead).toHaveBeenCalledOnce()
+    expect(authFetch).toHaveBeenCalledOnce()
+  })
+
   it('invalidates authoritative host401, stops realtime, and uses the login flow once', async () => {
     const { integration } = await mount()
     authFetch.mockRejectedValue(host401())
@@ -205,7 +240,7 @@ describe('host session and realtime ticket recovery', () => {
     await vi.advanceTimersByTimeAsync(10_000)
     expect(ticketFetch).toHaveBeenCalledOnce()
     expect(authFetch).toHaveBeenCalledTimes(status === 401 ? 1 : 0)
-    expect(integration.value.connected).toBe(true)
+    expect(integration.value?.connected).toBe(true)
     expect(clearSession).not.toHaveBeenCalled()
     expect(navigate).not.toHaveBeenCalled()
     expect(warning).toHaveBeenCalledOnce()
@@ -221,7 +256,7 @@ describe('host session and realtime ticket recovery', () => {
     await flush()
     expect(ticketFetch).toHaveBeenCalledTimes(2)
     expect(sockets).toHaveLength(1)
-    expect(integration.value.connected).toBe(true)
+    expect(integration.value?.connected).toBe(true)
     expect(navigate).not.toHaveBeenCalled()
   })
 
@@ -230,10 +265,10 @@ describe('host session and realtime ticket recovery', () => {
     authFetch.mockRejectedValueOnce(status === 'network' ? new TypeError('Synthetic network interruption') : Object.assign(new Error('Synthetic probe failure'), { status }))
     window.dispatchEvent(new Event('focus'))
     await flush()
-    expect(integration.value.connected).toBe(true)
+    expect(integration.value?.connected).toBe(true)
     window.dispatchEvent(new Event('focus'))
     await flush()
-    expect(integration.value.connected).toBe(true)
+    expect(integration.value?.connected).toBe(true)
     expect(sockets).toHaveLength(1)
     expect(sockets[0]!.closes).toHaveLength(0)
     expect(clearSession).not.toHaveBeenCalled()
@@ -255,7 +290,7 @@ describe('host session and realtime ticket recovery', () => {
       oldReject(host401())
     else oldResolve({ connected: false, browserAnalyzerEnabled: true })
     await flush()
-    expect(integration.value.connected).toBe(true)
+    expect(integration.value?.connected).toBe(true)
     expect(states.get('app:gscdump-integration:status').value).toBe('success')
     expect(states.get('app:gscdump-integration:error').value).toBeNull()
     expect(sockets[0]!.closes).toHaveLength(0)
@@ -292,7 +327,7 @@ describe('host session and realtime ticket recovery', () => {
       reject(host401())
     else resolve({ connected: false, browserAnalyzerEnabled: true })
     await flush()
-    expect(integration.value.connected).toBe(true)
+    expect(integration.value?.connected).toBe(true)
     expect(clearSession).not.toHaveBeenCalled()
     expect(navigate).not.toHaveBeenCalled()
   })
