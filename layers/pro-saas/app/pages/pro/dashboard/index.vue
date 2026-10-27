@@ -94,7 +94,7 @@ useJobListener('sites/sync-finished', async ({ siteId }) => {
 
 <template>
   <div class="flex flex-col gap-6 tabular-nums">
-    <UiAlert v-if="error && !sites.length" status="error" icon="caution" title="Your Sites could not be loaded">
+    <UiAlert v-if="error" status="error" icon="caution" title="Your Sites could not be loaded">
       <template #action>
         <UiButton size="xs" purpose="secondary" @click="refresh()">
           Retry
@@ -102,17 +102,17 @@ useJobListener('sites/sync-finished', async ({ siteId }) => {
       </template>
     </UiAlert>
 
-    <div v-else-if="status === 'pending' && !data" aria-busy="true" aria-label="Loading Sites">
+    <div v-if="status === 'pending' && !data" aria-busy="true" aria-label="Loading Sites">
       <UiLoadingState :rows="3" />
     </div>
 
-    <UiCard v-else-if="!sites.length && noProperty">
+    <UiCard v-else-if="!error && !sites.length && noProperty">
       <ProNoPropertyNotice heading-tag="h2" :email="session?.gscEmail ?? null" gsc-return-to="/pro/dashboard" />
     </UiCard>
 
-    <ProOverviewOnboardingCard v-else-if="!sites.length" step="connect-site" />
+    <ProOverviewOnboardingCard v-else-if="!error && !sites.length" step="connect-site" />
 
-    <template v-else>
+    <template v-else-if="sites.length">
       <ProOverviewOnboardingCard v-if="gscNotConnected" step="connect-search-console" />
       <ProLiveJobProgress :sites="sites" />
       <ProOverviewSitesColumn :entries="entries" />

@@ -20,6 +20,8 @@ function rawMarkdown() {
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url))
 const nuxtAsyncData = createRequire(createRequire(import.meta.url).resolve('nuxt/package.json')).resolve('./dist/app/composables/asyncData.js')
+const nuxtState = createRequire(createRequire(import.meta.url).resolve('nuxt/package.json')).resolve('./dist/app/composables/state.js')
+const nuxtOfetch = createRequire(createRequire(import.meta.url).resolve('nuxt/package.json')).resolve('ofetch')
 
 function nativeRosterRuntime() {
   return {
@@ -58,6 +60,8 @@ function alias() {
     { find: '#imports', replacement: fileURLToPath(new URL('./tests/setup/nuxt-imports.ts', import.meta.url)) },
     { find: '#components', replacement: fileURLToPath(new URL('./tests/setup/nuxt-components.ts', import.meta.url)) },
     { find: '#test/nuxt-async-data', replacement: nuxtAsyncData },
+    { find: '#test/nuxt-state', replacement: nuxtState },
+    { find: '#test/nuxt-ofetch', replacement: nuxtOfetch },
     { find: '#build/nuxt.config.mjs', replacement: fileURLToPath(new URL('./tests/setup/nuxt-build-config.ts', import.meta.url)) },
     { find: /^#layers\/(.*)$/, replacement: `${ROOT}layers/$1` },
     { find: /^#emails\/(.*)$/, replacement: `${ROOT}layers/pro-saas/server/emails/$1.md` },
