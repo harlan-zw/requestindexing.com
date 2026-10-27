@@ -4,7 +4,7 @@ import { indexingUrlsQueryKey } from '#layers/pro-gsc/app/composables/useProGscd
 import { firstPageIndexingUrlsParams } from '#layers/pro-indexing/app/utils/indexing-urls-first-page'
 
 /** How long the server render waits for the first page before it goes without. */
-const FIRST_PAGE_TIMEOUT_MS = 8_000
+const FIRST_PAGE_TIMEOUT_MS = 800
 
 /**
  * Seed the URLs table's clean first page into the SSR payload.

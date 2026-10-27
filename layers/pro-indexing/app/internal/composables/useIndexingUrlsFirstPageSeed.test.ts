@@ -24,7 +24,7 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-it('renders without the first page when the read does not answer in 8 seconds', async () => {
+it('releases a cold first-page seed at 800 ms while its upstream read remains pending', async () => {
   vi.useFakeTimers()
   upstream = () => new Promise(() => {})
   let settled = false
@@ -32,7 +32,9 @@ it('renders without the first page when the read does not answer in 8 seconds', 
     settled = true
   })
 
-  await vi.advanceTimersByTimeAsync(8_000)
+  await vi.advanceTimersByTimeAsync(799)
+  expect(settled).toBe(false)
+  await vi.advanceTimersByTimeAsync(1)
   expect(settled).toBe(true)
   expect(payload.data).toEqual({})
 })
