@@ -174,6 +174,15 @@ async function retryOverview() {
 
 const primarySitemap = computed(() => scopedSitemaps.value[0] ?? null)
 const primarySitemapUrl = computed(() => primarySitemap.value?.path)
+const livenessReadySite = ref('')
+const livenessReady = computed(() => !!gscdumpSiteId.value && (
+  livenessReadySite.value === siteId.value
+  || sitemapsStatus.value === 'success' || sitemapsStatus.value === 'error'
+))
+watch(livenessReady, (ready) => {
+  if (ready)
+    livenessReadySite.value = siteId.value
+}, { immediate: true })
 
 function parseSitemapLiveness(value: unknown): SitemapLiveness | null {
   const parsed = sitemapLivenessSchema.safeParse(value)
@@ -183,14 +192,14 @@ function parseSitemapLiveness(value: unknown): SitemapLiveness | null {
 // The live probe runs client-side only: it costs up to 15s on a cold cache and
 // the verdict below reads fine without it.
 const { data: rawLivenessData, error: livenessError } = useAsyncData<unknown>(
-  computed(() => `indexing-overview:sitemap-liveness:${siteId.value}:${primarySitemapUrl.value ?? ''}`),
+  computed(() => livenessReady.value ? `sitemap-liveness:${siteId.value}:${primarySitemapUrl.value ?? ''}` : `sitemap-liveness:${siteId.value}:waiting`),
   async () => {
-    if (!gscdumpSiteId.value)
+    if (!livenessReady.value)
       return null
     const base = `/api/pro/sites/${siteId.value}/sitemap-liveness`
     return proFetch(primarySitemapUrl.value ? withQuery(base, { sitemap: primarySitemapUrl.value }) : base)
   },
-  { server: false, lazy: true, watch: [gscdumpSiteId, primarySitemapUrl] },
+  { server: false, lazy: true, dedupe: 'defer' },
 )
 const livenessData = computed(() => parseSitemapLiveness(rawLivenessData.value))
 
