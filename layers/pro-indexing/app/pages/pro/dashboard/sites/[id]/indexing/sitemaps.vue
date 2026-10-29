@@ -174,20 +174,30 @@ function parseSitemapLiveness(value: unknown): SitemapLiveness | null {
   return parsed.success ? parsed.data : null
 }
 
+const livenessReadySite = ref('')
+const livenessReady = computed(() => !!gscdumpSiteId.value && (
+  livenessReadySite.value === siteId.value
+  || sitemapsStatus.value === 'success' || sitemapsStatus.value === 'error'
+))
+watch(livenessReady, (ready) => {
+  if (ready)
+    livenessReadySite.value = siteId.value
+}, { immediate: true })
+
 const {
   data: rawLivenessData,
   error: livenessError,
   status: livenessStatus,
   refresh: refreshLiveness,
 } = useAsyncData<unknown>(
-  computed(() => `indexing-sitemaps:liveness:${siteId.value}:${selectedSitemapPath.value}`),
+  computed(() => livenessReady.value ? `sitemap-liveness:${siteId.value}:${selectedSitemapPath.value}` : `sitemap-liveness:${siteId.value}:waiting`),
   async () => {
-    if (!gscdumpSiteId.value || !selectedSitemap.value)
+    if (!livenessReady.value || !selectedSitemap.value)
       return null
     const base = `/api/pro/sites/${siteId.value}/sitemap-liveness`
     return proFetch(selectedSitemap.value ? withQuery(base, { sitemap: selectedSitemap.value.path }) : base)
   },
-  { server: false, lazy: true, watch: [gscdumpSiteId, selectedSitemapPath] },
+  { server: false, lazy: true, dedupe: 'defer' },
 )
 
 const livenessData = computed(() => parseSitemapLiveness(rawLivenessData.value))
