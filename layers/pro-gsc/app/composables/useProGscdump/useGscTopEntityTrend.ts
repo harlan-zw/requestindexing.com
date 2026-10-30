@@ -174,18 +174,23 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
   }
 
   if (import.meta.client) {
+    // Parent renders can replace range and facet objects without changing
+    // the request. Keep the answered trend for equal request values.
     watch(
       [
         () => toValue(opts.gscdumpSiteId),
         () => toValue(opts.metric),
-        () => toValue(opts.range),
+        () => {
+          const range = toValue(opts.range)
+          return `${range?.start}|${range?.end}`
+        },
         () => opts.dimension,
         () => toValue(opts.topN),
         filters.searchType,
-        () => toValue(opts.facets),
+        () => JSON.stringify(toValue(opts.facets) ?? []),
       ],
       refetch,
-      { immediate: true, deep: true },
+      { immediate: true },
     )
   }
 

@@ -35,6 +35,18 @@ function nativeRosterRuntime() {
   }
 }
 
+function hostedTrendRuntime() {
+  return {
+    name: 'hosted-trend-runtime',
+    enforce: 'post' as const,
+    transform(code: string, id: string) {
+      if (!id.endsWith('/useProGscdump/useGscTopEntityTrend.ts'))
+        return
+      return { code: code.replaceAll('import.meta.client', 'true').replaceAll('import.meta.server', 'false'), map: null }
+    },
+  }
+}
+
 // nuxtseo.com discovers its committed workflows by suffix rather than by
 // directory, so a test sits next to what it covers. Same three suffixes here:
 //
@@ -101,7 +113,7 @@ export default defineConfig({
         resolve: { alias: alias() },
       }),
       defineProject({
-        plugins: [vue(), nativeRosterRuntime()],
+        plugins: [vue(), nativeRosterRuntime(), hostedTrendRuntime()],
         test: {
           name: 'client',
           environment: 'happy-dom',
