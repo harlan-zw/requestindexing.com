@@ -49,7 +49,7 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
   const metric = computed(() => toValue(opts.metric) ?? 'clicks')
   const searchType = computed(() => toValue(opts.searchType) ?? filters.searchType.value)
   const error = ref<Error | null>(null)
-  let cache = { scope: '', values: new Map<string, number[] | null>(), keys: [] as readonly string[], batch: null as Promise<BatchOutcome> | null, reads: new Map<string, Promise<BatchOutcome>>() }
+  let cache = { scope: '', values: new Map<string, number[] | null>(), keys: [] as readonly string[], batch: null as Promise<BatchOutcome> | null, reads: new Map<string, Promise<BatchOutcome>>(), attempted: new Set<string>() }
 
   const _keys = computed(() => {
     const seen = new Set<string>()
@@ -93,7 +93,7 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
       error.value = null
       const nextScope = JSON.stringify([siteId, range, opts.dimension, selectedMetric, selectedSearchType, facets])
       if (nextScope !== cache.scope) {
-        cache = { scope: nextScope, values: new Map(), keys, batch: null, reads: new Map() }
+        cache = { scope: nextScope, values: new Map(), keys, batch: null, reads: new Map(), attempted: new Set<string>() }
         map.value = new Map()
       }
       const owner = cache
@@ -115,16 +115,29 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
         const batch = (owner.batch ?? Promise.resolve<BatchOutcome>({ _tag: 'Ok' })).then(async (): Promise<BatchOutcome> => {
           if (stopped || owner !== cache)
             return { _tag: 'Ok' }
-          const unresolved = missing.filter(key => owner.keys.includes(key) && !cached.has(key))
+          const unresolved = owner.keys.filter(key => !cached.has(key) && !owner.attempted.has(key))
           // Hidden keys were never attempted. Release their reservations so a
           // later visible demand can schedule them during this same queue.
           for (const key of missing) {
             if (!owner.keys.includes(key) && owner.reads.get(key) === batch)
               owner.reads.delete(key)
           }
-          if (!unresolved.length)
+          if (!unresolved.length) {
+            // Earlier work can absorb this reservation. Forward its outcome
+            // to readers that joined before the grouped batch started.
+            const absorbed = [...new Set(missing.flatMap(key => owner.reads.has(key) && owner.reads.get(key) !== batch ? [owner.reads.get(key)!] : []))]
+            for (const read of absorbed) {
+              const outcome = await read
+              if (outcome._tag === 'Err')
+                return outcome
+            }
             return { _tag: 'Ok' }
+          }
           attempted = unresolved
+          for (const key of unresolved) {
+            owner.attempted.add(key)
+            owner.reads.set(key, batch)
+          }
           const series = await readSeries(siteId, range, unresolved, selectedMetric, selectedSearchType, facets)
           if (stopped || owner !== cache)
             return { _tag: 'Ok' }
@@ -135,6 +148,7 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
           if (owner.batch === batch) {
             owner.batch = null
             owner.reads.clear()
+            owner.attempted.clear()
           }
         })
         owner.batch = batch
