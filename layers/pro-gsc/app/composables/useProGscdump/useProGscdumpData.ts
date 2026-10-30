@@ -35,7 +35,8 @@ export function useProGscdumpData(
     site: _siteId,
     params: computed(() => ({ type: 'data-query' as const, searchType: _input.value.searchType, request: dataScope.value })),
     enabled: computed(() => !!_siteId.value),
-    watchSources: [useGscSiteInvalidation(_siteId), _input],
+    // Row growth changes the SDK body while retaining this query's data scope.
+    watchSources: [useGscSiteInvalidation(_siteId), computed(() => _input.value.rowLimit)],
     serverFallback: async id => gscdump.queryAnalyticsReport({
       params: { siteId: id },
       body: breakdownRequest(_input.value),

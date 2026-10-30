@@ -1,7 +1,6 @@
 import type { AnalysisParams } from '@gscdump/engine/analysis-types'
 import type { ComputedRef, MaybeRefOrGetter, Ref, WatchSource } from 'vue'
 import { classifyGscError } from '@gscdump/sdk/gsc-error'
-import { defaultStringifyOperations, stringify } from 'devalue'
 import { computed, onScopeDispose, ref, shallowRef, toValue, watch } from 'vue'
 import { useGscQueryIdentity } from './useGscQueryIdentity'
 
@@ -44,6 +43,7 @@ export interface UseGscQueryOptions<T> {
   /** The consumer-owned hosted operation. No legacy default endpoint exists. */
   serverFallback: (siteId: string, params: AnalysisParams) => Promise<T>
   engine?: GscQueryEngine
+  /** Native deep Vue sources. Each change invalidates the current read. */
   watchSources?: WatchSource[]
   extractMeta?: (out: T) => Record<string, unknown> | null | undefined
   enabled?: MaybeRefOrGetter<boolean>
@@ -102,12 +102,22 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
   const meta = ref<GscQueryMeta>({ raw: null })
   const pending = computed(() => status.value === 'pending')
   let generation = 0
+  let disposed = false
+  const invalidationRevision = ref(0)
   let dataScope: string | undefined
   const paramsKey = computed(() => JSON.stringify(toValue(options.params), (_key, value) => {
     if (value && typeof value === 'object' && !Array.isArray(value))
       return Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]]))
     return value
   }))
+  // Parent renders can rebuild the same request object. Watch its values so
+  // equal wire inputs retain their pending read and the rows it already answered.
+  const requestKey = computed(() => JSON.stringify([
+    identity.value.scope,
+    toValue(options.site),
+    paramsKey.value,
+    options.enabled === undefined || toValue(options.enabled),
+  ]))
 
   function captureMeta(output: T): void {
     const raw = options.extractMeta?.(output)
@@ -117,7 +127,12 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
   }
 
   async function runQuery(): Promise<void> {
+    if (disposed)
+      return
     const currentGeneration = ++generation
+    const key = requestKey.value
+    const revision = invalidationRevision.value
+    const ownsRequest = () => !disposed && currentGeneration === generation && requestKey.value === key && invalidationRevision.value === revision
     if (import.meta.server) {
       status.value = 'idle'
       lastDecision.value = { mode: null, reason: 'ssr' }
@@ -161,7 +176,7 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
     const startedAt = performance.now()
     try {
       const output = await options.serverFallback(siteId, toValue(options.params))
-      if (currentGeneration !== generation)
+      if (!ownsRequest())
         return
       data.value = output
       engine.value = 'server'
@@ -170,7 +185,7 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
       status.value = isEmpty(output) ? 'empty' : 'success'
     }
     catch (cause) {
-      if (currentGeneration !== generation)
+      if (!ownsRequest())
         return
       error.value = cause instanceof Error ? cause : new Error(String(cause))
       engine.value = 'server'
@@ -184,28 +199,14 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
     }
   }
 
-  // Parent renders can rebuild the same request object. Watch its values so
-  // equal inputs retain their pending read and the rows it already answered.
-  const requestKey = computed(() => JSON.stringify([
-    identity.value.scope,
-    toValue(options.site),
-    paramsKey.value,
-    stringify((options.watchSources ?? []).map(source => toValue(source)), undefined, {
-      operations: {
-        shapeOf(value) {
-          const shape = defaultStringifyOperations.shapeOf(value)
-          // Hosted inputs also appear in extra sources. Omitted optional
-          // fields and undefined fields carry the same wire request.
-          return shape.kind === 'plain' || shape.kind === 'null-proto'
-            ? { ...shape, keys: shape.keys.filter(key => defaultStringifyOperations.get(value, key) !== undefined).sort() }
-            : shape
-        },
-      },
-    }),
-    options.enabled === undefined || toValue(options.enabled),
-  ]))
-  watch(requestKey, runQuery, { immediate: true })
+  if (options.watchSources?.length) {
+    watch(options.watchSources, () => {
+      invalidationRevision.value++
+    }, { deep: true, flush: 'sync' })
+  }
+  watch([requestKey, invalidationRevision], runQuery, { immediate: true })
   onScopeDispose(() => {
+    disposed = true
     generation++
   })
 
