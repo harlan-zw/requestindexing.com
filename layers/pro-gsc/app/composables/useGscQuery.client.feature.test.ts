@@ -141,6 +141,193 @@ it('ignores changed function bodies and symbol labels in non-data invalidations'
   expect(view.data.value).toEqual({ clicks: 42 })
 })
 
+it('passes the array property-key to a JSON source', async () => {
+  const revision = ref(1)
+  const extra = ref(Object.create(null, { toJSON: { value: (key: string) => ({ revision: revision.value, depth: key.length }) } }))
+  expect(JSON.parse(JSON.stringify([extra.value]))).toEqual([{ revision: 1, depth: 1 }])
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  revision.value++
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+  expect(view.data.value).toEqual({ clicks: 42 })
+})
+
+it('projects shared JSON sources for each containing property-key', async () => {
+  const first = ref(1)
+  const second = ref(1)
+  const shared = Object.create(null, { toJSON: { value: (key: string) => ({ revision: key === 'first' ? first.value : second.value }) } })
+  const extra = ref({ first: shared, second: shared })
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  first.value++
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+  second.value++
+  await settle()
+  expect(read).toHaveBeenCalledTimes(3)
+})
+
+it.each([
+  ['Map value', (value: unknown) => new Map([['revision', value]])],
+  ['Map key', (value: unknown) => new Map([[value, 'revision']])],
+  ['Set member', (value: unknown) => new Set([value])],
+] as const)('invalidates changed undefined %s data independently from null', async (_name, create) => {
+  const extra = ref<unknown>(create(undefined))
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  extra.value = create(null)
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+})
+
+it('accepts all own record names without interpreting prototype data', async () => {
+  const extra = ref(JSON.parse('{"__proto__":{"revision":1}}'))
+  expect(JSON.parse(JSON.stringify([extra.value]))).toEqual([JSON.parse('{"__proto__":{"revision":1}}')])
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  extra.value = JSON.parse('{"__proto__":{"revision":2}}')
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+  expect(view.data.value).toEqual({ clicks: 42 })
+})
+
+it('retains equal acyclic data when record sharing changes', async () => {
+  const shared = { revision: 1 }
+  const extra = ref({ first: shared, second: shared })
+  const previousKey = JSON.stringify([extra.value])
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  extra.value = { first: { revision: 1 }, second: { revision: 1 } }
+  expect(JSON.stringify([extra.value])).toBe(previousKey)
+  await settle()
+  expect(read).toHaveBeenCalledTimes(1)
+  expect(view.data.value).toEqual({ clicks: 42 })
+  extra.value.first.revision++
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+})
+
+it.each(['Map', 'Set', 'Array'] as const)('retains and invalidates cyclic %s data', async (kind) => {
+  function create(revision: number): unknown {
+    if (kind === 'Map') {
+      const value = new Map<string, unknown>([['revision', revision]])
+      value.set('self', value)
+      return value
+    }
+    if (kind === 'Set') {
+      const value = new Set<unknown>([revision])
+      value.add(value)
+      return value
+    }
+    const value: unknown[] = [revision]
+    value.push(value)
+    return value
+  }
+  const extra = ref(create(1))
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  extra.value = create(1)
+  await settle()
+  expect(read).toHaveBeenCalledTimes(1)
+  expect(view.data.value).toEqual({ clicks: 42 })
+  extra.value = create(2)
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+})
+
+it('applies edge-local JSON data before interpreting a self-reference', async () => {
+  const revision = ref(1)
+  const extra = ref({
+    self: null as unknown,
+    toJSON(key: string): unknown {
+      return key === 'self' ? { revision: revision.value } : this
+    },
+  })
+  extra.value.self = extra.value
+  expect(JSON.parse(JSON.stringify([extra.value]))).toEqual([{ self: { revision: 1 } }])
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  revision.value++
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+  expect(view.data.value).toEqual({ clicks: 42 })
+})
+
+it.each([undefined, () => undefined])('reads array data independently from an own forEach property', async (forEach) => {
+  const extra = ref(Object.defineProperty([1], 'forEach', { value: forEach }))
+  expect(JSON.stringify([extra.value])).toBe('[[1]]')
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  expect(view.data.value).toEqual({ clicks: 42 })
+  extra.value = [1]
+  await settle()
+  expect(read).toHaveBeenCalledTimes(1)
+  extra.value = [2]
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+})
+
+it('retains every Map entry when distinct keys have equal JSON data', async () => {
+  const first = new Date('2026-10-01')
+  const second = new Date('2026-10-01')
+  const extra = ref(new Map([[first, 1], [second, 2]]))
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  extra.value.set(first, 3)
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+})
+
+it('retains every Set member when distinct members have equal JSON data', async () => {
+  const first = new Date('2026-10-01')
+  const second = new Date('2026-10-01')
+  const extra = ref(new Set([first, second]))
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  extra.value.delete(first)
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+})
+
+it.each([0n, 1n])('retains JSON-equivalent bigint data when a projection is installed', async (value) => {
+  const previous = Object.getOwnPropertyDescriptor(BigInt.prototype, 'toJSON')
+  // eslint-disable-next-line no-extend-native -- Reproduce the caller's JSON hook and restore it below.
+  Object.defineProperty(BigInt.prototype, 'toJSON', {
+    configurable: true,
+    value() {
+      return String(this)
+    },
+  })
+  try {
+    const extra = ref<unknown>(value)
+    expect(JSON.stringify([extra.value])).toBe(JSON.stringify([String(value)]))
+    const read = vi.fn().mockResolvedValue({ clicks: 42 })
+    const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+    await settle()
+    extra.value = String(value)
+    await settle()
+    expect(read).toHaveBeenCalledTimes(1)
+    expect(view.data.value).toEqual({ clicks: 42 })
+  }
+  finally {
+    if (previous)
+      // eslint-disable-next-line no-extend-native -- Restore the exact descriptor supplied before this fixture.
+      Object.defineProperty(BigInt.prototype, 'toJSON', previous)
+    else Reflect.deleteProperty(BigInt.prototype, 'toJSON')
+  }
+})
+
 describe('hosted query identity', () => {
   it('keeps a pending read when nested request properties arrive in another order', async () => {
     const request = ref({ type: 'data-detail' as const, startDate: '2026-10-01', endDate: '2026-10-28' })

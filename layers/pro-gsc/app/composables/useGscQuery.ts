@@ -81,30 +81,61 @@ function errorStatus(error: unknown): GscQueryStatus {
 }
 
 function stringifyWatchSources(values: unknown[]): string {
-  // Keep JSON's data projection while devalue retains Map, Set, and cycles.
-  const projections = new WeakMap<object, unknown>()
-  function project(value: unknown): unknown {
-    if (value && (typeof value === 'object' || typeof value === 'function')) {
-      if (projections.has(value))
-        return projections.get(value)
-      const toJSON = (value as { toJSON?: () => unknown }).toJSON
-      const data = typeof toJSON === 'function' ? toJSON.call(value) : value
-      const projected = typeof data === 'function' || typeof data === 'symbol' ? undefined : data
-      projections.set(value, projected)
-      return projected
+  const records = new WeakMap<object, Array<[string, unknown]>>()
+  const maps = new WeakMap<object, Array<[unknown, unknown]>>()
+  const sets = new WeakMap<object, unknown[]>()
+  const ancestors = new Map<object, unknown>()
+  function project(value: unknown, key: string): unknown {
+    // JSON calls toJSON once per edge, with that edge's property or index.
+    const toJSON = value !== null && value !== undefined && (typeof value === 'object' || typeof value === 'function' || typeof value === 'bigint')
+      ? (value as { toJSON?: (key: string) => unknown }).toJSON
+      : undefined
+    const data = typeof toJSON === 'function' ? toJSON.call(value, key) : value
+    if (typeof data === 'function' || typeof data === 'symbol')
+      return undefined
+    if (!data || typeof data !== 'object')
+      return data
+    const tag = defaultStringifyOperations.tagOf(data)
+    if (tag === 'Number' || tag === 'String' || tag === 'Boolean')
+      return project(defaultStringifyOperations.unbox(data), key)
+    if (ancestors.has(data))
+      return ancestors.get(data)
+    const result = Array.isArray(data) ? [] : {}
+    ancestors.set(data, result)
+    if (Array.isArray(data)) {
+      const length = data.length
+      for (let index = 0; index < length; index++)
+        (result as unknown[])[index] = project(data[index], String(index)) ?? null
     }
-    return typeof value === 'symbol' ? undefined : value
+    else if (data instanceof Map) {
+      const entries: Array<[unknown, unknown]> = []
+      maps.set(result, entries)
+      for (const [key, item] of data)
+        entries.push([project(key, ''), project(item, '')])
+    }
+    else if (data instanceof Set) {
+      const members: unknown[] = []
+      sets.set(result, members)
+      for (const item of data)
+        members.push(project(item, ''))
+    }
+    else {
+      const entries: Array<[string, unknown]> = []
+      records.set(result, entries)
+      for (const key of Object.keys(data).sort()) {
+        const item = project(defaultStringifyOperations.get(data, key), key)
+        if (item !== undefined)
+          entries.push([key, item])
+      }
+    }
+    // Repeated acyclic data clones by value. Only ancestors retain backlinks.
+    ancestors.delete(data)
+    return result
   }
-  return stringify(values, undefined, {
-    operations: {
-      isThenable: () => false,
-      shapeOf(value) {
-        return { kind: 'plain', keys: Object.keys(value).filter(key => project(defaultStringifyOperations.get(value, key)) !== undefined).sort() }
-      },
-      get: (value, key) => project(defaultStringifyOperations.get(value, key)) ?? null,
-      entriesOf: value => Array.from(defaultStringifyOperations.entriesOf(value), ([key, item]) => [project(key) ?? null, project(item) ?? null] as [unknown, unknown]),
-      valuesOf: value => Array.from(defaultStringifyOperations.valuesOf(value), item => project(item) ?? null),
-    },
+  return stringify(project(values, ''), {
+    Record: value => records.get(value),
+    MapEntries: value => maps.get(value),
+    SetMembers: value => sets.get(value),
   })
 }
 
