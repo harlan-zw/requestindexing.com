@@ -102,7 +102,7 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
     pending.value = true
     result.value = { buckets: [], series: [] }
 
-    const candidates = await readRows(async () => gscdump.queryAnalyticsReport({
+    const ranking = readRows(async () => gscdump.queryAnalyticsReport({
       params: { siteId },
       body: breakdownRequest({
         searchType,
@@ -114,6 +114,16 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
         rowLimit: candidateLimit,
       }),
     }, true))
+    // Totals need no ranked keys. Keep failures as values until the ranking
+    // names entities whose chart needs the total.
+    const totals = gscdump.queryAnalyticsRows({
+      params: { siteId },
+      body: siteDailySeriesRequest({ searchType, range, metric, facets }),
+    }, true).then(
+      response => ({ _tag: 'Ok', rows: response?.rows ?? [] } as const),
+      cause => ({ _tag: 'Err', cause } as const),
+    )
+    const candidates = await ranking
     if (current !== token)
       return
     if (!candidates) {
@@ -134,11 +144,8 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
       return
     }
 
-    const [totalRows, entityRows] = await Promise.all([
-      readRows(async () => gscdump.queryAnalyticsRows({
-        params: { siteId },
-        body: siteDailySeriesRequest({ searchType, range, metric, facets }),
-      }, true)),
+    const [total, entityRows] = await Promise.all([
+      totals,
       readRows(async () => gscdump.queryAnalyticsRows({
         params: { siteId },
         body: entityDailySeriesRequest({ searchType, dimension, keys: entities.map(entity => entity.key), range, metric, facets }),
@@ -146,13 +153,18 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
     ])
     if (current !== token)
       return
-    if (!totalRows || !entityRows) {
+    if (total._tag === 'Err') {
+      error.value = total.cause instanceof Error ? total.cause : new Error('Search trend could not load.')
+      pending.value = false
+      return
+    }
+    if (!entityRows) {
       pending.value = false
       return
     }
 
     const totalsByDate = new Map<string, number>()
-    for (const row of totalRows) {
+    for (const row of total.rows) {
       const day = String(row.date ?? '')
       if (day)
         totalsByDate.set(day, Number(row[metric] ?? 0) || 0)

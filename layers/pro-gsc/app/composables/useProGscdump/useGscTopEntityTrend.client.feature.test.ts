@@ -101,6 +101,27 @@ it('keeps current-only trend reads independent of the page comparison', async ()
   expect(reads).toHaveLength(3)
 })
 
+it.each(['query', 'page'] as const)('starts %s chart totals while ranking waits, then reads the selected entities', async (dimension) => {
+  const ranking = holdNext('ranking')
+  const scope = effectScope()
+  scopes.push(scope)
+  const view = scope.run(() => useGscTopEntityTrend({
+    gscdumpSiteId: 's_example',
+    range: { start: '2026-10-20', end: '2026-10-21' },
+    metric: 'clicks',
+    dimension,
+  }))!
+  await settle()
+  expect(reads.filter(read => read.state.dimensions.length === 1 && read.state.dimensions[0] === 'date')).toHaveLength(1)
+  expect(reads.filter(read => read.state.dimensions.includes('date') && read.state.dimensions.length > 1)).toHaveLength(0)
+  expect(view.pending.value).toBe(true)
+  ranking.succeed()
+  await settle()
+  expect(reads).toHaveLength(3)
+  expect(view.pending.value).toBe(false)
+  expect(view.result.value.series.map(series => series.values)).toEqual([[4, 5], [2, 3]])
+})
+
 it('replaces the answered trend after a real request input changes', async () => {
   const { view, metric } = await mount()
   metric.value = 'impressions'
