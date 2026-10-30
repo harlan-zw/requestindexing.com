@@ -328,15 +328,58 @@ it.each([0n, 1n])('retains JSON-equivalent bigint data when a projection is inst
   }
 })
 
+it.each(['success', 'failure'] as const)('retires an old %s synchronously when native demand changes', async (outcome) => {
+  const extra = ref(new Map([['revision', 1]]))
+  const old = deferred<{ clicks: number }>()
+  const next = deferred<{ clicks: number }>()
+  const read = vi.fn().mockReturnValueOnce(old.promise).mockReturnValueOnce(next.promise)
+  const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  const observed = old.promise.then(() => view.data.value, () => view.error.value)
+  if (outcome === 'success')
+    old.resolve({ clicks: 1 })
+  else old.reject(new Error('Old demand failed'))
+  extra.value.set('revision', 2)
+  expect(await observed).toBeNull()
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+  expect(view.status.value).toBe('pending')
+  expect(view.error.value).toBeNull()
+  next.resolve({ clicks: 42 })
+  await settle()
+  expect(view.data.value).toEqual({ clicks: 42 })
+})
+
+it('coalesces native deep invalidations while the latest demand owns its answer', async () => {
+  const extra = ref({ selected: ['first'], revision: 1 })
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  extra.value.selected.push('second')
+  extra.value.revision++
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+  expect(view.data.value).toEqual({ clicks: 42 })
+})
+
+it('refuses refresh and stale answers after its native watch scope is disposed', async () => {
+  const held = deferred<{ clicks: number }>()
+  const read = vi.fn().mockReturnValue(held.promise)
+  const view = use(read)
+  scope.stop()
+  held.resolve({ clicks: 1 })
+  await settle()
+  await view.refresh()
+  expect(read).toHaveBeenCalledTimes(1)
+  expect(view.data.value).toBeNull()
+})
+
 describe('hosted query identity', () => {
   it('keeps a pending read when nested request properties arrive in another order', async () => {
     const request = ref({ type: 'data-detail' as const, startDate: '2026-10-01', endDate: '2026-10-28' })
-    const extra = ref({ filter: { country: 'nzl', device: 'mobile' } })
     const first = deferred<{ clicks: number }>()
     const read = vi.fn().mockReturnValue(first.promise)
-    const view = scope.run(() => useGscQuery({ site: 's_one', params: request, watchSources: [extra], serverFallback: read }))!
+    const view = scope.run(() => useGscQuery({ site: 's_one', params: request, serverFallback: read }))!
     request.value = { endDate: '2026-10-28', startDate: '2026-10-01', type: 'data-detail' }
-    extra.value = { filter: { device: 'mobile', country: 'nzl' } }
     await settle()
     expect(read).toHaveBeenCalledTimes(1)
     first.resolve({ clicks: 42 })
@@ -360,7 +403,7 @@ describe('hosted query identity', () => {
     expect(view.data.value).toEqual({ clicks: 43 })
   })
 
-  it('refreshes for Map and Set mutations while retaining equivalent replacements', async () => {
+  it('observes Map and Set changes while retaining equal replacements', async () => {
     const selections = ref(new Map([['country', 'nzl']]))
     const revisions = ref(new Set(['first']))
     const read = vi.fn().mockResolvedValue({ clicks: 42 })
@@ -379,7 +422,7 @@ describe('hosted query identity', () => {
     expect(view.data.value).toEqual({ clicks: 42 })
   })
 
-  it('observes cyclic invalidation values without restarting an equivalent graph', async () => {
+  it('observes cyclic changes while retaining equal replacements', async () => {
     interface Revision { revision: number, next?: Revision }
     const initial: Revision = { revision: 1 }
     initial.next = initial
@@ -439,7 +482,6 @@ describe('hosted query identity', () => {
     const view = scope.run(() => useGscQuery({
       site: 's_one',
       params: computed(() => ({ ...request.value })),
-      watchSources: [request],
       serverFallback: read,
     }))!
     await settle()
