@@ -47,8 +47,7 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
   const metric = computed(() => toValue(opts.metric) ?? 'clicks')
   const searchType = computed(() => toValue(opts.searchType) ?? filters.searchType.value)
   const error = ref<Error | null>(null)
-  const cached = new Map<string, number[] | null>()
-  let cacheScope = ''
+  let cache = { scope: '', values: new Map<string, number[] | null>(), keys: [] as readonly string[], batch: null as Promise<void> | null }
 
   const _keys = computed(() => {
     const seen = new Set<string>()
@@ -80,18 +79,24 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
   }
 
   let token = 0
-  onScopeDispose(() => token++)
+  let stopped = false
+  onScopeDispose(() => {
+    stopped = true
+    token++
+  })
   watch(
     [() => toValue(opts.gscdumpSiteId), () => toValue(opts.range), _keys, metric, searchType, () => toValue(opts.facets)],
     async ([siteId, range, keys, selectedMetric, selectedSearchType, facets]) => {
       const current = ++token
       error.value = null
       const nextScope = JSON.stringify([siteId, range, opts.dimension, selectedMetric, selectedSearchType, facets])
-      if (nextScope !== cacheScope) {
-        cached.clear()
+      if (nextScope !== cache.scope) {
+        cache = { scope: nextScope, values: new Map(), keys, batch: null }
         map.value = new Map()
-        cacheScope = nextScope
       }
+      const owner = cache
+      const cached = owner.values
+      owner.keys = keys
       if (!import.meta.client || !siteId || !keys.length || !range?.start || !range?.end) {
         map.value = new Map()
         dates.value = []
@@ -112,25 +117,37 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
       pending.value = true
       map.value = new Map(keys.filter(key => cached.has(key)).map(key => [key, cached.get(key) ?? []]))
 
-      const series = await readSeries(siteId, range, missing, selectedMetric, selectedSearchType, facets).catch((cause: unknown) => {
+      // A queued read uses the latest visible keys after the previous batch.
+      // Resolved keys stay owned by this scope even if its watcher reruns.
+      const batch = (owner.batch ?? Promise.resolve()).then(async () => {
+        if (stopped || owner !== cache)
+          return
+        const unresolved = owner.keys.filter(key => !cached.has(key))
+        if (!unresolved.length)
+          return
+        const series = await readSeries(siteId, range, unresolved, selectedMetric, selectedSearchType, facets)
+        if (stopped || owner !== cache)
+          return
+        for (const key of unresolved)
+          cached.set(key, series.get(key) ?? null)
+      }).finally(() => {
+        if (owner.batch === batch)
+          owner.batch = null
+      })
+      owner.batch = batch
+      await batch.catch((cause: unknown) => {
         // A missing sparkline degrades to a dash in the cell, so the failure is
         // surfaced on the cell rather than as a toast over the whole table.
         if (current === token)
           error.value = cause instanceof Error ? cause : new Error('Trend data could not load.')
-        return null
       })
       if (current !== token)
         return
-      if (!series) {
-        pending.value = false
-        return
-      }
-
-      for (const key of missing)
-        cached.set(key, series.get(key) ?? null)
       const next = new Map<string, number[]>()
-      for (const key of keys)
-        next.set(key, cached.get(key) ?? [])
+      for (const key of keys) {
+        if (cached.has(key))
+          next.set(key, cached.get(key) ?? [])
+      }
       map.value = next
       dates.value = axis
       pending.value = false
