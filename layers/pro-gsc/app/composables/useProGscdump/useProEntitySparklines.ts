@@ -11,6 +11,8 @@ import { useProGscdump } from './useProGscdump'
 
 export { sparklineDateAxis }
 
+type BatchOutcome = { _tag: 'Ok' } | { _tag: 'Err', cause: unknown, keys: readonly string[] }
+
 /**
  * Resolve the daily sparkline series for a whole table page in one read.
  *
@@ -47,7 +49,7 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
   const metric = computed(() => toValue(opts.metric) ?? 'clicks')
   const searchType = computed(() => toValue(opts.searchType) ?? filters.searchType.value)
   const error = ref<Error | null>(null)
-  let cache = { scope: '', values: new Map<string, number[] | null>(), keys: [] as readonly string[], batch: null as Promise<void> | null }
+  let cache = { scope: '', values: new Map<string, number[] | null>(), keys: [] as readonly string[], batch: null as Promise<BatchOutcome> | null, reads: new Map<string, Promise<BatchOutcome>>() }
 
   const _keys = computed(() => {
     const seen = new Set<string>()
@@ -91,7 +93,7 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
       error.value = null
       const nextScope = JSON.stringify([siteId, range, opts.dimension, selectedMetric, selectedSearchType, facets])
       if (nextScope !== cache.scope) {
-        cache = { scope: nextScope, values: new Map(), keys, batch: null }
+        cache = { scope: nextScope, values: new Map(), keys, batch: null, reads: new Map() }
         map.value = new Map()
       }
       const owner = cache
@@ -105,42 +107,50 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
       }
       const axis = sparklineDateAxis(range.start, range.end)
       dates.value = axis
-      const missing = keys.filter(k => !cached.has(k))
-      if (missing.length === 0) {
-        const next = new Map<string, number[]>()
-        for (const key of keys)
-          next.set(key, cached.get(key) ?? [])
-        map.value = next
-        pending.value = false
-        return
+      const missing = keys.filter(key => !cached.has(key) && !owner.reads.has(key))
+      if (missing.length) {
+        // Reserve each key until the queue settles. A failed key cannot enter
+        // another batch during that queue, but later demand can retry it.
+        let attempted: string[] = []
+        const batch = (owner.batch ?? Promise.resolve<BatchOutcome>({ _tag: 'Ok' })).then(async (): Promise<BatchOutcome> => {
+          if (stopped || owner !== cache)
+            return { _tag: 'Ok' }
+          const unresolved = missing.filter(key => owner.keys.includes(key) && !cached.has(key))
+          // Hidden keys were never attempted. Release their reservations so a
+          // later visible demand can schedule them during this same queue.
+          for (const key of missing) {
+            if (!owner.keys.includes(key) && owner.reads.get(key) === batch)
+              owner.reads.delete(key)
+          }
+          if (!unresolved.length)
+            return { _tag: 'Ok' }
+          attempted = unresolved
+          const series = await readSeries(siteId, range, unresolved, selectedMetric, selectedSearchType, facets)
+          if (stopped || owner !== cache)
+            return { _tag: 'Ok' }
+          for (const key of unresolved)
+            cached.set(key, series.get(key) ?? null)
+          return { _tag: 'Ok' }
+        }).catch((cause: unknown): BatchOutcome => ({ _tag: 'Err', cause, keys: attempted })).finally(() => {
+          if (owner.batch === batch) {
+            owner.batch = null
+            owner.reads.clear()
+          }
+        })
+        owner.batch = batch
+        for (const key of missing)
+          owner.reads.set(key, batch)
       }
-      pending.value = true
+      const reads = [...new Set(keys.flatMap(key => !cached.has(key) && owner.reads.has(key) ? [owner.reads.get(key)!] : []))]
+      pending.value = reads.length > 0
       map.value = new Map(keys.filter(key => cached.has(key)).map(key => [key, cached.get(key) ?? []]))
-
-      // A queued read uses the latest visible keys after the previous batch.
-      // Resolved keys stay owned by this scope even if its watcher reruns.
-      const batch = (owner.batch ?? Promise.resolve()).then(async () => {
-        if (stopped || owner !== cache)
-          return
-        const unresolved = owner.keys.filter(key => !cached.has(key))
-        if (!unresolved.length)
-          return
-        const series = await readSeries(siteId, range, unresolved, selectedMetric, selectedSearchType, facets)
-        if (stopped || owner !== cache)
-          return
-        for (const key of unresolved)
-          cached.set(key, series.get(key) ?? null)
-      }).finally(() => {
-        if (owner.batch === batch)
-          owner.batch = null
-      })
-      owner.batch = batch
-      await batch.catch((cause: unknown) => {
-        // A missing sparkline degrades to a dash in the cell, so the failure is
-        // surfaced on the cell rather than as a toast over the whole table.
-        if (current === token)
-          error.value = cause instanceof Error ? cause : new Error('Trend data could not load.')
-      })
+      await Promise.all(reads.map(async (read) => {
+        const outcome = await read
+        // Only current visible demand surfaces its failures. Obsolete reads
+        // stay harmless, and their outcomes still let independent keys drain.
+        if (current === token && outcome._tag === 'Err' && outcome.keys.some(key => keys.includes(key)))
+          error.value = outcome.cause instanceof Error ? outcome.cause : new Error('Trend data could not load.')
+      }))
       if (current !== token)
         return
       const next = new Map<string, number[]>()

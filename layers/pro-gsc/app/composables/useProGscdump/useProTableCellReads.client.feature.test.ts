@@ -5,8 +5,9 @@ import { useProEntitySparklines } from './useProEntitySparklines'
 import { useProTopAssociations } from './useProTopAssociations'
 
 const filters = { searchType: ref<GscSearchType>('web') }
+const logging = vi.hoisted(() => ({ warn: vi.fn() }))
 vi.mock('../useProGscFilters', () => ({ useProGscFilters: () => filters }))
-vi.mock('~~/shared/logging', () => ({ logWarn: vi.fn() }))
+vi.mock('~~/shared/logging', () => ({ logWarn: logging.warn }))
 
 interface Read {
   keys: string[]
@@ -50,6 +51,7 @@ function reply(read: Read, fail = false) {
 
 beforeEach(() => {
   reads.length = 0
+  logging.warn.mockClear()
   filters.searchType.value = 'web'
   vi.stubGlobal('fetch', (input: string | URL | Request, init?: RequestInit) => {
     const path = new URL(String(input), 'https://example.test').pathname
@@ -210,4 +212,81 @@ it.each(kinds)('uses changed date and search type scopes for %s', async (kind) =
   reply(reads[2]!)
   await settle()
   expect(view.map.value.get('first')).toEqual(kind === 'sparklines' ? [0, 4, 0] : answer(kind, 'first'))
+})
+
+it.each(kinds)('drains independent %s after failures without retrying failed keys in the same queue', async (kind) => {
+  const { view, keys } = await mount(kind)
+  keys.value = ['first', 'second']
+  await settle()
+  reply(reads[0]!, true)
+  await settle()
+  expect(reads.map(read => read.keys)).toEqual([['first'], ['second']])
+  expect(view.pending.value).toBe(true)
+  if ('error' in view)
+    expect(view.error.value).toBeInstanceOf(Error)
+  else
+    expect(logging.warn).toHaveBeenCalledTimes(1)
+
+  keys.value = ['first', 'second', 'third']
+  await settle()
+  reply(reads[1]!, true)
+  await settle()
+  expect(reads.map(read => read.keys)).toEqual([['first'], ['second'], ['third']])
+  reply(reads[2]!)
+  await settle()
+  expect([...view.map.value]).toEqual([['third', answer(kind, 'third')]])
+  expect(view.pending.value).toBe(false)
+  if ('error' in view)
+    expect(view.error.value).toBeInstanceOf(Error)
+  else
+    expect(logging.warn).toHaveBeenCalledTimes(2)
+  await settle()
+  expect(reads).toHaveLength(3)
+
+  keys.value = ['first', 'second', 'third']
+  await settle()
+  expect(reads.map(read => read.keys)).toEqual([['first'], ['second'], ['third'], ['first', 'second']])
+  reply(reads[3]!)
+  await settle()
+  expect([...view.map.value]).toEqual(keys.value.map(key => [key, answer(kind, key)]))
+  expect(view.pending.value).toBe(false)
+  if ('error' in view)
+    expect(view.error.value).toBeNull()
+})
+
+it.each(kinds)('keeps removed %s failures out of the new visible demand', async (kind) => {
+  const { view, keys } = await mount(kind)
+  keys.value = ['second']
+  await settle()
+  reply(reads[0]!, true)
+  await settle()
+  expect(reads.map(read => read.keys)).toEqual([['first'], ['second']])
+  expect(view.pending.value).toBe(true)
+  if ('error' in view)
+    expect(view.error.value).toBeNull()
+  else
+    expect(logging.warn).not.toHaveBeenCalled()
+  reply(reads[1]!)
+  await settle()
+  expect([...view.map.value]).toEqual([['second', answer(kind, 'second')]])
+})
+
+it.each(kinds)('reads a skipped %s key if it returns before the queue finishes', async (kind) => {
+  const { view, keys } = await mount(kind)
+  keys.value = ['first', 'second']
+  await settle()
+  keys.value = ['first', 'third']
+  await settle()
+  reply(reads[0]!, true)
+  await settle()
+  expect(reads.map(read => read.keys)).toEqual([['first'], ['third']])
+  keys.value = ['first', 'second', 'third']
+  await settle()
+  reply(reads[1]!)
+  await settle()
+  expect(reads.map(read => read.keys)).toEqual([['first'], ['third'], ['second']])
+  reply(reads[2]!)
+  await settle()
+  expect([...view.map.value]).toEqual([['second', answer(kind, 'second')], ['third', answer(kind, 'third')]])
+  expect(view.pending.value).toBe(false)
 })

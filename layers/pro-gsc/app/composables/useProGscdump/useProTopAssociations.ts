@@ -9,6 +9,8 @@ import { selectTopAssociations } from '../../../shared/top-associations'
 import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdump } from './useProGscdump'
 
+type BatchOutcome = { _tag: 'Ok' } | { _tag: 'Err', cause: unknown, keys: readonly string[] }
+
 /**
  * Resolve the top associated entity for a table page in ONE read: the top page
  * for each query, or the top query for each page.
@@ -45,7 +47,7 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
   const searchType = computed(() => toValue(opts.searchType) ?? filters.searchType.value)
   // Grouping by a query dimension returns the top page, and the reverse.
   const topDimension = opts.group === 'page' ? 'query' : 'page'
-  let cache = { scope: '', values: new Map<string, string | null>(), keys: [] as readonly string[], batch: null as Promise<void> | null }
+  let cache = { scope: '', values: new Map<string, string | null>(), keys: [] as readonly string[], batch: null as Promise<BatchOutcome> | null, reads: new Map<string, Promise<BatchOutcome>>() }
 
   const _keys = computed(() => {
     const seen = new Set<string>()
@@ -74,7 +76,7 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
       const current = ++token
       const nextScope = siteId ? `${siteId}:${slice}:${range?.start}:${range?.end}:${opts.group}` : ''
       if (nextScope !== cache.scope) {
-        cache = { scope: nextScope, values: new Map(), keys, batch: null }
+        cache = { scope: nextScope, values: new Map(), keys, batch: null, reads: new Map() }
         map.value = new Map()
       }
       const owner = cache
@@ -85,19 +87,23 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
         pending.value = false
         return
       }
-      const missing = keys.filter(k => !cached.has(k))
+      const missing = keys.filter(key => !cached.has(key) && !owner.reads.has(key))
       if (missing.length) {
-        pending.value = true
-        map.value = new Map(keys.filter(key => cached.get(key)).map(key => [key, cached.get(key)!]))
-        const batch = (owner.batch ?? Promise.resolve()).then(async () => {
+        let attempted: string[] = []
+        const batch = (owner.batch ?? Promise.resolve<BatchOutcome>({ _tag: 'Ok' })).then(async (): Promise<BatchOutcome> => {
           if (stopped || owner !== cache)
-            return
-          const unresolved = owner.keys.filter(key => !cached.has(key))
+            return { _tag: 'Ok' }
+          const unresolved = missing.filter(key => owner.keys.includes(key) && !cached.has(key))
+          for (const key of missing) {
+            if (!owner.keys.includes(key) && owner.reads.get(key) === batch)
+              owner.reads.delete(key)
+          }
           if (!unresolved.length)
-            return
+            return { _tag: 'Ok' }
+          attempted = unresolved
           const response = await readAssociations(siteId, { searchType: slice, group: opts.group, keys: unresolved, range })
           if (stopped || owner !== cache)
-            return
+            return { _tag: 'Ok' }
           const top = selectTopAssociations((response?.rows ?? []) as unknown as Record<string, unknown>[], {
             groupField: opts.group,
             topField: topDimension,
@@ -108,21 +114,29 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
             // a page's top keyword.
             cached.set(key, topDimension === 'query' ? operatorFreeKeyword(value) : value)
           }
+          return { _tag: 'Ok' }
+        }).catch((cause: unknown): BatchOutcome => {
+          // Log each visible failed batch once. A hidden or obsolete batch no
+          // longer owns a cell. Its outcome must still release queued reads.
+          if (!stopped && owner === cache && attempted.some(key => owner.keys.includes(key)))
+            logWarn('gscdump.table_cell.unresolved', cause, { read: 'top-association', group: opts.group })
+          return { _tag: 'Err', cause, keys: attempted }
         }).finally(() => {
-          if (owner.batch === batch)
+          if (owner.batch === batch) {
             owner.batch = null
+            owner.reads.clear()
+          }
         })
         owner.batch = batch
-        // Silent: an unresolved association renders as a dash in its own cell,
-        // which says more than a toast over the whole table. The failure is
-        // logged rather than dropped.
-        await batch.catch((cause: unknown) => {
-          if (current === token)
-            logWarn('gscdump.table_cell.unresolved', cause, { read: 'top-association', group: opts.group })
-        })
-        if (current !== token)
-          return
+        for (const key of missing)
+          owner.reads.set(key, batch)
       }
+      const reads = [...new Set(keys.flatMap(key => !cached.has(key) && owner.reads.has(key) ? [owner.reads.get(key)!] : []))]
+      pending.value = reads.length > 0
+      map.value = new Map(keys.filter(key => cached.get(key)).map(key => [key, cached.get(key)!]))
+      await Promise.all(reads)
+      if (current !== token)
+        return
       const next = new Map<string, string>()
       for (const k of keys) {
         const v = cached.get(k)
