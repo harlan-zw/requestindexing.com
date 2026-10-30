@@ -1,6 +1,7 @@
 import type { AnalysisParams } from '@gscdump/engine/analysis-types'
 import type { ComputedRef, MaybeRefOrGetter, Ref, WatchSource } from 'vue'
 import { classifyGscError } from '@gscdump/sdk/gsc-error'
+import { defaultStringifyOperations, stringify } from 'devalue'
 import { computed, onScopeDispose, ref, shallowRef, toValue, watch } from 'vue'
 import { useGscQueryIdentity } from './useGscQueryIdentity'
 
@@ -102,6 +103,11 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
   const pending = computed(() => status.value === 'pending')
   let generation = 0
   let dataScope: string | undefined
+  const paramsKey = computed(() => JSON.stringify(toValue(options.params), (_key, value) => {
+    if (value && typeof value === 'object' && !Array.isArray(value))
+      return Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]]))
+    return value
+  }))
 
   function captureMeta(output: T): void {
     const raw = options.extractMeta?.(output)
@@ -117,7 +123,7 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
       lastDecision.value = { mode: null, reason: 'ssr' }
       return
     }
-    const scope = JSON.stringify([identity.value.scope, toValue(options.site), toValue(options.params)])
+    const scope = JSON.stringify([identity.value.scope, toValue(options.site), paramsKey.value])
     if (scope !== dataScope) {
       dataScope = scope
       data.value = null
@@ -183,8 +189,19 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
   const requestKey = computed(() => JSON.stringify([
     identity.value.scope,
     toValue(options.site),
-    toValue(options.params),
-    (options.watchSources ?? []).map(source => toValue(source)),
+    paramsKey.value,
+    stringify((options.watchSources ?? []).map(source => toValue(source)), undefined, {
+      operations: {
+        shapeOf(value) {
+          const shape = defaultStringifyOperations.shapeOf(value)
+          // Hosted inputs also appear in extra sources. Omitted optional
+          // fields and undefined fields carry the same wire request.
+          return shape.kind === 'plain' || shape.kind === 'null-proto'
+            ? { ...shape, keys: shape.keys.filter(key => defaultStringifyOperations.get(value, key) !== undefined).sort() }
+            : shape
+        },
+      },
+    }),
     options.enabled === undefined || toValue(options.enabled),
   ]))
   watch(requestKey, runQuery, { immediate: true })

@@ -1,7 +1,9 @@
 import type { Caller } from '#layers/pro-saas/shared/caller'
+import type { BreakdownInput } from '../../shared/analytics-requests'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed, effectScope, nextTick, ref } from 'vue'
+import { computed, effectScope, nextTick, ref, toValue } from 'vue'
 import { useGscQuery } from './useGscQuery'
+import { useProGscdumpData } from './useProGscdump/useProGscdumpData'
 
 function callerFor(id = 1): Caller {
   return {
@@ -41,12 +43,117 @@ async function settle() {
     await Promise.resolve()
     await nextTick()
   }
+  await new Promise(resolve => setTimeout(resolve, 0))
+  await nextTick()
 }
 function use(read: () => Promise<{ clicks: number }>) {
   return scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, serverFallback: read }))!
 }
 
 describe('hosted query identity', () => {
+  it('keeps a pending read when nested request properties arrive in another order', async () => {
+    const request = ref({ type: 'data-detail' as const, startDate: '2026-10-01', endDate: '2026-10-28' })
+    const extra = ref({ filter: { country: 'nzl', device: 'mobile' } })
+    const first = deferred<{ clicks: number }>()
+    const read = vi.fn().mockReturnValue(first.promise)
+    const view = scope.run(() => useGscQuery({ site: 's_one', params: request, watchSources: [extra], serverFallback: read }))!
+    request.value = { endDate: '2026-10-28', startDate: '2026-10-01', type: 'data-detail' }
+    extra.value = { filter: { device: 'mobile', country: 'nzl' } }
+    await settle()
+    expect(read).toHaveBeenCalledTimes(1)
+    first.resolve({ clicks: 42 })
+    await settle()
+    expect(view.data.value).toEqual({ clicks: 42 })
+  })
+
+  it('retains answered rows during an explicit refresh of an equivalent wire request', async () => {
+    const request = ref<{ type: 'data-detail', startDate: string, endDate: string, brandTerms?: string[] }>({ type: 'data-detail', startDate: '2026-10-01', endDate: '2026-10-28', brandTerms: undefined })
+    const next = deferred<{ clicks: number }>()
+    const read = vi.fn().mockResolvedValueOnce({ clicks: 42 }).mockReturnValue(next.promise)
+    const view = scope.run(() => useGscQuery({ site: 's_one', params: request, serverFallback: read }))!
+    await settle()
+    request.value = { endDate: '2026-10-28', startDate: '2026-10-01', type: 'data-detail' }
+    await settle()
+    const refreshed = view.refresh()
+    expect(view.data.value).toEqual({ clicks: 42 })
+    expect(view.pending.value).toBe(true)
+    next.resolve({ clicks: 43 })
+    await refreshed
+    expect(view.data.value).toEqual({ clicks: 43 })
+  })
+
+  it('refreshes for Map and Set mutations while retaining equivalent replacements', async () => {
+    const selections = ref(new Map([['country', 'nzl']]))
+    const revisions = ref(new Set(['first']))
+    const read = vi.fn().mockResolvedValue({ clicks: 42 })
+    const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [selections, revisions], serverFallback: read }))!
+    await settle()
+    selections.value.set('country', 'aus')
+    await settle()
+    expect(read).toHaveBeenCalledTimes(2)
+    revisions.value.add('second')
+    await settle()
+    expect(read).toHaveBeenCalledTimes(3)
+    selections.value = new Map([['country', 'aus']])
+    revisions.value = new Set(['first', 'second'])
+    await settle()
+    expect(read).toHaveBeenCalledTimes(3)
+    expect(view.data.value).toEqual({ clicks: 42 })
+  })
+
+  it('observes cyclic invalidation values without restarting an equivalent graph', async () => {
+    interface Revision { revision: number, next?: Revision }
+    const initial: Revision = { revision: 1 }
+    initial.next = initial
+    const invalidation = ref(initial)
+    const read = vi.fn().mockResolvedValue({ clicks: 42 })
+    const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [invalidation], serverFallback: read }))!
+    await settle()
+    invalidation.value.revision++
+    await settle()
+    expect(read).toHaveBeenCalledTimes(2)
+    const equivalent: Revision = { revision: 2 }
+    equivalent.next = equivalent
+    invalidation.value = equivalent
+    await settle()
+    expect(read).toHaveBeenCalledTimes(2)
+    expect(view.data.value).toEqual({ clicks: 42 })
+  })
+
+  it('keeps the typed report request when optional fields and object order are equivalent', async () => {
+    const input = ref<BreakdownInput>({ searchType: 'web', dimension: 'queryCanonical', range: { start: '2026-10-01', end: '2026-10-28' }, comparisonRange: null, search: undefined, orderBy: { column: 'clicks', dir: 'desc' }, rowLimit: 25 })
+    const reads: Array<{ path: string, body: { state: { rowLimit: number, searchType: string } } }> = []
+    vi.stubGlobal('toValue', toValue)
+    vi.stubGlobal('useState', () => ref({}))
+    vi.stubGlobal('fetch', async (url: string | URL | Request, init?: RequestInit) => {
+      reads.push({ path: new URL(String(url), 'https://example.test').pathname, body: JSON.parse(String(init?.body)) })
+      return Response.json({
+        data: {
+          rows: [{ queryCanonical: 'Nuxt SEO', queryCanonicalKey: 'nuxt seo', clicks: 42, impressions: 420, ctr: 0.1, position: 3 }],
+          totalCount: 1,
+          totals: { clicks: 42, impressions: 420, ctr: 0.1, position: 3 },
+          meta: { siteUrl: 'sc-domain:example.com', syncStatus: 'synced', newestDateSynced: '2026-10-28', oldestDateSynced: '2026-10-01', dataDelay: '3 days' },
+        },
+        meta: { requestId: 'req_values', surface: 'analytics', version: '1.0', sourceName: 'hosted-values', sourceKind: 'sql', queryMs: 0 },
+      })
+    })
+    const view = scope.run(() => useProGscdumpData('s_one', input))!
+    await settle()
+    expect(view.error.value).toBeNull()
+    expect(view.data.value?.rows[0]?.clicks).toBe(42)
+    input.value = { rowLimit: 25, orderBy: { dir: 'desc', column: 'clicks' }, comparisonRange: null, range: { end: '2026-10-28', start: '2026-10-01' }, dimension: 'queryCanonical', searchType: 'web', search: undefined }
+    await settle()
+    expect(reads).toHaveLength(1)
+    const { search: _search, ...omitted } = input.value
+    input.value = omitted
+    await settle()
+    expect(reads).toHaveLength(1)
+    input.value.rowLimit = 50
+    await settle()
+    expect(reads).toHaveLength(2)
+    expect(reads[1]).toMatchObject({ path: '/api/_gscdump/analytics/v1/sites/s_one/reports', body: { state: { rowLimit: 50, searchType: 'web' } } })
+  })
+
   it('keeps an in-flight read when its request is rebuilt with equal values', async () => {
     const request = ref({ type: 'data-detail' as const, startDate: '2026-10-01', endDate: '2026-10-28' })
     const first = deferred<{ clicks: number }>()
