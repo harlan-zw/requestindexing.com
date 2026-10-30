@@ -178,15 +178,16 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
     }
   }
 
-  const sources: WatchSource[] = [
-    () => identity.value.scope,
-    () => toValue(options.site),
-    () => toValue(options.params),
-    ...(options.watchSources ?? []),
-  ]
-  if (options.enabled !== undefined)
-    sources.push(() => toValue(options.enabled))
-  watch(sources, runQuery, { deep: true, immediate: true })
+  // Parent renders can rebuild the same request object. Watch its values so
+  // equal inputs retain their pending read and the rows it already answered.
+  const requestKey = computed(() => JSON.stringify([
+    identity.value.scope,
+    toValue(options.site),
+    toValue(options.params),
+    (options.watchSources ?? []).map(source => toValue(source)),
+    options.enabled === undefined || toValue(options.enabled),
+  ]))
+  watch(requestKey, runQuery, { immediate: true })
   onScopeDispose(() => {
     generation++
   })

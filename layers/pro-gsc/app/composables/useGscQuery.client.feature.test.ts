@@ -1,6 +1,6 @@
 import type { Caller } from '#layers/pro-saas/shared/caller'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { effectScope, nextTick, ref } from 'vue'
+import { computed, effectScope, nextTick, ref } from 'vue'
 import { useGscQuery } from './useGscQuery'
 
 function callerFor(id = 1): Caller {
@@ -47,6 +47,69 @@ function use(read: () => Promise<{ clicks: number }>) {
 }
 
 describe('hosted query identity', () => {
+  it('keeps an in-flight read when its request is rebuilt with equal values', async () => {
+    const request = ref({ type: 'data-detail' as const, startDate: '2026-10-01', endDate: '2026-10-28' })
+    const first = deferred<{ clicks: number }>()
+    const read = vi.fn().mockReturnValue(first.promise)
+    const view = scope.run(() => useGscQuery({
+      site: 's_one',
+      params: computed(() => ({ ...request.value })),
+      watchSources: [request],
+      serverFallback: read,
+    }))!
+    await settle()
+    request.value = { ...request.value }
+    await settle()
+    expect(read).toHaveBeenCalledTimes(1)
+    first.resolve({ clicks: 42 })
+    await settle()
+    expect(view.data.value).toEqual({ clicks: 42 })
+    expect(view.status.value).toBe('success')
+
+    request.value = { ...request.value }
+    await settle()
+    expect(read).toHaveBeenCalledTimes(1)
+    expect(view.status.value).toBe('success')
+  })
+
+  it('refreshes for changed request values, invalidation, and an explicit retry', async () => {
+    const request = ref({ type: 'data-detail' as const, startDate: '2026-10-01', endDate: '2026-10-28' })
+    const invalidation = ref(0)
+    const read = vi.fn().mockResolvedValue({ clicks: 42 })
+    const view = scope.run(() => useGscQuery({ site: 's_one', params: request, watchSources: [invalidation], serverFallback: read }))!
+    await settle()
+    request.value.endDate = '2026-10-29'
+    await settle()
+    expect(read).toHaveBeenCalledTimes(2)
+    expect(read.mock.calls[1]?.[1]).toMatchObject({ endDate: '2026-10-29' })
+    invalidation.value++
+    await settle()
+    expect(read).toHaveBeenCalledTimes(3)
+    await view.refresh()
+    expect(read).toHaveBeenCalledTimes(4)
+  })
+
+  it('refreshes a larger load-more window while keeping its current rows', async () => {
+    const rowLimit = ref(25)
+    const first = deferred<{ clicks: number }>()
+    const read = vi.fn().mockResolvedValueOnce({ clicks: 42 }).mockReturnValueOnce(first.promise)
+    const view = scope.run(() => useGscQuery({
+      site: 's_one',
+      params: { type: 'data-detail' },
+      watchSources: [computed(() => ({ rowLimit: rowLimit.value }))],
+      serverFallback: read,
+    }))!
+    await settle()
+    rowLimit.value = 50
+    await settle()
+    expect(read).toHaveBeenCalledTimes(2)
+    expect(view.data.value).toEqual({ clicks: 42 })
+    expect(view.pending.value).toBe(true)
+    first.resolve({ clicks: 43 })
+    await settle()
+    expect(view.data.value).toEqual({ clicks: 43 })
+  })
+
   it.each([401, 403])('clears retained values and metadata after a %s access refusal', async (statusCode) => {
     const read = vi.fn().mockResolvedValueOnce({ clicks: 42, meta: { source: 'retained' } }).mockRejectedValueOnce(Object.assign(new Error('Access lost'), { statusCode }))
     const view = use(read)
