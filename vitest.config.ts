@@ -40,7 +40,7 @@ function hostedTrendRuntime() {
     name: 'hosted-trend-runtime',
     enforce: 'post' as const,
     transform(code: string, id: string) {
-      if (!id.endsWith('/useProGscdump/useGscTopEntityTrend.ts'))
+      if (!['useGscTopEntityTrend', 'useProEntitySparklines', 'useProTopAssociations'].some(name => id.endsWith(`/useProGscdump/${name}.ts`)))
         return
       return { code: code.replaceAll('import.meta.client', 'true').replaceAll('import.meta.server', 'false'), map: null }
     },

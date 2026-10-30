@@ -45,8 +45,7 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
   const searchType = computed(() => toValue(opts.searchType) ?? filters.searchType.value)
   // Grouping by a query dimension returns the top page, and the reverse.
   const topDimension = opts.group === 'page' ? 'query' : 'page'
-  const cached = new Map<string, string | null>()
-  let cacheScope = ''
+  let cache = { scope: '', values: new Map<string, string | null>(), keys: [] as readonly string[], batch: null as Promise<void> | null }
 
   const _keys = computed(() => {
     const seen = new Set<string>()
@@ -64,16 +63,23 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
   }
 
   let token = 0
-  onScopeDispose(() => token++)
+  let stopped = false
+  onScopeDispose(() => {
+    stopped = true
+    token++
+  })
   watch(
     [() => toValue(opts.gscdumpSiteId), () => toValue(opts.range), _keys, searchType],
     async ([siteId, range, keys, slice]) => {
       const current = ++token
       const nextScope = siteId ? `${siteId}:${slice}:${range?.start}:${range?.end}:${opts.group}` : ''
-      if (nextScope !== cacheScope) {
-        cached.clear()
-        cacheScope = nextScope
+      if (nextScope !== cache.scope) {
+        cache = { scope: nextScope, values: new Map(), keys, batch: null }
+        map.value = new Map()
       }
+      const owner = cache
+      const cached = owner.values
+      owner.keys = keys
       if (!import.meta.client || !siteId || !keys.length || !range?.start || !range?.end) {
         map.value = new Map()
         pending.value = false
@@ -82,27 +88,40 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
       const missing = keys.filter(k => !cached.has(k))
       if (missing.length) {
         pending.value = true
+        map.value = new Map(keys.filter(key => cached.get(key)).map(key => [key, cached.get(key)!]))
+        const batch = (owner.batch ?? Promise.resolve()).then(async () => {
+          if (stopped || owner !== cache)
+            return
+          const unresolved = owner.keys.filter(key => !cached.has(key))
+          if (!unresolved.length)
+            return
+          const response = await readAssociations(siteId, { searchType: slice, group: opts.group, keys: unresolved, range })
+          if (stopped || owner !== cache)
+            return
+          const top = selectTopAssociations((response?.rows ?? []) as unknown as Record<string, unknown>[], {
+            groupField: opts.group,
+            topField: topDimension,
+          })
+          for (const key of unresolved) {
+            const value = top.get(key) ?? null
+            // An operator string is not a ranking, so it must never be offered as
+            // a page's top keyword.
+            cached.set(key, topDimension === 'query' ? operatorFreeKeyword(value) : value)
+          }
+        }).finally(() => {
+          if (owner.batch === batch)
+            owner.batch = null
+        })
+        owner.batch = batch
         // Silent: an unresolved association renders as a dash in its own cell,
         // which says more than a toast over the whole table. The failure is
         // logged rather than dropped.
-        const response = await readAssociations(siteId, { searchType: slice, group: opts.group, keys: missing, range })
-          .catch((cause: unknown) => {
+        await batch.catch((cause: unknown) => {
+          if (current === token)
             logWarn('gscdump.table_cell.unresolved', cause, { read: 'top-association', group: opts.group })
-            return null
-          })
+        })
         if (current !== token)
           return
-
-        const top = selectTopAssociations((response?.rows ?? []) as unknown as Record<string, unknown>[], {
-          groupField: opts.group,
-          topField: topDimension,
-        })
-        for (const key of missing) {
-          const value = top.get(key) ?? null
-          // An operator string is not a ranking, so it must never be offered as
-          // a page's top keyword.
-          cached.set(key, topDimension === 'query' ? operatorFreeKeyword(value) : value)
-        }
       }
       const next = new Map<string, string>()
       for (const k of keys) {
