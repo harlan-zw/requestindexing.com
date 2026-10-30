@@ -50,6 +50,97 @@ function use(read: () => Promise<{ clicks: number }>) {
   return scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, serverFallback: read }))!
 }
 
+it.each([
+  ['custom prototype', () => Object.assign(Object.create({ inherited: 'ignored' }), { revision: 1 })],
+  ['class record', () => new class { revision = 1 }()],
+  ['symbol property', () => ({ revision: 1, [Symbol('ignored')]: 'ignored' })],
+  ['function property', () => ({ revision: 1, ignored: () => 'ignored' })],
+  ['symbol value property', () => ({ revision: 1, ignored: Symbol('ignored') })],
+  ['function value', () => () => 'ignored'],
+  ['symbol value', () => Symbol('ignored')],
+  ['array function', () => [() => 'ignored']],
+  ['array symbol', () => [Symbol('ignored')]],
+  ['thenable record', () => ({ revision: 1, then: () => undefined })],
+  ['Promise value', () => Promise.resolve('ignored')],
+] as const)('accepts JSON-compatible %s invalidations without restarting equal reads', async (_name, create) => {
+  const extra = ref<unknown>(create())
+  const previousKey = JSON.stringify([extra.value])
+  const invalidation = ref(0)
+  const held = deferred<{ clicks: number }>()
+  const read = vi.fn().mockReturnValueOnce(held.promise).mockResolvedValue({ clicks: 43 })
+  const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra, invalidation], serverFallback: read }))!
+  await settle()
+  extra.value = create()
+  expect(JSON.stringify([extra.value])).toBe(previousKey)
+  await settle()
+  expect(read).toHaveBeenCalledTimes(1)
+  expect(view.pending.value).toBe(true)
+  held.resolve({ clicks: 42 })
+  await settle()
+  extra.value = create()
+  await settle()
+  expect(read).toHaveBeenCalledTimes(1)
+  expect(view.data.value).toEqual({ clicks: 42 })
+  expect(view.pending.value).toBe(false)
+  invalidation.value++
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+  expect(view.data.value).toEqual({ clicks: 43 })
+})
+
+it.each([undefined, () => 'ignored', Symbol('ignored')])('retains a read when an omitted array value becomes null', async (ignored) => {
+  const extra = ref<unknown>([ignored])
+  const previousKey = JSON.stringify([extra.value])
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  extra.value = [null]
+  expect(JSON.stringify([extra.value])).toBe(previousKey)
+  await settle()
+  expect(read).toHaveBeenCalledTimes(1)
+  expect(view.data.value).toEqual({ clicks: 42 })
+})
+
+it('observes non-enumerable data exposed by a custom JSON projection', async () => {
+  const revision = ref(1)
+  const extra = computed(() => Object.create(null, {
+    toJSON: { value: () => ({ revision: revision.value }) },
+  }))
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  expect(view.data.value).toEqual({ clicks: 42 })
+  revision.value++
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+})
+
+it.each([
+  () => Object.assign(Object.create({ inherited: true }), { revision: 1 }),
+  () => new class { revision = 1 }(),
+])('invalidates a read when custom record data changes', async (create) => {
+  const extra = ref<{ revision: number }>(create())
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra], serverFallback: read }))!
+  await settle()
+  extra.value.revision++
+  await settle()
+  expect(read).toHaveBeenCalledTimes(2)
+})
+
+it('ignores changed function bodies and symbol labels in non-data invalidations', async () => {
+  const extra = ref<{ callback: () => string, label: symbol }>({ callback: () => 'first', label: Symbol('first') })
+  const opaque = ref<unknown>(() => 'first')
+  const read = vi.fn().mockResolvedValue({ clicks: 42 })
+  const view = scope.run(() => useGscQuery({ site: 's_one', params: { type: 'data-detail' }, watchSources: [extra, opaque], serverFallback: read }))!
+  await settle()
+  extra.value = { callback: () => 'second', label: Symbol('second') }
+  opaque.value = Symbol('second')
+  await settle()
+  expect(read).toHaveBeenCalledTimes(1)
+  expect(view.data.value).toEqual({ clicks: 42 })
+})
+
 describe('hosted query identity', () => {
   it('keeps a pending read when nested request properties arrive in another order', async () => {
     const request = ref({ type: 'data-detail' as const, startDate: '2026-10-01', endDate: '2026-10-28' })

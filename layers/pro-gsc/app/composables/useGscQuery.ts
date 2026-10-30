@@ -80,6 +80,34 @@ function errorStatus(error: unknown): GscQueryStatus {
   return classifyGscError(error).status
 }
 
+function stringifyWatchSources(values: unknown[]): string {
+  // Keep JSON's data projection while devalue retains Map, Set, and cycles.
+  const projections = new WeakMap<object, unknown>()
+  function project(value: unknown): unknown {
+    if (value && (typeof value === 'object' || typeof value === 'function')) {
+      if (projections.has(value))
+        return projections.get(value)
+      const toJSON = (value as { toJSON?: () => unknown }).toJSON
+      const data = typeof toJSON === 'function' ? toJSON.call(value) : value
+      const projected = typeof data === 'function' || typeof data === 'symbol' ? undefined : data
+      projections.set(value, projected)
+      return projected
+    }
+    return typeof value === 'symbol' ? undefined : value
+  }
+  return stringify(values, undefined, {
+    operations: {
+      isThenable: () => false,
+      shapeOf(value) {
+        return { kind: 'plain', keys: Object.keys(value).filter(key => project(defaultStringifyOperations.get(value, key)) !== undefined).sort() }
+      },
+      get: (value, key) => project(defaultStringifyOperations.get(value, key)) ?? null,
+      entriesOf: value => Array.from(defaultStringifyOperations.entriesOf(value), ([key, item]) => [project(key) ?? null, project(item) ?? null] as [unknown, unknown]),
+      valuesOf: value => Array.from(defaultStringifyOperations.valuesOf(value), item => project(item) ?? null),
+    },
+  })
+}
+
 /**
  * Consumer-owned query lifecycle for the v1 cutover.
  *
@@ -190,18 +218,7 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
     identity.value.scope,
     toValue(options.site),
     paramsKey.value,
-    stringify((options.watchSources ?? []).map(source => toValue(source)), undefined, {
-      operations: {
-        shapeOf(value) {
-          const shape = defaultStringifyOperations.shapeOf(value)
-          // Hosted inputs also appear in extra sources. Omitted optional
-          // fields and undefined fields carry the same wire request.
-          return shape.kind === 'plain' || shape.kind === 'null-proto'
-            ? { ...shape, keys: shape.keys.filter(key => defaultStringifyOperations.get(value, key) !== undefined).sort() }
-            : shape
-        },
-      },
-    }),
+    stringifyWatchSources((options.watchSources ?? []).map(source => toValue(source))),
     options.enabled === undefined || toValue(options.enabled),
   ]))
   watch(requestKey, runQuery, { immediate: true })
