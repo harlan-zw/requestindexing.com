@@ -290,3 +290,43 @@ it.each(kinds)('reads a skipped %s key if it returns before the queue finishes',
   expect([...view.map.value]).toEqual([['second', answer(kind, 'second')], ['third', answer(kind, 'third')]])
   expect(view.pending.value).toBe(false)
 })
+
+it.each(kinds.flatMap(kind => [[kind, 'successful'], [kind, 'failed']] as const))('coalesces new %s keys after a %s predecessor', async (kind, predecessor) => {
+  const { view, keys } = await mount(kind)
+  keys.value = ['first', 'second']
+  await settle()
+  keys.value = ['first', 'second', 'third']
+  await settle()
+  expect(reads.map(read => read.keys)).toEqual([['first']])
+  reply(reads[0]!, predecessor === 'failed')
+  await settle()
+  expect(reads.map(read => read.keys)).toEqual([['first'], ['second', 'third']])
+  reply(reads[1]!)
+  await settle()
+  const answered = predecessor === 'failed' ? ['second', 'third'] : keys.value
+  expect([...view.map.value]).toEqual(answered.map(key => [key, answer(kind, key)]))
+  expect(view.pending.value).toBe(false)
+  if ('error' in view)
+    expect(Boolean(view.error.value)).toBe(predecessor === 'failed')
+})
+
+it.each(kinds)('surfaces a shared %s batch failure for the remaining visible key', async (kind) => {
+  const { view, keys } = await mount(kind)
+  keys.value = ['first', 'second']
+  await settle()
+  keys.value = ['first', 'second', 'third']
+  await settle()
+  keys.value = ['third']
+  await settle()
+  reply(reads[0]!)
+  await settle()
+  expect(reads.map(read => read.keys)).toEqual([['first'], ['third']])
+  reply(reads[1]!, true)
+  await settle()
+  expect(view.map.value.size).toBe(0)
+  expect(view.pending.value).toBe(false)
+  if ('error' in view)
+    expect(view.error.value).toBeInstanceOf(Error)
+  else
+    expect(logging.warn).toHaveBeenCalledTimes(1)
+})

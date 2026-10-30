@@ -47,7 +47,7 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
   const searchType = computed(() => toValue(opts.searchType) ?? filters.searchType.value)
   // Grouping by a query dimension returns the top page, and the reverse.
   const topDimension = opts.group === 'page' ? 'query' : 'page'
-  let cache = { scope: '', values: new Map<string, string | null>(), keys: [] as readonly string[], batch: null as Promise<BatchOutcome> | null, reads: new Map<string, Promise<BatchOutcome>>() }
+  let cache = { scope: '', values: new Map<string, string | null>(), keys: [] as readonly string[], batch: null as Promise<BatchOutcome> | null, reads: new Map<string, Promise<BatchOutcome>>(), attempted: new Set<string>() }
 
   const _keys = computed(() => {
     const seen = new Set<string>()
@@ -76,7 +76,7 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
       const current = ++token
       const nextScope = siteId ? `${siteId}:${slice}:${range?.start}:${range?.end}:${opts.group}` : ''
       if (nextScope !== cache.scope) {
-        cache = { scope: nextScope, values: new Map(), keys, batch: null, reads: new Map() }
+        cache = { scope: nextScope, values: new Map(), keys, batch: null, reads: new Map(), attempted: new Set<string>() }
         map.value = new Map()
       }
       const owner = cache
@@ -93,14 +93,25 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
         const batch = (owner.batch ?? Promise.resolve<BatchOutcome>({ _tag: 'Ok' })).then(async (): Promise<BatchOutcome> => {
           if (stopped || owner !== cache)
             return { _tag: 'Ok' }
-          const unresolved = missing.filter(key => owner.keys.includes(key) && !cached.has(key))
+          const unresolved = owner.keys.filter(key => !cached.has(key) && !owner.attempted.has(key))
           for (const key of missing) {
             if (!owner.keys.includes(key) && owner.reads.get(key) === batch)
               owner.reads.delete(key)
           }
-          if (!unresolved.length)
+          if (!unresolved.length) {
+            const absorbed = [...new Set(missing.flatMap(key => owner.reads.has(key) && owner.reads.get(key) !== batch ? [owner.reads.get(key)!] : []))]
+            for (const read of absorbed) {
+              const outcome = await read
+              if (outcome._tag === 'Err')
+                return outcome
+            }
             return { _tag: 'Ok' }
+          }
           attempted = unresolved
+          for (const key of unresolved) {
+            owner.attempted.add(key)
+            owner.reads.set(key, batch)
+          }
           const response = await readAssociations(siteId, { searchType: slice, group: opts.group, keys: unresolved, range })
           if (stopped || owner !== cache)
             return { _tag: 'Ok' }
@@ -125,6 +136,7 @@ export function useProTopAssociations(opts: UseProTopAssociationsOptions): {
           if (owner.batch === batch) {
             owner.batch = null
             owner.reads.clear()
+            owner.attempted.clear()
           }
         })
         owner.batch = batch
