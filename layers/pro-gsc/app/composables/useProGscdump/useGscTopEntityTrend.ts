@@ -70,18 +70,18 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
     token++
   })
 
-  // `read` is async, so a request the contract rejects fails here like a read.
-  async function readRows(read: () => Promise<{ rows?: readonly unknown[] } | null | undefined>): Promise<Row[] | null> {
-    return read()
-      .then(response => (response?.rows ?? []) as Row[])
-      .catch((cause: unknown) => {
-        error.value = cause instanceof Error ? cause : new Error('Search trend could not load.')
-        return null
-      })
-  }
-
   async function refetch(): Promise<void> {
     const current = ++token
+    // Each pipeline owns its errors. A replaced read must not hide a newer chart.
+    async function readRows(read: () => Promise<{ rows?: readonly unknown[] } | null | undefined>): Promise<Row[] | null> {
+      return read()
+        .then(response => (response?.rows ?? []) as Row[])
+        .catch((cause: unknown) => {
+          if (current === token)
+            error.value = cause instanceof Error ? cause : new Error('Search trend could not load.')
+          return null
+        })
+    }
     error.value = null
     const siteId = toValue(opts.gscdumpSiteId)
     const metric = toValue(opts.metric)
@@ -114,7 +114,9 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
         rowLimit: candidateLimit,
       }),
     }, true))
-    if (current !== token || !candidates) {
+    if (current !== token)
+      return
+    if (!candidates) {
       pending.value = false
       return
     }
@@ -142,7 +144,9 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
         body: entityDailySeriesRequest({ searchType, dimension, keys: entities.map(entity => entity.key), range, metric, facets }),
       }, true)),
     ])
-    if (current !== token || !totalRows || !entityRows) {
+    if (current !== token)
+      return
+    if (!totalRows || !entityRows) {
       pending.value = false
       return
     }
