@@ -20,6 +20,7 @@ const metrics = [
   { label: 'CLS', value: 0.28, display: '0.28', status: 'poor' as const },
   { label: 'TBT', value: null as number | null, display: null, status: 'neutral' as const },
 ]
+const cardMetrics = metrics.slice(0, 4).map(metric => ({ title: metric.label, value: metric.display }))
 
 const trends = [
   { current: 1200, previous: 1000, inverted: false, note: 'Clicks up' },
@@ -43,6 +44,13 @@ const paths = [
       title="Table cells"
       description="Composable cell primitives. Mix into UTable column render or build your own data grids."
     />
+
+    <KitSection title="UiStats" code="<UiStats :data variant=&quot;cards&quot;>">
+      <div class="space-y-4">
+        <UiStats :data="cardMetrics" variant="cards" />
+        <UiStats :data="cardMetrics.slice(0, 1)" variant="cards" />
+      </div>
+    </KitSection>
 
     <KitSection
       title="UiTableScoreTile"

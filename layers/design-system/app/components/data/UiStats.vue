@@ -20,7 +20,7 @@ const {
 }>()
 
 const gridCols = [
-  'lg:grid-cols-1 md:grid-cols-2',
+  'lg:grid-cols-1 md:grid-cols-1',
   'lg:grid-cols-2 md:grid-cols-2',
   'lg:grid-cols-3 md:grid-cols-2',
   'lg:grid-cols-4 md:grid-cols-2',
@@ -40,7 +40,7 @@ const containerClass = computed(() => {
   const isGrid = layout === 'grid' || variant === 'cards'
   return join(
     'justify-around',
-    isGrid ? `grid grid-cols-1 sm:grid-cols-2 ${gridCols[gridIndex]}` : 'flex flex-col md:flex-row',
+    isGrid ? `grid ${length === 1 ? 'grid-cols-1' : 'grid-cols-2'} ${gridCols[gridIndex]}` : 'flex flex-col md:flex-row',
     wrap && 'flex-wrap',
     variant === 'card' && 'divide-y md:divide-y-0 md:divide-x divide-[var(--ui-border-muted)] rounded-lg border border-default py-4',
     variant === 'cards' && 'gap-4',

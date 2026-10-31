@@ -200,7 +200,7 @@ const formattedTrend = computed(() => {
       :is="rootTag"
       :to="to || undefined"
       data-ui="UiStat"
-      class="relative flex flex-col"
+      class="relative flex min-w-0 flex-col"
       :class="[
         card ? 'gap-2' : 'gap-1',
         to ? 'cursor-pointer' : '',
@@ -324,7 +324,7 @@ const formattedTrend = computed(() => {
              stays inline on the right. -->
           <div class="relative z-10 flex items-end justify-between gap-3" :class="card && (sparkline?.length || $slots.chart) ? 'ui-stat-legible' : ''">
             <slot>
-              <div v-if="value != null" class="flex items-baseline gap-2 min-w-0">
+              <div v-if="value != null" class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span class="numerals-display tracking-tight" :class="[sizeConfig.value, valueClass || 'text-default']">
                   <UiSlotText
                     v-if="animatedValueOptions && displayValue"
