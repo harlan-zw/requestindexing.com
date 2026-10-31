@@ -99,10 +99,12 @@ export const RENDER_PATH_TIMEOUT_MS = 2_500
 export interface GscdumpClientOptions {
   /** One deadline per call. It covers the SDK's retries as well as each attempt. */
   timeoutMs?: number
+  /** Total SDK attempts per call. Omit to retain the SDK's retry policy. */
+  attempts?: number
 }
 
 export function useGscdumpClient(options: GscdumpClientOptions = {}) {
-  const client = createGscdumpPublicV1Client()
+  const client = createGscdumpPublicV1Client(undefined, options)
   const timeoutMs = options.timeoutMs ?? DEFAULT_PARTNER_TIMEOUT_MS
   // A fresh signal per call, so a client reused across calls never shares a
   // spent deadline. The SDK stops retrying once the signal aborts.
