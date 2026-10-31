@@ -173,7 +173,8 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
     const visibleSites = [...new Map(rows.filter(row => selectGscdumpV1SiteAccess(caller, {
       teamIds: [row.owningTeamId, ...(row.linkedTeamId === null ? [] : [row.linkedTeamId])],
     }, false)._tag === 'allowed').map(row => [row.localSiteId, row])).values()]
-    const gscdump = useGscdumpClient()
+    // A browser fence refuses promptly instead of waiting through SDK retries.
+    const gscdump = useGscdumpClient({ attempts: 1 })
     const linkedSites = await Promise.all(visibleSites.map(async site => ({
       ...site,
       principalIds: [...await registeredSiteTeamPrincipals(db, site.owningTeamId), ...[site.teamPrincipalId, site.sitePrincipalId].filter((id): id is string => !!id)],

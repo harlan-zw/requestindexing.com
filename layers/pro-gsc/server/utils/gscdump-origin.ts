@@ -31,7 +31,7 @@ export function getGscdumpWebhookUrl(event?: H3Event): string {
 }
 
 /** Public v1 client for operations in the frozen registry. */
-export function createGscdumpPublicV1Client(event?: H3Event) {
+export function createGscdumpPublicV1Client(event?: H3Event, options?: { attempts?: number }) {
   const config = event ? useRuntimeConfig(event) : useRuntimeConfig()
   const apiKey = config.gscdump?.apiKey
   if (!apiKey)
@@ -39,5 +39,6 @@ export function createGscdumpPublicV1Client(event?: H3Event) {
   return createGscdumpV1Client({
     apiRoot: getGscdumpApiUrl(event),
     credential: apiKey,
+    ...(options?.attempts === undefined ? {} : { retry: { maxAttempts: options.attempts } }),
   })
 }
