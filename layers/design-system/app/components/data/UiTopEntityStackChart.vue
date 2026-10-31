@@ -22,6 +22,7 @@ const {
   series,
   loading = false,
   height = 220,
+  legendSlots = 0,
   format = (v: number) => v.toLocaleString(),
   xFormat,
   emptyTitle = 'Not enough data to chart',
@@ -33,6 +34,8 @@ const {
   series: TopEntityStackSeries[]
   loading?: boolean
   height?: number | string
+  /** Reserve single-line legend cells while loading and for unused series. */
+  legendSlots?: number
   /** Format a metric value for the legend + tooltip. */
   format?: (value: number) => string
   /** Format bucket labels for details. The axis uses the shared calendar tick planner. */
@@ -64,6 +67,7 @@ const resolvedColors = computed(() => series.map((s, i) => s.isOther
   ? 'color-mix(in oklab, var(--ui-primary) 22%, transparent)'
   : colorFor(i).hex))
 const resolvedDotClasses = computed(() => series.map((_, i) => colorFor(i).dot))
+const legend = computed(() => Array.from({ length: Math.max(legendSlots, series.length) }, (_, index) => series[index]))
 
 const rows = computed(() => topEntityStackRows({ buckets, series }))
 const y = computed(() => series.map((_, si) => (d: TopEntityStackRow) => d.shares[si] ?? 0))
@@ -261,13 +265,24 @@ const ariaLabel = computed(() => `100% stacked bar chart of ${series.map(s => s.
          can never crowd or overflow the bars. Always present for 2+ series so
          identity is never color-alone. -->
     <ul
-      v-if="series.length > 1 && !loading && buckets.length"
-      class="mt-2 flex flex-wrap gap-x-3 gap-y-1"
-      :aria-label="`Legend: ${series.map(s => s.label).join(', ')}`"
+      v-if="legendSlots > 0 || (series.length > 1 && !loading && buckets.length)"
+      class="mt-2 gap-x-3 gap-y-1"
+      :class="legendSlots ? 'ui-top-entity-stack-chart__legend--slots text-mini' : 'flex flex-wrap'"
+      :aria-label="loading ? undefined : `Legend: ${series.map(s => s.label).join(', ')}`"
+      :aria-busy="loading || undefined"
     >
-      <li v-for="(s, i) in series" :key="s.key" class="flex items-center gap-1.5 min-w-0 max-w-full">
-        <span class="size-2 rounded-full shrink-0" :class="s.isOther ? 'bg-primary/25' : resolvedDotClasses[i]" aria-hidden="true" />
-        <span class="text-mini text-muted truncate">{{ s.label }}</span>
+      <li
+        v-for="(s, i) in legend"
+        :key="s?.key ?? i"
+        class="flex items-center gap-1.5 min-w-0 max-w-full"
+        :class="{ invisible: !loading && !s }"
+        :aria-hidden="loading || !s || undefined"
+      >
+        <UiSkeleton v-if="loading" type="block" class="h-3 w-24 max-w-full" />
+        <template v-else-if="s">
+          <span class="size-2 rounded-full shrink-0" :class="s.isOther ? 'bg-primary/25' : resolvedDotClasses[i]" aria-hidden="true" />
+          <span class="text-mini text-muted truncate" :title="legendSlots ? s.label : undefined">{{ s.label }}</span>
+        </template>
       </li>
     </ul>
 
@@ -301,6 +316,12 @@ const ariaLabel = computed(() => `100% stacked bar chart of ${series.map(s => s.
 </template>
 
 <style scoped>
+.ui-top-entity-stack-chart__legend--slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  grid-auto-rows: 1.5em;
+}
+
 .ui-top-entity-stack-chart__plot {
   display: grid;
   grid-template-columns: 1fr;

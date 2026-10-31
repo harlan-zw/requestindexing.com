@@ -104,6 +104,7 @@ function showImpressions() {
       :series="result.series"
       :loading="pending"
       :height="height"
+      :legend-slots="topN + 1"
       :format="format"
       :x-format="xFormat"
       :empty-title="emptyTitle"
