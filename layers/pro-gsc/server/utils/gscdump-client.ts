@@ -10,7 +10,6 @@ import type {
   DataDetailOptions,
   DataQueryOptions,
   EntitlementRefusal,
-  GscdumpAnalysisParams,
   GscdumpAvailableSite,
   IndexingDiagnosticsParams,
   IndexingUrlsParams,
@@ -19,7 +18,6 @@ import type {
 } from '@gscdump/contracts'
 import type { PartnerSiteRegistrationV1Response, PartnerUserEntitlementsV1 } from '@gscdump/contracts/v1'
 import type {
-  GscdumpAnalysisResponse,
   GscdumpDataDetailResponse,
   GscdumpDataResponse,
   GscdumpSyncStatusResponse,
@@ -198,18 +196,6 @@ export function useGscdumpClient(options: GscdumpClientOptions = {}) {
     })
   }
 
-  async function getAnalysis(siteId: string, params: GscdumpAnalysisParams): Promise<GscdumpAnalysisResponse> {
-    if ((params.preset === 'non-brand' || params.preset === 'brand-only') && !params.brandTerms?.trim()) {
-      throw createError({
-        statusCode: 400,
-        message: 'brandTerms is required for brand/non-brand presets',
-      })
-    }
-    return client.getSiteAnalysis({ params: { siteId }, query: params }, deadline())
-      .then(response => response.data as unknown as GscdumpAnalysisResponse)
-      .catch(rethrowV1AsH3)
-  }
-
   return {
     // User management
     registerUser: (body: RegisterPartnerUserParams) =>
@@ -285,7 +271,6 @@ export function useGscdumpClient(options: GscdumpClientOptions = {}) {
           ...(queryOptions?.comparison ? { comparison: toV1ReportState(queryOptions.comparison, queryOptions.searchType) } : {}),
         },
       }, deadline()).then(response => response.data as unknown as GscdumpDataDetailResponse).catch(rethrowV1AsH3),
-    getAnalysis,
 
     // Sitemaps: all v1 since `partner.sites.sitemaps.action.create` (submit/delete/refresh).
     getSitemaps: (siteId: string) =>

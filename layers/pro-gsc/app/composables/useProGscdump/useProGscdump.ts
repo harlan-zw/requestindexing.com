@@ -11,7 +11,6 @@
 import type { GscdumpV1OperationInput, GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import type { DetailReportRequest, ListReportRequest, RowsRequest } from '../../../shared/analytics-requests'
 import type {
-  GscdumpAnalysisResponse,
   GscdumpDataDetailResponse,
   GscdumpDataResponse,
   GscdumpIndexingDiagnosticsResponse,
@@ -64,10 +63,6 @@ export function useProGscdump() {
 
   function queryAnalyticsReportDetail(input: { params: { siteId: string }, body: DetailReportRequest }, silent = false) {
     return runV1<GscdumpDataDetailResponse>(() => createV1Client().queryAnalyticsReportDetail(input), silent)
-  }
-
-  function getSiteAnalysis(input: GscdumpV1OperationInput<'partner.sites.analysis.get'>, silent = false) {
-    return runV1<GscdumpAnalysisResponse>(() => createV1Client().getSiteAnalysis(input), silent)
   }
 
   function getSiteAnalyticsCoverage(input: GscdumpV1OperationInput<'partner.sites.analytics.coverage.get'>, silent = false) {
@@ -215,7 +210,6 @@ export function useProGscdump() {
     listSiteGoogleSubmissionReceipts,
     createSitemapAction,
     getCanonicalMismatches,
-    getSiteAnalysis,
     createSiteBingAuthorization,
     getSiteBingConnection,
     getSiteBingData,

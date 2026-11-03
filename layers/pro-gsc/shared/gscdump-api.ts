@@ -1,10 +1,7 @@
 // Shared gscdump contracts used by server and client adapters.
 
 export type {
-  GscdumpAnalysisPreset as AnalysisPreset,
   GscComparisonFilter,
-  GscdumpAnalysisParams,
-  GscdumpAnalysisResponse,
   GscdumpAvailableSite,
   GscdumpCanonicalMismatchesResponse,
   GscdumpDataDetailResponse,

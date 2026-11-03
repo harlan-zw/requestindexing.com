@@ -25,7 +25,6 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteAnalyticsCoverage },
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryReport },
   { surface: protocol.surfaces.analytics, operation: protocol.surfaces.analytics.operations.queryReportDetail },
-  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteAnalysis },
   // Query and page counts over a window, with the comparison window.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexing },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexingUrls },
