@@ -7,7 +7,6 @@ export {
   type UseProEntitySparklinesOptions,
 } from './useProEntitySparklines'
 export { useProGscdump } from './useProGscdump'
-export { useProGscdumpAnalysis } from './useProGscdumpAnalysis'
 export {
   type BingDataset,
   type BingSiteId,

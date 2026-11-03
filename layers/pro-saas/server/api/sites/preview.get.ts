@@ -1,11 +1,8 @@
 // Connected Sites and the Site allowance for `ProSiteAddForm`, plus the
 // read-only list on Team settings. Lists the caller's current team's sites,
 // plus any they created on another team they manage.
-// Sync status/progress comes from gscdump's lifecycle;
-// `pageCount30Day` is a real per-site page count pulled from gscdump `getData`
-// (not fabricated), bounded to synced sites only.
+// Sync status/progress comes from gscdump's lifecycle.
 import { and, eq, inArray, or } from 'drizzle-orm'
-import { between, date, daysAgo, gsc, page, today } from 'gscdump/query'
 import { useGscdumpClient } from '#layers/pro-gsc/server/utils/gscdump-client'
 import { readOptionalUserEntitlements } from '#layers/pro-gsc/server/utils/user-entitlements'
 import { siteAllowanceOf } from '#layers/pro-gsc/shared/free-allowance'
@@ -14,10 +11,6 @@ import { readCallerGscdumpUserId } from '#layers/pro-saas/server/utils/caller-ro
 import { defineProApiHandler, getProLogger } from '#layers/pro-saas/server/utils/handler'
 import { teamsCallerCan } from '#layers/pro-saas/shared/policies/team-policy'
 import { isNearRetentionLimit, lifecycleOf, lifecycleSiteFor, readOptionalUserLifecycle, syncStatusFor } from '../../utils/site-lifecycle'
-
-// Real per-site page count over the trailing 30 days (`limit(1)`: we only
-// need `totalCount` from the response, not the rows themselves).
-const pageCountState = gsc.select(page).where(between(date, daysAgo(30), today())).limit(1).getState()
 
 export default defineProApiHandler({}, async ({ db, caller, event }) => {
   // A Site the caller created elsewhere is offered only while they can still
@@ -59,10 +52,6 @@ export default defineProApiHandler({}, async ({ db, caller, event }) => {
     const syncStatus = syncStatusFor(lifecycleSite, site.gscdumpSyncStatus)
     const oldest = lifecycleSite?.analytics.syncedRange.oldest ?? null
 
-    const pageCount30Day = (lifecycleRead._tag === 'Loaded' && site.gscdumpSiteId && lifecycleSite?.analytics.queryable)
-      ? await lifecycleRead.reader.getData(site.gscdumpSiteId, pageCountState).then(r => r.totalCount).catch(() => 0)
-      : 0
-
     return {
       site,
       syncStatus,
@@ -75,7 +64,6 @@ export default defineProApiHandler({}, async ({ db, caller, event }) => {
         // ships with the preview and `siteLabel()` falls back to it.
         property: site.property,
         gscdumpSiteUrl: site.gscdumpSiteUrl,
-        pageCount30Day,
         startOfData: oldest,
         isLosingData: isNearRetentionLimit(oldest),
       },

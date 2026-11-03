@@ -39,9 +39,9 @@ export function isNearRetentionLimit(oldestSyncedDate: string | null): boolean {
  * fall back to their stored sync status either way, but only `Unavailable`
  * carries a reason worth logging.
  */
-export type OptionalLifecycleRead<R extends LifecycleReader = LifecycleReader>
+export type OptionalLifecycleRead
   = | { _tag: 'Skipped' }
-    | { _tag: 'Loaded', lifecycle: PartnerLifecycleResponse, reader: R }
+    | { _tag: 'Loaded', lifecycle: PartnerLifecycleResponse }
     | { _tag: 'Unavailable', reason: string }
 
 /** The one gscdump operation an optional lifecycle read needs. */
@@ -63,20 +63,17 @@ export interface LifecycleReader {
  * with it while anonymous traffic was fine.
  *
  * Taking the factory as an argument puts construction inside the boundary, so
- * no caller can place it outside one. The built reader rides on `Loaded`, so a
- * route that needs more gscdump reads gets the client only on the path where
- * gscdump answered.
+ * no caller can place it outside one.
  */
-export async function readOptionalUserLifecycle<R extends LifecycleReader>(
+export async function readOptionalUserLifecycle(
   gscdumpUserId: string | null | undefined,
-  createReader: () => R,
-): Promise<OptionalLifecycleRead<R>> {
+  createReader: () => LifecycleReader,
+): Promise<OptionalLifecycleRead> {
   if (!gscdumpUserId)
     return { _tag: 'Skipped' }
 
   try {
-    const reader = createReader()
-    return { _tag: 'Loaded', lifecycle: await reader.getUserLifecycle(gscdumpUserId), reader }
+    return { _tag: 'Loaded', lifecycle: await createReader().getUserLifecycle(gscdumpUserId) }
   }
   catch (error) {
     return { _tag: 'Unavailable', reason: error instanceof Error ? error.message : String(error) }
@@ -84,6 +81,6 @@ export async function readOptionalUserLifecycle<R extends LifecycleReader>(
 }
 
 /** The lifecycle a read produced, or null when there is none to read. */
-export function lifecycleOf(read: OptionalLifecycleRead<LifecycleReader>): PartnerLifecycleResponse | null {
+export function lifecycleOf(read: OptionalLifecycleRead): PartnerLifecycleResponse | null {
   return read._tag === 'Loaded' ? read.lifecycle : null
 }

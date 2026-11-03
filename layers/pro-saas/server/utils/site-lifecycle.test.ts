@@ -22,7 +22,7 @@ describe('readOptionalUserLifecycle', () => {
 
     const result = await readOptionalUserLifecycle('gscdump-user-1', () => reader)
 
-    expect(result).toEqual({ _tag: 'Loaded', lifecycle, reader })
+    expect(result).toEqual({ _tag: 'Loaded', lifecycle })
   })
 
   it('skips the read for a user gscdump does not know', async () => {

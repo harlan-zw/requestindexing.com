@@ -118,7 +118,6 @@ export interface SitePreview {
   // `siteLabel()` falls back to `property`, so both belong on the type.
   domain: string | null
   property: string | null
-  pageCount30Day: number
   startOfData: string
   isLosingData: boolean
 }
