@@ -5,7 +5,7 @@ import { globbySync } from 'globby'
 import { externalCheckin } from './shared/checkin-external'
 import { CLOUDFLARE_REQUIRED_SECRETS } from './shared/cloudflare'
 import { disableDeferredPrefetch } from './shared/deferred-prefetch'
-import { markdownVaryRouteRules, redirectRouteRules, runtimeOnlyRouteRules } from './shared/routes'
+import { markdownVaryRouteRules, redirectRouteRules, runtimeOnlyRouteRules, runtimeOnlySitemapExclude } from './shared/routes'
 import { reportPolicy, SENTRY_DSN } from './shared/sentry'
 
 // read all the folders at the server/app path
@@ -182,14 +182,8 @@ export default defineNuxtConfig({
 
   sitemap: {
     zeroRuntime: true,
-    exclude: [
-      '/_alt/**',
-      '/dashboard/**',
-      '/pro/**',
-      '/api/**',
-      '/auth/**',
-      '/kit/**',
-    ],
+    // Every runtime-only route is an app page. `shared/routes.ts` owns the list.
+    exclude: runtimeOnlySitemapExclude(),
   },
 
   ogImage: {
