@@ -49,6 +49,7 @@ const iconMap: Record<string, string> = {
   'i-heroicons-arrow-up-tray': 'i-heroicons-arrow-up-tray',
   'i-heroicons-exclamation-triangle': 'i-heroicons-exclamation-triangle',
   'i-heroicons-chart-bar': 'i-heroicons-chart-bar',
+  'i-heroicons-document-magnifying-glass': 'i-heroicons-document-magnifying-glass',
 }
 </script>
 

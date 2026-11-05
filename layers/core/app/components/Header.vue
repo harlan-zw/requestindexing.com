@@ -32,6 +32,7 @@ const megaMenuItems = computed(() => {
 
 // Mobile nav data
 const mobileGuides = [
+  { label: 'Ask Google to Index a URL', icon: 'i-heroicons-document-magnifying-glass', to: '/request-indexing-google-search-console' },
   { label: 'Google Indexing API', icon: 'i-heroicons-book-open', to: '/google-indexing-api' },
   { label: 'Setup Tutorial', icon: 'i-heroicons-academic-cap', to: '/google-indexing-api-tutorial' },
   { label: 'Node.js Implementation', icon: 'i-simple-icons-nodedotjs', to: '/google-indexing-api-node-js' },

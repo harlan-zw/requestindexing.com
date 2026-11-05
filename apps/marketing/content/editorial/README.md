@@ -1,6 +1,6 @@
 # Content refresh ledger
 
-Scope: six guides and three comparisons. Preserve all nine URLs.
+Scope: six guides and three comparisons. Preserve all nine URLs. A tenth guide, request-indexing-google-search-console, was added on 5 November 2026 outside this pass.
 Original base Git revision: cf640ac56542cca8850b2ce3ab773f35c8910e21. Review date: 15 September 2026.
 Authority: prepare improved content and owned PRs for review. No automatic merge or production publication.
 
@@ -32,6 +32,7 @@ Prioritize reader problems and verified source gaps; no measured demand claim is
 | comparisons/vs-indexly.md | /comparisons/vs-indexly | Which current workflow fits my needs? | article reviewed |
 | comparisons/vs-seo-gets.md | /comparisons/vs-seo-gets | Do I need API notifications or Search Console analysis? | article reviewed |
 | comparisons/vs-tagparrot.md | /comparisons/vs-tagparrot | Is Tag Parrot still available and what replaces its workflow? | article reviewed |
+| guides/request-indexing-google-search-console.md | /request-indexing-google-search-console | How do I request indexing for one URL in Search Console, and what does the result mean? | draft, awaiting review |
 
 Pilot: indexing-api-for-blog-posts. Each brief records owner, revision, review evidence, and decision.
 New articles are excluded from this pass. Candidate gaps may be recorded without publication.
