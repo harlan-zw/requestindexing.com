@@ -38,6 +38,15 @@ export function runtimeOnlyRouteRules(): Record<string, { prerender: false }> {
 }
 
 /**
+ * Sitemap exclusions for every runtime-only prefix: the page itself and its
+ * children. These are app pages, and `/login` renders `noindex`, so a sitemap
+ * entry would submit a URL that asks Google not to index it.
+ */
+export function runtimeOnlySitemapExclude(): string[] {
+  return RUNTIME_ONLY_ROUTE_PREFIXES.flatMap(prefix => [prefix, `${prefix}/**`])
+}
+
+/**
  * Every page the build writes to disk. Cloudflare serves these files before the
  * worker runs, so the worker cannot answer `Accept: text/markdown` on them.
  *

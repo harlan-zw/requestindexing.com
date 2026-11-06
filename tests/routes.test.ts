@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isRuntimeOnlyRoute, redirectRouteRules, RUNTIME_ONLY_ROUTE_PREFIXES, runtimeOnlyRouteRules } from '../shared/routes'
+import { isRuntimeOnlyRoute, redirectRouteRules, RUNTIME_ONLY_ROUTE_PREFIXES, runtimeOnlyRouteRules, runtimeOnlySitemapExclude } from '../shared/routes'
 
 describe('isRuntimeOnlyRoute', () => {
   it.each([
@@ -58,5 +58,24 @@ describe('redirectRouteRules', () => {
       redirect: { to: '/pro/onboarding', statusCode: 301 },
       prerender: false,
     })
+  })
+})
+
+describe('runtimeOnlySitemapExclude', () => {
+  // `/login` renders `noindex` at runtime. The sitemap listed it anyway, so
+  // Search Console saw a submitted URL that asks not to be indexed.
+  it('keeps runtime-only pages and their children out of the sitemap', () => {
+    const exclude = runtimeOnlySitemapExclude()
+
+    expect(exclude).toContain('/login')
+    expect(exclude).toContain('/login/**')
+    expect(exclude).toContain('/team-invitations/**')
+  })
+
+  it('leaves marketing pages in the sitemap', () => {
+    const exclude = runtimeOnlySitemapExclude()
+
+    expect(exclude).not.toContain('/tools')
+    expect(exclude).not.toContain('/guides')
   })
 })
