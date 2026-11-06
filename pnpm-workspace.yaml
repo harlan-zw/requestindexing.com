@@ -34,7 +34,7 @@ minimumReleaseAgeExclude:
   - '@nuxtjs/robots@7.0.2'
   - '@nuxtjs/sitemap@9.1.0'
   - nuxt-og-image@7.0.4
-  - nuxt-ai-ready@3.3.1
+  - nuxt-ai-ready@3.5.0
   - nuxt-skew-protection@2.0.2
   - nuxt-schema-org@7.0.1
   - nuxt-seo-utils@9.0.1
