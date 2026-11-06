@@ -4,7 +4,7 @@ import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
 const { loggedIn, user } = useUserSession()
 
 useSeoMeta({
-  title: 'Request Google Indexing for Your Pages',
+  title: 'Request Google Indexing and See Why Pages Are Not Indexed',
   description: 'Request Google indexing for your pages, then see which URLs Google has indexed, which it has not, and the reason it gives. Free and open source.',
 })
 
