@@ -4,6 +4,8 @@ import type { CurrentTeamContext } from '../layers/pro-saas/server/utils/require
 import type { Caller } from '../layers/pro-saas/shared/caller'
 import { createError, defineEventHandler } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { dispatchEvent } from '#domain-events/server'
+import { teamInvitations, teamMemberships } from '../layers/pro-saas/server/database'
 import { migratedSqlite, proDatabase, seedUser } from './utils/pro-database'
 
 // An invitation names an email address. Only an address the provider has
@@ -92,11 +94,78 @@ describe('an invitation for an email the caller has not verified', () => {
 })
 
 describe('an invitation for an email the caller has verified', () => {
+  it.each([
+    ['revocation', 'DELETE FROM team_invitations'],
+    ['expiration', 'UPDATE team_invitations SET expires_at = 0'],
+    ['another acceptance', 'UPDATE team_invitations SET accepted_at = 1'],
+    ['token rotation', 'UPDATE team_invitations SET token = \'replacement-token\''],
+    ['role change', 'UPDATE team_invitations SET role = \'viewer\''],
+    ['identity verification removal', 'UPDATE user_identities SET email_verified = 0'],
+  ])('grants nothing when %s wins before acceptance', async (_, mutation) => {
+    seedIdentity(2, INVITEE, true)
+    let revoked = false
+    h.db = new Proxy(proDatabase(sqlite), {
+      get(target, key) {
+        const value = Reflect.get(target, key, target)
+        if ((key === 'insert' || key === 'update') && typeof value === 'function') {
+          return (...args: unknown[]) => {
+            if (!revoked && (args[0] === teamInvitations || args[0] === teamMemberships)) {
+              sqlite.exec(mutation)
+              revoked = true
+            }
+            return Reflect.apply(value, target, args)
+          }
+        }
+        return typeof value === 'function' ? value.bind(target) : value
+      },
+    })
+
+    await expect(accept()).rejects.toMatchObject({ statusCode: 409 })
+    expect(membershipRole(1, 2)).toBeNull()
+    expect(sqlite.prepare('SELECT current_team_id FROM users WHERE user_id = 2').get())
+      .toMatchObject({ current_team_id: 2 })
+    expect(sqlite.prepare('SELECT count(*) AS count FROM team_audit_events').get()).toMatchObject({ count: 0 })
+    expect(dispatchEvent).not.toHaveBeenCalled()
+  })
+
   it('is accepted and grants the invited role', async () => {
     seedIdentity(2, INVITEE, true)
 
     await expect(accept()).resolves.toEqual({ ok: true, teamId: 1 })
     expect(membershipRole(1, 2)).toBe('editor')
+    expect(sqlite.prepare('SELECT kind FROM team_audit_events').get()).toMatchObject({ kind: 'invitation.accepted' })
+    expect(dispatchEvent).toHaveBeenCalledExactlyOnceWith('pro:membership:added', expect.objectContaining({ teamId: 1, userId: 2, role: 'editor' }))
+  })
+
+  it('keeps verified Unicode email matching case insensitive', async () => {
+    sqlite.prepare('UPDATE team_invitations SET email = ?').run('älice@example.test')
+    seedIdentity(2, 'Älice@example.test', true)
+
+    await expect(accept()).resolves.toEqual({ ok: true, teamId: 1 })
+    expect(membershipRole(1, 2)).toBe('editor')
+  })
+
+  it('keeps an existing role without announcing another membership', async () => {
+    seedIdentity(2, INVITEE, true)
+    sqlite.prepare('INSERT INTO team_memberships (team_id, user_id, role) VALUES (1, 2, \'viewer\')').run()
+
+    await expect(accept()).resolves.toEqual({ ok: true, teamId: 1 })
+
+    expect(membershipRole(1, 2)).toBe('viewer')
+    expect(sqlite.prepare('SELECT kind FROM team_audit_events').get()).toMatchObject({ kind: 'invitation.accepted' })
+    expect(dispatchEvent).not.toHaveBeenCalled()
+  })
+
+  it('accepts only once across concurrent requests', async () => {
+    seedIdentity(2, INVITEE, true)
+
+    const attempts = await Promise.allSettled([accept(), accept()])
+
+    expect(attempts.filter(attempt => attempt.status === 'fulfilled')).toHaveLength(1)
+    expect(attempts.find(attempt => attempt.status === 'rejected')).toMatchObject({ reason: { statusCode: 409 } })
+    expect(sqlite.prepare('SELECT count(*) AS count FROM team_memberships').get()).toMatchObject({ count: 1 })
+    expect(sqlite.prepare('SELECT count(*) AS count FROM team_audit_events').get()).toMatchObject({ count: 1 })
+    expect(dispatchEvent).toHaveBeenCalledTimes(1)
   })
 
   it('is listed as pending', async () => {
