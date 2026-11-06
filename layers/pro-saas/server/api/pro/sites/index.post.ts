@@ -6,11 +6,13 @@ import { readOptionalUserEntitlements, refusalError } from '#layers/pro-gsc/serv
 import { siteAllowanceOf } from '#layers/pro-gsc/shared/free-allowance'
 import { users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler, getProLogger } from '#layers/pro-saas/server/utils/handler'
+import { loadPageTask } from '#layers/pro-saas/server/utils/page-task'
 import { registerSite } from '#layers/pro-saas/server/utils/register-site'
 import { ProError } from '#layers/pro-saas/shared/errors'
 
 const bodySchema = z.object({
   url: z.string().trim().min(1).max(2048),
+  propertyUrl: z.string().min(1).max(2048).optional(),
 })
 
 /**
@@ -26,7 +28,8 @@ export default defineProApiHandler({
     .where(eq(users.userId, caller.user.id))
     .get()
 
-  const result = await registerSite(event, ctx, { url: body.url }, {
+  const task = body.propertyUrl ? await loadPageTask(event) : null
+  const result = await registerSite(event, ctx, { url: body.url, propertyUrl: body.propertyUrl, ...(task?._tag === 'Available' && task.task.ownerId === caller.user.id ? { pageUrl: task.task.url } : {}) }, {
     readSiteAllowance: async () => {
       const read = await readOptionalUserEntitlements(user?.gscdumpUserId, useGscdumpClient)
       if (read._tag === 'Unavailable')

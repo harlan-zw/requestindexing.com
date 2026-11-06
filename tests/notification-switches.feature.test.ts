@@ -60,6 +60,7 @@ function runtimeConfig(switches: Switches) {
 function memoryStorage() {
   const items = new Map<string, unknown>()
   return {
+    getItem: async (key: string) => items.get(key) ?? null,
     hasItem: async (key: string) => items.has(key),
     setItem: async (key: string, value: unknown) => {
       items.set(key, value)

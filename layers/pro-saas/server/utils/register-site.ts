@@ -6,14 +6,17 @@ import type { CurrentTeamContext } from './require-current-team'
 import { and, eq, isNull, or } from 'drizzle-orm'
 import { dispatchEvent } from '#domain-events/server'
 import { decideSiteConnect } from '#layers/pro-gsc/shared/free-allowance'
-import { isStalePropertyRefusal, matchSiteProperty } from '#layers/pro-gsc/shared/site-property'
+import { isStalePropertyRefusal, matchSiteProperty, sitePropertyRefusalMessage } from '#layers/pro-gsc/shared/site-property'
 import { sites } from '#layers/pro-saas/server/database'
+import { pagePropertyCoversUrl, savedPageMatchesHost } from '#layers/pro-saas/shared/page-task'
 import { connectedSiteDomain, parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
 import { emitFirstProEvent } from './pro-events'
 
 export interface RegisterSiteInput {
   /** What the user typed, or the Search Console property the picker handed over. */
   url: string
+  propertyUrl?: string
+  pageUrl?: string
 }
 
 export interface RegisterSiteDeps {
@@ -43,11 +46,21 @@ export type RegisterSiteResult
 async function matchOwnedProperty(
   address: SiteAddress,
   read: RegisterSiteDeps['readSearchConsoleProperties'],
+  propertyUrl?: string,
+  pageUrl?: string,
 ): Promise<SitePropertyMatch> {
-  const stored = matchSiteProperty(address, await read({ refresh: false }))
+  const match = (value: SearchConsolePropertyRead): SitePropertyMatch => {
+    if (!propertyUrl || value._tag !== 'Loaded')
+      return matchSiteProperty(address, value)
+    const properties = value.properties.filter(property => property.siteUrl === propertyUrl && (!pageUrl || (savedPageMatchesHost(pageUrl, address.domain) && pagePropertyCoversUrl(pageUrl, property.siteUrl))))
+    return properties.length
+      ? matchSiteProperty(address, { _tag: 'Loaded', properties })
+      : { _tag: 'Refused', refusal: { reason: 'not_owned', message: sitePropertyRefusalMessage('not_owned', address.domain) } }
+  }
+  const stored = match(await read({ refresh: false }))
   if (stored._tag === 'Matched' || !isStalePropertyRefusal(stored.refusal.reason))
     return stored
-  return matchSiteProperty(address, await read({ refresh: true }))
+  return match(await read({ refresh: true }))
 }
 
 /**
@@ -81,7 +94,7 @@ export async function registerSite(
   if (existing)
     return { _tag: 'AlreadyConnected', site: existing }
 
-  const match = await matchOwnedProperty(parsed, deps.readSearchConsoleProperties)
+  const match = await matchOwnedProperty(parsed, deps.readSearchConsoleProperties, input.propertyUrl, input.pageUrl)
   if (match._tag === 'Refused')
     return { _tag: 'PropertyRefused', refusal: match.refusal }
 

@@ -9,6 +9,7 @@
 
 import type { AccountStatus } from '@gscdump/contracts'
 import { GSC_SCOPE_MISSING_ERROR, isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
+import { PAGE_TASK_ROUTE } from './page-task'
 
 /** Where a signed-out visitor starts. Renders the provider buttons. */
 export const ONBOARDING_ENTRY_ROUTE = '/pro/onboarding'
@@ -33,6 +34,7 @@ export const CONNECT_SITE_ROUTE = '/pro/dashboard/sites/connect'
  * pages here, a half-onboarded user cannot sign out or delete their account.
  */
 export const ONBOARDING_EXEMPT_PREFIXES = [
+  PAGE_TASK_ROUTE,
   '/pro/dashboard/account',
   '/account',
   ONBOARDING_ROUTE,

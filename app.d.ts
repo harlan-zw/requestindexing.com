@@ -57,6 +57,7 @@ module '#auth-utils' {
     } | null
   }
   export interface SecureSessionData {
+    pageTask?: import('./layers/pro-saas/shared/page-task').PageTask
     googleOauthState?: string
     googleOauthReturnTo?: string
     googleIndexingAuth?: {

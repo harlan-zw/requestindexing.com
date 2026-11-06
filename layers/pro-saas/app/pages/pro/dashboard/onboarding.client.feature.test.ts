@@ -1,9 +1,11 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { createApp, defineComponent, h, nextTick, onMounted, ref } from 'vue'
+import { createApp, defineComponent, h, nextTick, onMounted, ref, watch } from 'vue'
 
 const session = ref({ hasSites: true, gscdumpConnected: true })
 Object.assign(globalThis, {
   onMounted,
+  watch,
+  useFetch: () => ({ data: ref({ _tag: 'Missing' }) }),
   definePageMeta: () => {},
   useRoute: () => ({ query: { step: 'sync' } }),
   useRouter: () => ({ replace: vi.fn() }),

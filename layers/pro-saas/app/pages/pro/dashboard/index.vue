@@ -93,6 +93,7 @@ useJobListener('sites/sync-finished', async ({ siteId }) => {
 </script>
 
 <template>
+  <ProSavedPageResume />
   <div class="flex flex-col gap-6 tabular-nums">
     <UiAlert v-if="error" status="error" icon="caution" title="Your Sites could not be loaded">
       <template #action>

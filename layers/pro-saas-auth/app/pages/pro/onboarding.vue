@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AuthProviderId } from '#layers/pro-saas-auth/shared/types/auth'
 import { ONBOARDING_ROUTE, resolveGscConnection, resolveOnboardingResumeStep } from '#layers/pro-saas/shared/onboarding'
+import { PAGE_SETUP_COPY, PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 
 // The signup door. A signed-out visitor gets the provider buttons; a signed-in
 // one is never left here, because this page's only job is to route them on.
@@ -11,6 +12,8 @@ definePageMeta({
 
 const { loggedIn, session, fetch: fetchSession } = useUserSession()
 await fetchSession()
+const { data: savedPage } = await useFetch('/api/onboarding/page')
+const hasSavedPage = computed(() => savedPage.value?._tag === 'Available')
 
 const { features } = useProSaasFeatures()
 
@@ -57,7 +60,7 @@ const providers = computed(() => {
     id: p.id,
     label: p.label,
     icon: p.icon,
-    href: `/auth/${p.id}?redirect=${encodeURIComponent(ONBOARDING_ROUTE)}`,
+    href: `/auth/${p.id}?redirect=${encodeURIComponent(hasSavedPage.value ? PAGE_TASK_ROUTE : ONBOARDING_ROUTE)}`,
     external: true,
     lastUsed: lastProvider.value === p.id,
     testId: `${p.id}-signup-btn`,
@@ -71,6 +74,10 @@ const providers = computed(() => {
  */
 async function resolveSignedInLanding() {
   await fetchSession()
+  if (hasSavedPage.value) {
+    await navigateTo(PAGE_TASK_ROUTE, { replace: true })
+    return
+  }
   if (session.value?.onboardingCompletedAt) {
     await navigateTo('/pro/dashboard', { replace: true })
     return
@@ -106,7 +113,19 @@ useSeoMeta({
 <template>
   <div data-testid="onboarding-entry">
     <template v-if="!loggedIn">
+      <div v-if="savedPage?._tag === 'Available'" class="mb-6 space-y-2">
+        <h1 class="text-2xl font-semibold">
+          {{ PAGE_SETUP_COPY.heading }}
+        </h1>
+        <p class="break-all text-sm">
+          {{ savedPage.url }}
+        </p>
+        <p class="text-sm text-muted">
+          {{ PAGE_SETUP_COPY.signIn }}
+        </p>
+      </div>
       <UiAuthHeading
+        v-else
         title="Get your pages indexed"
         description="Connect Google Search Console, then submit the pages Google has missed. Free during the beta."
       />

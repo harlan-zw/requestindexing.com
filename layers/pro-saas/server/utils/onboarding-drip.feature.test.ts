@@ -36,7 +36,7 @@ async function recordSend(message: OutgoingEmail): Promise<EmailSendResult> {
 }
 
 function run(now: Date, overrides: { onboardingDripEnabled?: boolean, send?: typeof recordSend } = {}) {
-  return processDueDrips({ db, now, onboardingDripEnabled: true, send: recordSend, baseUrl: BASE_URL, secret: SECRET, ...overrides })
+  return processDueDrips({ db, now, onboardingDripEnabled: true, send: recordSend, readProgress: async () => ({ progress: 'ready', resumePage: false }), baseUrl: BASE_URL, secret: SECRET, ...overrides })
 }
 
 function enrol(now = T0, onboardingDripEnabled = true) {

@@ -15,6 +15,7 @@ import {
   resolveOnboardingNav,
   resolveOnboardingResumeStep,
 } from '#layers/pro-saas/shared/onboarding'
+import { PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 
 // First-run setup, three steps, the step in the URL.
 //
@@ -31,6 +32,11 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const { session, fetch: refreshSession } = useUserSession()
+const { data: savedPage } = useFetch('/api/onboarding/page', { server: false, lazy: true })
+watch(() => savedPage.value?._tag, (state) => {
+  if (state === 'Available')
+    void navigateTo(PAGE_TASK_ROUTE, { replace: true })
+}, { immediate: true })
 
 // The callback returns `?error=gsc_scope_missing` when the user unticked
 // Search Console on Google's consent screen, and gscdump's lifecycle reports

@@ -174,7 +174,7 @@ function checkIndex() {
         </div>
       </div>
 
-      <ToolsToolInspectionCta class="mb-6" />
+      <ToolsToolInspectionCta :url="result.url" class="mb-6" />
 
       <!-- Actions -->
       <div class="grid sm:grid-cols-2 gap-4 mb-8">
