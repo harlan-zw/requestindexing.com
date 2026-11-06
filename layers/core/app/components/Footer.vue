@@ -17,6 +17,10 @@ const links = [
     label: 'Guides',
     children: [
       {
+        label: 'Ask Google to Index a URL',
+        to: '/request-indexing-google-search-console',
+      },
+      {
         label: 'Google Indexing API',
         to: '/google-indexing-api',
       },

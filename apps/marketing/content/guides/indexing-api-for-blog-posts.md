@@ -37,7 +37,7 @@ Suppose you publish `https://example.com/blog/pruning-apple-trees`. It is an ord
 
 A new post may show a different status.
 
-This follows [Google's recrawl guidance](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl). A request does not guarantee inclusion in search results. Repeating it for the same URL will not speed crawling.
+This follows [Google's recrawl guidance](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl). A request does not guarantee inclusion in search results. Repeating it for the same URL will not speed crawling. [How to request indexing in Google Search Console](/request-indexing-google-search-console) explains each inspection status and the causes that block a request.
 
 If you have many posts, use a sitemap instead of repeating this process for each one. Your publishing platform may already manage a sitemap; check its documentation before adding another integration.
 
