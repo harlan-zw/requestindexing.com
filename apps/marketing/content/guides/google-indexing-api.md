@@ -35,7 +35,7 @@ The body alone is only part of the call. The [Indexing API setup tutorial](/goog
 
 A successful response means Google may attempt to recrawl the URL. It does not prove that a crawl happened or that Google indexed the page. The metadata endpoint reports notification history, so a recent timestamp there cannot establish indexing either. See [Google's request and response meanings](https://developers.google.com/search/apis/indexing-api/v3/using-api).
 
-To see whether Google returns the page in search, run a `site:` search for it with one of the [free indexing tools](/tools). They check one URL, a list of URLs, or a whole domain.
+To see whether Google returns the page in search, run a `site:` search for it with one of the [free indexing tools](/tools). The [Google Index Checker](/tools/google-indexing-checker) checks one URL. The [Bulk Indexing Checker](/tools/bulk-indexing-checker) checks up to 10 URLs, or the first 10 URLs of a sitemap. The [Site Indexing Report](/tools/site-indexing-report) estimates the indexed page count for a whole domain. Each result is an estimate from public search output, not a URL Inspection result.
 
 An accepted notification does not set an indexing deadline. [October 2026 conference reporting](https://www.seroundtable.com/google-crawling-indexing-serving-data-42225.html) lists roughly 1.5 hours as typical for indexing processes, with slow cases reaching months or never.
 

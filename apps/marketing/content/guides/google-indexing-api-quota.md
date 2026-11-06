@@ -33,7 +33,7 @@ The daily quota resets at midnight Pacific Time. Use that time zone rather than 
 
 If you put ten notifications in one multipart HTTP batch, they count as ten API requests. Batching saves HTTP connections. Your publish quota stays the same. Google documents this in its [batch request guidance](https://developers.google.com/search/apis/indexing-api/v3/using-api).
 
-If you have less remaining quota than the batch needs, do not assume the first URLs in your list will succeed. Inspect every inner response. The [bulk submission guide](/bulk-submit-urls-google-indexing-api) shows how to retain individual results.
+If you have less remaining quota than the batch needs, do not assume the first URLs in your list will succeed. Inspect every inner response. The [bulk submission guide](/bulk-submit-urls-google-indexing-api) shows how to retain individual results. An accepted notification does not show whether Google indexed the page. To check up to 10 of those URLs later, use the [Bulk Indexing Checker](/tools/bulk-indexing-checker). It runs a Google `site:` search for each URL, so each result is an estimate.
 
 ## Diagnose the returned error
 
