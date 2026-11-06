@@ -4,10 +4,13 @@
 // See CONTEXT.md and docs/adr/0002-caller-is-the-user-context-seam.md.
 
 import type { H3Event } from 'h3'
+import type { AuthIdentityRow } from '#layers/pro-saas-auth/shared/types/auth'
 import type { Team, TeamAuditEventKind } from '../database'
+import { and, eq, exists, gte, inArray, isNull, sql } from 'drizzle-orm'
 import { logWarn } from '~~/shared/logging'
 import { logger } from '~~/shared/server/logger'
-import { teamAuditEvents } from '../database'
+import { dispatchEvent } from '#domain-events/server'
+import { teamAuditEvents, teamInvitations, teamMemberships, userIdentities, users } from '../database'
 
 // `sendEmail` from the upstream host was deleted during port. Stub to a logger
 // call until request-indexing wires Postmark (already a dep in package.json).
@@ -44,6 +47,95 @@ export async function recordTeamAuditEvent(opts: RecordTeamAuditEventOpts): Prom
   }).catch((err: unknown) => {
     logger.error('[team-audit] insert failed:', err instanceof Error ? err.message : String(err))
   })
+}
+
+export type TeamInvitationAcceptance
+  = | { _tag: 'Accepted', teamId: number }
+    | { _tag: 'Rejected', reason: 'not-found' | 'already-accepted' | 'expired' | 'changed' }
+    | { _tag: 'WrongAccount', email: string }
+
+export async function acceptTeamInvitation(
+  event: H3Event,
+  input: { db: ReturnType<typeof useDrizzle>, token: string, userId: number, identities: ReadonlyArray<Pick<AuthIdentityRow, 'email' | 'emailVerified'>>, now: number },
+): Promise<TeamInvitationAcceptance> {
+  const { db } = input
+  const invitation = await db.select().from(teamInvitations).where(eq(teamInvitations.token, input.token)).get()
+  if (!invitation)
+    return { _tag: 'Rejected', reason: 'not-found' }
+  if (invitation.acceptedAt !== null)
+    return { _tag: 'Rejected', reason: 'already-accepted' }
+  const acceptedAt = new Date(input.now)
+  if (invitation.expiresAt < acceptedAt)
+    return { _tag: 'Rejected', reason: 'expired' }
+  const matchingEmails = input.identities.flatMap(({ email, emailVerified }) =>
+    emailVerified && email && email.toLowerCase() === invitation.email.toLowerCase() ? [email] : [],
+  )
+  if (!matchingEmails.length)
+    return { _tag: 'WrongAccount', email: invitation.email }
+
+  // Each write gates the next through changes(). A lost claim changes no other row.
+  // D1 commits the batch atomically, so a failed grant also releases the claim.
+  const [accepted, , memberships] = await db.batch([
+    db.update(teamInvitations)
+      .set({ acceptedAt })
+      .where(and(
+        eq(teamInvitations.teamInvitationId, invitation.teamInvitationId),
+        eq(teamInvitations.token, input.token),
+        eq(teamInvitations.teamId, invitation.teamId),
+        eq(teamInvitations.role, invitation.role),
+        eq(teamInvitations.email, invitation.email),
+        isNull(teamInvitations.acceptedAt),
+        gte(teamInvitations.expiresAt, acceptedAt),
+        exists(db.select({ userId: users.userId }).from(users).where(eq(users.userId, input.userId))),
+        exists(db.select({ userId: userIdentities.userId }).from(userIdentities).where(and(
+          eq(userIdentities.userId, input.userId),
+          eq(userIdentities.emailVerified, true),
+          inArray(userIdentities.email, matchingEmails),
+        ))),
+      ))
+      .returning({ id: teamInvitations.teamInvitationId }),
+    db.update(users)
+      .set({ currentTeamId: invitation.teamId, updatedAt: input.now })
+      .where(and(eq(users.userId, input.userId), sql`changes() = 1`)),
+    db.insert(teamMemberships)
+      .select(db.select({
+        teamMembershipId: sql<number | null>`NULL`.as('team_membership_id'),
+        teamId: teamInvitations.teamId,
+        userId: sql<number>`${input.userId}`.as('user_id'),
+        role: teamInvitations.role,
+        firstVisitDismissedAt: sql<Date | null>`NULL`.as('first_visit_dismissed_at'),
+        createdAt: sql<Date>`${Math.floor(input.now / 1000)}`.as('created_at'),
+        updatedAt: sql<Date>`${Math.floor(input.now / 1000)}`.as('updated_at'),
+      }).from(teamInvitations).where(and(
+        eq(teamInvitations.teamInvitationId, invitation.teamInvitationId),
+        eq(teamInvitations.token, input.token),
+        eq(teamInvitations.acceptedAt, acceptedAt),
+        sql`changes() = 1`,
+      )))
+      .onConflictDoNothing({ target: [teamMemberships.teamId, teamMemberships.userId] })
+      .returning({ id: teamMemberships.teamMembershipId }),
+  ])
+  if (!accepted.length)
+    return { _tag: 'Rejected', reason: 'changed' }
+
+  await recordTeamAuditEvent({
+    db,
+    teamId: invitation.teamId,
+    actorUserId: input.userId,
+    kind: 'invitation.accepted',
+    targetType: 'invitation',
+    targetId: String(invitation.teamInvitationId),
+    metadata: { email: invitation.email, role: invitation.role },
+  })
+  if (memberships.length) {
+    await dispatchEvent('pro:membership:added', {
+      event,
+      teamId: invitation.teamId,
+      userId: input.userId,
+      role: invitation.role,
+    }).catch((err: unknown) => logWarn('webhook.side_effect_failed', err, { event: 'pro:membership:added' }))
+  }
+  return { _tag: 'Accepted', teamId: invitation.teamId }
 }
 
 export interface SendInviteOpts {
