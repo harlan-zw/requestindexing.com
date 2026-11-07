@@ -10,6 +10,9 @@ type State = { _tag: 'Idle' | 'Loading' | 'Unavailable' | 'Changed' } | FirstRep
 const state = ref<State>({ _tag: 'Idle' })
 const inspecting = ref(false)
 let request = 0
+onScopeDispose(() => {
+  request++
+})
 const ready = computed(() => state.value._tag === 'Ready' ? state.value : null)
 const results = computed(() => state.value._tag === 'Results' ? state.value.rows : [])
 
@@ -38,8 +41,10 @@ async function inspect() {
     state.value = result
     if (result._tag === 'Results' && result.rows.some(row => row._tag === 'Evidence')) {
       await nextTick()
-      await getAppFetch()<{ recorded: boolean }>(`/api/sites/${id}/onboarding/first-report-view`, { method: 'POST', body: { token }, retry: 0 })
-        .catch(() => console.warn('First report evidence viewing could not be recorded.'))
+      if (serial === request && id === siteId && team === session.value?.team?.teamId) {
+        await getAppFetch()<{ recorded: boolean }>(`/api/sites/${id}/onboarding/first-report-view`, { method: 'POST', body: { token }, retry: 0 })
+          .catch(() => console.warn('First report evidence viewing could not be recorded.'))
+      }
     }
   }
   inspecting.value = false
