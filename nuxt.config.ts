@@ -217,11 +217,8 @@ export default defineNuxtConfig({
   aiReady: {
     llmsTxt: { directive: { html: true } },
     // Writes the Content-Signal line into robots.txt. An unset `aiTrain`
-    // emits `ai-train=no`, so all three are explicit. `contentUsage: false`
-    // drops the draft `Content-Usage` line: Lighthouse reports it as an
-    // unknown directive and fails the robots.txt audit on every page.
-    // Content-Signal already states the same training preference.
-    contentSignal: { search: true, aiInput: true, aiTrain: true, contentUsage: false },
+    // emits `ai-train=no`, so all three are explicit.
+    contentSignal: { search: true, aiInput: true, aiTrain: true },
   },
 
   seo: {
