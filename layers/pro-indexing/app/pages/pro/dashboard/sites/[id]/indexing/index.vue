@@ -541,6 +541,7 @@ const overviewErrorDescription = computed(() => {
 
 <template>
   <div data-testid="indexing-page">
+    <ProFirstSiteReport v-if="gscdumpSiteId" :site-id="siteId" class="mb-6" />
     <div v-if="overviewError && overviewModel" class="mb-6">
       <UiAlert
         status="warning"

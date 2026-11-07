@@ -1,10 +1,23 @@
 import { describe, expect, it, vi } from 'vitest'
-import { inspectSavedPage, readSavedPageEvidence } from './page-evidence'
+import { inspectFirstReport, inspectSavedPage, readSavedPageEvidence } from './page-evidence'
 
 const url = 'https://www.example.com/Case'
 const evidence = { url, coverageState: 'Discovered - currently not indexed', verdict: 'NEUTRAL', lastCheckedAt: '2026-11-07T00:00:00Z', lastCrawlTime: null }
 
 describe('the original page evidence', () => {
+  it('does not count metadata-only rows as actual Google evidence', async () => {
+    const metadata = { ...evidence, coverageState: null, verdict: null }
+    expect(await readSavedPageEvidence(url, async () => ({ urls: [metadata] }), vi.fn())).toEqual({ _tag: 'Missing' })
+    expect(await inspectFirstReport([url], async () => ({ results: [metadata], errors: [], skipped: [] }), vi.fn(), new Date())).toEqual({ _tag: 'Results', rows: [{ _tag: 'NoResult', url }] })
+  })
+  it('preserves a partial batch without inventing Google evidence for skipped or failed URLs', async () => {
+    const inspect = vi.fn(async () => ({ results: [evidence], errors: [{ url: `${url}/failed`, error: 'permission_denied' }], skipped: [{ url: `${url}/skipped`, reason: 'daily_quota' }] }))
+    expect(await inspectFirstReport([url, `${url}/failed`, `${url}/skipped`, `${url}/missing`], inspect, vi.fn(), new Date('2026-11-07T00:00:00Z'))).toMatchObject({
+      _tag: 'Results',
+      rows: [{ _tag: 'Evidence', evidence: { url } }, { _tag: 'Error', url: `${url}/failed`, reason: 'permission_denied' }, { _tag: 'Skipped', url: `${url}/skipped`, reason: 'daily_quota' }, { _tag: 'NoResult', url: `${url}/missing` }],
+    })
+    expect(inspect).toHaveBeenCalledOnce()
+  })
   it('reads a negative saved verdict without triggering an inspection', async () => {
     const read = vi.fn(async () => ({ urls: [evidence] }))
     expect(await readSavedPageEvidence(url, read, vi.fn())).toMatchObject({ _tag: 'Evidence', evidence: { url, coverage: evidence.coverageState, capturedAt: evidence.lastCheckedAt } })
