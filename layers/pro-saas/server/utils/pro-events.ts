@@ -11,7 +11,6 @@ export type ProEventType
     | 'page_task_started'
     | 'page_evidence_viewed'
     | 'page_inspection_started'
-    | 'setup_feedback'
     | 'first_report_started'
     | 'first_report_evidence_viewed'
     | 'setup_example_viewed'

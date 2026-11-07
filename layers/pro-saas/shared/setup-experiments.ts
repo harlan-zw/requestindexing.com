@@ -19,6 +19,8 @@ export const SETUP_EXPERIMENT_COPY = {
 
 export const SETUP_EXIT_REASONS = ['permission', 'property', 'value', 'time'] as const
 export type SetupExitReason = typeof SETUP_EXIT_REASONS[number]
+export interface SetupFeedback { reason: SetupExitReason, step: 'connect' | 'sites' | 'sync' | 'page' }
+export type SetupFeedbackWrite = { _tag: 'Recorded' } | { _tag: 'Unavailable' }
 
 /** A tiny subset of gscdump.com's public dashboard-snapshot.json. No customer data. */
 export const PUBLIC_INSPECTION_EXAMPLE = {
