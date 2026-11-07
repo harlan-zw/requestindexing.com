@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed } from 'vue'
 import ProCardGsc from '#layers/pro-gsc/app/components/pro/ProCardGsc.vue'
+import ProGscGenerativeAiEvidence from '#layers/pro-gsc/app/components/pro/ProGscGenerativeAiEvidence.vue'
 import ProGscReadError from '#layers/pro-gsc/app/components/pro/ProGscReadError.vue'
 import ProGscSurfaceBar from '#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue'
 import { useProGscdumpDates } from '#layers/pro-gsc/app/composables/useProGscdump'
@@ -122,6 +123,15 @@ const pagesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-co
         :comparison-read-failed="pageDates.comparisonReadFailed"
         :columns="columns"
         @zoom="onZoom"
+      />
+    </ProPageZone>
+
+    <ProPageZone tier="secondary">
+      <ProGscGenerativeAiEvidence
+        :site-id="siteId"
+        :gscdump-site-id="gscdumpSiteId"
+        :page-url="pageFullUrl"
+        :site="site"
       />
     </ProPageZone>
 

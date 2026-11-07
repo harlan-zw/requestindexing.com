@@ -25,7 +25,9 @@ minimumReleaseAgeExclude:
   - '@harlan-zw/nuxt-sentry@0.3.0'
   - '@nuxt/kit@4.6.0'
   - '@gscdump/sdk@7.9.0'
+  - '@gscdump/sdk@7.10.0'
   - '@gscdump/contracts@7.9.0'
+  - '@gscdump/contracts@7.10.0'
   - '@gscdump/engine@7.9.0'
   - '@gscdump/lakehouse@7.9.0'
   - gscdump@7.9.0
@@ -143,9 +145,9 @@ allowBuilds:
 catalog:
   '@antfu/eslint-config': ^9.5.1
   '@cloudflare/workers-types': ^5.20260929.1
-  '@gscdump/contracts': 7.9.0
+  '@gscdump/contracts': ^7.10.0
   '@gscdump/engine': 7.9.0
-  '@gscdump/sdk': 7.9.0
+  '@gscdump/sdk': ^7.10.0
   '@harlan-zw/comark-content': 0.2.0
   '@harlan-zw/nuxt-checkin': 0.4.1
   '@harlan-zw/nuxt-cloudflare': 0.5.1
