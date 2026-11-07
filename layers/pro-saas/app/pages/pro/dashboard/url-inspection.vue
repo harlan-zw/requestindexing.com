@@ -26,6 +26,9 @@ const copyError = ref(false)
 const propertyRequired = computed(() => read.value._tag === 'PropertyRequired' ? read.value : null)
 const searchConsoleHref = computed(() => `https://search.google.com/search-console?resource_id=${encodeURIComponent(propertyRequired.value?.alternatives[0] ?? propertyRequired.value?.property ?? '')}`)
 let request = 0
+onScopeDispose(() => {
+  request++
+})
 
 async function copySelectedUrl() {
   copyError.value = false
@@ -41,6 +44,8 @@ async function loadEvidence() {
   read.value = { _tag: 'Loading' }
   const result = await getAppFetch()<PageEvidenceRead>(`/api/sites/${id}/onboarding/page`)
     .catch((): PageEvidenceRead => ({ _tag: 'Unavailable', operation: 'read' }))
+  if (serial !== request || siteId.value !== id)
+    return
   if (result._tag === 'Evidence' && result.evidence.url !== selected.value?.url) {
     await refreshTask()
     return
@@ -90,15 +95,19 @@ watch([siteId, () => selected.value?.url], () => {
     void loadEvidence()
 })
 watch(() => session.value?.team?.teamId, () => refreshTask())
-watch(() => read.value._tag, async (state) => {
-  if (state !== 'Evidence')
+watch(read, async (result) => {
+  if (result._tag !== 'Evidence' || !siteId.value)
     return
+  const id = siteId.value
+  const url = result.evidence.url
+  const serial = request
+  const team = session.value?.team?.teamId
   await nextTick()
+  if (serial !== request || siteId.value !== id || team !== session.value?.team?.teamId || selected.value?.url !== url || read.value._tag !== 'Evidence' || read.value.evidence.url !== url)
+    return
   title.value?.focus()
-  if (siteId.value) {
-    await getAppFetch()(`/api/sites/${siteId.value}/onboarding/page-view`, { method: 'POST', body: { url: selected.value?.url } })
-      .catch(() => console.warn('The saved page view could not be recorded.'))
-  }
+  await getAppFetch()(`/api/sites/${id}/onboarding/page-view`, { method: 'POST', body: { url }, retry: 0 })
+    .catch(() => console.warn('The saved page view could not be recorded.'))
 })
 onMounted(async () => {
   await refreshSession()

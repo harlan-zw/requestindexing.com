@@ -1,6 +1,6 @@
 import type { PageEvidenceRead, PageInspectionResult } from '#layers/pro-indexing/shared/page-evidence'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { computed, createApp, defineComponent, h, nextTick, onMounted, ref, Suspense, useTemplateRef, watch } from 'vue'
+import { computed, createApp, defineComponent, h, nextTick, onMounted, onScopeDispose, ref, Suspense, useTemplateRef, watch } from 'vue'
 
 const api = vi.hoisted(() => ({ fetch: vi.fn() }))
 vi.mock('~~/layers/core/app/utils/app-fetch', () => ({ getAppFetch: () => api.fetch }))
@@ -15,6 +15,7 @@ Object.assign(globalThis, {
   watch,
   nextTick,
   onMounted,
+  onScopeDispose,
   useTemplateRef,
   definePageMeta: () => {},
   useSeoMeta: () => {},
