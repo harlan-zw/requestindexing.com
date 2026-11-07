@@ -108,7 +108,7 @@ export default defineConfig({
           include: [FEATURE],
           exclude: [...EXCLUDE, CLIENT_FEATURE],
           globals: true,
-          server: { deps: { inline: [/nitropack\/dist\/presets\/cloudflare\/runtime\//] } },
+          server: { deps: { inline: [/nitropack\/dist\/presets\/cloudflare\/runtime\//, /nuxt-auth-utils\/dist\/runtime\/server\//] } },
         },
         resolve: { alias: alias() },
       }),

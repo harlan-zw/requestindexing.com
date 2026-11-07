@@ -1,6 +1,8 @@
 import type { EmailSendResult, OutgoingEmail } from '~~/layers/core/server/utils/email'
+import type { FollowUpRead } from './onboarding-follow-up'
 import { and, asc, eq, lte } from 'drizzle-orm'
 import { logError } from '~~/shared/logging'
+import { onboardingFollowUpReady } from '../../shared/onboarding-follow-up'
 import { dripEmails, users } from '../database'
 import { findDripSequence } from './drip-sequences'
 import { decideDueDrip, DRIP_MAX_OVERDUE_MS } from './drip-step'
@@ -20,6 +22,7 @@ export interface ProcessDripsDeps {
   now: Date
   onboardingDripEnabled: boolean
   send: (message: OutgoingEmail) => Promise<EmailSendResult>
+  readProgress: (userId: number) => Promise<FollowUpRead>
   /** The site origin that unsubscribe links point at. */
   baseUrl: string
   /** Signs the unsubscribe tokens. */
@@ -68,6 +71,7 @@ export async function processDueDrips(deps: ProcessDripsDeps): Promise<ProcessDr
     stepIndex: dripEmails.stepIndex,
     nextSendAt: dripEmails.nextSendAt,
     name: users.name,
+    userId: users.userId,
   })
     .from(dripEmails)
     .innerJoin(users, eq(users.userId, dripEmails.userId))
@@ -97,6 +101,12 @@ export async function processDueDrips(deps: ProcessDripsDeps): Promise<ProcessDr
       continue
     }
 
+    const followUp = await deps.readProgress(row.userId)
+    if (!onboardingFollowUpReady(row.stepIndex, followUp.progress)) {
+      await db.update(dripEmails).set({ nextSendAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) }).where(and(eq(dripEmails.dripEmailId, row.id), eq(dripEmails.stepIndex, row.stepIndex), eq(dripEmails.nextSendAt, row.nextSendAt)))
+      continue
+    }
+
     const unsubscribeUrl = await buildUnsubscribeUrl(
       { email: row.email, category: decision.category },
       { secret: deps.secret, now, baseUrl: deps.baseUrl },
@@ -105,6 +115,7 @@ export async function processDueDrips(deps: ProcessDripsDeps): Promise<ProcessDr
       firstName: row.name.split(' ')[0] ?? null,
       baseUrl: deps.baseUrl,
       unsubscribeUrl,
+      resumePage: followUp.resumePage,
     })
     // Compare and swap the selected step before sending. A second runner cannot
     // claim it, and an expired lease can retry after an interrupted Worker.

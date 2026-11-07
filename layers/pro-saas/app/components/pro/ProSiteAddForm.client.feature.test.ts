@@ -39,10 +39,10 @@ Object.assign(globalThis, {
 
 const apps: ReturnType<typeof createApp>[] = []
 
-function mount(onBlocked = vi.fn(), { suspense = true } = {}) {
+function mount(onBlocked = vi.fn(), { suspense = true, targetUrl = undefined as string | undefined } = {}) {
   const host = document.createElement('div')
   document.body.appendChild(host)
-  const form = () => h(ProSiteAddForm, { gscReturnTo: '/pro/dashboard/onboarding?step=sites', onBlocked })
+  const form = () => h(ProSiteAddForm, { gscReturnTo: '/pro/dashboard/onboarding?step=sites', onBlocked, targetUrl })
   const app = createApp({
     render: () => suspense ? h(Suspense, null, { default: form }) : form(),
   })
@@ -101,6 +101,36 @@ afterEach(() => {
 })
 
 describe('connect a Site', () => {
+  it('offers the exact www Site even when its root Site is already connected', async () => {
+    reads.preview.value = { sites: [{ siteId: 's_root', domain: 'example.com', property: 'sc-domain:example.com' }], siteAllowance: { _tag: 'Uncapped' } }
+    reads.properties.value = { connected: true, properties: [{ siteUrl: 'sc-domain:example.com', permissionLevel: 'siteOwner' }] }
+    post.mockResolvedValue({ site: { id: 's_www', domain: 'www.example.com' } })
+    const host = mount(vi.fn(), { targetUrl: 'https://www.example.com/Article' })
+    await flush()
+    expect(host.textContent).toContain('www.example.com')
+    const connect = [...host.querySelectorAll('button')].find(button => button.textContent === 'Connect Site')!
+    expect(connect).toBeDefined()
+    connect.click()
+    await flush()
+    expect(post).toHaveBeenCalledWith('/api/pro/sites', { method: 'POST', body: { url: 'https://www.example.com', propertyUrl: 'sc-domain:example.com' } })
+  })
+
+  it('names the property selector and excludes wrong protocol, www and path prefixes', async () => {
+    reads.properties.value = { connected: true, properties: ['sc-domain:example.com', 'https://www.example.com/shop/', 'http://www.example.com/shop/', 'https://example.com/shop/', 'https://www.example.com/blog/'].map(siteUrl => ({ siteUrl, permissionLevel: 'siteOwner' })) }
+    const host = mount(vi.fn(), { targetUrl: 'https://www.example.com/shop/item' })
+    await flush()
+    const select = host.querySelector('select')!
+    expect(select.getAttribute('aria-label')).toBe('Matching property')
+    expect([...select.options].map(option => option.value)).toEqual(['', 'sc-domain:example.com', 'https://www.example.com/shop/'])
+  })
+
+  it('keeps account repair read-only when the saved-page account has no property', async () => {
+    reads.properties.value = { connected: true, properties: [] }
+    const host = mount(vi.fn(), { targetUrl: 'https://www.example.com/Article' })
+    await flush()
+    const account = [...host.querySelectorAll('a')].find(link => link.textContent === 'Connect another Google account')!
+    expect(new URL(account.href).searchParams.get('scope')).toBe('read')
+  })
   // The 2026-10-01 replay: the Manage Sites modal showed an empty body for
   // about 3 s. The form awaited both reads in setup, and a modal opened after
   // load has no Suspense fallback to show meanwhile.

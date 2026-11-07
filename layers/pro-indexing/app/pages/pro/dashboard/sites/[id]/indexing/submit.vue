@@ -16,6 +16,7 @@ import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_
 import IndexingChannelsCard from '#layers/pro-indexing/app/internal/components/indexing/IndexingChannelsCard.vue'
 import { attemptAfterReceipt, describeReceipt, describeSubmissionRefusal, readIndexingGrantRefusal, readSubmissionRefusal, resolveSubmitAction, submissionAttemptFor } from '#layers/pro-indexing/app/utils/indexing-grant'
 import { INDEXING_API_UNAVAILABLE } from '#layers/pro-indexing/shared/indexing-copy'
+import { savedPageMatchesHost } from '#layers/pro-saas/shared/page-task'
 
 definePageMeta({
   proTab: { feature: 'indexing', label: 'Submit to Google', icon: 'i-ph-check-circle-duotone', order: 40 },
@@ -40,9 +41,12 @@ const hasSyncedSite = computed(() => Boolean(gscdumpSiteId.value))
 
 // Start the input on this site, so the common case is one path away.
 const url = ref('')
+const { data: savedPage } = await useFetch('/api/onboarding/page')
 watchEffect(() => {
-  if (!url.value && siteName.value && siteName.value !== 'Site')
-    url.value = `https://${siteName.value}/`
+  if (!url.value && siteName.value && siteName.value !== 'Site') {
+    const task = savedPage.value
+    url.value = task?._tag === 'Available' && savedPageMatchesHost(task.url, siteName.value) ? task.url : `https://${siteName.value}/`
+  }
 })
 const submitting = ref(false)
 

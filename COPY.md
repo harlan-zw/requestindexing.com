@@ -257,7 +257,56 @@ These assets apply to Site connection, held Sites, URL Inspection refusals, the 
 
 The daily URL Inspection pool of one Site is a different limit. Its refusal keeps its own rate-limit message and never says Free allowance.
 
+## Saved-page setup
+
+These strings apply when a reader continues from a checked page.
+Keep the exact URL and host through sign-in, consent, connection, and recovery.
+
+| Asset | String |
+| --- | --- |
+| Saved-page heading | Keep checking your page |
+| Saved-page introduction | Connect the Site that contains this page. Your selected URL stays with you through setup. |
+| Saved-page target | The page you checked |
+| Saved-page sign-in help | First, sign in. Then allow Search Console access to read Google's evidence for this page. |
+| Saved-page expired | Your saved page has expired. Check the page again to continue. |
+| Saved-page missing | Check a page to start, or connect a Site from your dashboard. |
+| Saved-page invalid URL | Enter an http or https page URL without a username or password. |
+| Saved-page URL too long | Use a page URL with at most 1024 characters. |
+| Saved-page load failed | Your saved page could not load. Retry this read. |
+| Saved-page review | Review the property covering this host before you connect the Site. |
+| Saved-page host | Site host |
+| Saved-page property | Matching property |
+| Saved-page connect | Connect Site |
+| Saved-page resume | Resume this page |
+| Saved-page skip | Continue later |
+| Saved-page no evidence | This page has no saved URL Inspection result. |
+| Saved-page inspection heading | Check this URL with Google's record |
+| Saved-page inspection help | Inspect this URL now. Your full history can continue syncing. |
+| Saved-page inspection cost | One accepted check uses one URL Inspection from your Free allowance and Google's daily quota. |
+| Saved-page inspection action | Inspect URL |
+| Saved-page inspection failed | Google returned no inspection result for this page. Retry the check later. |
+| Saved-page inspection unavailable | The inspection could not run. Your page stays selected. Retry the check later. |
+| Saved-page daily quota | This Site has used its daily URL Inspection quota. Return when the quota resets. |
+| Saved-page result heading | Google's evidence for your page |
+| Saved-page result source | Google URL Inspection |
+| Saved-page capture label | Captured |
+| Saved-page missing inspection field | Not reported by Google |
+| Saved-page coverage label | Google coverage state |
+| Saved-page details action | View inspection details |
+| Saved-page account pending | This Site is being connected to Search Console. Refresh its status in a moment. |
+| Saved-page read access | This step asks for read-only Search Console access. Extra permissions appear with the actions that need them. |
+| Saved-page retry | Retry |
+| Saved-page property limit | This Site's connected property does not cover your selected page. |
+| Saved-page connected property | Connected property |
+| Saved-page other properties | Other properties in your Google account that cover this page |
+| Saved-page property recovery | Open Search Console with this URL. This Site keeps its current property. |
+| Saved-page copy URL | Copy URL |
+| Saved-page copied URL | URL copied |
+| Saved-page copy failed | Copy the selected URL above. Your browser could not copy it. |
+| Saved-page changed | Your saved page changed. Reload this page before you inspect it. |
+
 ## Connect a Site assets
+
 
 These assets apply to the property list on onboarding step 2, Connect a Site, and Manage Sites.
 A Site connects only from a verified Search Console property in the reader's own Google account.

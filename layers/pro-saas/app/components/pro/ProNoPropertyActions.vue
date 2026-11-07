@@ -8,13 +8,14 @@ import { NO_PROPERTY_ACTIONS, SEARCH_CONSOLE_URL, VERIFY_SITE_HELP_URL } from '#
 // the one that stays inside Request Indexing. Every surface that shows the
 // no-property state renders these, so no surface offers a fifth label for the
 // same step.
-const { gscReturnTo, align = 'start' } = defineProps<{
+const { gscReturnTo, align = 'start', readAccess = false } = defineProps<{
   /** The page the Google grant returns to. */
   gscReturnTo: string
   align?: 'start' | 'center'
+  readAccess?: boolean
 }>()
 
-const gscConnectUrl = computed(() => `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent(gscReturnTo)}`)
+const gscConnectUrl = computed(() => `/auth/integrations/gsc/connect?${readAccess ? 'scope=read&' : ''}returnTo=${encodeURIComponent(gscReturnTo)}`)
 </script>
 
 <template>

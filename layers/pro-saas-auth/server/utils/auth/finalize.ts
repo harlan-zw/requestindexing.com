@@ -5,6 +5,9 @@ import { logError } from '~~/shared/logging'
 import { logger } from '~~/shared/server/logger'
 import * as schema from '#layers/pro-saas/server/database'
 import { createUserWithPersonalTeam } from '#layers/pro-saas/server/utils/create-user-with-personal-team'
+import { enrolOnboardingDrip } from '#layers/pro-saas/server/utils/drip-sequences'
+import { claimPageTask } from '#layers/pro-saas/server/utils/page-task'
+import { PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 import { safeAuthRedirect } from '../../../shared/utils/auth-redirect'
 import { useAuthHooks } from './hooks'
 import { attachIdentityToUser, resolveExistingUser, upsertIdentity } from './identity'
@@ -118,11 +121,17 @@ export async function signInOrCreate({ event, provider, identity }: SignInOrCrea
     columns: { currentTeamId: true },
   }).catch(() => null)
 
+  const pageTask = await claimPageTask(event, dbUserId!)
   await setAuthSession(
     event,
     { id: dbUserId!, currentTeamId: finalUser?.currentTeamId ?? null },
     identityRow,
   )
+
+  if (isNewUser) {
+    await enrolOnboardingDrip({ db, onboardingDripEnabled: useRuntimeConfig(event).onboardingDripEnabled, now: new Date() }, dbUserId!)
+      .catch(() => logger.warn('The existing onboarding sequence could not be enrolled.'))
+  }
 
   // Source-driven onboarding redirects (preserve current GitHub flow behaviour).
   if (isNewUser) {
@@ -130,7 +139,7 @@ export async function signInOrCreate({ event, provider, identity }: SignInOrCrea
       deleteCookie(event, 'auth-source')
     // There is no onboarding page in this app; new users land on the dashboard,
     // which walks them through connecting Search Console.
-    return sendRedirect(event, '/pro/dashboard')
+    return sendRedirect(event, pageTask ? PAGE_TASK_ROUTE : '/pro/dashboard')
   }
 
   // Honour stashed deep-link for returning users only.
@@ -138,7 +147,7 @@ export async function signInOrCreate({ event, provider, identity }: SignInOrCrea
   if (stashed)
     deleteCookie(event, 'auth-redirect')
   const safe = safeAuthRedirect(stashed)
-  return sendRedirect(event, safe ?? '/pro/dashboard')
+  return sendRedirect(event, safe ?? (pageTask ? PAGE_TASK_ROUTE : '/pro/dashboard'))
 }
 
 export interface AttachIdentityOpts {

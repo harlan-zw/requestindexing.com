@@ -2,11 +2,14 @@
 import type { SiteAllowance } from '#layers/pro-gsc/shared/free-allowance'
 
 import type { PropertyPickerResponse } from '#layers/pro-gsc/shared/property-picker'
+import { isVerifiedGscPermission, pickBestGscProperty } from 'gscdump'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProGscAddVerify from '#layers/pro-gsc/app/components/pro/ProGscAddVerify.vue'
 import { ADD_VERIFY_ACTION } from '#layers/pro-gsc/shared/add-verify-copy'
 import { siteAllowanceReached, siteAllowanceSummary } from '#layers/pro-gsc/shared/entitlement-copy'
 import { projectPropertyPicker, propertyPickerBlocksConnect } from '#layers/pro-gsc/shared/property-picker'
+import { sitePropertyRefusalMessage } from '#layers/pro-gsc/shared/site-property'
+import { PAGE_SETUP_COPY, pagePropertyCoversUrl } from '#layers/pro-saas/shared/page-task'
 import { connectedSiteDomain, parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
 import ProNoPropertyNotice from './ProNoPropertyNotice.vue'
 
@@ -29,8 +32,9 @@ import ProNoPropertyNotice from './ProNoPropertyNotice.vue'
 // Manage Sites modal. `gscReturnTo` is required because the Google grant must
 // come back to the page that started it. A default of the wizard once sent
 // finished users there, and the onboarding gate bounced them to the dashboard.
-const { gscReturnTo } = defineProps<{
+const { gscReturnTo, targetUrl } = defineProps<{
   gscReturnTo: string
+  targetUrl?: string
 }>()
 
 const emit = defineEmits<{
@@ -140,7 +144,22 @@ watch(connectedSites, sites => emit('changed', sites.length), { immediate: true 
 // account with no property, it invites an address the server must refuse.
 const showAddressField = computed(() => picker.value._tag === 'Properties' || picker.value._tag === 'AllConnected')
 
-const gscConnectUrl = computed(() => `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent(gscReturnTo)}`)
+const gscConnectUrl = computed(() => `/auth/integrations/gsc/connect?${targetUrl ? 'scope=read&' : ''}returnTo=${encodeURIComponent(gscReturnTo)}`)
+const target = computed(() => targetUrl ? parseSiteUrlInput(targetUrl) : null)
+const matchingProperties = computed(() => target.value?._tag === 'Ok'
+  ? (gsc.value?.properties ?? []).filter(property => pagePropertyCoversUrl(targetUrl!, property.siteUrl) && isVerifiedGscPermission(property.permissionLevel))
+  : [])
+const chosenProperty = ref('')
+const recommendedProperty = computed(() => target.value?._tag === 'Ok' ? pickBestGscProperty(target.value.origin, matchingProperties.value)?.siteUrl : undefined)
+const selectedProperty = computed(() => matchingProperties.value.find(property => property.siteUrl === chosenProperty.value)?.siteUrl ?? recommendedProperty.value)
+const targetRefusal = computed(() => {
+  if (target.value?._tag !== 'Ok' || !gsc.value || gsc.value.error || !gsc.value.connected)
+    return null
+  if (selectedProperty.value)
+    return null
+  const reason = !gsc.value.properties.length ? 'no_properties' : gsc.value.properties.some(property => pagePropertyCoversUrl(targetUrl!, property.siteUrl)) ? 'unverified' : 'not_owned'
+  return sitePropertyRefusalMessage(reason, target.value.domain)
+})
 
 const url = ref('')
 const submitting = ref<string | null>(null)
@@ -183,7 +202,7 @@ async function connect(value: string, source: 'field' | 'list') {
 
   submitting.value = parsed.domain
   try {
-    const { site } = await getAppFetch()<{ site: { id: string, domain: string | null } }>('/api/pro/sites', { method: 'POST', body: { url: parsed.origin } })
+    const { site } = await getAppFetch()<{ site: { id: string, domain: string | null } }>('/api/pro/sites', { method: 'POST', body: { url: parsed.origin, ...(targetUrl && selectedProperty.value ? { propertyUrl: selectedProperty.value } : {}) } })
     url.value = ''
     await rereadAfterConnect()
     toast.add({ title: `Connected ${parsed.domain}`, color: 'success' })
@@ -212,7 +231,7 @@ async function connect(value: string, source: 'field' | 'list') {
 
 <template>
   <div class="space-y-6">
-    <div v-if="connectedSites.length" class="space-y-2">
+    <div v-if="connectedSites.length && !targetUrl" class="space-y-2">
       <h2 class="text-sm font-semibold text-highlighted">
         Connected
       </h2>
@@ -285,14 +304,45 @@ async function connect(value: string, source: 'field' | 'list') {
       <ProAlert v-else-if="picker._tag === 'Failed'" color="warning" title="Your Search Console properties could not load" :description="picker.message" />
 
       <div v-else-if="picker._tag === 'NoProperties'" class="rounded-lg border border-dashed border-default p-4" data-testid="gsc-empty-state">
-        <ProNoPropertyNotice :email="session?.gscEmail ?? null" :gsc-return-to="gscReturnTo" in-list />
+        <ProNoPropertyNotice :email="session?.gscEmail ?? null" :gsc-return-to="gscReturnTo" :read-access="!!targetUrl" in-list />
       </div>
 
-      <p v-else-if="picker._tag === 'AllConnected'" class="text-sm text-muted">
+      <p v-else-if="picker._tag === 'AllConnected' && !targetUrl" class="text-sm text-muted">
         Every property in this Google account is already connected. Add and verify another site here, or add it in Search Console and refresh this list.
       </p>
 
-      <ul v-else class="space-y-2">
+      <div v-else-if="targetUrl && target?._tag === 'Ok'" class="space-y-4">
+        <template v-if="selectedProperty">
+          <p class="text-sm text-muted">
+            {{ PAGE_SETUP_COPY.review }}
+          </p>
+          <dl class="grid gap-2 text-sm sm:grid-cols-2">
+            <dt>{{ PAGE_SETUP_COPY.host }}</dt><dd class="break-all">
+              {{ target.domain }}
+            </dd>
+            <dt>{{ PAGE_SETUP_COPY.property }}</dt><dd class="break-all">
+              {{ selectedProperty }}
+            </dd>
+          </dl>
+          <UFormField v-if="matchingProperties.length > 1" :label="PAGE_SETUP_COPY.property">
+            <select v-model="chosenProperty" :aria-label="PAGE_SETUP_COPY.property" class="min-h-11 w-full rounded border border-default bg-default px-3">
+              <option value="">
+                {{ recommendedProperty }}
+              </option>
+              <option v-for="property in matchingProperties" :key="property.siteUrl" :value="property.siteUrl">
+                {{ property.siteUrl }}
+              </option>
+            </select>
+          </UFormField>
+          <UButton :label="PAGE_SETUP_COPY.connect" color="primary" class="min-h-11" :loading="!!submitting" :disabled="atLimit || !!submitting" @click="connect(target.origin, 'list')" />
+        </template>
+        <template v-else>
+          <ProAlert color="warning" :title="targetRefusal ?? PAGE_SETUP_COPY.unavailable" />
+          <ProGscAddVerify :domain="target.domain" :gsc-return-to="gscReturnTo" :label="ADD_VERIFY_ACTION" />
+          <UButton :to="gscConnectUrl" external color="neutral" variant="outline" label="Connect another Google account" class="min-h-11" />
+        </template>
+      </div>
+      <ul v-else-if="picker._tag === 'Properties'" class="space-y-2">
         <li
           v-for="property in picker.properties"
           :key="property.siteUrl"
@@ -331,7 +381,7 @@ async function connect(value: string, source: 'field' | 'list') {
       </ul>
     </section>
 
-    <form v-if="showAddressField" class="space-y-2" @submit.prevent="connect(url, 'field')">
+    <form v-if="showAddressField && !targetUrl" class="space-y-2" @submit.prevent="connect(url, 'field')">
       <UFormField label="Site address" help="For a subdomain of one of your properties, type its address." :error="fieldError">
         <div class="flex flex-col gap-2 sm:flex-row">
           <UInput

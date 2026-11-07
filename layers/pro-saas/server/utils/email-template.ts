@@ -16,6 +16,8 @@ export interface EmailTemplateContext {
   firstName: string | null
   baseUrl: string
   unsubscribeUrl: string
+  /** A private task exists for this user; its URL stays out of the message. */
+  resumePage?: boolean
 }
 
 export interface RenderedEmail {
@@ -30,7 +32,7 @@ function buildTokens(ctx: EmailTemplateContext): Record<string, string> {
   return {
     firstName: ctx.firstName?.trim() || 'there',
     DASHBOARD_URL: `${baseUrl}/pro/dashboard`,
-    INDEXING_URL: `${baseUrl}/pro/dashboard/indexing`,
+    INDEXING_URL: `${baseUrl}${ctx.resumePage ? '/pro/dashboard/url-inspection' : '/pro/dashboard/indexing'}`,
     DEVELOPERS_URL: `${baseUrl}/pro/dashboard/developers`,
   }
 }

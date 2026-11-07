@@ -240,4 +240,24 @@ describe('registerSite and Search Console ownership', () => {
       gscProperty: expect.objectContaining({ siteUrl: 'sc-domain:example.com' }),
     }))
   })
+
+  it.each(['https://example.com/shop/', 'http://www.example.com/shop/', 'https://www.example.com/blog/', 'sc-domain:elsewhere.test'])('refuses a selected property that excludes the private saved page: %s', async (propertyUrl) => {
+    const result = await registerSite({} as H3Event, ctx, { url: 'https://www.example.com', propertyUrl, pageUrl: 'https://www.example.com/shop/Item' }, {
+      readSiteAllowance: async () => ({ _tag: 'Uncapped' }),
+      readSearchConsoleProperties: owns(property(propertyUrl), property('sc-domain:example.com')),
+    })
+    expect(result._tag).toBe('PropertyRefused')
+    expect(siteCount(sqlite)).toBe(0)
+    expect(dispatchEvent).not.toHaveBeenCalled()
+  })
+
+  it('retains the explicitly selected covering prefix among overlapping properties', async () => {
+    const propertyUrl = 'https://www.example.com/shop/'
+    const result = await registerSite({} as H3Event, ctx, { url: 'https://www.example.com', propertyUrl, pageUrl: 'https://www.example.com/shop/Item' }, {
+      readSiteAllowance: async () => ({ _tag: 'Uncapped' }),
+      readSearchConsoleProperties: owns(property('sc-domain:example.com'), property(propertyUrl)),
+    })
+    expect(result._tag).toBe('Ok')
+    expect(dispatchEvent).toHaveBeenCalledWith('pro:site:added', expect.objectContaining({ gscProperty: expect.objectContaining({ siteUrl: propertyUrl }) }))
+  })
 })

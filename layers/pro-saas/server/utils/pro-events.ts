@@ -8,6 +8,9 @@ type ProDB = ReturnType<typeof useDrizzle>
 // onboarding_completed. Each type records one first-time milestone per user.
 export type ProEventType
   = | 'signed_up'
+    | 'page_task_started'
+    | 'page_evidence_viewed'
+    | 'page_inspection_started'
     | 'gsc_connected'
     | 'site_added'
     | 'onboarding_completed'
