@@ -75,6 +75,8 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | Reported Google timing observations provide context, never a countdown or product speed claim | TIMING-01 to TIMING-03 in `apps/marketing/content/VERIFIED-CLAIMS.md`. Attribute the report beside numbers. Keep stage dependencies and slow cases visible |
 | A free tool verdict is an estimate from a Google `site:` search | PRODUCT-06 in `apps/marketing/content/VERIFIED-CLAIMS.md`. The tools read no Search Console data and no URL Inspection result |
 | Deleting an account removes its Teams, Sites, and data here, and gscdump.com deletes its record and API keys | `deleteUserData` purges the rows; its `pro:user:deleting` listener calls gscdump's `partner.users.delete`, which queues the gscdump user cleanup |
+| Google says a page must be indexed, and eligible to show with a snippet, to be a supporting link in AI Overviews or AI Mode | GOOGLE-21 in `apps/marketing/content/VERIFIED-CLAIMS.md`. It is the one link between Generative AI impressions and indexing that the data supports. Never state a cause |
+| Generative AI impressions are the impressions that the reader's own Generative AI report upload states, as of that upload | gscdump's `getSiteGenerativeAiReport` returns `source._tag: 'upload'`. Google has no API for this report. The read has no clicks, no queries, and no position |
 
 **Never claim that a delete revokes Google access.** The Search Console grant comes from this
 app's OAuth client, and gscdump holds its token. gscdump's user cleanup skips a grant a partner's
@@ -193,6 +195,43 @@ Refreshing status only reads the current evidence; it does not retry collection.
 | Collection status action | Refresh status |
 | Sitemap read failure | Sitemap evidence failed to load |
 | Overview read retry | Retry loading |
+
+### Generative AI impressions assets
+
+These assets apply to the one evidence line on the page detail page, and to its upload control.
+gscdump owns the Generative AI report upload and its read. `GLOSSARY.md` defines both terms.
+The line ties the count to indexing, because Google says a supporting link must be indexed.
+It never shows a report, a total, a ratio, or a trend. Request Indexing is not an AI-visibility tool.
+`{start}`, `{end}`, and `{date}` render as a day, a short month, and a year, for example 4 Nov 2026.
+`layers/pro-gsc/shared/generative-ai-evidence.ts` holds these strings. Change them here first.
+
+| Asset | String |
+| --- | --- |
+| Section heading | Generative AI impressions |
+| Reported line | Google reported {count} impressions for this URL in generative AI features from {start} to {end}. (One: 1 impression) |
+| Zero or unavailable line | Google listed this URL in generative AI features from {start} to {end}. Its impressions were zero or unavailable. Google writes both as zero in the export. |
+| Not listed | Not listed in this export. |
+| Truncated note | Google exports 1,000 rows at most. This export can omit this URL. |
+| Indexing requirement | Google says a page must be indexed to appear as a supporting link. |
+| Indexing link | Check indexing status |
+| As of line | Data through {date}. Uploaded {date}. |
+| Stale line | This data is more than 35 days old. Upload a newer export. |
+| Empty state | No Generative AI report upload yet. Google has no API for this report. |
+| Export steps | In Search Console, open Performance, then Generative AI features. Choose a date range, select Export, then Download CSV. Upload the zip here. |
+| Upload action | Upload export |
+| Upload busy | Uploading export… |
+| Upload saved | Generative AI report upload saved. |
+| Mismatch warning | This filename names {prefix}, and this Site is {host}. Check that you uploaded the export of this Site. |
+| Read failure | Generative AI impressions could not load. Retry to read them again. |
+| Retry action | Retry loading |
+| Refusal, no host rows | This export has no pages on {host}. Upload it on the Site that this export belongs to. |
+| Refusal, classic export | This file is the Search results export. Open Generative AI features in Search Console, then export from there. |
+| Refusal, filter | This export uses the filter {filter}. Remove the filter, then export again. |
+| Refusal, Discover | Discover exports are not supported yet. Export the Search report. |
+| Refusal, too large | This file is larger than a Generative AI report export. Export the report again, then upload the zip. |
+| Refusal, other file | This file is not a Generative AI report export from Search Console. Export the report again, then upload the zip without changes. |
+| Refusal, daily limit | This Site reached its daily upload limit. Try again tomorrow. |
+| Refusal, other | The upload could not finish. Retry the upload. |
 
 ## Free tool assets
 
@@ -436,6 +475,8 @@ Harlan's global writing rules already apply and are not repeated here: no em das
 | solutions, empower, leverage (as a verb), seamless, powerful | say what it does | Corporate hedging. The reader is a developer with a page that is not showing up |
 | OK, Submit, Click here (as a button label) | a verb and its object | A label that names no action tells the reader nothing |
 | emoji in production copy | a status pip, or nothing | Set by `DESIGN.md` and repeated here because it is a copy decision |
+| AI traffic, clicks from AI, AI visits, AI rankings, lost to AI | Generative AI impressions | The report states impressions only. It has no clicks and no position |
+| import, for a Generative AI report upload | upload | gscdump's glossary reserves import for Sync and Backfill |
 | Local mode, the gscdump CLI, your own Google keys, as advice to a reader | the next step inside this app | gscdump's own refusal and hold copy points there. A Request Indexing reader has neither, so never pass gscdump's message through |
 
 ## Open questions

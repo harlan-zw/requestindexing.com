@@ -96,6 +96,25 @@ describe('resolveGscdumpV1ProxyOperation', () => {
     expect(resolveGscdumpV1ProxyOperation(method, 'partner', path)).toBeNull()
   })
 
+  // The page detail page reads one URL's Generative AI impressions and uploads
+  // an export. A viewer reads; only a Team writer uploads.
+  it.each([
+    ['GET', 'sites/s_site-1/generative-ai', 'partner.sites.generative_ai.get', false],
+    ['POST', 'sites/s_site-1/generative-ai/uploads', 'partner.sites.generative_ai.uploads.create', true],
+  ] as const)('routes Generative AI %s %s through Site ownership checks', (method, path, id, requiresWrite) => {
+    const operation = resolveGscdumpV1ProxyOperation(method, 'partner', path)
+    expect(operation?.operation.id).toBe(id)
+    expect(operation && selectGscdumpV1ProxyTarget(operation, 'u_me')).toEqual({ _tag: 'site', siteId: 's_site-1', requiresWrite, path })
+  })
+
+  // No report page ships here, so the upload list and remove stay off the relay.
+  it.each([
+    ['GET', 'sites/s_site-1/generative-ai/uploads'],
+    ['DELETE', 'sites/s_site-1/generative-ai/uploads/gau_01'],
+  ])('rejects Generative AI %s %s', (method, path) => {
+    expect(resolveGscdumpV1ProxyOperation(method, 'partner', path)).toBeNull()
+  })
+
   it('rejects a path with no matching operation', () => {
     expect(resolveGscdumpV1ProxyOperation('GET', 'partner', 'users/u_1')).toBeNull()
   })

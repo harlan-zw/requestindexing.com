@@ -30,6 +30,8 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 | funnel milestone | pro_events table | First-time record of one step toward an active account | (internal) |
 | Submission | gscdump Submission Receipt (`google_indexing_submissions`, gscdump.com ADR-0016) | Site 1—N Submission, unique on (site, idempotency key) in gscdump | "Submit" |
 | IndexNow | gscdump `partner.sites.indexing.indexnow.*`, IndexNow page | Site 0—1 verified key; notifies participating search engines, never Google | IndexNow |
+| Generative AI report upload | gscdump `partner.sites.generative_ai.uploads.create`, page detail upload control | Site 1—N upload; gscdump stores each one unchanged | upload |
+| Generative AI impressions | gscdump `partner.sites.generative_ai.get` | URL 0—1 count per upload window | Generative AI impressions |
 | Investigation | indexing_investigations table | Site 1—N Investigation, unique on (site, url, issue) | (not surfaced as a noun) |
 | Quota | gscdump `google_indexing_quota_daily` (gscdump.com ADR-0016) | Cloud project 1—N Pacific-day counter, kept by gscdump | "quota" |
 | Free allowance | gscdump `partner.users.entitlements.get` | Billing owner 1—1 per usage pool; gscdump sets and enforces it | Free allowance |
@@ -134,6 +136,26 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 **Never:** Bing submission, because IndexNow reaches more engines than Bing. Never imply that IndexNow reaches Google.
 
 **Casing:** `IndexNow`, one word, capital I and N.
+
+### Generative AI report upload
+
+**Is:** one Search Console Generative AI report export zip for one Site, which the reader uploads. The browser parses the zip with `@gscdump/sdk/generative-ai-report`, and gscdump stores the result unchanged. Google has no API for this report. Borrowed from the gscdump glossary, which owns the term.
+
+**Use for:** the upload control on the page detail page, and its refusals.
+
+**Never:** import, sync, backfill, snapshot, or ingestion. gscdump reserves import for Sync and Backfill.
+
+**Casing:** `Generative AI report upload` in prose; upload as the verb.
+
+### Generative AI impressions
+
+**Is:** the impressions that one Generative AI report upload states for one URL, within that upload's window. Borrowed from the gscdump glossary, which owns the term. A zero in the export means zero or unavailable. A URL with no row is not listed in this export.
+
+**Use for:** the one evidence line on the page detail page. The line ties the count to indexing, because Google says a supporting link must be indexed (GOOGLE-21).
+
+**Never:** AI traffic, AI visits, AI clicks, AI citations, or AI rankings. Never a total, a ratio, or a trend. Request Indexing is not an AI-visibility tool, so this term names one line and no report.
+
+**Casing:** `Generative AI impressions` as a term; Google's feature name, generative AI features, stays lowercase.
 
 ### Investigation
 
