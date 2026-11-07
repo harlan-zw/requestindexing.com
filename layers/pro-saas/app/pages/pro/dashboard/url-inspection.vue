@@ -151,6 +151,7 @@ const failure = computed(() => {
         Google Search Console: {{ session.gscEmail }}
       </p>
       <template v-if="needsGoogle">
+        <ProSetupExample />
         <p>{{ copy.readAccess }}</p>
         <UButton :to="connectHref" external color="primary" label="Connect Google Search Console" class="min-h-11" />
       </template>
@@ -203,6 +204,7 @@ const failure = computed(() => {
         </dl>
         <UButton v-if="!showDetails" :label="copy.details" :loading="finishing" color="primary" class="min-h-11" @click="finish()" />
         <div v-if="showDetails" class="space-y-4" aria-live="polite" data-testid="page-inspection-details">
+          <ProFirstSiteReport v-if="siteId" :site-id="siteId" />
           <dl class="grid gap-x-5 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
             <dt>Last crawl</dt><dd>{{ evidence.lastCrawlAt ?? copy.notReported }}</dd>
             <dt>Google canonical</dt><dd class="break-all">
@@ -242,6 +244,7 @@ const failure = computed(() => {
         {{ actionError }}
       </p>
       <UButton :label="copy.skip" :loading="finishing" color="neutral" variant="link" class="min-h-11" @click="finish(true)" />
+      <ProSetupExitFeedback step="page" saved-page />
     </template>
   </div>
 </template>

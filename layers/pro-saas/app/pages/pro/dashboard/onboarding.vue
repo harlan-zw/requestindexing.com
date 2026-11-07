@@ -188,6 +188,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       </div>
 
       <template v-else>
+        <ProSetupExample />
         <ul class="space-y-2 text-sm text-muted">
           <li class="flex gap-2">
             <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
@@ -241,6 +242,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         :title="hasSites ? ONBOARDING_COMPLETION_COPY.connected.title : ONBOARDING_COMPLETION_COPY.missingSite.title"
         :description="hasSites ? ONBOARDING_COMPLETION_COPY.connected.description : ONBOARDING_COMPLETION_COPY.missingSite.description"
       />
+      <ProSetupFirstSiteReport v-if="hasSites" />
     </section>
 
     <UiWizardNav
@@ -254,5 +256,6 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       @skip="next"
       @next="next"
     />
+    <ProSetupExitFeedback :step="step" />
   </div>
 </template>

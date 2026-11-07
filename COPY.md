@@ -305,6 +305,61 @@ Keep the exact URL and host through sign-in, consent, connection, and recovery.
 | Saved-page copy failed | Copy the selected URL above. Your browser could not copy it. |
 | Saved-page changed | Your saved page changed. Reload this page before you inspect it. |
 
+## Setup examples and optional feedback
+
+Examples show dated public observations from nuxtseo.com, published on gscdump.com.
+They never describe the reader's Site. Feedback never blocks leaving setup.
+
+| Asset | String |
+| --- | --- |
+| Example heading | See an example before you connect |
+| Example label | Example from nuxtseo.com |
+| Example help | This public example shows a saved Google URL Inspection result. Your Site needs its own check. |
+| Example source link | View the public example |
+| Exit question | What would help you continue? Optional |
+| Exit permission | Understand Google access |
+| Exit property | Find my Search Console property |
+| Exit value | See what I get |
+| Exit time | Come back later |
+| Exit permission recovery | URL Inspection reads Search Console data. It does not submit a page to Google. |
+| Exit property recovery | Use the Google account that owns a verified Search Console property for this Site. |
+| Exit time recovery | Your saved page stays available for seven days. Resume it from your dashboard. |
+| Exit generic time recovery | Return to setup from your dashboard when you are ready. |
+| Exit recorded | Thanks. You can continue setup or leave when you are ready. |
+| Exit record failed | Your answer could not save. You can still continue later. |
+| Exit property action | Open Search Console |
+
+## First Site report
+
+The preview reads known Sitemap URLs. It spends no URL Inspections.
+The explicit inspection uses at most ten matching URLs. This sample is not Site-wide coverage.
+
+| Asset | String |
+| --- | --- |
+| First report heading | Check your first Sitemap URLs |
+| First report help | Preview up to 10 known Sitemap URLs. Then choose whether to inspect them with Google. |
+| First report preview | Preview URLs |
+| First report source | Source: saved Sitemap membership |
+| First report cost | Each accepted URL uses one URL Inspection from your Free allowance and Google's daily quota. |
+| First report sample limit | These selected URLs do not measure indexing across your whole Site. |
+| First report inspect | Inspect selected URLs |
+| First report refresh | Refresh preview |
+| First report empty | No matching Sitemap URLs are available yet. Your history can keep syncing. |
+| First report incomplete | Matching URLs could not be found in this preview. Review your Sitemaps or refresh later. |
+| First report unavailable | The preview could not load. Refresh it before you inspect URLs. |
+| First report changed | This Site or its Sitemap URLs changed. Refresh the preview before you inspect URLs. |
+| First report result | Google's evidence for selected URLs |
+| First report no result | Google returned no inspection result for this URL. |
+| First report skipped | Inspection skipped |
+| First report error | Inspection failed |
+| First report loading | Loading Sitemap URLs |
+| First report selected | {count} URLs selected. |
+| First report pending | Leaving this page does not cancel an inspection already sent. |
+| First report view changed | Refresh the preview before recording its evidence. |
+| First report uncertain | The request outcome is unknown. Read saved results before you choose another inspection. |
+| First report saved action | Read saved results |
+| First report view only | Your Team role allows viewing only. |
+
 ## Connect a Site assets
 
 
