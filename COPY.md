@@ -295,6 +295,16 @@ Retained observations do not establish lifetime first use.
 | Feedback step | Step |
 | Feedback reason | Reason |
 | Engine identity | Engine user ID |
+| Campaign source | UTM source |
+| Campaign medium | UTM medium |
+| Campaign name | UTM campaign |
+| Campaign content | UTM content |
+| Campaign term | UTM term |
+| Referrer domain | Referrer domain |
+| Landing group | Landing group |
+| Attribution capture time | Captured at (UTC) |
+| Sign-in provider | Sign-in provider |
+| Acquisition channel | Acquisition channel |
 
 ## Saved-page setup
 

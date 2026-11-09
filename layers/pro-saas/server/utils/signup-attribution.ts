@@ -15,13 +15,14 @@ export function captureFirstSignupTouch(event: H3Event) {
   const url = getRequestURL(event)
   const referrer = getHeader(event, 'referer')
   const now = Date.now()
+  const current = captureSignupTouch({ path: url.pathname, query: getQuery(event), referrer, hostname: url.hostname, now })
   const previousUrl = referrer && URL.canParse(referrer) ? new URL(referrer) : null
   // A native signup click can arrive before a static landing hydrates.
   // Recover only bounded campaign fields from the exact same-origin page.
-  const handoff = (url.pathname === '/login' || url.pathname.startsWith('/auth/')) && previousUrl?.origin === url.origin
+  const handoff = current && previousUrl?.origin === url.origin
     ? captureSignupTouch({ path: previousUrl.pathname, query: Object.fromEntries(previousUrl.searchParams), hostname: url.hostname, now })
     : null
-  const touch = handoff?._tag === 'campaign' ? handoff : captureSignupTouch({ path: url.pathname, query: getQuery(event), referrer, hostname: url.hostname, now })
+  const touch = handoff?._tag === 'campaign' ? handoff : current
   if (touch)
     setCookie(event, SIGNUP_TOUCH_COOKIE, JSON.stringify(touch), { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 30 * 24 * 60 * 60, secure: !import.meta.dev })
 }

@@ -1,4 +1,5 @@
 import type { ObservedFunnelUser } from './funnel-observations'
+import type { AcquisitionEvidence } from './journey-evidence'
 import { z } from 'zod'
 import { defaultFunnelDates } from './funnel'
 import { ADMIN_JOURNEY_COPY } from './journey-evidence'
@@ -21,6 +22,7 @@ export interface CustomerInsightsUser {
   name: string | null
   email: string | null
   source: { label: string, basis: 'captured' | 'legacy' | 'unknown' }
+  acquisition: AcquisitionEvidence
   goals: string[]
   other: string | null
   integrations: CustomerIntegrationActivity[]
@@ -86,6 +88,7 @@ export function buildCustomerInsights(users: ObservedFunnelUser[], query: z.infe
       name: user.name,
       email: user.email,
       source: { label: user.acquisition.label, basis: user.acquisition.basis },
+      acquisition: user.acquisition,
       goals: [],
       other: null,
       integrations,

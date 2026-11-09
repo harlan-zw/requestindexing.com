@@ -47,8 +47,8 @@ it('keeps the first campaign through OAuth and persists it once without private 
   expect(getResponseHeader(callback, 'set-cookie')).toContain('Max-Age=0')
 })
 
-it('keeps a campaign on a native signup click before the static landing hydrates', () => {
-  const signup = event('/login', undefined, 'https://requestindexing.com/?utm_source=Docs&utm_medium=email&url=https://private.example/selected')
+it.each(['/login', '/pro/onboarding', '/pro/dashboard'])('keeps a campaign on a native %s click before the static landing hydrates', (path) => {
+  const signup = event(path, undefined, 'https://requestindexing.com/?utm_source=Docs&utm_medium=email&url=https://private.example/selected')
   captureFirstSignupTouch(signup)
   const cookie = responseCookie(getResponseHeader(signup, 'set-cookie'))
   const callback = event('/auth/google', cookie, 'https://requestindexing.com/?utm_source=later')

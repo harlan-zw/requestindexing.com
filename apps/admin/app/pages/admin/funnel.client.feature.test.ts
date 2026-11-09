@@ -93,7 +93,7 @@ it('rejects reversed date ranges without fetching a different cohort', async () 
 it('renders recorded timing, unknown sizes and hosted coverage for a large cohort', async () => {
   const now = Date.parse('2026-10-10T00:00:00Z')
   const users = buildObservedFunnelUsers(Array.from({ length: 121 }, (_, index) => ({ id: index + 1, name: `User ${index + 1}`, email: `${index}@example.test`, createdAt: '2026-10-01T00:00:00Z', completedAt: null, source: null, teamId: 1, engineUserId: 'engine-fixture' })), [
-    { userId: 121, type: 'signed_up', createdAt: '2026-10-01T00:00:00Z', payload: { attributionBasis: 'journey_linked', attributionSource: 'utm:newsletter' } },
+    { userId: 121, type: 'signed_up', createdAt: '2026-10-01T00:00:00Z', payload: { attributionBasis: 'journey_linked', attributionSource: 'utm:newsletter', utmCampaign: 'november' } },
     { userId: 121, type: 'gsc_connected', createdAt: '2026-10-01T00:01:00Z', payload: null },
     { userId: 121, type: 'setup_feedback', createdAt: '2026-10-01T00:02:00Z', payload: { reason: 'time', step: 'page' } },
   ], [{ teamId: 1 }, { teamId: 1 }], now)
@@ -111,6 +111,8 @@ it('renders recorded timing, unknown sizes and hosted coverage for a large cohor
   expect(details.textContent).toContain('Signed up → Connected Google')
   expect(details.textContent).toContain('1 min')
   expect(details.textContent).toContain('Missing timestamps')
+  expect(details.textContent).toContain('UTM campaign')
+  expect(details.textContent).toContain('november')
 })
 
 it('renders a zero cohort with explicit unknown timing and export filters', async () => {

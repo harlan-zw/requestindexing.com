@@ -17,3 +17,11 @@ it('preserves filtered full cohorts across pages, UTC timestamps and null covera
   expect(csv).toContain('"unavailable"')
   expect(exportFunnelCsv(users, { ...query, source: 'other' }, now).split('\r\n')).toHaveLength(1)
 })
+it('exports actual campaign fields and capture time independently of signup time', () => {
+  const now = Date.parse('2026-11-09T12:00:00Z')
+  const users = buildObservedFunnelUsers([{ id: 1, name: 'Example', email: 'operator@example.test', createdAt: '2026-11-01', completedAt: null, source: null, teamId: 1, engineUserId: null }], [{ userId: 1, type: 'signed_up', createdAt: '2026-11-01T00:00:00Z', payload: { attributionBasis: 'journey_linked', attributionSource: 'utm:docs', utmSource: 'docs', utmMedium: 'email', utmCampaign: 'november', utmContent: 'header', utmTerm: 'indexing', referrerDomain: 'search.example', landingPath: '/tools', capturedAt: '2026-10-31T23:59:00Z', provider: 'google', channelClass: 'owned' } }], [], now)
+  const csv = exportFunnelCsv(users, parseFunnelQuery({ from: '2026-11-01', to: '2026-11-09' }), now)
+  expect(csv).toContain('"utm_source","utm_medium","utm_campaign","utm_content","utm_term","referrer_domain","landing_group","attribution_captured_at_utc"')
+  expect(csv).toContain('"docs","email","november","header","indexing","search.example","/tools","2026-10-31T23:59:00.000Z","google","owned"')
+  expect(csv).toContain('"2026-11-01T00:00:00.000Z"')
+})

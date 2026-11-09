@@ -61,6 +61,12 @@ export function buildObservedFunnelUsers(accounts: FunnelAccount[], events: Funn
       channelClass: safeText(initial?.channelClass, 32),
       landingPath: safeText(initial?.landingPath, 128),
       capturedAt: funnelTimestamp(initial?.capturedAt),
+      utmSource: safeText(initial?.utmSource, 80),
+      utmMedium: safeText(initial?.utmMedium, 80),
+      utmCampaign: safeText(initial?.utmCampaign, 120),
+      utmContent: safeText(initial?.utmContent, 120),
+      utmTerm: safeText(initial?.utmTerm, 120),
+      referrerDomain: safeText(initial?.referrerDomain, 253),
     }
     const times: StageTimes = {
       signedUp: signedUpAt,

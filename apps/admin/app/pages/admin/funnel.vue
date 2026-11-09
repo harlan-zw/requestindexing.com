@@ -32,6 +32,7 @@ const percentage = (value: number | null) => value === null ? '—' : `${value}%
 const timestamp = (value: string) => `${value.slice(0, 16).replace('T', ' ')} UTC`
 const exportHref = computed(() => `/api/admin/funnel?${new URLSearchParams({ from: filters.value.from, to: filters.value.to, source: filters.value.source, stage: filters.value.stage, search: filters.value.search, format: 'csv' })}`)
 const stageLabel = (key: string) => FUNNEL_STEPS.find(stage => stage.key === key)?.label ?? copy.evidence
+const acquisitionFields = ['utmSource', 'utmMedium', 'utmCampaign', 'utmContent', 'utmTerm', 'referrerDomain', 'landingPath', 'capturedAt', 'provider', 'channelClass'] as const
 function duration(milliseconds: number | null) {
   if (milliseconds === null)
     return copy.unavailable
@@ -422,6 +423,11 @@ function inspectStage(key: string) {
                     <dl class="space-y-2 py-2">
                       <template v-for="pair in user.journey.delays" :key="pair.to">
                         <dt>{{ stageLabel(pair.from) }} → {{ stageLabel(pair.to) }}</dt><dd>{{ pair._tag === 'Known' ? duration(pair.milliseconds) : pair._tag === 'Missing' ? copy.missing : pair._tag === 'OutOfOrder' ? copy.reversed : copy.future }}</dd>
+                      </template>
+                    </dl>
+                    <dl v-if="user.acquisition" class="space-y-2 py-2">
+                      <template v-for="key in acquisitionFields" :key="key">
+                        <dt>{{ copy[key] }}</dt><dd><time v-if="key === 'capturedAt' && user.acquisition.capturedAt" :datetime="user.acquisition.capturedAt" :title="user.acquisition.capturedAt">{{ timestamp(user.acquisition.capturedAt) }}</time><span v-else>{{ user.acquisition[key] ?? copy.unknown }}</span></dd>
                       </template>
                     </dl>
                     <dl v-if="user.engineUserId" class="space-y-2 py-2">

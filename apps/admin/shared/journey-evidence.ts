@@ -30,6 +30,16 @@ export const ADMIN_JOURNEY_COPY = {
   step: 'Step',
   reason: 'Reason',
   engineUser: 'Engine user ID',
+  utmSource: 'UTM source',
+  utmMedium: 'UTM medium',
+  utmCampaign: 'UTM campaign',
+  utmContent: 'UTM content',
+  utmTerm: 'UTM term',
+  referrerDomain: 'Referrer domain',
+  landingPath: 'Landing group',
+  capturedAt: 'Captured at (UTC)',
+  provider: 'Sign-in provider',
+  channelClass: 'Acquisition channel',
 } as const
 
 export const JOURNEY_STAGES = ['signedUp', 'googleConnected', 'siteConnected', 'evidenceViewed', 'setupCompleted'] as const
@@ -47,6 +57,12 @@ export interface AcquisitionEvidence {
   channelClass: string | null
   landingPath: string | null
   capturedAt: string | null
+  utmSource: string | null
+  utmMedium: string | null
+  utmCampaign: string | null
+  utmContent: string | null
+  utmTerm: string | null
+  referrerDomain: string | null
 }
 export interface FeedbackObservation { reason: 'permission' | 'property' | 'value' | 'time', step: 'connect' | 'sites' | 'sync' | 'page', recordedAt: string }
 export interface UserJourney {

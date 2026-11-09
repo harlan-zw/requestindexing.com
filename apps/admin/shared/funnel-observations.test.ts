@@ -29,6 +29,14 @@ it('does not fill unknown original attribution from a mutable current field', ()
   expect(users[0]?.acquisition).toMatchObject({ label: 'Unattributed', basis: 'unknown' })
 })
 
+it('exposes bounded campaign detail and preserves its actual capture time', () => {
+  const capturedAt = new Date(start - 60000).toISOString()
+  const user = buildObservedFunnelUsers([account], [{ userId: 1, type: 'signed_up', createdAt: start, payload: { attributionBasis: 'journey_linked', attributionSource: 'utm:docs', utmSource: 'docs', utmMedium: 'email', utmCampaign: 'november', utmContent: 'header', utmTerm: 'indexing', referrerDomain: 'search.example', landingPath: '/tools', capturedAt } }], [], start + 1)[0]!
+  expect(user.acquisition).toMatchObject({ utmSource: 'docs', utmMedium: 'email', utmCampaign: 'november', utmContent: 'header', utmTerm: 'indexing', referrerDomain: 'search.example', landingPath: '/tools', capturedAt })
+  const missing = buildObservedFunnelUsers([account], [], [], start + 1)[0]!
+  expect(missing.acquisition).toMatchObject({ utmSource: null, referrerDomain: null, capturedAt: null })
+})
+
 it('keeps a valid maximum-length referral source selectable in both reports', () => {
   const domain = ['a'.repeat(63), 'b'.repeat(63), 'c'.repeat(63), 'd'.repeat(61)].join('.')
   const source = `referral:${domain}`
