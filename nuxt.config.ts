@@ -141,7 +141,7 @@ export default defineNuxtConfig({
     ],
   },
 
-  compatibilityDate: '2026-08-11',
+  compatibilityDate: '2026-09-26',
 
   // `layers/design-system` turns auto-imports off so every file in it imports
   // explicitly, the way nuxtseo.com writes them. Nuxt merges layer config into
