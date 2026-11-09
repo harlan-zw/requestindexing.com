@@ -7,6 +7,7 @@ import * as schema from '#layers/pro-saas/server/database'
 import { createUserWithPersonalTeam } from '#layers/pro-saas/server/utils/create-user-with-personal-team'
 import { enrolOnboardingDrip } from '#layers/pro-saas/server/utils/drip-sequences'
 import { claimPageTask } from '#layers/pro-saas/server/utils/page-task'
+import { clearSignupAttribution, readSignupAttribution } from '#layers/pro-saas/server/utils/signup-attribution'
 import { PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 import { safeAuthRedirect } from '../../../shared/utils/auth-redirect'
 import { useAuthHooks } from './hooks'
@@ -68,6 +69,7 @@ export async function signInOrCreate({ event, provider, identity }: SignInOrCrea
         displayName: identity.name ?? null,
         avatarUrl: identity.avatarUrl ?? null,
       },
+      readSignupAttribution(event),
     ).catch((err) => {
       // Route through the structured logger, not a bare console.error: the
       // console path never reached Sentry, so this failure was invisible in
@@ -82,6 +84,7 @@ export async function signInOrCreate({ event, provider, identity }: SignInOrCrea
     dbUserId = created.user.userId
     isNewUser = true
   }
+  clearSignupAttribution(event)
 
   // Upsert identity row.
   const identityRow = await upsertIdentity(db, {

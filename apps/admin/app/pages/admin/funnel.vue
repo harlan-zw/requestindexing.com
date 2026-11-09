@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { FunnelReport } from '../../../shared/funnel'
+import { SETUP_EXPERIMENT_COPY } from '#layers/pro-saas/shared/setup-experiments'
 import { defaultFunnelDates, FUNNEL_STEPS, parseFunnelQuery } from '../../../shared/funnel'
+import { ADMIN_JOURNEY_COPY as copy } from '../../../shared/journey-evidence'
 
 definePageMeta({ layout: 'admin' })
 useSeoMeta({ title: 'Signup funnel' })
@@ -28,6 +30,21 @@ const stageOptions = [
 const maxSignups = computed(() => Math.max(1, ...(report.value?.days.map(day => day.count) ?? [])))
 const percentage = (value: number | null) => value === null ? '—' : `${value}%`
 const timestamp = (value: string) => `${value.slice(0, 16).replace('T', ' ')} UTC`
+const exportHref = computed(() => `/api/admin/funnel?${new URLSearchParams({ from: filters.value.from, to: filters.value.to, source: filters.value.source, stage: filters.value.stage, search: filters.value.search, format: 'csv' })}`)
+const stageLabel = (key: string) => FUNNEL_STEPS.find(stage => stage.key === key)?.label ?? copy.evidence
+const acquisitionFields = ['utmSource', 'utmMedium', 'utmCampaign', 'utmContent', 'utmTerm', 'referrerDomain', 'landingPath', 'capturedAt', 'provider', 'channelClass'] as const
+function duration(milliseconds: number | null) {
+  if (milliseconds === null)
+    return copy.unavailable
+  if (milliseconds < 60000)
+    return `${Math.round(milliseconds / 1000)} s`
+  if (milliseconds < 3600000)
+    return `${Math.round(milliseconds / 60000)} min`
+  return `${Math.round(milliseconds / 3600000 * 10) / 10} h`
+}
+function feedbackLabel(reason: string | undefined) {
+  return reason && ['permission', 'property', 'value', 'time'].includes(reason) ? SETUP_EXPERIMENT_COPY[reason as 'permission' | 'property' | 'value' | 'time'] : copy.unknown
+}
 
 function applyFilters(nextPage = 1) {
   try {
@@ -77,6 +94,7 @@ function inspectStage(key: string) {
       <UButton type="submit" color="primary" :loading="status === 'pending'">
         Apply filters
       </UButton>
+      <UButton :to="exportHref" external color="neutral" variant="outline" class="min-h-11" :label="copy.export" />
       <div class="flex gap-1">
         <UButton v-for="days in [7, 30, 90]" :key="days" color="neutral" variant="ghost" @click="preset(days)">
           {{ days }} days
@@ -126,6 +144,99 @@ function inspectStage(key: string) {
           </dd>
         </div>
       </dl>
+      <section class="space-y-3" aria-labelledby="funnel-evidence-heading">
+        <h2 id="funnel-evidence-heading" class="text-lg font-semibold">
+          {{ copy.evidence }}: {{ report.evidenceViewed }}
+        </h2>
+        <p class="text-sm text-muted">
+          {{ copy.coverage }}
+        </p>
+      </section>
+
+      <section class="space-y-3" aria-labelledby="funnel-timing-heading">
+        <h2 id="funnel-timing-heading" class="text-lg font-semibold">
+          {{ copy.timing }}
+        </h2>
+        <p class="text-sm text-muted">
+          {{ copy.timingHelp }}
+        </p>
+        <div class="overflow-x-auto rounded-lg border border-default">
+          <table class="w-full min-w-2xl text-left text-sm tabular-nums">
+            <thead>
+              <tr>
+                <th scope="col" class="p-3">
+                  {{ copy.step }}
+                </th><th scope="col" class="p-3">
+                  {{ copy.median }}
+                </th><th scope="col" class="p-3">
+                  {{ copy.known }}
+                </th><th scope="col" class="p-3">
+                  {{ copy.missing }}
+                </th><th scope="col" class="p-3">
+                  {{ copy.reversed }}
+                </th><th scope="col" class="p-3">
+                  {{ copy.future }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="pair in report.timing" :key="pair.to" class="border-t border-default">
+                <th scope="row" class="p-3 font-medium">
+                  {{ stageLabel(pair.from) }} → {{ stageLabel(pair.to) }}
+                </th><td class="p-3">
+                  {{ duration(pair.medianMs) }}
+                </td><td class="p-3">
+                  {{ pair.knownPairs }}
+                </td><td class="p-3">
+                  {{ pair.missingPairs }}
+                </td><td class="p-3">
+                  {{ pair.reversedPairs }}
+                </td><td class="p-3">
+                  {{ pair.futurePairs }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-sm text-muted">
+          {{ copy.excluded }}: {{ copy.beforeSignup }} {{ report.invalidHistory.beforeSignup }} · {{ copy.future }} {{ report.invalidHistory.future }} · {{ copy.invalid }} {{ report.invalidHistory.invalidTimestamp }}
+        </p>
+      </section>
+
+      <section class="space-y-3" aria-labelledby="funnel-attribution-heading">
+        <h2 id="funnel-attribution-heading" class="text-lg font-semibold">
+          {{ copy.source }}
+        </h2>
+        <p class="text-sm text-muted">
+          {{ copy.sourceHelp }}
+        </p>
+        <p class="text-sm tabular-nums">
+          {{ copy.captured }}: {{ report.attribution.captured }} · {{ copy.legacy }}: {{ report.attribution.legacy }} · {{ copy.unknown }}: {{ report.attribution.unknown }}
+        </p>
+      </section>
+
+      <section v-if="report.feedbackReasons.length" class="space-y-3" aria-labelledby="funnel-feedback-heading">
+        <h2 id="funnel-feedback-heading" class="text-lg font-semibold">
+          {{ copy.feedback }}
+        </h2>
+        <p class="text-sm text-muted">
+          {{ copy.feedbackHelp }}
+        </p>
+        <ul class="space-y-2 text-sm">
+          <li v-for="answer in report.feedbackReasons" :key="`${answer.step}:${answer.reason}`">
+            {{ answer.step }}: {{ feedbackLabel(answer.reason) }} · {{ answer.users }}
+          </li>
+        </ul>
+      </section>
+
+      <section class="space-y-3" aria-labelledby="funnel-integration-heading">
+        <h2 id="funnel-integration-heading" class="text-lg font-semibold">
+          {{ copy.integrations }}
+        </h2>
+        <p class="text-sm text-muted">
+          {{ copy.integrationHelp }}
+        </p>
+      </section>
 
       <p v-if="!report.total" class="rounded-lg border border-default p-6 text-muted">
         No signups match this period and source. Choose another date range or source.
@@ -260,11 +371,17 @@ function inspectStage(key: string) {
                   Site
                 </th><th scope="col" class="p-4">
                   Setup
+                </th><th scope="col" class="p-4">
+                  {{ copy.source }}
+                </th><th scope="col" class="p-4">
+                  {{ copy.sites }}
+                </th><th scope="col" class="p-4">
+                  {{ copy.timing }}
                 </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="user in report.users" :key="user.id" class="border-t border-default">
+              <tr v-for="user in report.users" :key="user.id" class="border-t border-default [&>td]:align-top">
                 <td class="p-4">
                   <p class="font-medium">
                     {{ user.name || user.email }}
@@ -286,9 +403,53 @@ function inspectStage(key: string) {
                 <td class="p-4">
                   {{ user.setupCompleted ? 'Finished' : 'Unfinished' }}
                 </td>
+                <td class="p-4">
+                  <span class="break-words">{{ user.source }}</span><p class="text-muted">
+                    {{ user.acquisition?.basis ?? 'unknown' }}
+                  </p>
+                </td>
+                <td class="p-4">
+                  {{ user.currentSites?.count ?? copy.unavailable }}
+                </td>
+                <td class="p-4">
+                  <details v-if="user.journey">
+                    <summary class="flex min-h-11 cursor-pointer items-center">
+                      {{ copy.details }}
+                    </summary><dl class="space-y-2 py-2">
+                      <template v-for="(at, key) in user.journey.stageTimes" :key="key">
+                        <dt>{{ stageLabel(key) }}</dt><dd><time v-if="at" :datetime="at" :title="at">{{ timestamp(at) }}</time><span v-else>{{ copy.unavailable }}</span></dd>
+                      </template>
+                    </dl>
+                    <dl class="space-y-2 py-2">
+                      <template v-for="pair in user.journey.delays" :key="pair.to">
+                        <dt>{{ stageLabel(pair.from) }} → {{ stageLabel(pair.to) }}</dt><dd>{{ pair._tag === 'Known' ? duration(pair.milliseconds) : pair._tag === 'Missing' ? copy.missing : pair._tag === 'OutOfOrder' ? copy.reversed : copy.future }}</dd>
+                      </template>
+                    </dl>
+                    <dl v-if="user.acquisition" class="space-y-2 py-2">
+                      <template v-for="key in acquisitionFields" :key="key">
+                        <dt>{{ copy[key] }}</dt><dd><time v-if="key === 'capturedAt' && user.acquisition.capturedAt" :datetime="user.acquisition.capturedAt" :title="user.acquisition.capturedAt">{{ timestamp(user.acquisition.capturedAt) }}</time><span v-else>{{ user.acquisition[key] ?? copy.unknown }}</span></dd>
+                      </template>
+                    </dl>
+                    <dl v-if="user.engineUserId" class="space-y-2 py-2">
+                      <dt>{{ copy.engineUser }}</dt><dd class="break-all font-mono text-xs">
+                        {{ user.engineUserId }}
+                      </dd>
+                    </dl>
+                    <template v-if="user.feedback?.length">
+                      <p class="font-medium">
+                        {{ copy.feedback }}
+                      </p>
+                      <ul class="space-y-2 py-2">
+                        <li v-for="answer in user.feedback" :key="answer.step">
+                          {{ answer.step }}: {{ feedbackLabel(answer.reason) }}<br><time :datetime="answer.recordedAt" :title="answer.recordedAt">{{ timestamp(answer.recordedAt) }}</time>
+                        </li>
+                      </ul>
+                    </template>
+                  </details>
+                </td>
               </tr>
               <tr v-if="!report.users.length">
-                <td colspan="5" class="p-6 text-muted">
+                <td colspan="8" class="p-6 text-muted">
                   No users match these progress and search filters.
                 </td>
               </tr>
@@ -311,6 +472,7 @@ function inspectStage(key: string) {
         <p>Dates select signup cohorts, not event activity. Each user counts once per step. Deleted accounts are excluded.</p>
         <p>{{ report.accountDateFallbacks }} users use the stored account creation date because no signup event is available. Imported account dates may reflect an import rather than the original signup.</p>
         <p>Google and Site milestones come from recorded first-time events. Older progress may be unrecorded. Finishing setup can include skipping Site connection; it does not mean data finished syncing.</p>
+        <p>{{ copy.sitesHelp }}</p>
       </aside>
     </template>
   </div>

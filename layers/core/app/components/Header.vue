@@ -194,12 +194,12 @@ const authDropdownItems = computed(() => {
         <template v-if="!loggedIn">
           <!-- Two doors, as on nuxtseo.com: `/login` for an existing account,
                `/pro/onboarding` for a new one. -->
-          <UButton to="/login" external color="neutral" variant="ghost" class="hidden md:flex max-lg:min-h-11">
+          <UButton to="/login" external rel="noopener" color="neutral" variant="ghost" class="hidden md:flex max-lg:min-h-11">
             Sign in
           </UButton>
           <!-- Under 375px the label collapses to an icon so the call to action and
                the menu toggle both fit. The label stays as the accessible name. -->
-          <UButton to="/pro/onboarding" external color="primary" variant="solid" class="max-lg:min-h-11 max-[375px]:min-w-11 max-[375px]:justify-center">
+          <UButton to="/pro/onboarding" external rel="noopener" color="primary" variant="solid" class="max-lg:min-h-11 max-[375px]:min-w-11 max-[375px]:justify-center">
             <UIcon name="next" class="hidden size-5 max-[375px]:block" />
             <span class="max-[375px]:sr-only">Get started</span>
           </UButton>
