@@ -1,3 +1,6 @@
+import type { AcquisitionEvidence, FeedbackObservation, UserJourney } from './journey-evidence'
+import { summarizeDelays } from './journey-evidence'
+
 const DAY = 86_400_000
 
 export const FUNNEL_STEPS = [
@@ -17,6 +20,11 @@ export interface FunnelUser {
   googleConnected: boolean
   siteConnected: boolean
   setupCompleted: boolean
+  acquisition?: AcquisitionEvidence
+  journey?: UserJourney
+  feedback?: FeedbackObservation[]
+  currentSites?: { count: number, knownUrlCount: null, unknownSizeSites: number, scope: 'current-team', capturedAt: string }
+  engineUserId?: string | null
 }
 
 export interface FunnelQuery {
@@ -73,7 +81,7 @@ export function parseFunnelQuery(query: Record<string, unknown>, now = Date.now(
   const stage = query.stage === undefined ? 'all' : query.stage
   const search = query.search === undefined ? '' : query.search
   const page = query.page === undefined ? 1 : Number(query.page)
-  if (typeof source !== 'string' || source.length > 200 || typeof search !== 'string' || search.length > 100
+  if (typeof source !== 'string' || source.length > 320 || typeof search !== 'string' || search.length > 100
     || typeof stage !== 'string' || !['all', 'complete', ...FUNNEL_STEPS.slice(1).map(step => step.key)].includes(stage)
     || !Number.isSafeInteger(page) || page < 1 || Array.isArray(query.page)) {
     throw new Error('Choose valid funnel filters.')
@@ -129,6 +137,14 @@ export function buildFunnelReport(users: FunnelUser[], query: FunnelQuery, now =
     setupCompleted: cohort.filter(user => user.setupCompleted).length,
     accountDateFallbacks: cohort.filter(user => user.signupEvidence === 'account').length,
     completedOutsidePath: cohort.filter(user => user.setupCompleted && funnelProgress(user).next !== 'complete').length,
+    evidenceViewed: cohort.filter(user => user.journey?.stageTimes.evidenceViewed && Date.parse(user.journey.stageTimes.evidenceViewed) <= now).length,
+    timing: summarizeDelays(cohort.flatMap(user => user.journey ? [user.journey] : [])),
+    attribution: { captured: cohort.filter(user => user.acquisition?.basis === 'captured').length, legacy: cohort.filter(user => user.acquisition?.basis === 'legacy').length, unknown: cohort.filter(user => !user.acquisition || user.acquisition.basis === 'unknown').length },
+    invalidHistory: cohort.reduce((total, user) => ({ beforeSignup: total.beforeSignup + (user.journey?.invalidHistory?.beforeSignup ?? 0), future: total.future + (user.journey?.invalidHistory?.future ?? 0), invalidTimestamp: total.invalidTimestamp + (user.journey?.invalidHistory?.invalidTimestamp ?? 0) }), { beforeSignup: 0, future: 0, invalidTimestamp: 0 }),
+    feedbackReasons: [...new Set(cohort.flatMap(user => (user.feedback ?? []).map(answer => `${answer.step}:${answer.reason}`)))].sort().map((key) => {
+      const [step, reason] = key.split(':')
+      return { step, reason, users: cohort.filter(user => user.feedback?.some(answer => answer.step === step && answer.reason === reason)).length }
+    }),
     sources,
     stages,
     days,

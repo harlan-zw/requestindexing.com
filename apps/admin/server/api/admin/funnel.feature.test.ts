@@ -1,6 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite'
+import { IncomingMessage, ServerResponse } from 'node:http'
+import { Socket } from 'node:net'
 import { drizzle } from 'drizzle-orm/d1'
-import { createError } from 'h3'
+import { createError, createEvent } from 'h3'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { migratedDatabase } from '~~/tests/support/migrated-d1'
 
@@ -37,7 +39,11 @@ afterEach(() => {
 
 async function read() {
   const handler = (await import('./funnel.get')).default
-  return handler({} as never)
+  const request = new IncomingMessage(new Socket())
+  const result = await handler(createEvent(request, new ServerResponse(request)))
+  if (typeof result === 'string')
+    throw new Error('Expected JSON report')
+  return result
 }
 
 describe('admin funnel endpoint', () => {
@@ -75,5 +81,53 @@ describe('admin funnel endpoint', () => {
     query.from = '2026-02-30'
     await expect(read()).rejects.toMatchObject({ statusCode: 400 })
     expect(useDrizzle).not.toHaveBeenCalled()
+  })
+  it('uses immutable signup attribution and first qualifying evidence while excluding secrets from exports', async () => {
+    sqlite.exec('UPDATE users SET source = \'changed-current-source\' WHERE user_id = 1')
+    const insert = sqlite.prepare('INSERT INTO pro_events (user_id, type, created_at, payload) VALUES (1, ?, ?, ?)')
+    insert.run('signed_up', Date.parse('2026-10-01T00:00:00Z'), JSON.stringify({ source: 'pro-free', attributionBasis: 'journey_linked', attributionSource: 'utm:newsletter', provider: 'google' }))
+    insert.run('site_added', Date.parse('2026-10-02T00:00:00Z'), null)
+    insert.run('page_inspection_started', Date.parse('2026-10-03T00:00:00Z'), null)
+    insert.run('first_report_evidence_viewed', Date.parse('2026-10-04T00:00:00Z'), null)
+    const result = await read()
+    expect(result.users[0]?.source).toBe('utm:newsletter')
+    expect(result.users[0]?.journey?.stageTimes.evidenceViewed).toBe('2026-10-04T00:00:00.000Z')
+    expect(result.evidenceViewed).toBe(1)
+    query.format = 'csv'
+    const handler = (await import('./funnel.get')).default
+    const request = new IncomingMessage(new Socket())
+    const csv = await handler(createEvent(request, new ServerResponse(request)))
+    expect(csv).toContain('utm:newsletter')
+    expect(csv).not.toContain('must-not-leak')
+    expect(csv).not.toContain('changed-current-source')
+  })
+  it('protects CSV and shared insights behind the same administrator boundary', async () => {
+    query.format = 'csv'
+    vi.stubGlobal('getUserSession', async () => ({ user: { email: 'someone@example.test' } }))
+    await expect(read()).rejects.toMatchObject({ statusCode: 403 })
+    const handler = (await import('./analytics/customer-insights.get')).default
+    const request = new IncomingMessage(new Socket())
+    await expect(handler(createEvent(request, new ServerResponse(request)))).rejects.toMatchObject({ statusCode: 403 })
+    expect(useDrizzle).not.toHaveBeenCalled()
+  })
+  it('serves shared customer insights with local milestones and explicit hosted-use gaps', async () => {
+    const insert = sqlite.prepare('INSERT INTO pro_events (user_id, type, created_at, payload) VALUES (1, ?, ?, ?)')
+    insert.run('signed_up', Date.parse('2026-10-01T00:00:00Z'), JSON.stringify({ attributionBasis: 'journey_linked', attributionSource: 'utm:newsletter' }))
+    insert.run('site_added', Date.parse('2026-10-02T00:00:00Z'), null)
+    insert.run('page_evidence_viewed', Date.parse('2026-10-03T00:00:00Z'), null)
+    insert.run('setup_feedback', Date.parse('2026-10-04T00:00:00Z'), JSON.stringify({ step: 'page', reason: 'time' }))
+    query = { userId: '1', source: 'utm:newsletter', timeRange: '1d' }
+    const handler = (await import('./analytics/customer-insights.get')).default
+    const request = new IncomingMessage(new Socket())
+    const event = createEvent(request, new ServerResponse(request))
+    const result = await handler(event)
+    expect(result.pagination.total).toBe(1)
+    expect(result.coverage).toMatchObject({ signupEvents: 1, accountDateFallbacks: 0 })
+    expect(result.segments[0]).toMatchObject({ key: 'utm:newsletter', activated: 1, returned: null })
+    expect(result.users[0]).toMatchObject({ source: { label: 'utm:newsletter', basis: 'captured' }, goals: [], feedback: [{ step: 'page', reason: 'time', recordedAt: '2026-10-04T00:00:00.000Z' }] })
+    expect(result.users[0]?.journey.stageTimes).toMatchObject({ siteConnected: '2026-10-02T00:00:00.000Z', evidenceViewed: '2026-10-03T00:00:00.000Z' })
+    expect(result.integrations.every(row => row.successfulCalls === null && row.configuredUsers === null && row.coverage === 'unavailable')).toBe(true)
+    expect(event.node.res.getHeader('Cache-Control')).toBe('private, no-store')
+    expect(JSON.stringify(result)).not.toContain('must-not-leak')
   })
 })

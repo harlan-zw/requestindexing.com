@@ -1,3 +1,4 @@
+import type { SignupAttribution } from '../../shared/signup-attribution'
 import type { AuthProviderId, NewUser } from '../database'
 import { eq, sql } from 'drizzle-orm'
 import { logWarn } from '~~/shared/logging'
@@ -37,6 +38,7 @@ export async function createUserWithPersonalTeam(
   db: ReturnType<typeof useDrizzle>,
   userInsert: CreateUserInput,
   identity?: CreateUserIdentityInput,
+  attribution?: SignupAttribution,
 ) {
   // Team first satisfies the required User link. Each statement can use the
   // preceding insert's numeric ID inside the same D1 transaction.
@@ -74,6 +76,7 @@ export async function createUserWithPersonalTeam(
   await emitFirstProEvent(db, userRow.userId, 'signed_up', {
     source: userInsert.source ?? null,
     provider: identity?.provider ?? null,
+    ...(attribution ?? {}),
   })
 
   return {

@@ -257,6 +257,45 @@ These assets apply to Site connection, held Sites, URL Inspection refusals, the 
 
 The daily URL Inspection pool of one Site is a different limit. Its refusal keeps its own rate-limit message and never says Free allowance.
 
+## Admin signup reporting
+
+The report describes recorded evidence. Missing timestamps do not prove abandonment.
+Retained observations do not establish lifetime first use.
+
+| Asset | String |
+| --- | --- |
+| Evidence milestone | Viewed Google evidence |
+| Timing heading | Time between recorded milestones |
+| Timing explanation | Only known, ordered timestamp pairs contribute to timing. Missing and reversed pairs remain visible. |
+| Timing median | Median time |
+| Timing known | Known pairs |
+| Timing missing | Missing timestamps |
+| Timing reversed | Out of order |
+| Timing unavailable | Not measured |
+| Source heading | Signup attribution |
+| Source explanation | Captured signup attribution stays with the account. Unknown history remains unknown. |
+| Feedback heading | Optional setup feedback |
+| Feedback explanation | These are the latest self-reported reasons for each setup step. They are not customer goals. |
+| Integration heading | Integration activity |
+| Integration unavailable | gscdump hosts MCP, CLI, and API activity. Request Indexing has no local successful-use evidence. |
+| Site inventory heading | Current Team Sites |
+| Site inventory explanation | Site counts describe the current Team. Site sizes are unknown in this local cache. |
+| Export action | Export CSV |
+| Per-user details action | Recorded details |
+| Timing coverage | First recorded observations. Older activity may be unrecorded. |
+| Filter failure | Choose valid report filters. |
+| Export format failure | Choose a valid export format. |
+| Timing future | Future timestamps |
+| Timing history | Excluded history |
+| Timing before signup | Before signup |
+| Timing invalid | Invalid timestamps |
+| Source captured | Captured |
+| Source legacy | Legacy |
+| Source unknown | Unknown |
+| Feedback step | Step |
+| Feedback reason | Reason |
+| Engine identity | Engine user ID |
+
 ## Saved-page setup
 
 These strings apply when a reader continues from a checked page.
