@@ -126,7 +126,7 @@ const marketingTools = [
 
               <div class="flex items-center justify-center gap-3 flex-row sm:gap-4 lg:justify-start">
                 <template v-if="!loggedIn">
-                  <UButton to="/pro/onboarding" external size="xl" color="primary" trailing-icon="i-heroicons-arrow-right">
+                  <UButton to="/pro/onboarding" external rel="noopener" size="xl" color="primary" trailing-icon="i-heroicons-arrow-right">
                     <span>Get started<span class="hidden sm:inline"> free</span></span>
                   </UButton>
                 </template>

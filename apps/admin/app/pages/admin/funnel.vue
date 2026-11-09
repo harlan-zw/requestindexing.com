@@ -381,7 +381,7 @@ function inspectStage(key: string) {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="user in report.users" :key="user.id" class="border-t border-default">
+              <tr v-for="user in report.users" :key="user.id" class="border-t border-default [&>td]:align-top">
                 <td class="p-4">
                   <p class="font-medium">
                     {{ user.name || user.email }}
