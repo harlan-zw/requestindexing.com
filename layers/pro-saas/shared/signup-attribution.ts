@@ -84,7 +84,8 @@ export function parseSignupTouchCookie(raw: string | undefined): SignupTouch | n
   if (!raw || raw.length > 2048)
     return null
   try {
-    const parsed = signupTouchSchema.safeParse(JSON.parse(raw))
+    const decoded = raw.startsWith('%') ? decodeURIComponent(raw) : raw
+    const parsed = signupTouchSchema.safeParse(JSON.parse(decoded))
     return parsed.success ? parsed.data : null
   }
   catch {

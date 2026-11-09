@@ -15,6 +15,7 @@ it('keeps legacy account cohorts, optional feedback and unknown hosted usage dis
   expect(report.users[0]?.feedback).toMatchObject([{ reason: 'time' }])
   expect(report.integrations.map(row => [row.surface, row.successfulCalls, row.configuredUsers])).toEqual([['mcp', null, null], ['cli', null, null], ['api', null, null]])
   expect(report.segments[0]?.returned).toBeNull()
+  expect(report.segments[0]?.paid).toBeNull()
 })
 it.each([{ timeRange: '0d' }, { timeRange: '999d' }, { page: -1 }, { perPage: 1000 }, { userId: 'user-secret' }, { source: ['one', 'two'] }])('refuses unbounded filters %j', (query) => {
   expect(parseCustomerInsightsQuery(query).success).toBe(false)

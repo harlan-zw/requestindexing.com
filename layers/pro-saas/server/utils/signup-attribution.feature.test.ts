@@ -9,12 +9,15 @@ import { emitFirstProEvent } from './pro-events'
 import { captureFirstSignupTouch, clearSignupAttribution, readSignupAttribution } from './signup-attribution'
 
 let sqlite: DatabaseSync | undefined
-afterEach(() => sqlite?.close())
-function event(url: string, cookie?: string) {
+afterEach(() => {
+  sqlite?.close()
+  sqlite = undefined
+})
+function event(url: string, cookie?: string, referrer?: string) {
   const request = new IncomingMessage(new Socket())
   request.url = url
   request.method = 'GET'
-  request.headers = { 'host': 'requestindexing.com', 'x-forwarded-proto': 'https', ...(cookie ? { cookie } : {}) }
+  request.headers = { 'host': 'requestindexing.com', 'x-forwarded-proto': 'https', ...(cookie ? { cookie } : {}), ...(referrer ? { referer: referrer } : {}) }
   return createEvent(request, new ServerResponse(request))
 }
 function responseCookie(value: string | number | string[] | undefined) {
@@ -42,4 +45,15 @@ it('keeps the first campaign through OAuth and persists it once without private 
   expect(JSON.stringify(rows)).not.toContain('private.example')
   clearSignupAttribution(callback)
   expect(getResponseHeader(callback, 'set-cookie')).toContain('Max-Age=0')
+})
+
+it('keeps a campaign on a native signup click before the static landing hydrates', () => {
+  const signup = event('/login', undefined, 'https://requestindexing.com/?utm_source=Docs&utm_medium=email&url=https://private.example/selected')
+  captureFirstSignupTouch(signup)
+  const cookie = responseCookie(getResponseHeader(signup, 'set-cookie'))
+  const callback = event('/auth/google', cookie, 'https://requestindexing.com/?utm_source=later')
+  captureFirstSignupTouch(callback)
+  expect(readSignupAttribution(callback)).toMatchObject({ attributionSource: 'utm:docs', landingPath: '/', channelClass: 'owned' })
+  expect(getResponseHeader(callback, 'set-cookie')).toBeUndefined()
+  expect(cookie).not.toContain('private')
 })

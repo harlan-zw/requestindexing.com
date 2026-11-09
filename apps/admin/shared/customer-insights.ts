@@ -28,6 +28,7 @@ export interface CustomerInsightsUser {
 export interface CustomerInsightsResponse {
   version: 1
   capabilities: { goals: boolean, acquisition: boolean, integrationActivity: boolean }
+  metricCoverage: { activated: 'measured' | 'unavailable', paid: 'measured' | 'unavailable', returned: 'measured' | 'unavailable' }
   coverage: { cohortUsers: number, goalAnswers: number, attributedUsers: number, signupEvents: number, accountDateFallbacks: number, note: string }
   segments: { dimension: 'goal' | 'source', key: string, label: string, users: number, activated: number, paid: number | null, returned: number | null }[]
   integrations: CustomerIntegrationActivity[]
@@ -73,10 +74,11 @@ export function buildCustomerInsights(users: ObservedFunnelUser[], query: z.infe
   return {
     version: 1,
     capabilities: { goals: false, acquisition: true, integrationActivity: false },
+    metricCoverage: { activated: 'measured', paid: 'unavailable', returned: 'unavailable' },
     coverage: { cohortUsers: total, goalAnswers: 0, attributedUsers: cohort.filter(user => user.acquisition.basis !== 'unknown').length, signupEvents: cohort.filter(user => user.signupEvidence === 'event').length, accountDateFallbacks: cohort.filter(user => user.signupEvidence === 'account').length, note: ADMIN_JOURNEY_COPY.coverage },
     segments: sources.map((source) => {
       const rows = cohort.filter(user => user.source === source)
-      return { dimension: 'source', key: source, label: source, users: rows.length, activated: rows.filter(user => !!user.journey.stageTimes.evidenceViewed).length, paid: 0, returned: null }
+      return { dimension: 'source', key: source, label: source, users: rows.length, activated: rows.filter(user => !!user.journey.stageTimes.evidenceViewed).length, paid: null, returned: null }
     }),
     integrations,
     users: [...cohort].sort((a, b) => b.signedUpAt.localeCompare(a.signedUpAt) || b.id - a.id).slice((page - 1) * query.perPage, page * query.perPage).map(user => ({
