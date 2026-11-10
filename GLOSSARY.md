@@ -37,6 +37,8 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 | Held | gscdump lifecycle site `hold` | Site 0—1 hold reason, before its first import | Held |
 | API key | gscdump `partner.users.api_keys.*`, Developers page | User 1—N, at most 10; gscdump stores them, this app stores none | API key |
 | Hosted mode | gscdump CLI `--mode hosted` | CLI access mode that reads the gscdump.com record; the other mode is Local | Hosted mode |
+| Watched URL | gscdump `partner.sites.indexing.watched.*` | Site 1—N chosen URLs with scheduled URL Inspection | Watched URL, Watched URLs |
+| Checkpoint | gscdump scheduled URL Inspection for a Watched URL | Watched URL 1—N retained observations | Checkpoint |
 | onboarding drip | drip_emails table, `onboarded` sequence | User 0—1 row per sequence; three emails after onboarding | (internal) |
 | Product updates | notification_optouts, category `lifecycle` | Address 0—1 opt-out per category | product updates |
 

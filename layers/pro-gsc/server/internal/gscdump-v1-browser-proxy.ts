@@ -28,6 +28,9 @@ const baseOperationEntries = [
   // Query and page counts over a window, with the comparison window.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexing },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexingUrls },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteWatchedUrls },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.addSiteWatchedUrls },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.removeSiteWatchedUrls },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteIndexingDiagnostics },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.inspectSiteUrls },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteSitemaps },

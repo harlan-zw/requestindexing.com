@@ -25,10 +25,27 @@ These exact strings. Do not paraphrase them per page.
 | Site description | Monitor and request Google indexing for your pages | `nuxt.config.ts` site description, which feeds every page's meta description |
 | Landing meta title | Request Google Indexing and See Why Pages Are Not Indexed | `apps/marketing/app/pages/index.vue`; `app.vue` appends ` · Request Indexing` |
 | Landing meta description | Request Google indexing for your pages, then see which URLs Google has indexed, which it has not, and the reason it gives. Free and open source. | the landing page only |
+| Agent setup link | Set up an agent | public footer, links to Developers |
 
 **The short pitch adds a second half in long form.** `README.md` and `VISION.md` both follow the
 tagline with "Search Console data and multi-engine submission, in one small app." That sentence
 claims more than the marketing site does today. See Truth rules.
+
+## Watched URLs assets
+
+| Asset | String |
+| --- | --- |
+| Page heading and nav row | Watched URLs |
+| Intro | Keep scheduled URL Inspection evidence for pages you choose. This does not request indexing. |
+| URL label | URLs, one per line |
+| Add action | Watch URLs |
+| Empty state | No Watched URLs yet. Choose pages to keep a record of Google's reported index state. |
+| Read failure | Watched URLs could not load. Retry to read the saved record. |
+| Refresh failure | The latest refresh failed. The last saved record stays visible. |
+| Remove action | Stop watching |
+| Remove consequence | This removes the URL and its Checkpoints. Stored URL Inspection results stay. |
+| No Checkpoints | No scheduled URL Inspection recorded yet. |
+| Read-only role | Your Team role allows viewing only. |
 
 ## Register by context
 

@@ -73,6 +73,18 @@ export function useProGscdump() {
     return runV1<GscdumpIndexingResponse>(() => createV1Client().getSiteIndexing(input), silent)
   }
 
+  function listSiteWatchedUrls(input: GscdumpV1OperationInput<'partner.sites.indexing.watched.list'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.watched.list'>['data']>(() => createV1Client().listSiteWatchedUrls(input), silent)
+  }
+
+  function addSiteWatchedUrls(input: GscdumpV1OperationInput<'partner.sites.indexing.watched.add'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.watched.add'>['data']>(() => createV1Client().addSiteWatchedUrls(input), silent)
+  }
+
+  function removeSiteWatchedUrls(input: GscdumpV1OperationInput<'partner.sites.indexing.watched.remove'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.watched.remove'>['data']>(() => createV1Client().removeSiteWatchedUrls(input), silent)
+  }
+
   function listSiteIndexingUrls(input: GscdumpV1OperationInput<'partner.sites.indexing.urls.list'>, silent = false) {
     return runV1<GscdumpIndexingUrlsResponse>(() => createV1Client().listSiteIndexingUrls(input), silent)
   }
@@ -200,6 +212,9 @@ export function useProGscdump() {
   }
 
   return {
+    listSiteWatchedUrls,
+    addSiteWatchedUrls,
+    removeSiteWatchedUrls,
     getSiteSitemapSubmission,
     submitSiteSitemap,
     getSiteIndexNowConnection,

@@ -23,7 +23,8 @@
     "test": "vitest run",
     "typecheck": "nuxt prepare && site-typecheck --noEmit --incremental false",
     "checkin": "nuxt-checkin prepare && nuxt-checkin --save",
-    "typecheck:legacy": "nuxt typecheck"
+    "typecheck:legacy": "nuxt typecheck",
+    "check:agent-surface": "node scripts/check-agent-surface.ts"
   },
   "dependencies": {
     "@gscdump/contracts": "catalog:",

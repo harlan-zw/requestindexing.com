@@ -28,7 +28,7 @@ describe('useProSiteNav', () => {
 
     expect(sections.value.map(section => section.label)).toEqual(['Search Performance', 'Indexing'])
     expect(labelsOf(sections.value[0]!)).toEqual(['Overview', 'Queries', 'Pages', 'Countries'])
-    expect(labelsOf(sections.value[1]!)).toEqual(['Overview', 'Recovery', 'Sitemaps', 'URLs', 'Submit to Google', 'IndexNow'])
+    expect(labelsOf(sections.value[1]!)).toEqual(['Overview', 'Recovery', 'Sitemaps', 'URLs', 'Watched URLs', 'Submit to Google', 'IndexNow'])
     expect(footerLinks.value.map(link => link.label)).toEqual(['Site settings'])
   })
 
