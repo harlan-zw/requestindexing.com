@@ -1,25 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, ref } from 'vue'
 
-const fixture = vi.hoisted(() => ({ canWrite: true, add: vi.fn(), remove: vi.fn(), refresh: vi.fn() }))
+const fixture = vi.hoisted(() => ({ canWrite: true, list: vi.fn(), add: vi.fn(), remove: vi.fn(), refresh: vi.fn() }))
 const engineId = ref('s_engine')
-const data = ref({
+const session = ref({ user: { id: 1 } })
+const initialRecord = {
   watched: [{ url: 'https://example.com/page', addedAt: '2026-11-01', dueAt: '2026-11-10', checkpoints: [] }],
   limit: 50,
   cadenceDays: 7,
   meta: { siteUrl: 'https://example.com' },
-})
+}
+const data = ref<typeof initialRecord | null>(initialRecord)
 const error = ref<unknown>(null)
 vi.mock('#layers/pro-gsc/app/composables/useProGscdump/useProGscdump', () => ({
-  useProGscdump: () => ({ addSiteWatchedUrls: fixture.add, removeSiteWatchedUrls: fixture.remove }),
+  useProGscdump: () => ({ listSiteWatchedUrls: fixture.list, addSiteWatchedUrls: fixture.add, removeSiteWatchedUrls: fixture.remove }),
 }))
 vi.mock('#layers/pro-gsc/app/composables/useProGscdump/_internal', () => ({
-  useGscdumpQuery: () => ({ data, status: ref('success'), error, refresh: fixture.refresh }),
+  useGscdumpQuery: (_key: unknown, _site: unknown, read: (id: string) => Promise<unknown>) => {
+    void read(engineId.value)
+    return { data, status: ref('success'), error, refresh: async () => {
+      await fixture.refresh()
+      if (!error.value)
+        await read(engineId.value)
+    } }
+  },
 }))
 Object.assign(globalThis, {
   definePageMeta: () => {},
   useSite: () => ({ gscdumpSiteId: engineId, site: ref({ teamId: 1 }) }),
   useCaller: () => ({ isAdmin: ref(false) }),
+  useUserSession: () => ({ session }),
   useTeamPolicy: () => ({ can: () => fixture.canWrite }),
 })
 const { default: Page } = await import('./watched.vue')
@@ -59,10 +69,13 @@ async function settle() {
 }
 beforeEach(() => {
   fixture.canWrite = true
+  fixture.list.mockReset().mockResolvedValue(initialRecord)
   fixture.add.mockReset().mockResolvedValue({ changed: ['https://example.com/new'], unchanged: [], skipped: [], total: 2, limit: 50 })
   fixture.remove.mockReset().mockResolvedValue({ changed: ['https://example.com/page'], unchanged: [], skipped: [], total: 0, limit: 50 })
   fixture.refresh.mockReset().mockResolvedValue(undefined)
   engineId.value = 's_engine'
+  session.value = { user: { id: 1 } }
+  data.value = initialRecord
   error.value = null
 })
 afterEach(() => {
@@ -71,6 +84,41 @@ afterEach(() => {
 })
 
 describe('watched URLs workflow', () => {
+  it('retires saved evidence on permission loss', async () => {
+    const element = await mount()
+    fixture.refresh.mockImplementation(async () => {
+      data.value = null
+      error.value = { statusCode: 403, message: 'Permission lost' }
+    })
+    const refresh = [...element.querySelectorAll('button')].find(button => button.textContent?.includes('Refresh saved record'))!
+    refresh.click()
+    await settle()
+    expect(element.textContent).not.toContain('https://example.com/page')
+    expect(element.querySelector('form')).toBeNull()
+  })
+
+  it('clears the previous user record before another account can read it', async () => {
+    const element = await mount()
+    expect(element.textContent).toContain('https://example.com/page')
+    session.value = { user: { id: 2 } }
+    await nextTick()
+    expect(element.textContent).not.toContain('https://example.com/page')
+    expect(element.querySelector('form')).toBeNull()
+  })
+
+  it('retains the same Site record when Nuxt clears its data after a failed refresh', async () => {
+    fixture.refresh.mockImplementation(async () => {
+      data.value = null
+      error.value = { statusCode: 500, message: 'Refresh failed' }
+    })
+    const element = await mount()
+    const refresh = [...element.querySelectorAll('button')].find(button => button.textContent?.includes('Refresh saved record'))!
+    refresh.click()
+    await settle()
+    expect(element.textContent).toContain('The latest refresh failed')
+    expect(element.textContent).toContain('https://example.com/page')
+  })
+
   it('requires recurring spend consent before sending URLs, then refreshes saved evidence', async () => {
     const element = await mount()
     element.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }))
@@ -95,8 +143,14 @@ describe('watched URLs workflow', () => {
 
   it('keeps read-only roles away from mutations and preserves evidence after a failed refresh', async () => {
     fixture.canWrite = false
-    error.value = new Error('Upstream unavailable')
     const element = await mount()
+    fixture.refresh.mockImplementation(async () => {
+      data.value = null
+      error.value = new Error('Upstream unavailable')
+    })
+    const refresh = [...element.querySelectorAll('button')].find(button => button.textContent?.includes('Refresh saved record'))!
+    refresh.click()
+    await settle()
     expect(element.querySelector('form')).toBeNull()
     expect(element.textContent).toContain('Your Team role allows viewing only.')
     expect(element.textContent).toContain('The latest refresh failed')
@@ -131,6 +185,6 @@ describe('watched URLs workflow', () => {
     await settle()
     expect(element.textContent).not.toContain('1 URL added')
     expect(fixture.refresh).not.toHaveBeenCalled()
-    expect(element.querySelector('textarea')?.value).toBe('')
+    expect(element.querySelector('textarea')).toBeNull()
   })
 })

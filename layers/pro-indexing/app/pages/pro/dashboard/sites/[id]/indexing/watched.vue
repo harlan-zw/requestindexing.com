@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import { WATCHED_URL_CADENCE_DAYS, WATCHED_URL_LIMIT, watchedUrlsChangeRequestSchema } from '@gscdump/contracts'
-import { computed, onScopeDispose, ref, watch } from 'vue'
+import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue'
 import { parseGscdumpError } from '#layers/pro-gsc/app/composables/_gscdump-error'
 import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
 import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump/useProGscdump'
@@ -9,14 +9,25 @@ import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump/use
 definePageMeta({ title: 'Watched URLs', proTab: { feature: 'indexing', label: 'Watched URLs', icon: 'clock', order: 37 } })
 
 const { gscdumpSiteId, site } = useSite('Watched URLs')
+const { session } = useUserSession()
+const recordScope = computed(() => JSON.stringify([gscdumpSiteId.value, session.value?.user?.id]))
 const { isAdmin } = useCaller()
 const policy = useTeamPolicy(() => site.value?.teamId)
 const canWrite = computed(() => isAdmin.value || policy.can('write-data'))
 const gscdump = useProGscdump()
+type WatchedRecord = GscdumpV1OperationResponse<'partner.sites.indexing.watched.list'>['data']
+// Nuxt clears AsyncData on errors. Keep successful evidence within its Site and user scope.
+const observation = shallowRef<{ _tag: 'Empty' } | { _tag: 'Observed', scope: string, record: WatchedRecord }>({ _tag: 'Empty' })
 const query = useGscdumpQuery<GscdumpV1OperationResponse<'partner.sites.indexing.watched.list'>['data']>(
-  () => `gscdump:watched:${gscdumpSiteId.value}`,
-  () => gscdumpSiteId.value ?? undefined,
-  id => gscdump.listSiteWatchedUrls({ params: { siteId: id } }, true),
+  () => `gscdump:watched:${recordScope.value}`,
+  () => session.value?.user ? gscdumpSiteId.value ?? undefined : undefined,
+  async (id) => {
+    const scope = recordScope.value
+    const record = await gscdump.listSiteWatchedUrls({ params: { siteId: id } }, true)
+    if (scope === recordScope.value)
+      observation.value = { _tag: 'Observed', scope, record }
+    return record
+  },
   [],
 )
 const urls = ref('')
@@ -26,19 +37,26 @@ const removeUrl = ref<string | null>(null)
 const message = ref('')
 const failure = ref('')
 let generation = 0
-watch(gscdumpSiteId, () => {
+watch(recordScope, () => {
   generation++
+  observation.value = { _tag: 'Empty' }
   urls.value = ''
   consent.value = false
   removeUrl.value = null
   pending.value = false
   message.value = ''
   failure.value = ''
-})
+}, { flush: 'sync' })
 onScopeDispose(() => {
   generation++
 })
-const record = computed(() => query.data.value)
+watch(query.error, (error) => {
+  if (error && !parseGscdumpError(error).retry)
+    observation.value = { _tag: 'Empty' }
+}, { flush: 'sync' })
+const record = computed(() => observation.value._tag === 'Observed' && observation.value.scope === recordScope.value
+  ? observation.value.record
+  : null)
 const cadence = computed(() => record.value?.cadenceDays ?? WATCHED_URL_CADENCE_DAYS)
 const limit = computed(() => record.value?.limit ?? WATCHED_URL_LIMIT)
 const skippedReasons = {
