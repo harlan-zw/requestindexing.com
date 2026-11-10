@@ -44,9 +44,9 @@ export const ONBOARDING_OTHER_MAX = 500
 
 export const ONBOARDING_QUESTIONS = {
   role: 'What best describes you?',
-  siteCount: 'How many sites do you look after?',
+  siteCount: 'How many websites do you look after?',
   seoExperience: 'How comfortable are you with SEO?',
-  intents: 'How can we help?',
+  intents: 'What do you want to do with Request Indexing?',
 } as const
 
 export type OnboardingRole = typeof ONBOARDING_ROLES[number]['id']

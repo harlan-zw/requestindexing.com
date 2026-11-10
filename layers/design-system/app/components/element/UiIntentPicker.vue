@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useId } from 'vue'
 import { UiIcon, UTextarea } from '#components'
-// The onboarding "How can we help?" multi-select: a grid of toggle cards plus
+// The onboarding goals multi-select: a grid of toggle cards plus
 // an always-visible optional text box. Presentation only: it emits the
 // selected ids and the text, and the caller stores them.
 import { ONBOARDING_INTENTS, ONBOARDING_OTHER_MAX } from './onboarding-answers'

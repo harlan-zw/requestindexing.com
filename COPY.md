@@ -511,11 +511,11 @@ It never gates setup. `layers/pro-saas/shared/onboarding-answers.ts` holds the c
 | Card detail | Optional. Your answers help us improve Request Indexing. Setup does not wait for them. |
 | Role question | What best describes you? |
 | Role options | Solo developer, Agency or freelancer, In-house team, Building an SEO tool, Something else |
-| Site count question | How many sites do you look after? |
+| Site count question | How many websites do you look after? |
 | Site count options | 1, 2–5, 6–20, 21+ |
 | SEO question | How comfortable are you with SEO? |
 | SEO options | New to it, Know the basics, Do it for a living |
-| Goals question | How can we help? |
+| Goals question | What do you want to do with Request Indexing? |
 | Goals options | Get new pages indexed, Find why pages are not indexed, Watch indexing across many sites, Recover after a launch or migration |
 | Free text label | Anything else? Optional |
 | Free text placeholder | Tell us what you want to get indexed |
