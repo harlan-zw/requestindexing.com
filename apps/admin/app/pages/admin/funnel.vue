@@ -229,6 +229,35 @@ function inspectStage(key: string) {
         </ul>
       </section>
 
+      <section v-if="report.onboardingAnswers.answered" class="space-y-3" aria-labelledby="funnel-answers-heading">
+        <h2 id="funnel-answers-heading" class="text-lg font-semibold">
+          {{ copy.answers }} · {{ report.onboardingAnswers.answered }}
+        </h2>
+        <p class="text-sm text-muted">
+          {{ copy.answersHelp }}
+        </p>
+        <dl class="grid gap-4 text-sm sm:grid-cols-2">
+          <div v-for="question in report.onboardingAnswers.questions" :key="question.key">
+            <dt class="font-medium">
+              {{ question.question }}
+            </dt>
+            <dd v-for="option in question.options" :key="option.id" class="tabular-nums text-muted">
+              {{ option.label }} · {{ option.users }}
+            </dd>
+          </div>
+        </dl>
+        <details v-if="report.onboardingAnswers.other.length" class="text-sm">
+          <summary class="cursor-pointer">
+            {{ copy.answersOther }} · {{ report.onboardingAnswers.other.length }}
+          </summary>
+          <ul class="space-y-1 pt-2">
+            <li v-for="row in report.onboardingAnswers.other" :key="row.userId" class="whitespace-pre-wrap">
+              {{ row.text }}
+            </li>
+          </ul>
+        </details>
+      </section>
+
       <section class="space-y-3" aria-labelledby="funnel-integration-heading">
         <h2 id="funnel-integration-heading" class="text-lg font-semibold">
           {{ copy.integrations }}

@@ -4,8 +4,10 @@
 //
 // The flow is nuxtseo.com's URL-driven wizard cut to what this product does:
 // Google Search Console is the only integration, there is no billing and there
-// are no invites, so `help`, `plan` and `invite` are gone and `integrations`
-// folds into `connect`.
+// are no invites, so `plan` and `invite` are gone and `integrations` folds into
+// `connect`. nuxtseo.com's `help` step is not a step here: its questions sit on
+// the `sync` step as the optional "About you" card (Onboarding Answers), so they
+// add no time and never gate completion.
 
 import type { AccountStatus } from '@gscdump/contracts'
 import { GSC_SCOPE_MISSING_ERROR, isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'

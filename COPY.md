@@ -499,6 +499,34 @@ Google's own step, so these strings say add for a property and connect for a Sit
 reader when it passes. Request Indexing does not, so no string here may say "we keep checking".
 The reader selects Check again.
 
+## About you
+
+The optional card on the last setup step. Every answer saves when the reader taps it.
+It never gates setup. `layers/pro-saas/shared/onboarding-answers.ts` holds the card strings.
+`layers/design-system/app/components/element/onboarding-answers.ts` holds the questions and options.
+
+| Asset | String |
+| --- | --- |
+| Card heading | About you |
+| Card detail | Optional. Your answers help us improve Request Indexing. Setup does not wait for them. |
+| Role question | What best describes you? |
+| Role options | Solo developer, Agency or freelancer, In-house team, Building an SEO tool, Something else |
+| Site count question | How many websites do you look after? |
+| Site count options | 1, 2–5, 6–20, 21+ |
+| SEO question | How comfortable are you with SEO? |
+| SEO options | New to it, Know the basics, Do it for a living |
+| Goals question | What do you want to do with Request Indexing? |
+| Goals options | Get new pages indexed, Find why pages are not indexed, Watch indexing across many sites, Recover after a launch or migration |
+| Free text label | Anything else? Optional |
+| Free text placeholder | Tell us what you want to get indexed |
+| Save action | Save answers |
+| Skip action | Skip |
+| Saved | Thanks. Your answers are saved. |
+| Save failed | Your answer could not save. Setup continues without it. |
+| Admin heading | Onboarding Answers |
+| Admin explanation | Self-reported answers from the optional About you card. Unanswered questions are not counted. |
+| Admin free text | Anything else |
+
 ## Setup completion
 
 The final setup step confirms a connected Site. It does not read or start an engine sync.

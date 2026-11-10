@@ -1,4 +1,6 @@
+import type { OnboardingAnswers } from '#layers/pro-saas/shared/onboarding-answers'
 import type { AcquisitionEvidence, FeedbackObservation, UserJourney } from './journey-evidence'
+import { ONBOARDING_INTENTS, ONBOARDING_QUESTIONS, ONBOARDING_ROLES, ONBOARDING_SEO_EXPERIENCE, ONBOARDING_SITE_COUNTS } from '#layers/design-system/app/components/element/onboarding-answers'
 import { summarizeDelays } from './journey-evidence'
 
 const DAY = 86_400_000
@@ -25,6 +27,7 @@ export interface FunnelUser {
   feedback?: FeedbackObservation[]
   currentSites?: { count: number, knownUrlCount: null, unknownSizeSites: number, scope: 'current-team', capturedAt: string }
   engineUserId?: string | null
+  onboardingAnswers?: OnboardingAnswers | null
 }
 
 export interface FunnelQuery {
@@ -145,11 +148,34 @@ export function buildFunnelReport(users: FunnelUser[], query: FunnelQuery, now =
       const [step, reason] = key.split(':')
       return { step, reason, users: cohort.filter(user => user.feedback?.some(answer => answer.step === step && answer.reason === reason)).length }
     }),
+    onboardingAnswers: summarizeOnboardingAnswers(cohort),
     sources,
     stages,
     days,
     users: filtered.slice((page - 1) * pageSize, page * pageSize).map(user => ({ ...user, next: funnelProgress(user).next })),
     pagination: { page, pageSize, pageCount, total: filtered.length },
+  }
+}
+
+const ANSWER_QUESTIONS = [
+  { key: 'role', options: ONBOARDING_ROLES },
+  { key: 'siteCount', options: ONBOARDING_SITE_COUNTS },
+  { key: 'seoExperience', options: ONBOARDING_SEO_EXPERIENCE },
+  { key: 'intents', options: ONBOARDING_INTENTS },
+] as const
+
+/** Option counts per question. A user who skipped a question is not counted. */
+export function summarizeOnboardingAnswers(cohort: FunnelUser[]) {
+  const answers = cohort.flatMap(user => user.onboardingAnswers ? [{ userId: user.id, answers: user.onboardingAnswers }] : [])
+  const chose = (answer: OnboardingAnswers, key: typeof ANSWER_QUESTIONS[number]['key'], id: string) => key === 'intents' ? (answer.intents as string[]).includes(id) : answer[key] === id
+  return {
+    answered: answers.length,
+    questions: ANSWER_QUESTIONS.map(question => ({
+      key: question.key,
+      question: ONBOARDING_QUESTIONS[question.key],
+      options: question.options.map(option => ({ id: option.id, label: option.label, users: answers.filter(row => chose(row.answers, question.key, option.id)).length })),
+    })),
+    other: answers.flatMap(row => row.answers.other ? [{ userId: row.userId, text: row.answers.other }] : []),
   }
 }
 

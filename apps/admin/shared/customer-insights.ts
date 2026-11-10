@@ -1,6 +1,7 @@
 import type { ObservedFunnelUser } from './funnel-observations'
 import type { AcquisitionEvidence } from './journey-evidence'
 import { z } from 'zod'
+import { ONBOARDING_INTENTS } from '#layers/design-system/app/components/element/onboarding-answers'
 import { defaultFunnelDates } from './funnel'
 import { ADMIN_JOURNEY_COPY } from './journey-evidence'
 
@@ -75,13 +76,19 @@ export function buildCustomerInsights(users: ObservedFunnelUser[], query: z.infe
   const page = Math.min(query.page, Math.max(1, Math.ceil(total / query.perPage)))
   return {
     version: 1,
-    capabilities: { goals: false, acquisition: true, integrationActivity: false },
+    capabilities: { goals: true, acquisition: true, integrationActivity: false },
     metricCoverage: { activated: 'measured', paid: 'unavailable', returned: 'unavailable' },
-    coverage: { cohortUsers: total, goalAnswers: 0, attributedUsers: cohort.filter(user => user.acquisition.basis !== 'unknown').length, signupEvents: cohort.filter(user => user.signupEvidence === 'event').length, accountDateFallbacks: cohort.filter(user => user.signupEvidence === 'account').length, note: ADMIN_JOURNEY_COPY.coverage },
-    segments: sources.map((source) => {
-      const rows = cohort.filter(user => user.source === source)
-      return { dimension: 'source', key: source, label: source, users: rows.length, activated: rows.filter(user => !!user.journey.stageTimes.evidenceViewed).length, paid: null, returned: null }
-    }),
+    coverage: { cohortUsers: total, goalAnswers: cohort.filter(user => user.onboardingAnswers).length, attributedUsers: cohort.filter(user => user.acquisition.basis !== 'unknown').length, signupEvents: cohort.filter(user => user.signupEvidence === 'event').length, accountDateFallbacks: cohort.filter(user => user.signupEvidence === 'account').length, note: ADMIN_JOURNEY_COPY.coverage },
+    segments: [
+      ...ONBOARDING_INTENTS.map((intent) => {
+        const rows = cohort.filter(user => (user.onboardingAnswers?.intents as string[] | undefined)?.includes(intent.id))
+        return { dimension: 'goal' as const, key: intent.id, label: intent.label, users: rows.length, activated: rows.filter(user => !!user.journey.stageTimes.evidenceViewed).length, paid: null, returned: null }
+      }).filter(segment => segment.users),
+      ...sources.map((source) => {
+        const rows = cohort.filter(user => user.source === source)
+        return { dimension: 'source' as const, key: source, label: source, users: rows.length, activated: rows.filter(user => !!user.journey.stageTimes.evidenceViewed).length, paid: null, returned: null }
+      }),
+    ],
     integrations,
     users: [...cohort].sort((a, b) => b.signedUpAt.localeCompare(a.signedUpAt) || b.id - a.id).slice((page - 1) * query.perPage, page * query.perPage).map(user => ({
       userId: String(user.id),
@@ -89,8 +96,8 @@ export function buildCustomerInsights(users: ObservedFunnelUser[], query: z.infe
       email: user.email,
       source: { label: user.acquisition.label, basis: user.acquisition.basis },
       acquisition: user.acquisition,
-      goals: [],
-      other: null,
+      goals: user.onboardingAnswers?.intents ?? [],
+      other: user.onboardingAnswers?.other ?? null,
       integrations,
       journey: user.journey,
       currentSites: user.currentSites,

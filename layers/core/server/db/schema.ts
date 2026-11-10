@@ -80,6 +80,11 @@ export const users = sqliteTable('users', {
   // Onboarding completion is user-scoped, matching nuxtseo.com. It used to sit
   // on `teams.onboarded_step`, which made a second team look unonboarded.
   onboardingCompletedAt: integer('onboarding_completed_at', { mode: 'timestamp' }),
+  // Onboarding Answers: the optional "About you" card on the sync step. Raw JSON,
+  // parsed at each read with `OnboardingAnswersSchema`. Closed means submitted or
+  // dismissed, and a closed card never shows again.
+  onboardingAnswers: text('onboarding_answers', { mode: 'json' }),
+  onboardingAnswersClosedAt: integer('onboarding_answers_closed_at', { mode: 'timestamp' }),
 
   ...timestamps,
 }, t => ({
