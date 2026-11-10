@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { OnboardingStep } from '#layers/pro-saas/shared/onboarding'
-
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
+
+import ProSetupFirstSiteReport from '~~/layers/pro-indexing/app/components/ProSetupFirstSiteReport.vue'
 import {
   canAdvanceOnboardingStep,
   canSkipOnboardingSites,

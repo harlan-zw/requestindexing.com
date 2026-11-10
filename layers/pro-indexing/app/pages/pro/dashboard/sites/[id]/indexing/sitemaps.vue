@@ -656,9 +656,9 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
             <div class="pb-2">
               <UCheckbox
                 v-if="problemRows.length"
-                v-model="problemsOnly"
-                label="Problems only"
+                :model-value="problemsOnly" label="Problems only"
                 class="min-h-11 px-2"
+                @update:model-value="problemsOnly = $event === true"
               />
               <UiNavList :links="sitemapLinks" label="Sitemap selection mobile">
                 <template #icon="{ link }">
@@ -671,9 +671,9 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
           <div class="hidden lg:sticky lg:top-6 lg:block">
             <UCheckbox
               v-if="problemRows.length"
-              v-model="problemsOnly"
-              label="Problems only"
+              :model-value="problemsOnly" label="Problems only"
               class="mb-2 min-h-11 px-2"
+              @update:model-value="problemsOnly = $event === true"
             />
             <UiNavList :links="sitemapLinks" label="Sitemap selection">
               <template #icon="{ link }">

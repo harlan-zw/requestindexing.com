@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import process from 'node:process'
 import { resolve } from 'path'
 import { globbySync } from 'globby'
@@ -39,7 +39,7 @@ export default defineNuxtConfig({
   },
   checkin: { external: externalCheckin },
   alias: {
-    h3: resolve('./node_modules/h3/dist/index.mjs'),
+    h3: realpathSync(resolve('./node_modules/h3/dist/index.mjs')),
   },
   extends: [
     './apps/marketing',
@@ -266,7 +266,7 @@ export default defineNuxtConfig({
   nitro: {
     virtual: buildEmailVirtuals(resolve('./layers/pro-saas/server/emails')),
     alias: {
-      'h3': resolve('./node_modules/h3/dist/index.mjs'),
+      'h3': realpathSync(resolve('./node_modules/h3/dist/index.mjs')),
       '~/server': resolve('./layers/core/server'),
       // `#schema` aggregates pro-saas's typed drizzle surface. `#schema/pro`
       // and `#db/pro` come from `modules/drizzle-layers` instead.

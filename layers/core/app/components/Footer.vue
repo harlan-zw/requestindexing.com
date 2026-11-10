@@ -161,7 +161,7 @@ function toaster() {
     </template>
 
     <template #right>
-      <UButton color="neutral" title="Bread" variant="link" target="_blank" class="group" @click="toaster">
+      <UButton color="neutral" v-bind="{ title: 'Bread' } satisfies { title: string }" variant="link" target="_blank" class="group" @click="toaster">
         <div class="hidden group-hover:block h-0">
           <Icon name="noto:bread" class="text-xl  " />
         </div>
@@ -169,13 +169,13 @@ function toaster() {
 
       <UColorModeButton size="sm" />
 
-      <UButton color="neutral" title="Twitter" variant="link" to="https://twitter.com/harlan_zw" target="_blank">
+      <UButton color="neutral" v-bind="{ title: 'Twitter' } satisfies { title: string }" variant="link" to="https://twitter.com/harlan_zw" target="_blank">
         <UIcon name="i-simple-icons-twitter" class="text-xl" />
       </UButton>
-      <UButton color="neutral" title="GitHub" aria-label="GitHub" variant="link" to="https://github.com/harlan-zw/requestindexing.com" target="_blank">
+      <UButton color="neutral" v-bind="{ title: 'GitHub' } satisfies { title: string }" aria-label="GitHub" variant="link" to="https://github.com/harlan-zw/requestindexing.com" target="_blank">
         <UIcon name="i-simple-icons-github" class="text-xl" />
       </UButton>
-      <UButton color="neutral" title="Discord" aria-label="Discord" variant="link" to="https://discord.gg/275MBUBvgP" target="_blank">
+      <UButton color="neutral" v-bind="{ title: 'Discord' } satisfies { title: string }" aria-label="Discord" variant="link" to="https://discord.gg/275MBUBvgP" target="_blank">
         <UIcon name="i-simple-icons-discord" class="text-xl" />
       </UButton>
     </template>

@@ -155,7 +155,7 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
   <UiAlert
     v-if="siteStatus === 'error'"
     status="error"
-    title="Failed to load Site data."
+    v-bind="{ title: 'Failed to load Site data.' } satisfies { title: string }"
   >
     <template #action>
       <UiButton size="xs" purpose="secondary" :to="queriesHref">
@@ -170,7 +170,7 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
     <!-- Identity header: hero search clicks plus the performance facts -->
     <ProPageZone tier="primary" first>
       <UiEntitySummary
-        title="Search clicks"
+        v-bind="{ title: 'Search clicks' } satisfies { title: string }"
         tooltip="Search clicks"
         tooltip-description="Clicks this query group earned from Google Search in the selected period, including every grouped variant."
         :value="totals?.clicks != null ? formatNumber(totals.clicks) : '—'"
@@ -185,7 +185,7 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
             <h2 class="text-sm font-semibold text-highlighted truncate">
               &ldquo;{{ keyword }}&rdquo;
             </h2>
-            <UiIcon v-if="isBrand" name="success" title="Brand term" class="size-3.5 shrink-0" :class="vizTextColor.brand" />
+            <UiIcon v-if="isBrand" name="success" v-bind="{ title: 'Brand term' } satisfies { title: string }" class="size-3.5 shrink-0" :class="vizTextColor.brand" />
             <UiChip v-if="groupVariantCount > 1" purpose="count">
               {{ groupVariantCount }} variants
             </UiChip>
@@ -244,7 +244,7 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
         v-if="!keywordDates && isNotConnected"
         compact
         icon="google"
-        title="Connect Search Console"
+        v-bind="{ title: 'Connect Search Console' } satisfies { title: string }"
         description="This keyword's trend fills in once Google Search Console is connected for this site."
       />
       <UiCard v-else-if="!keywordDates && (siteStatus === 'pending' || !isReady)" variant="default" aria-busy="true">
@@ -273,7 +273,7 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
       <!-- Which phrasings drive the clicks, and where each one ranks. Only
            renders when the canonical actually groups more than one query. -->
       <section v-if="hasVariants">
-        <ProSectionHeader title="Query variants" :badge="variantRows.length" />
+        <ProSectionHeader v-bind="{ title: 'Query variants' } satisfies { title: string }" :badge="variantRows.length" />
         <UiTableShell size="xs" row-hover bordered :label="`Query variants grouped under ${keyword}`">
           <template #head>
             <UiTableTh>Query</UiTableTh>
@@ -309,7 +309,7 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
     <!-- Cannibalisation reads directly off this table: more than one page with
          real clicks means split ranking signals. -->
     <ProPageZone tier="secondary">
-      <ProSectionHeader title="Pages ranking for this keyword" />
+      <ProSectionHeader v-bind="{ title: 'Pages ranking for this keyword' } satisfies { title: string }" />
       <ProTablePages
         :site-id="siteId"
         :gscdump-site-id="gscdumpSiteId"

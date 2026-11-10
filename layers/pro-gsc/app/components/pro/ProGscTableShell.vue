@@ -257,14 +257,14 @@ function onApplySaved(id: string) {
     <div v-if="searchable || filters.length || facets" class="flex flex-wrap items-center justify-between gap-2">
       <div v-if="searchable" class="min-w-48 flex-1 sm:flex-none sm:w-64">
         <UiInput
-          v-model="localQ"
-          :placeholder="searchPlaceholder"
+          :model-value="localQ" :placeholder="searchPlaceholder"
           :aria-label="searchPlaceholder"
           icon="search"
           autocomplete="off"
           size="sm"
           :ui="{ base: 'min-h-11 sm:min-h-10' }"
           data-inp-target="gsc-table-search"
+          @update:model-value="localQ = $event ?? ''"
           @keydown.enter="commitQ()"
         >
           <template #trailing>

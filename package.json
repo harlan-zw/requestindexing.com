@@ -21,8 +21,9 @@
     "postinstall": "nuxt prepare",
     "release": "bumpp",
     "test": "vitest run",
-    "typecheck": "nuxt typecheck",
+    "typecheck": "nuxt prepare && site-typecheck --noEmit --incremental false",
     "checkin": "nuxt-checkin prepare && nuxt-checkin --save",
+    "typecheck:legacy": "nuxt typecheck",
     "check:agent-surface": "node scripts/check-agent-surface.ts"
   },
   "dependencies": {
@@ -107,6 +108,7 @@
     "happy-dom": "catalog:",
     "nuxtseo-devtools-host": "catalog:",
     "oxc-parser": "catalog:",
+    "site-typecheck": "workspace:*",
     "typescript": "catalog:",
     "unplugin": "catalog:",
     "vitest": "catalog:",

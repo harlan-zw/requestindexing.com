@@ -299,12 +299,12 @@ async function copyAgentSetupPrompt() {
           <UFormField label="Key name" :error="createError || undefined" help="Use a name that tells you where the key is used.">
             <div class="flex flex-col gap-2 sm:flex-row">
               <UiInput
-                v-model="label"
-                class="min-w-0 grow"
+                :model-value="label" class="min-w-0 grow"
                 placeholder="Laptop CLI"
                 autocomplete="off"
                 :maxlength="DEVELOPER_API_KEY_LABEL_MAX"
                 :disabled="creating"
+                @update:model-value="label = $event ?? ''"
               />
               <UiButton type="submit" purpose="cta" icon="key" class="min-h-11 shrink-0" :loading="creating">
                 Create API key

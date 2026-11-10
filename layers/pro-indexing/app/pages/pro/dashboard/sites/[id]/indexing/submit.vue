@@ -248,11 +248,11 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
         <form class="mt-5 flex flex-wrap items-end gap-3 border-t border-default pt-5" @submit.prevent="submitForIndexing">
           <UFormField label="Page URL" class="min-w-0 grow">
             <UiInput
-              v-model="url"
-              class="w-full"
+              :model-value="url" class="w-full"
               type="url"
               autocomplete="off"
               placeholder="https://example.com/blog/my-post"
+              @update:model-value="url = $event ?? ''"
             />
           </UFormField>
           <UiButton
@@ -284,7 +284,7 @@ const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/
             If people overuse the Indexing API, Google can block it for every
             Request Indexing user.
           </p>
-          <UCheckbox v-model="intentConfirmed" label="I will submit only pages I own that are new or changed." />
+          <UCheckbox :model-value="intentConfirmed" label="I will submit only pages I own that are new or changed." @update:model-value="intentConfirmed = $event === true" />
         </div>
         <UiAlert v-else-if="submitAction._tag === 'Unavailable'" status="info" :title="INDEXING_API_UNAVAILABLE" class="mt-4">
           <template #action>

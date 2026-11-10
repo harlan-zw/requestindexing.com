@@ -186,7 +186,7 @@ export const sizes = {
           aria-label="More information"
           class="-m-0.5 inline-flex min-h-6 min-w-6 items-center justify-center cursor-help rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          <UiIcon name="life-buoy" color="primary" :size="iconSize || 'md'" aria-hidden="true" />
+          <UiIcon name="life-buoy" class="text-primary" :class="[{ xs: 'size-3', sm: 'size-3.5', md: 'size-4', lg: 'size-5', xl: 'size-6' }[iconSize || 'md']]" aria-hidden="true" />
         </button>
       </TooltipTrigger>
       <TooltipPortal>

@@ -1,0 +1,19 @@
+{
+  "name": "site-typecheck",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "site-typecheck": "./check.ts"
+  },
+  "typescript": {
+    "contentMapper": {
+      "exec": ["node", "mapper.ts"],
+      "dynamicConfig": true
+    }
+  },
+  "dependencies": {
+    "@vue/content-mapper": "catalog:native",
+    "jsonc-parser": "catalog:",
+    "typescript": "catalog:native"
+  }
+}

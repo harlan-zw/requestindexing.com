@@ -208,7 +208,7 @@ function selectPeriod(p: Period) {
             <!-- Comparison mode -->
             <div v-if="showCompare" class="px-3.5 py-2.5">
               <UiMetricLabel>Compare To</UiMetricLabel>
-              <RadioGroupRoot v-model="compareMode" aria-label="Comparison mode" class="mt-1.5 flex flex-col gap-0.5">
+              <RadioGroupRoot :model-value="compareMode" aria-label="Comparison mode" class="mt-1.5 flex flex-col gap-0.5" @update:model-value="compareMode = COMPARE_OPTIONS.find(option => option.value === $event)?.value ?? compareMode">
                 <RadioGroupItem
                   v-for="opt in COMPARE_OPTIONS"
                   :key="opt.value"

@@ -41,6 +41,10 @@ vi.mock('#components', () => ({
   ConnectSearchConsoleButton: defineComponent({ setup: () => () => h('button', 'Connect Search Console') }),
 }))
 
+vi.mock('../../../../../../components/ProFirstSiteReport.vue', () => ({
+  default: defineComponent({ render: () => null }),
+}))
+
 Object.assign(globalThis, {
   definePageMeta: () => {},
   useSite: () => ({

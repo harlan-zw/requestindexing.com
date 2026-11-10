@@ -574,7 +574,7 @@ function plural(count: number, one: string, many: string): string {
     <!-- Facet panel: consolidation targets (canonical_mismatch) -->
     <UiDataList
       v-if="facet === 'canonical_mismatch'"
-      title="Consolidation targets"
+      v-bind="{ title: 'Consolidation targets' } satisfies { title: string }"
       icon="compare"
       tooltip="Google is folding these pages onto another canonical. Point your canonical at the same URL, or remove the duplication."
       :items="consolidationData?.consolidationTargets ?? []"
@@ -921,7 +921,7 @@ function plural(count: number, one: string, many: string): string {
               :icon="inflightUrls.has(url.url) ? 'loading' : 'refresh'"
               :label="inflightUrls.has(url.url) ? 'Re-checking…' : 'Re-check with Google'"
               :disabled="!canWrite || inflightUrls.has(url.url) || inspectQuota?.remaining === 0"
-              :title="recheckTitle"
+              v-bind="{ title: recheckTitle } satisfies { title: string }"
               @click="handleReinspect(url)"
             />
           </div>

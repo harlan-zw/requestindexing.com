@@ -35,7 +35,7 @@ const pixelSizes = {
     <NuxtImg
       v-if="variant === 'tile'"
       src="/brand-icon-light.png"
-      alt=""
+      v-bind="{ alt: '' } satisfies { alt: string }"
       :width="pixelSizes[size]"
       :height="pixelSizes[size]"
       format="webp"
@@ -44,7 +44,7 @@ const pixelSizes = {
     <NuxtImg
       v-if="variant === 'tile'"
       src="/brand-icon-dark.png"
-      alt=""
+      v-bind="{ alt: '' } satisfies { alt: string }"
       :width="pixelSizes[size]"
       :height="pixelSizes[size]"
       format="webp"

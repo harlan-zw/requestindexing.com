@@ -46,8 +46,7 @@ const isRange = computed(() => model.value !== null && !(model.value instanceof 
     v-model.range="date"
     :max-date="maxDate"
     :min-date="minDate"
-    :columns="2"
-    v-bind="{ ...attrs, ...$attrs }"
+    v-bind="{ ...attrs, ...$attrs, columns: 2 } satisfies { columns: number }"
   />
   <VCalendarDatePicker
     v-else
