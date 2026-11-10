@@ -1,3 +1,3 @@
 <template>
-  <UDivider class="max-w-5" />
+  <USeparator class="max-w-5" />
 </template>

@@ -110,6 +110,7 @@ shellEmulator: true
 packages:
   - apps/*
   - layers/*
+  - tools/typecheck
 
 overrides:
   oxc-parser: 'catalog:'
@@ -200,6 +201,7 @@ catalog:
   h3: ^1.15.11
   happy-dom: ^20.0.0
   hookable: ^6.1.2
+  jsonc-parser: 3.3.1
   klona: ^2.0.6
   lightweight-charts: ^5.2.1
   motion-v: 2.5.1
@@ -222,7 +224,12 @@ catalog:
   v-calendar: ^3.1.2
   vitest: ^5.0.2
   vue: ^3.5.43
-  vue-router: ^5.3.1
+  vue-router: 5.4.0
   vue-tsc: 3.3.14
   wrangler: ^4.143.0
   zod: ^4.6.6
+
+catalogs:
+  native:
+    '@vue/content-mapper': 4.0.0-alpha.3
+    typescript: 7.1.0-beta

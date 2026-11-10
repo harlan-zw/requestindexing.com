@@ -205,7 +205,7 @@ const authDropdownItems = computed(() => {
           </UButton>
         </template>
         <template v-else>
-          <UDropdownMenu :items="authDropdownItems" mode="hover" class="flex items-center">
+          <UDropdownMenu :items="authDropdownItems" class="flex items-center">
             <UButton color="neutral" variant="ghost" class="p-0 max-lg:min-h-11">
               <UAvatar :src="user?.avatarUrl || undefined" :alt="user?.name || user?.email || 'Account'" size="sm" />
               <UIcon name="i-heroicons-chevron-down" class="w-4 h-4 ml-1 opacity-50" />

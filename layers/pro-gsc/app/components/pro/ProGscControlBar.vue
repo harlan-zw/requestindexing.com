@@ -356,13 +356,13 @@ function onApplySavedFilter(id: string) {
         <!-- Country: searchable flag list -->
         <div v-if="dim === 'country'" class="space-y-1.5">
           <UiInput
-            v-model="countrySearch"
-            placeholder="Search countries…"
+            :model-value="countrySearch" placeholder="Search countries…"
             aria-label="Search countries"
             icon="search"
             size="xs"
             autocomplete="off"
             class="w-full"
+            @update:model-value="countrySearch = $event ?? ''"
           />
           <button
             v-if="country"
@@ -391,7 +391,7 @@ function onApplySavedFilter(id: string) {
         </div>
 
         <!-- Device: options with their share of clicks -->
-        <div v-else-if="dim === 'device'" class="space-y-1">
+        <div v-if="dim === 'device'" class="space-y-1">
           <button
             v-if="device"
             type="button"
@@ -417,7 +417,7 @@ function onApplySavedFilter(id: string) {
         </div>
 
         <!-- Brand: classify queries by the site's brand terms (regex facet). -->
-        <div v-else-if="dim === 'brand'" class="space-y-1">
+        <div v-if="dim === 'brand'" class="space-y-1">
           <button
             v-if="brand"
             type="button"
@@ -442,7 +442,7 @@ function onApplySavedFilter(id: string) {
         </div>
 
         <!-- Questions: classify queries by question-intent (regex on canonical query). -->
-        <div v-else-if="dim === 'questions'" class="space-y-1">
+        <div v-if="dim === 'questions'" class="space-y-1">
           <button
             v-if="questions"
             type="button"

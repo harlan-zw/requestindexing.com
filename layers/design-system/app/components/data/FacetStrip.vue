@@ -61,12 +61,12 @@ function magnitudeStyle(link: UiTabLink | UiTabItem<T>): Record<string, string> 
       <span class="text-sm font-strong text-muted">{{ group.label }}</span>
       <div class="min-w-0">
         <UiTabs
-          v-model="model"
-          class="w-full!"
+          :model-value="model" class="w-full!"
           :class="wrapOnMobile ? 'max-sm:flex-wrap! max-sm:overflow-visible!' : ''"
           kind="subnav"
           :items="group.items"
           :aria-label="`${group.label}, ${ariaLabel}`"
+          @update:model-value="model = $event ?? model"
         >
           <template #trailing="{ link }">
             <span class="relative isolate overflow-hidden rounded-sm px-1 numerals-display tabular-nums">

@@ -46,6 +46,7 @@ const modelValue = defineModel<ModelValue>()
 </script>
 
 <template>
+  <!-- @vue-generic {T, VK, M} -->
   <USelect
     v-bind="{ ...props, ...$attrs }"
     v-model="modelValue"

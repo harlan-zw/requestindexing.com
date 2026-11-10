@@ -29,6 +29,7 @@ import { sitemapLivenessSchema } from '#layers/pro-indexing/shared/contracts/sit
 import { selectIndexCohortLead } from '#layers/pro-indexing/shared/index-cohorts'
 import { selectIndexingRegressionLead } from '#layers/pro-indexing/shared/indexing-transition-lead'
 import { computeTrustGate, sitemapHistoryCollapsed } from '#layers/pro-indexing/shared/trust-gate'
+import ProFirstSiteReport from '../../../../../../components/ProFirstSiteReport.vue'
 
 definePageMeta({
   proTab: { feature: 'indexing', label: 'Overview', icon: 'i-lucide-layout-dashboard', order: 0 },
