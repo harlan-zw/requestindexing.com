@@ -8,6 +8,7 @@
 import type { HttpV1OperationDefinition } from '@gscdump/contracts/v1/http'
 import type { GscdumpV1ProxyOperation } from '../../../../internal/gscdump-v1-browser-proxy'
 import process from 'node:process'
+import { AGENT_REQUEST_HEADERS } from '@gscdump/contracts'
 import { eq, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 import { createError, getQuery, getRequestHeader, getRequestURL, getRouterParam, readBody } from 'h3'
@@ -207,6 +208,9 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
       ...(process.env.NODE_ENV !== 'production' ? { 'accept-encoding': 'identity' } : {}),
       'authorization': `Bearer ${apiKey}`,
       'x-request-id': requestIdForUpstream(requestId),
+      [AGENT_REQUEST_HEADERS.parentRequestId]: requestIdForUpstream(requestId),
+      [AGENT_REQUEST_HEADERS.product]: 'requestindexing',
+      [AGENT_REQUEST_HEADERS.client]: 'Request Indexing',
       ...(body === undefined ? {} : { 'content-type': 'application/json' }),
     },
   })
