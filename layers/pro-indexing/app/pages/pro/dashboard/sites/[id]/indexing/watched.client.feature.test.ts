@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, ref } from 'vue'
 
-const fixture = vi.hoisted(() => ({ canWrite: true, list: vi.fn(), add: vi.fn(), remove: vi.fn(), refresh: vi.fn() }))
+const fixture = vi.hoisted(() => ({ canWrite: true, list: vi.fn(), add: vi.fn(), remove: vi.fn(), refresh: vi.fn(), runRead: null as null | (() => Promise<unknown>) }))
 const engineId = ref('s_engine')
 const session = ref({ user: { id: 1 } })
 const initialRecord = {
@@ -17,6 +17,7 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscdump/useProGscdump', () => ({
 }))
 vi.mock('#layers/pro-gsc/app/composables/useProGscdump/_internal', () => ({
   useGscdumpQuery: (_key: unknown, _site: unknown, read: (id: string) => Promise<unknown>) => {
+    fixture.runRead = () => read(engineId.value)
     void read(engineId.value)
     return { data, status: ref('success'), error, refresh: async () => {
       await fixture.refresh()
@@ -84,6 +85,22 @@ afterEach(() => {
 })
 
 describe('watched URLs workflow', () => {
+  it('keeps newer accepted evidence when an older overlapping read finishes last', async () => {
+    const element = await mount()
+    let complete!: (record: typeof initialRecord) => void
+    fixture.list.mockImplementationOnce(() => new Promise((resolve) => {
+      complete = resolve
+    }))
+    const older = fixture.runRead!()
+    fixture.list.mockResolvedValueOnce({ ...initialRecord, watched: [{ ...initialRecord.watched[0]!, url: 'https://example.com/newer' }] })
+    await fixture.runRead!()
+    complete(initialRecord)
+    await older
+    await nextTick()
+    expect(element.textContent).toContain('https://example.com/newer')
+    expect(element.textContent).not.toContain('https://example.com/page')
+  })
+
   it('retires saved evidence on permission loss', async () => {
     const element = await mount()
     fixture.refresh.mockImplementation(async () => {

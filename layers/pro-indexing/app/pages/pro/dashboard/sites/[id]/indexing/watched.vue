@@ -18,13 +18,16 @@ const gscdump = useProGscdump()
 type WatchedRecord = GscdumpV1OperationResponse<'partner.sites.indexing.watched.list'>['data']
 // Nuxt clears AsyncData on errors. Keep successful evidence within its Site and user scope.
 const observation = shallowRef<{ _tag: 'Empty' } | { _tag: 'Observed', scope: string, record: WatchedRecord }>({ _tag: 'Empty' })
+let readSequence = 0
+let active = true
 const query = useGscdumpQuery<GscdumpV1OperationResponse<'partner.sites.indexing.watched.list'>['data']>(
   () => `gscdump:watched:${recordScope.value}`,
   () => session.value?.user ? gscdumpSiteId.value ?? undefined : undefined,
   async (id) => {
+    const sequence = ++readSequence
     const scope = recordScope.value
     const record = await gscdump.listSiteWatchedUrls({ params: { siteId: id } }, true)
-    if (scope === recordScope.value)
+    if (active && sequence === readSequence && scope === recordScope.value)
       observation.value = { _tag: 'Observed', scope, record }
     return record
   },
@@ -39,6 +42,7 @@ const failure = ref('')
 let generation = 0
 watch(recordScope, () => {
   generation++
+  readSequence++
   observation.value = { _tag: 'Empty' }
   urls.value = ''
   consent.value = false
@@ -49,10 +53,14 @@ watch(recordScope, () => {
 }, { flush: 'sync' })
 onScopeDispose(() => {
   generation++
+  readSequence++
+  active = false
 })
 watch(query.error, (error) => {
-  if (error && !parseGscdumpError(error).retry)
+  if (error && !parseGscdumpError(error).retry) {
+    readSequence++
     observation.value = { _tag: 'Empty' }
+  }
 }, { flush: 'sync' })
 const record = computed(() => observation.value._tag === 'Observed' && observation.value.scope === recordScope.value
   ? observation.value.record
