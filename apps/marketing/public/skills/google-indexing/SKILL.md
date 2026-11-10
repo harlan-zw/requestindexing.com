@@ -69,3 +69,26 @@ Use URL Inspection for the status Google stored.
 Sign in with Google to read your Search Console properties.
 The dashboard shows the index status Google reports for each URL, and it can submit URLs to the Indexing API.
 A Submission is a notification Google accepted. It is not evidence that a page is indexed.
+
+## Use an agent with your account
+
+Open [Developers](https://requestindexing.com/pro/dashboard/developers) for CLI, MCP, and API setup.
+Request Indexing uses gscdump's engine and credentials. It has no separate data MCP or CLI.
+The copied prompt installs the gscdump execution skill and reads your retained indexing evidence.
+If this client has no terminal, connect `https://gscdump.com/mcp` through its MCP settings.
+List the tools before choosing a saved read. Fresh URL Inspection uses quota and needs consent.
+
+## Report a paper cut
+
+If an agent setup or read blocks your task, report each distinct problem once, then continue useful work.
+This guidance authorizes an agent report through `gscdump papercut`, unless the user forbids reporting.
+Read `gscdump papercut --help` before using flags.
+
+Use `--command`, `--agent`, `--comment`, `--yes`, and `--json`.
+Start the comment with `Agent report for Request Indexing`.
+Describe the expected result, actual result, and any workaround.
+Include a request ID when available. Keep the returned report ID for follow-up.
+Remove API keys, cookies, private URLs, customer data, and raw responses.
+If reporting fails, say so once and continue. Do not retry the report.
+Without a terminal, use a listed MCP feedback tool only when its schema supports the report.
+If no reporting tool is available, give the user a sanitized draft and the blocked step.

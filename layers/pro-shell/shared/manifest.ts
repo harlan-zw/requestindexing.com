@@ -124,6 +124,14 @@ export const proSiteFeatureManifest = {
     route: `${SITE_ROOT}/indexing/urls`,
     integration: 'gsc-connected',
   },
+  'indexing.watched': {
+    label: 'Watched URLs',
+    icon: 'clock',
+    group: 'indexing',
+    order: 37,
+    route: `${SITE_ROOT}/indexing/watched`,
+    integration: 'gsc-connected',
+  },
   // The namesake action. It runs on this account's pooled Google client, not on
   // gscdump, so it carries no integration prerequisite of its own. The label
   // names Google because the IndexNow row beside it also submits URLs, to

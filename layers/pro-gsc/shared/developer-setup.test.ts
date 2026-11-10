@@ -35,8 +35,9 @@ describe('buildSetupSteps', () => {
   it('queries the given Site, or a placeholder Site ID when none is connected', () => {
     const [withSite] = commands(buildSetupSteps('api', null, 's_abc'))
     const [withoutSite] = commands(buildSetupSteps('api', null, null))
-    expect(withSite?.copy).toContain('https://gscdump.com/api/analytics/v1/sites/s_abc/reports')
-    expect(withoutSite?.copy).toContain('https://gscdump.com/api/analytics/v1/sites/s_your_site/reports')
+    expect(withSite?.copy).toContain('https://gscdump.com/api/partner/v1/sites/s_abc/indexing?days=28')
+    expect(withoutSite?.copy).toContain('https://gscdump.com/api/partner/v1/sites/s_your_site/indexing?days=28')
+    expect(withSite?.copy).not.toContain('-X POST')
   })
 })
 

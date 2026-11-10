@@ -11,6 +11,10 @@ const links = [
         label: 'Get started',
         to: '/pro/onboarding',
       },
+      {
+        label: 'Set up an agent',
+        to: '/pro/dashboard/developers',
+      },
     ],
   },
   {
