@@ -85,6 +85,9 @@ This guidance authorizes an agent report through `gscdump papercut`, unless the 
 Read `gscdump papercut --help` before using flags.
 
 Use `--command`, `--agent`, `--comment`, `--yes`, and `--json`.
+With CLI 7.12.0 or newer, add `--origin requestindexing.com --product requestindexing --surface cli`.
+If a response provides a request ID, pass `--request-id`.
+If a workflow ID or skill digest is known, pass its matching flag from help.
 Start the comment with `Agent report for Request Indexing`.
 Describe the expected result, actual result, and any workaround.
 Include a request ID when available. Keep the returned report ID for follow-up.
@@ -92,3 +95,15 @@ Remove API keys, cookies, private URLs, customer data, and raw responses.
 If reporting fails, say so once and continue. Do not retry the report.
 Without a terminal, use a listed MCP feedback tool only when its schema supports the report.
 If no reporting tool is available, give the user a sanitized draft and the blocked step.
+
+## Record an explicit task outcome
+
+If the user permits reporting, CLI 7.12.0 or newer can record one terminal task outcome.
+Read `gscdump telemetry record --help` first.
+Use an opaque `--workflow-id`, `--product requestindexing`, `--surface cli`, and an operation name without arguments.
+Set `--outcome` to the observed success, failure, blocked, or cancelled result.
+Pass `--quality unknown` unless the user explicitly assessed usefulness or correctness.
+Add measured semantic flags, row count, duration, request ID, and skill digest only when known.
+Never infer a correct answer from a successful request or a downloaded skill.
+Do not send prompts, URLs, command arguments, output bodies, or credentials.
+Use `--yes --json` only within that reporting permission. Keep the receipt and do not retry a failed report.

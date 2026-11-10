@@ -3,6 +3,7 @@ import type { FunnelReport } from '../../../shared/funnel'
 import { SETUP_EXPERIMENT_COPY } from '#layers/pro-saas/shared/setup-experiments'
 import { defaultFunnelDates, FUNNEL_STEPS, parseFunnelQuery } from '../../../shared/funnel'
 import { ADMIN_JOURNEY_COPY as copy } from '../../../shared/journey-evidence'
+import AdminIntegrationActivity from '../../components/AdminIntegrationActivity.vue'
 
 definePageMeta({ layout: 'admin' })
 useSeoMeta({ title: 'Signup funnel' })
@@ -435,6 +436,7 @@ function inspectStage(key: string) {
                         {{ user.engineUserId }}
                       </dd>
                     </dl>
+                    <AdminIntegrationActivity :key="user.id" :user-id="user.id" />
                     <template v-if="user.feedback?.length">
                       <p class="font-medium">
                         {{ copy.feedback }}

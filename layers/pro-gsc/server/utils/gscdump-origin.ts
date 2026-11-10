@@ -39,6 +39,7 @@ export function createGscdumpPublicV1Client(event?: H3Event, options?: { attempt
   return createGscdumpV1Client({
     apiRoot: getGscdumpApiUrl(event),
     credential: apiKey,
+    requestContext: { product: 'requestindexing', client: 'Request Indexing' },
     ...(options?.attempts === undefined ? {} : { retry: { maxAttempts: options.attempts } }),
   })
 }

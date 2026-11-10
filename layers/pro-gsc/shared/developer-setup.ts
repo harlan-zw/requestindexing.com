@@ -14,7 +14,7 @@ export const SITE_ID_PLACEHOLDER = 's_your_site'
 export const GSCDUMP_MCP_URL = 'https://gscdump.com/mcp'
 export const GSCDUMP_API_ROOT = 'https://gscdump.com/api'
 export const GSCDUMP_SKILL_URL = 'https://gscdump.com/skill'
-const GSCDUMP_CLI_PACKAGE = '@gscdump/cli'
+const GSCDUMP_CLI_PACKAGE = '@gscdump/cli@^7.12.0'
 /** Where a Request Indexing reader connects a Site. The agent prompt sends them here, never to gscdump.com. */
 export const CONNECT_SITE_URL = `https://requestindexing.com${CONNECT_SITE_ROUTE}`
 
@@ -205,10 +205,11 @@ If a required tool is absent, report that limit.
 If setup or a read blocks or slows this task, report each distinct paper cut once.
 Then continue useful work.
 Run gscdump papercut --help first.
-Use --command, --agent, --comment, --yes and --json.
+Use --command, --agent, --comment, --origin requestindexing.com, --product requestindexing, --surface cli, --yes and --json.
+These attribution flags need CLI 7.12.0 or newer.
 Start the comment with "Agent report for Request Indexing".
 Give sanitized expected and actual behavior, plus a workaround.
-Include a request ID when available. Keep the returned report ID for follow-up.
+If a response supplies a request ID, pass --request-id. Keep the returned report ID for follow-up.
 Do not include this API key, cookies, private URLs, customer data or raw responses.
 If reporting fails, tell me once and continue. Do not retry the report.`
 }
