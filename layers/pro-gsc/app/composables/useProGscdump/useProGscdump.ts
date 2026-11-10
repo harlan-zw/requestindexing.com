@@ -199,7 +199,24 @@ export function useProGscdump() {
     )
   }
 
+  // One URL's Generative AI impressions, and an upload the browser parsed.
+  function getSiteGenerativeAiReport(input: GscdumpV1OperationInput<'partner.sites.generative_ai.get'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.generative_ai.get'>['data']>(
+      () => createV1Client().getSiteGenerativeAiReport(input),
+      silent,
+    )
+  }
+
+  function createSiteGenerativeAiReportUpload(input: GscdumpV1OperationInput<'partner.sites.generative_ai.uploads.create'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.generative_ai.uploads.create'>['data']>(
+      () => createV1Client().createSiteGenerativeAiReportUpload(input),
+      silent,
+    )
+  }
+
   return {
+    getSiteGenerativeAiReport,
+    createSiteGenerativeAiReportUpload,
     getSiteSitemapSubmission,
     submitSiteSitemap,
     getSiteIndexNowConnection,

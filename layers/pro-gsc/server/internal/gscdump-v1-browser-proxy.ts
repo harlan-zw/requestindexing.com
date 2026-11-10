@@ -49,6 +49,11 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexNowSubmissionReceipts },
   // Google Submissions are created server side with the partner key; the browser only reads receipts.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteGoogleSubmissionReceipts },
+  // The page detail page reads one URL's Generative AI impressions, and a
+  // writer uploads an export the browser parsed. No report page ships, so the
+  // upload list and remove stay off this list.
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.getSiteGenerativeAiReport },
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.createSiteGenerativeAiReportUpload },
   { surface: protocol.surfaces.realtime, operation: protocol.surfaces.realtime.operations.createTicket },
 ] as const
 

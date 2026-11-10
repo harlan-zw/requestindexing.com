@@ -1,6 +1,6 @@
 ---
 name: google-indexing
-description: Choose the supported way to ask Google to crawl a URL, and read the result without overclaiming. Covers the Google Indexing API, Search Console URL Inspection, sitemaps, and the free Request Indexing tools. Use when the user wants a page indexed by Google, asks about the Indexing API, or wants to check whether Google has indexed a URL.
+description: Choose the supported way to ask Google to crawl a URL, and read the result without overclaiming. Covers the Google Indexing API, Search Console URL Inspection, sitemaps, the free Request Indexing tools, and how to provide Search Console's Generative AI report. Use when the user wants a page indexed by Google, asks about the Indexing API, wants to check whether Google has indexed a URL, or asks for AI Overviews, AI Mode, or generative AI data for a page.
 license: MIT
 ---
 
@@ -69,3 +69,20 @@ Use URL Inspection for the status Google stored.
 Sign in with Google to read your Search Console properties.
 The dashboard shows the index status Google reports for each URL, and it can submit URLs to the Indexing API.
 A Submission is a notification Google accepted. It is not evidence that a page is indexed.
+
+## AI Overviews and AI Mode data
+
+Google has no API for the Search Console Generative AI report. The user must export it and upload it.
+
+1. In Search Console, open **Performance**, then **Generative AI features**.
+2. Choose a date range.
+3. Select **Export**, then **Download CSV**. Google downloads a zip.
+4. In Request Indexing, open the page in Search Console > Pages, then select **Upload export**.
+
+Report the result within these limits:
+
+- The data is impressions only. It has no clicks, no queries, and no position. Never call it AI traffic.
+- The data is as of the last upload. State the window and the upload date with each number.
+- If Request Indexing says "No Generative AI report upload yet", no upload exists. Give the user the four steps above.
+- A zero in the export means zero or unavailable. A URL with no row is not listed in that export.
+- To be a supporting link in AI Overviews or AI Mode, Google says a page must be indexed and eligible to show with a snippet. Indexing does not make a page appear.
