@@ -123,6 +123,7 @@ overrides:
   # SSR must use one Vue instance. A second peer context loses Nuxt's
   # injection context during prerender.
   vue: 3.5.43
+  vue-tsc@3.3.14>@vue/language-core: 3.3.11
 
 patchedDependencies:
   '@nuxt/ui@4.11.2': patches/@nuxt__ui@4.11.2.patch
@@ -222,6 +223,6 @@ catalog:
   vitest: ^5.0.2
   vue: ^3.5.43
   vue-router: ^5.3.1
-  vue-tsc: ^3.3.11
+  vue-tsc: 3.3.14
   wrangler: ^4.143.0
   zod: ^4.6.6
