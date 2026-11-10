@@ -70,3 +70,4 @@ jobs:
       - run: pnpm build
         env:
           NODE_OPTIONS: --max-old-space-size=16384
+      - run: pnpm check:agent-surface

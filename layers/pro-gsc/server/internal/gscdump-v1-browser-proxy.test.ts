@@ -18,6 +18,16 @@ function makeCaller(overrides: Partial<Caller> = {}): Caller {
 }
 
 describe('resolveGscdumpV1ProxyOperation', () => {
+  it.each([
+    ['GET', 'watched', 'partner.sites.indexing.watched.list', false],
+    ['POST', 'watched', 'partner.sites.indexing.watched.add', true],
+    ['POST', 'watched/remove', 'partner.sites.indexing.watched.remove', true],
+  ])('authorizes Watched URLs %s %s against the Site', (method, path, id, requiresWrite) => {
+    const resolved = resolveGscdumpV1ProxyOperation(method, 'partner', `sites/s_site-1/indexing/${path}`)
+    expect(resolved?.operation.id).toBe(id)
+    expect(resolved && selectGscdumpV1ProxyTarget(resolved, 'u_me')).toMatchObject({ _tag: 'site', siteId: 's_site-1', requiresWrite })
+  })
+
   it('resolves an allowlisted operation by method, surface, and path', () => {
     const resolved = resolveGscdumpV1ProxyOperation('GET', 'partner', 'sites/s_site-1/indexing')
     expect(resolved?.operation.id).toBe('partner.sites.indexing.get')

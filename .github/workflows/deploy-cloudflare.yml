@@ -121,6 +121,10 @@ jobs:
         env:
           PUBLIC_EGRESS_VERSION_TAG: public-egress-v1-${{ github.event.workflow_run.head_sha || github.sha }}
 
+      - name: Verify agent skill discovery
+        timeout-minutes: 2
+        run: pnpm check:agent-surface --origin https://requestindexing.com
+
       # Sentry shows "No deploys found" until a deploy is recorded against the
       # release, so already-fixed checks cannot cite a production deploy. The
       # build names the release `head_sha`; this marker must name the same

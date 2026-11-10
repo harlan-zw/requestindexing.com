@@ -101,15 +101,13 @@ export function buildSetupSteps(method: SetupMethod, apiKey: string | null, site
       { _tag: 'api-key', title: 'Create an API key', body: API_KEY_STEP_BODY },
       {
         _tag: 'command',
-        title: 'Query your top queries',
+        title: 'Read your indexing record',
         body: siteId
-          ? 'This request reads the search queries for your first connected Site. Send the key as a bearer token.'
+          ? 'Read stored URL Inspection verdicts and 28-day changes. The response names when the evidence was captured.'
           : 'Connect a Site first. Then replace s_your_site with its gscdump Site ID.',
         command: command(k => [
-          `curl -X POST ${GSCDUMP_API_ROOT}/analytics/v1/sites/${site}/reports \\`,
-          `  -H "Authorization: Bearer ${k}" \\`,
-          '  -H "Content-Type: application/json" \\',
-          `  -d '{"state":{"dimensions":["query"],"searchType":"web"}}'`,
+          `curl '${GSCDUMP_API_ROOT}/partner/v1/sites/${site}/indexing?days=28' \\`,
+          `  -H "Authorization: Bearer ${k}"`,
         ].join('\n'), key),
       },
       {
@@ -197,5 +195,20 @@ export function buildAgentSetupPrompt(apiKey: string, site: AgentPromptSite | nu
 ${read}
    Its counts are stored URL Inspection verdicts. They are not Google's live index or the Search Console Page indexing report. Tell me that, and say when the verdicts were counted. Then say how many URLs have an indexed verdict. Say how many do not, and at which stage they stopped. Say what changed over the last 28 days.
 
-If this client cannot run a terminal, the MCP server at ${GSCDUMP_MCP_URL} reads the same Search Console data over HTTP. Send the API key from step 3 in the x-api-key header.`
+If this client cannot run a terminal, connect ${GSCDUMP_MCP_URL} through its MCP settings.
+Use OAuth, or send the API key from step 3 in the x-api-key header.
+List the tools first.
+Use get-indexing for retained counts, then get-indexing-urls or get-url-inspection for saved URL evidence when listed.
+Never replace a saved read with inspect-url, which requests a fresh inspection and uses quota.
+If a required tool is absent, report that limit.
+
+If setup or a read blocks or slows this task, report each distinct paper cut once.
+Then continue useful work.
+Run gscdump papercut --help first.
+Use --command, --agent, --comment, --yes and --json.
+Start the comment with "Agent report for Request Indexing".
+Give sanitized expected and actual behavior, plus a workaround.
+Include a request ID when available. Keep the returned report ID for follow-up.
+Do not include this API key, cookies, private URLs, customer data or raw responses.
+If reporting fails, tell me once and continue. Do not retry the report.`
 }

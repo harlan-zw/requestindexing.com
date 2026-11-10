@@ -22,7 +22,8 @@
     "release": "bumpp",
     "test": "vitest run",
     "typecheck": "nuxt typecheck",
-    "checkin": "nuxt-checkin prepare && nuxt-checkin --save"
+    "checkin": "nuxt-checkin prepare && nuxt-checkin --save",
+    "check:agent-surface": "node scripts/check-agent-surface.ts"
   },
   "dependencies": {
     "@gscdump/contracts": "catalog:",
