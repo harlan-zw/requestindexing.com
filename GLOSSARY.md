@@ -27,6 +27,7 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 | connect | Connect site controls, registerSite | Attaching a Site to a Team | connect |
 | Integration | no table; `/pro/dashboard/integrations` | External service the app reads from: Google Search Console per account, Bing per Site | Integration |
 | Link | gscdump Site binding; Bing `partner.sites.indexing.bing.link.create` | A Site has 0 or 1 link per Integration that reads it | link, linked |
+| Onboarding Answers | users.onboarding_answers | User 0—1 set of optional answers from the About you card | About you |
 | funnel milestone | pro_events table | First-time record of one step toward an active account | (internal) |
 | Submission | gscdump Submission Receipt (`google_indexing_submissions`, gscdump.com ADR-0016) | Site 1—N Submission, unique on (site, idempotency key) in gscdump | "Submit" |
 | IndexNow | gscdump `partner.sites.indexing.indexnow.*`, IndexNow page | Site 0—1 verified key; notifies participating search engines, never Google | IndexNow |
@@ -106,6 +107,12 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 **Never:** connect, bind, attach, or sync for the per-Site binding. Connect names the grant ("Connect Bing", "Reconnect Bing") and attaching a Site to a Team.
 
 **Casing:** lowercase in prose; `Link` only at the start of a label.
+
+### Onboarding Answers
+**Is:** what a user tells the optional About you card on the last onboarding step: role, site count, SEO experience, goals, and free text. Stored in `users.onboarding_answers`. `users.onboarding_answers_closed_at` records Save or Skip, and a closed card never shows again. The ids match nuxtseo.com and gscdump.com.
+**Use for:** code, admin reports, and docs about these answers. The card heading says About you.
+**Never:** profile, priorities, survey, or intents for the whole set. Intents names the goals question only.
+**Casing:** `Onboarding Answers` in prose, `onboardingAnswers` in identifiers.
 
 ### Funnel milestone
 **Is:** one first-time row in `pro_events` marking a step toward an active account.

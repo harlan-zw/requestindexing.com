@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { UiIcon, UInput } from '#components'
-// The onboarding intent multi-select ("How can Nuxt SEO Pro help you?") — a
-// multi-select card grid plus a free-text "Something else". Single source of
-// truth (design-system) for the live teams/create wizard AND the brand-kit
-// showcase. Presentation-only: emits the selected ids; the caller maps them to
-// internal focus.
-import { ONBOARDING_INTENTS } from './onboarding-intents'
+import { useId } from 'vue'
+import { UiIcon, UTextarea } from '#components'
+// The onboarding "How can we help?" multi-select: a grid of toggle cards plus
+// an always-visible optional text box. Presentation only: it emits the
+// selected ids and the text, and the caller stores them.
+import { ONBOARDING_INTENTS, ONBOARDING_OTHER_MAX } from './onboarding-answers'
 
+const { otherLabel = 'Anything else? Optional', otherPlaceholder = '' } = defineProps<{ otherLabel?: string, otherPlaceholder?: string }>()
 const selected = defineModel<string[]>('selected', { default: () => [] })
-const other = defineModel<boolean>('other', { default: false })
 const otherText = defineModel<string>('otherText', { default: '' })
+
+const otherId = useId()
 
 function toggle(id: string) {
   selected.value = selected.value.includes(id)
@@ -17,14 +18,14 @@ function toggle(id: string) {
     : [...selected.value, id]
 }
 
-const cardClass = 'relative flex min-h-28 cursor-pointer flex-col justify-between rounded-xl border p-4 text-left shadow-sm outline-none transition-[background-color,border-color,box-shadow,transform] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-default active:translate-y-px'
-const selectedClass = 'border-primary bg-primary/10 shadow-md ring-1 ring-primary/40'
-const restClass = 'border-accented bg-default/80 hover:border-primary/60 hover:bg-elevated hover:shadow-md'
+const cardClass = 'relative flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 pr-8 text-left text-sm outline-none transition-[background-color,border-color,box-shadow] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-default active:translate-y-px'
+const selectedClass = 'border-primary bg-primary/10 ring-1 ring-primary/40'
+const restClass = 'border-accented bg-default/80 hover:border-primary/60 hover:bg-elevated'
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="grid gap-3 sm:grid-cols-2">
+  <div class="space-y-3">
+    <div class="grid gap-2 sm:grid-cols-2">
       <button
         v-for="intent in ONBOARDING_INTENTS"
         :key="intent.id"
@@ -33,45 +34,28 @@ const restClass = 'border-accented bg-default/80 hover:border-primary/60 hover:b
         :class="[cardClass, selected.includes(intent.id) ? selectedClass : restClass]"
         @click="toggle(intent.id)"
       >
+        <UiIcon :name="intent.icon" class="size-4 shrink-0 text-highlighted" aria-hidden="true" />
+        <span class="font-medium text-highlighted">{{ intent.label }}</span>
         <UiIcon
           v-if="selected.includes(intent.id)"
           name="check"
-          class="absolute top-3 right-3 size-4 text-primary"
+          class="absolute top-1/2 right-3 size-4 -translate-y-1/2 text-primary"
           aria-hidden="true"
         />
-        <UiIcon :name="intent.icon" class="size-5 text-highlighted" aria-hidden="true" />
-        <div class="mt-4 text-base font-medium text-highlighted">
-          {{ intent.label }}
-        </div>
-      </button>
-
-      <!-- Other (free text) -->
-      <button
-        type="button"
-        :aria-pressed="other"
-        :class="[cardClass, other ? selectedClass : restClass]"
-        @click="other = !other"
-      >
-        <UiIcon
-          v-if="other"
-          name="check"
-          class="absolute top-3 right-3 size-4 text-primary"
-          aria-hidden="true"
-        />
-        <UiIcon name="i-lucide-pencil" class="size-5 text-highlighted" aria-hidden="true" />
-        <div class="mt-4 text-base font-medium text-highlighted">
-          Something else
-        </div>
       </button>
     </div>
 
-    <UInput
-      v-if="other"
-      v-model="otherText"
-      size="lg"
-      placeholder="Tell us what you're after…"
-      aria-label="What else can we help with?"
-      class="w-full"
-    />
+    <div class="space-y-1.5">
+      <label :for="otherId" class="block text-sm text-muted">{{ otherLabel }}</label>
+      <UTextarea
+        :id="otherId"
+        v-model="otherText"
+        :maxlength="ONBOARDING_OTHER_MAX"
+        :placeholder="otherPlaceholder"
+        :rows="2"
+        autoresize
+        class="w-full"
+      />
+    </div>
   </div>
 </template>

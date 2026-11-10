@@ -130,4 +130,28 @@ describe('admin funnel endpoint', () => {
     expect(event.node.res.getHeader('Cache-Control')).toBe('private, no-store')
     expect(JSON.stringify(result)).not.toContain('must-not-leak')
   })
+  it('reports Onboarding Answers in the funnel and in shared customer insights, ignoring a malformed row', async () => {
+    sqlite.exec(`INSERT INTO users (user_id, public_id, name, email, avatar, last_login, sub, current_team_id, created_at, onboarding_answers)
+      VALUES (2, 'u_two', 'Bo', 'bo@example.test', '', 1, 'google-2', 1, '2026-04-22 15:13:53', '{"role":"ceo","intents":[]}');`)
+    sqlite.prepare('UPDATE users SET onboarding_answers = ? WHERE user_id = 1').run(JSON.stringify({ role: 'agency', siteCount: '6-20', intents: ['why-not', 'launch'], other: 'bulk sitemaps' }))
+    const insert = sqlite.prepare('INSERT INTO pro_events (user_id, type, created_at) VALUES (?, ?, ?)')
+    insert.run(1, 'signed_up', Date.parse('2026-10-01T12:00:00Z'))
+    insert.run(2, 'signed_up', Date.parse('2026-10-02T12:00:00Z'))
+    const result = await read()
+    expect(result.onboardingAnswers.answered).toBe(1)
+    const role = result.onboardingAnswers.questions.find(question => question.key === 'role')
+    expect(role?.options.find(option => option.id === 'agency')).toMatchObject({ label: 'Agency or freelancer', users: 1 })
+    expect(role?.options.reduce((sum, option) => sum + option.users, 0)).toBe(1)
+    expect(result.onboardingAnswers.questions.find(question => question.key === 'intents')?.options.filter(option => option.users).map(option => option.id)).toEqual(['why-not', 'launch'])
+    expect(result.onboardingAnswers.other).toEqual([{ userId: 1, text: 'bulk sitemaps' }])
+
+    query = { userId: '1', timeRange: '366d' }
+    const handler = (await import('./analytics/customer-insights.get')).default
+    const request = new IncomingMessage(new Socket())
+    const insights = await handler(createEvent(request, new ServerResponse(request)))
+    expect(insights.capabilities.goals).toBe(true)
+    expect(insights.coverage.goalAnswers).toBe(1)
+    expect(insights.users[0]).toMatchObject({ goals: ['why-not', 'launch'], other: 'bulk sitemaps' })
+    expect(insights.segments).toContainEqual(expect.objectContaining({ dimension: 'goal', key: 'why-not', label: 'Find why pages are not indexed', users: 1 }))
+  })
 })

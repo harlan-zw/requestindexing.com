@@ -10,7 +10,7 @@ it('keeps legacy account cohorts, optional feedback and unknown hosted usage dis
     throw new Error('Invalid fixture')
   const report = buildCustomerInsights(users, parsed.data, now)
   expect(report.coverage).toMatchObject({ cohortUsers: 1, signupEvents: 0, accountDateFallbacks: 1, goalAnswers: 0 })
-  expect(report.capabilities).toEqual({ goals: false, acquisition: true, integrationActivity: false })
+  expect(report.capabilities).toEqual({ goals: true, acquisition: true, integrationActivity: false })
   expect(report.users[0]?.goals).toEqual([])
   expect(report.users[0]?.feedback).toMatchObject([{ reason: 'time' }])
   expect(report.integrations.map(row => [row.surface, row.successfulCalls, row.configuredUsers])).toEqual([['mcp', null, null], ['cli', null, null], ['api', null, null]])

@@ -243,6 +243,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         :description="hasSites ? ONBOARDING_COMPLETION_COPY.connected.description : ONBOARDING_COMPLETION_COPY.missingSite.description"
       />
       <ProSetupFirstSiteReport v-if="hasSites" />
+      <ProOnboardingAnswers />
     </section>
 
     <UiWizardNav
