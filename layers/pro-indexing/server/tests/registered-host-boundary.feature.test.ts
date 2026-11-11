@@ -215,25 +215,25 @@ describe('destructive consumers prove the registered host', () => {
 describe('automatic links bind the requested host', () => {
   it('repairs a cached same-host link owned by an unrelated account', async () => {
     external.identity.mockResolvedValue({ identity: { siteId: 's_engine', requestedUrl: 'https://example.com', userId: 'u_foreign', teamId: 't_foreign' } })
-    await expect(autoLinkGsc({ db: proDatabase(sqlite) as never, gscdumpUserId: 'u_owner', siteId: 'local', origin: 'https://example.com', availableSites: [{ siteUrl: 'sc-domain:example.com', permissionLevel: 'siteOwner', registered: true, siteId: 's_engine' }] as never })).resolves.toEqual({ _tag: 'Linked', gscdumpSiteId: 's_exact' })
+    await expect(autoLinkGsc({ db: proDatabase(sqlite) as never, user: { _tag: 'ReadyGscdumpUser', gscdumpUserId: 'u_owner' }, siteId: 'local', origin: 'https://example.com', availableSites: [{ siteUrl: 'sc-domain:example.com', permissionLevel: 'siteOwner', registered: true, siteId: 's_engine' }] as never })).resolves.toEqual({ _tag: 'Linked', gscdumpSiteId: 's_exact' })
   })
   it('keeps a cached link after authoritative same-host proof', async () => {
     external.lifecycle.mockResolvedValue({ sites: [{ siteId: 's_engine', requestedUrl: 'https://example.com' }] })
-    await expect(autoLinkGsc({ db: proDatabase(sqlite) as never, gscdumpUserId: 'u_owner', siteId: 'local', origin: 'https://example.com' })).resolves.toEqual({ _tag: 'Linked', gscdumpSiteId: 's_engine' })
+    await expect(autoLinkGsc({ db: proDatabase(sqlite) as never, user: { _tag: 'ReadyGscdumpUser', gscdumpUserId: 'u_owner' }, siteId: 'local', origin: 'https://example.com' })).resolves.toEqual({ _tag: 'Linked', gscdumpSiteId: 's_engine' })
     expect(external.register).not.toHaveBeenCalled()
   })
 
   it('registers the local host instead of reusing a broad-property Site for another host', async () => {
     sqlite.exec('UPDATE sites SET gscdump_site_id = NULL, domain = \'www.example.com\' WHERE id = \'local\'')
     external.lifecycle.mockResolvedValue({ sites: [{ siteId: 's_engine', requestedUrl: 'https://example.com' }] })
-    const result = await autoLinkGsc({ db: proDatabase(sqlite) as never, gscdumpUserId: 'u_owner', siteId: 'local', origin: 'https://www.example.com', availableSites: [{ siteUrl: 'sc-domain:example.com', permissionLevel: 'siteOwner', registered: true, siteId: 's_engine' }] as never })
+    const result = await autoLinkGsc({ db: proDatabase(sqlite) as never, user: { _tag: 'ReadyGscdumpUser', gscdumpUserId: 'u_owner' }, siteId: 'local', origin: 'https://www.example.com', availableSites: [{ siteUrl: 'sc-domain:example.com', permissionLevel: 'siteOwner', registered: true, siteId: 's_engine' }] as never })
     expect(result).toEqual({ _tag: 'Linked', gscdumpSiteId: 's_exact' })
     expect(external.register).toHaveBeenCalledWith(expect.objectContaining({ requestedUrl: 'www.example.com', gscPropertyUrl: 'sc-domain:example.com' }))
   })
 
   it('preserves the cached pointer when authoritative identity cannot be read', async () => {
     external.lifecycle.mockRejectedValue(new Error('offline'))
-    await expect(autoLinkGsc({ db: proDatabase(sqlite) as never, gscdumpUserId: 'u_owner', siteId: 'local', origin: 'https://example.com' })).rejects.toMatchObject({ statusCode: 503 })
+    await expect(autoLinkGsc({ db: proDatabase(sqlite) as never, user: { _tag: 'ReadyGscdumpUser', gscdumpUserId: 'u_owner' }, siteId: 'local', origin: 'https://example.com' })).rejects.toMatchObject({ statusCode: 503 })
     expect(sqlite.prepare('SELECT gscdump_site_id FROM sites WHERE id = \'local\'').get()).toMatchObject({ gscdump_site_id: 's_engine' })
     expect(external.register).not.toHaveBeenCalled()
   })

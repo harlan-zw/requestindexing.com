@@ -6,7 +6,7 @@ import { dispatchEvent } from '#domain-events/server'
 import { sites, teamMemberships, teams, users } from '#layers/pro-saas/server/database'
 import { readCurrentTeam } from '#layers/pro-saas/server/utils/current-team'
 import { can } from '#layers/pro-saas/shared/policies/team-policy'
-import { autoLinkGsc } from './auto-link-gsc'
+import { autoLinkGsc, readyGscdumpUser, waitForReadyGscdumpUser } from './auto-link-gsc'
 import { rememberGscdumpAccountStatus } from './gscdump-account-status'
 import { useGscdumpClient } from './gscdump-client'
 import { unlinkUnreadableGscdumpSites } from './gscdump-site-access'
@@ -14,11 +14,33 @@ import { updateOnboardingState } from './onboarding'
 import { notRefused } from './site-registration-refusal'
 import { syncUserGscdumpTeams } from './sync-user-gscdump-teams'
 
+/**
+ * Site registrations in flight at once. Each one is a gscdump write, and a
+ * user can hold dozens of unlinked Sites.
+ */
+const AUTO_LINK_CONCURRENCY = 4
+
+/** `Promise.allSettled` over `items`, with at most `limit` calls running at once. */
+async function settleWithLimit<T, R>(items: readonly T[], limit: number, run: (item: T) => Promise<R>): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = []
+  let next = 0
+  async function worker(): Promise<void> {
+    while (next < items.length) {
+      const index = next++
+      results[index] = await run(items[index]!).then(
+        (value): PromiseSettledResult<R> => ({ status: 'fulfilled', value }),
+        (reason: unknown): PromiseSettledResult<R> => ({ status: 'rejected', reason }),
+      )
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
+}
+
 export interface ReconcileGscdumpOnboardingOptions {
   event?: H3Event
   userId: number
   gscdumpUserId: string
-  waitForReady?: boolean
   linkScope?: 'unreported' | 'all'
 }
 
@@ -79,8 +101,10 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     }
   }
 
-  if (opts.waitForReady !== false && lifecycle.account.status !== 'ready')
-    await gscdump.waitForUserReady(gscdumpUserId, { attempts: 30, intervalMs: 2000 })
+  // One readiness proof serves every Site below. A read per Site sent gscdump
+  // one lifecycle request per Site at once, and part of that burst failed.
+  const ready = readyGscdumpUser(gscdumpUserId, lifecycle)
+    ?? await waitForReadyGscdumpUser(gscdumpUserId, { attempts: 30, intervalMs: 2000 })
 
   // GSC + gscdump are ready — flag the connection regardless of whether the
   // user has added a site yet. The only other writer (autoLinkGsc) requires a
@@ -201,17 +225,14 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     }
   }
 
-  const results = await Promise.allSettled(
-    unlinkedSites.map(site =>
-      autoLinkGsc({
-        db,
-        gscdumpUserId,
-        siteId: site.id,
-        origin: site.url ?? '',
-        availableSites: available,
-      }),
-    ),
-  )
+  const results = await settleWithLimit(unlinkedSites, AUTO_LINK_CONCURRENCY, site =>
+    autoLinkGsc({
+      db,
+      user: ready,
+      siteId: site.id,
+      origin: site.url ?? '',
+      availableSites: available,
+    }))
 
   const linkedSites = results.filter(result => result.status === 'fulfilled' && result.value._tag === 'Linked').length
   const refusedSites = results.filter(result => result.status === 'fulfilled' && result.value._tag === 'Refused').length

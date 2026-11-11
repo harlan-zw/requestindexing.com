@@ -25,6 +25,33 @@ export type AutoLinkResult
     | { _tag: 'Refused', refusal: EntitlementRefusal }
 
 /**
+ * Proof that gscdump answered `ready` for this user. Linking needs it, so a
+ * caller reads the lifecycle once and hands the proof to every Site it links.
+ * A fan-out over many Sites cannot read the lifecycle once per Site.
+ */
+export interface ReadyGscdumpUser {
+  readonly _tag: 'ReadyGscdumpUser'
+  readonly gscdumpUserId: string
+}
+
+/** The proof, from a lifecycle the caller already read. `null` if it is not ready. */
+export function readyGscdumpUser(gscdumpUserId: string, lifecycle: { account: { status: string } }): ReadyGscdumpUser | null {
+  return lifecycle.account.status === 'ready' ? { _tag: 'ReadyGscdumpUser', gscdumpUserId } : null
+}
+
+/** Poll gscdump until the user is ready. Throws when it never gets there. */
+export async function waitForReadyGscdumpUser(
+  gscdumpUserId: string,
+  options?: { attempts?: number, intervalMs?: number },
+): Promise<ReadyGscdumpUser> {
+  await useGscdumpClient().waitForUserReady(gscdumpUserId, options).catch((err: unknown) => {
+    logWarn('auth.optional_probe_failed', err, { stage: 'autoLinkGsc_user_not_ready', gscdumpUserId })
+    throw err
+  })
+  return { _tag: 'ReadyGscdumpUser', gscdumpUserId }
+}
+
+/**
  * Whether to store the Site a registration answered with. A new Site is always
  * this partner's. An existing one can be another pool's Site: gscdump.com
  * returned that before it registered Sites per pool, and every read of it
@@ -51,22 +78,19 @@ async function readableRegistration(
  */
 export async function autoLinkGsc(opts: {
   db: ReturnType<typeof useDrizzle>
-  gscdumpUserId: string
+  user: ReadyGscdumpUser
   siteId: string
   origin: string
   preferredSiteUrl?: string
   /** Pre-fetched available sites (for bulk operations) */
   availableSites?: GscdumpAvailableSite[]
 }): Promise<AutoLinkResult> {
-  const { db, gscdumpUserId, siteId, origin } = opts
+  const { db, siteId, origin } = opts
+  const { gscdumpUserId } = opts.user
   const gscdump = useGscdumpClient()
 
   // Idempotency guard: return early if already linked
   const [existing] = await db.select({ gscdumpSiteId: sites.gscdumpSiteId }).from(sites).where(eq(sites.id, siteId))
-  await gscdump.waitForUserReady(gscdumpUserId).catch((err) => {
-    logWarn('auth.optional_probe_failed', err, { stage: 'autoLinkGsc_user_not_ready', gscdumpUserId })
-    throw err
-  })
 
   if (existing?.gscdumpSiteId) {
     const reusable = await assertLocalRegisteredGscSiteScope(db, siteId, existing.gscdumpSiteId, id => gscdump.getRegisteredHostIdentity(id), origin)

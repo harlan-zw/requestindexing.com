@@ -2,6 +2,8 @@
 //
 // Integration metadata reads one valid preference and caches it for 60 seconds.
 // Optional reads share an 800 ms budget. A failure never becomes a cached opt-in.
+// A read over budget is a log line, not a Sentry report: the fallback is safe
+// and the next read asks again. Other failures still report.
 
 import type { GscdumpUserSettings } from '@gscdump/contracts'
 import type { PartnerFetch } from '@gscdump/sdk/partner'
@@ -9,6 +11,7 @@ import type { H3Event } from 'h3'
 import { createPartnerClient } from '@gscdump/sdk/partner'
 import { createError } from 'h3'
 import { logWarn } from '~~/shared/logging'
+import { logger } from '~~/shared/server/logger'
 import { getGscdumpApiUrl } from './gscdump-origin'
 
 const TTL_SECONDS = 60
@@ -92,7 +95,10 @@ export async function loadGscdumpSettings(
   const result = await Promise.race([read, deadline]).finally(() => clearTimeout(timer))
 
   if (result._tag === 'Unavailable') {
-    logWarn('gscdump.proxy.failed', result.cause, { stage: 'settings.get', reason: result.reason, userId })
+    if (result.reason === 'timeout')
+      logger.warn(`[gscdump settings] read exceeded ${SETTINGS_READ_TIMEOUT_MS} ms; browser analyzer falls back to off`, { userId })
+    else
+      logWarn('gscdump.proxy.failed', result.cause, { stage: 'settings.get', reason: result.reason, userId })
     return { browserAnalyzerEnabled: false }
   }
 

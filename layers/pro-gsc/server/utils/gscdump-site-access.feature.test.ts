@@ -82,7 +82,7 @@ describe('a linked Site this partner cannot read', () => {
   }
 
   function reconcile(linkScope: 'unreported' | 'all' = 'unreported') {
-    return reconcileGscdumpOnboardingForUser({ userId, gscdumpUserId: 'u_harlan', waitForReady: false, linkScope })
+    return reconcileGscdumpOnboardingForUser({ userId, gscdumpUserId: 'u_harlan', linkScope })
   }
 
   it.each([
