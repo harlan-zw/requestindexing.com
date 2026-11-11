@@ -40,6 +40,7 @@ jobs:
   harlan-desktop:
     uses: harlan-zw/harlan-nuxt/.github/workflows/harlan-desktop-site-ci.yml@main
     with:
+      node-version: 26.13.0
       # GitHub-hosted on purpose. This repository is public, and a self-hosted
       # runner on a public repository lets a fork pull request run code on the
       # workstation.
@@ -64,7 +65,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26.13.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build

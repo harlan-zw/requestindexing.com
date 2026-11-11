@@ -5,6 +5,9 @@
   "private": true,
   "packageManager": "pnpm@12.9.1",
   "license": "MIT",
+  "engines": {
+    "node": ">=26.13.0 <27"
+  },
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply request-indexin-bw2z --remote",
