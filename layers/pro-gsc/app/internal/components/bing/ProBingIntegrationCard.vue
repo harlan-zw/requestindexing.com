@@ -8,11 +8,11 @@
 // Upstream calls gscdump's private app surface and starts the round trip with
 // a host redirect route. Here every call is a partner v1 operation through
 // the browser proxy, and Connect asks gscdump for the authorize URL first.
-import type { SemanticStatus } from '#layers/design-system/app/composables/semanticColors'
+import type { SemanticStatus } from '@nuxtseo/design-system/app/composables/semanticColors'
 import type { useProBingIntegration } from '#layers/pro-gsc/app/composables/useProGscdump'
 import type { BingIntegrationRow, BingIntegrationSiteRef } from '#layers/pro-gsc/app/utils/bing-integration-view'
+import { cleanDomain, siteLabel } from '~~/layers/core/app/utils/site-format'
 import { NuxtLink, UiAlert, UiButton, UiFavicon, UiRelativeTime, UiSkeleton, UiStatusBadge, UiTableShell, UiTableTd, UiTableTh } from '#components'
-import { cleanDomain, siteLabel } from '#layers/design-system/app/composables/formatting'
 import { useProBingAuthorize } from '#layers/pro-gsc/app/composables/useProGscdump'
 import {
   bingLinkOutcomeMessage,

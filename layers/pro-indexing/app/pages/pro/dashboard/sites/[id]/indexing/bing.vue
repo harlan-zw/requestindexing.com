@@ -11,7 +11,7 @@
 // every Site, so this page links there rather than repeat them.
 import type { BingConnectionV1 } from '@gscdump/contracts/v1/http'
 import type { BingCrawlDetailView } from '#layers/pro-gsc/app/utils/bing-view'
-import { siteLabel } from '#layers/design-system/app/composables/formatting'
+import { siteLabel } from '~~/layers/core/app/utils/site-format'
 import { useProGscdumpBingConnection, useProGscdumpBingData, useProGscdumpBingEvidence } from '#layers/pro-gsc/app/composables/useProGscdump'
 import ProBingCrawlStats from '#layers/pro-gsc/app/internal/components/bing/ProBingCrawlStats.vue'
 import ProBingSitemap from '#layers/pro-gsc/app/internal/components/bing/ProBingSitemap.vue'

@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { vizTextColor } from '@nuxtseo/design-system/app/composables/dataVizColors'
+import { formatNumber, formatReportingDay } from '@nuxtseo/design-system/app/composables/formatting'
 // Ported from nuxtseo.com `layers/pro/gsc/app/components/pro/ProQueryLabel.vue`.
 import { computed, ref, watch } from 'vue'
-import { vizTextColor } from '~~/layers/design-system/app/composables/dataVizColors'
-import { formatNumber, formatReportingDay } from '~~/layers/design-system/app/composables/formatting'
 import { NuxtLink, UiIcon, UiPopover, UiSkeleton, UiSparkline, UiTooltip } from '#components'
 import { POSITION_DISPLAY_THRESHOLD, POSITION_FALL_MIN_IMPRESSIONS, POSITION_FALL_PLACES, positionFall } from '../../../shared/query-display'
 

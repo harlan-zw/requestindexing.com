@@ -2,12 +2,6 @@
 definePageMeta({ layout: 'kit' })
 useHead({ title: 'Forms · Brand Kit' })
 
-const pillValue = ref<'7d' | '28d' | '90d'>('28d')
-const pillOptions = [
-  { label: '7 days', value: '7d' as const },
-  { label: '28 days', value: '28d' as const },
-  { label: '90 days', value: '90d' as const },
-]
 const radioValue = ref('email')
 const switchValue = ref(true)
 const checkValues = ref(['indexed'])
@@ -114,21 +108,6 @@ const inputValue = ref('')
               {{ sliderValue[0] }} pages / day
             </template>
           </UFormField>
-        </div>
-      </UCard>
-    </KitSection>
-
-    <KitSection
-      title="UiPillSelect"
-      code="<UiPillSelect>"
-      description="Compact segmented control from the design-system layer. Best for date ranges and small set toggles."
-    >
-      <UCard variant="outline">
-        <div class="space-y-4">
-          <UiPillSelect v-model="pillValue" :options="pillOptions" />
-          <p class="text-xs text-muted">
-            Current value: <code class="font-mono text-default">{{ pillValue }}</code>
-          </p>
         </div>
       </UCard>
     </KitSection>

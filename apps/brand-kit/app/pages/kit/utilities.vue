@@ -8,7 +8,7 @@ useHead({ title: 'Utilities · Brand Kit' })
     <KitHeader
       eyebrow="Foundation"
       title="Utilities"
-      description="Custom CSS that carries brand personality. Defined in layers/design-system/css/global.css."
+      description="Custom CSS that carries brand personality. Defined in layers/core/app/assets/css/brand.css."
     />
 
     <KitSection

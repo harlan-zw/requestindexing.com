@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // One collapsible sidebar group. Ported from nuxtseo.com's
 // `layers/saas/app/components/pro/ProNavSection.vue`.
-import type { UiNavLink } from '#layers/design-system/app/shared/nav'
+import type { UiNavLink } from '@nuxtseo/design-system/app/shared/nav'
 import { useLocalStorage } from '@vueuse/core'
 import { useRoute } from 'nuxt/app'
 import { computed } from 'vue'

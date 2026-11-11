@@ -1,6 +1,7 @@
 import type { OnboardingAnswers } from '#layers/pro-saas/shared/onboarding-answers'
 import type { AcquisitionEvidence, FeedbackObservation, UserJourney } from './journey-evidence'
-import { ONBOARDING_INTENTS, ONBOARDING_QUESTIONS, ONBOARDING_ROLES, ONBOARDING_SEO_EXPERIENCE, ONBOARDING_SITE_COUNTS } from '#layers/design-system/app/components/element/onboarding-answers'
+import { ONBOARDING_QUESTIONS, ONBOARDING_ROLES, ONBOARDING_SEO_EXPERIENCE, ONBOARDING_SITE_COUNTS } from '@nuxtseo/design-system/app/components/element/onboarding-answers'
+import { ONBOARDING_INTENTS, ONBOARDING_INTENTS_QUESTION } from '#layers/pro-saas/shared/onboarding-answers'
 import { summarizeDelays } from './journey-evidence'
 
 const DAY = 86_400_000
@@ -158,10 +159,10 @@ export function buildFunnelReport(users: FunnelUser[], query: FunnelQuery, now =
 }
 
 const ANSWER_QUESTIONS = [
-  { key: 'role', options: ONBOARDING_ROLES },
-  { key: 'siteCount', options: ONBOARDING_SITE_COUNTS },
-  { key: 'seoExperience', options: ONBOARDING_SEO_EXPERIENCE },
-  { key: 'intents', options: ONBOARDING_INTENTS },
+  { key: 'role', question: ONBOARDING_QUESTIONS.role, options: ONBOARDING_ROLES },
+  { key: 'siteCount', question: ONBOARDING_QUESTIONS.siteCount, options: ONBOARDING_SITE_COUNTS },
+  { key: 'seoExperience', question: ONBOARDING_QUESTIONS.seoExperience, options: ONBOARDING_SEO_EXPERIENCE },
+  { key: 'intents', question: ONBOARDING_INTENTS_QUESTION, options: ONBOARDING_INTENTS },
 ] as const
 
 /** Option counts per question. A user who skipped a question is not counted. */
@@ -172,7 +173,7 @@ export function summarizeOnboardingAnswers(cohort: FunnelUser[]) {
     answered: answers.length,
     questions: ANSWER_QUESTIONS.map(question => ({
       key: question.key,
-      question: ONBOARDING_QUESTIONS[question.key],
+      question: question.question,
       options: question.options.map(option => ({ id: option.id, label: option.label, users: answers.filter(row => chose(row.answers, question.key, option.id)).length })),
     })),
     other: answers.flatMap(row => row.answers.other ? [{ userId: row.userId, text: row.answers.other }] : []),

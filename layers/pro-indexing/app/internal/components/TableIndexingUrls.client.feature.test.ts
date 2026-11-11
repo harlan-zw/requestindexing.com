@@ -72,10 +72,10 @@ function stub(name: string, render: (props: Record<string, any>, slots: Record<s
 }
 
 const leaf = (tag: string) => ({ default: stub(tag, props => h('span', props.label ?? '')) })
-vi.mock('#layers/design-system/app/components/element/UiIcon.vue', () => ({ default: stub('UiIcon', () => h('i')) }))
-vi.mock('#layers/design-system/app/components/element/UiSeverityDot.vue', () => leaf('UiSeverityDot'))
-vi.mock('#layers/design-system/app/components/data/UiMetricLabel.vue', () => leaf('UiMetricLabel'))
-vi.mock('#layers/design-system/app/components/data/cells/UiTableDash.vue', () => ({ default: stub('UiTableDash', () => h('span', 'none')) }))
+vi.mock('@nuxtseo/design-system/app/components/element/UiIcon.vue', () => ({ default: stub('UiIcon', () => h('i')) }))
+vi.mock('@nuxtseo/design-system/app/components/element/UiSeverityDot.vue', () => leaf('UiSeverityDot'))
+vi.mock('@nuxtseo/design-system/app/components/data/UiMetricLabel.vue', () => leaf('UiMetricLabel'))
+vi.mock('@nuxtseo/design-system/app/components/data/cells/UiTableDash.vue', () => ({ default: stub('UiTableDash', () => h('span', 'none')) }))
 
 interface StubColumn {
   header: () => VNodeChild

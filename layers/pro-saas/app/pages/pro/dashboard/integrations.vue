@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatTimeAgo } from '@nuxtseo/design-system/app/composables/formatting'
 // Ported from nuxtseo.com `apps/pro/app/pages/pro/dashboard/integrations.vue`,
 // cut to the "Search engines" group the way gscdump.com cut it: Google Search
 // Console and Bing Webmaster Tools. Web analytics, market data and delivery
@@ -12,7 +13,6 @@
 // feature flag, and gscdump returns a Microsoft round trip to this page.
 import { useMounted } from '@vueuse/core'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
-import { formatTimeAgo } from '#layers/design-system/app/composables/formatting'
 import { useProBingIntegration } from '#layers/pro-gsc/app/composables/useProGscdump'
 import ProBingIntegrationCard from '#layers/pro-gsc/app/internal/components/bing/ProBingIntegrationCard.vue'
 import { bingIntegrationStatusLine } from '#layers/pro-gsc/app/utils/bing-integration-view'

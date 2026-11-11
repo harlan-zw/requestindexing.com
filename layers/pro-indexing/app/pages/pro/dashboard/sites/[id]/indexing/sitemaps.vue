@@ -1,14 +1,14 @@
 <script lang="ts" setup>
 import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
-import type { FactItem } from '#layers/design-system/app/components/data/UiFactsGrid.vue'
-import type { SemanticStatus } from '#layers/design-system/app/composables/semanticColors'
-import type { UiNavLink } from '#layers/design-system/app/shared/nav'
+import type { FactItem } from '@nuxtseo/design-system/app/components/data/UiFactsGrid.vue'
+import type { SemanticStatus } from '@nuxtseo/design-system/app/composables/semanticColors'
+import type { UiNavLink } from '@nuxtseo/design-system/app/shared/nav'
 import type { GscdumpSitemapChangesResponse } from '#layers/pro-gsc/shared/gscdump-api'
 import type { SitemapLiveness } from '#layers/pro-indexing/shared/contracts/sitemap-liveness'
 import { gscConsoleUrl } from '@gscdump/sdk/gsc-console-url'
+import { getPath, getSitemapName } from '@nuxtseo/design-system/app/composables/formatting'
 import { sameSitemapIdentity } from 'gscdump/sitemap-identity'
 import { withQuery } from 'ufo'
-import { getPath, getSitemapName } from '#layers/design-system/app/composables/formatting'
 import ProDateRangePicker from '#layers/pro-gsc/app/components/pro/ProDateRangePicker.vue'
 import { periodToDateRange } from '#layers/pro-gsc/app/composables/useGscPeriod'
 import {

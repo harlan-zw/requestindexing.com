@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { UiIcon as UiIconName } from '#layers/design-system/app/shared/ui-icons'
-import type { WidgetFailure } from '#layers/design-system/app/shared/widget-failure'
+import type { UiIcon as UiIconName } from '@nuxtseo/design-system/app/shared/ui-icons'
+import type { WidgetFailure } from '@nuxtseo/design-system/app/shared/widget-failure'
 import { UiWidgetState } from '#components'
 
 /**

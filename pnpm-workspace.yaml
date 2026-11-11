@@ -60,6 +60,7 @@ minimumReleaseAgeExclude:
   - '@takumi-rs/helpers@2.15.0'
   - '@takumi-rs/wasm@2.15.0'
   - sitemapd@0.2.3
+  - '@nuxtseo/design-system@0.1.0'
 
 trustPolicy: no-downgrade
 trustPolicyExclude:
@@ -113,6 +114,15 @@ packages:
   - tools/typecheck
 
 overrides:
+  # @nuxtseo/design-system pins these exactly. A second copy of motion-v splits
+  # the LazyMotion context the layer provides, and a second @nuxt/scripts or
+  # @vueuse/core registers twice. A second zod gives the layer its own
+  # @nuxt/ui instance, whose types do not match the site's. Hold the layer to
+  # the site's versions.
+  '@nuxtseo/design-system>@nuxt/scripts': 'catalog:'
+  '@nuxtseo/design-system>@vueuse/core': 'catalog:'
+  '@nuxtseo/design-system>motion-v': 'catalog:'
+  '@nuxtseo/design-system>zod': 4.6.6
   oxc-parser: 'catalog:'
   # Pin Rolldown so Nitro builds use a reproducible bundle.
   rolldown: 1.2.11
@@ -128,6 +138,9 @@ overrides:
 
 patchedDependencies:
   '@nuxt/ui@4.11.2': patches/@nuxt__ui@4.11.2.patch
+  # UiSelect binds its model with defineModel, so the TypeScript 7 typecheck
+  # passes. Request Indexing carried this fix in its own copy (#388).
+  '@nuxtseo/design-system@0.1.0': patches/@nuxtseo__design-system@0.1.0.patch
   nitropack@2.13.4: patches/nitropack@2.13.4.patch
   nuxt-auth-utils@0.5.30: patches/nuxt-auth-utils@0.5.30.patch
   zod@4.6.6: patches/zod@4.6.6.patch
@@ -174,6 +187,7 @@ catalog:
   '@nuxt/test-utils': ^4.3.2
   '@nuxt/ui': ^4.11.2
   '@nuxtjs/seo': ^6.0.1
+  '@nuxtseo/design-system': ^0.1.0
   '@sentry/cloudflare': ^11.1.0
   '@sentry/nuxt': ^11.1.0
   '@takumi-rs/core': ^2.15.0

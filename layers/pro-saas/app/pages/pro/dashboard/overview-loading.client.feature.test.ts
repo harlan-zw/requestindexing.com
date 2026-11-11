@@ -29,7 +29,7 @@ vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewSitesColumn.vue', ()
     h('p', { 'data-site': entry.site.siteId }, entry.clicks._tag === 'Read' ? `${entry.clicks.clicks} clicks` : entry.clicks._tag))),
 }) }))
 vi.mock('#components', async () => {
-  const { default: UiSkeleton } = await import('#layers/design-system/app/components/element/UiSkeleton.vue')
+  const { default: UiSkeleton } = await import('@nuxtseo/design-system/app/components/element/UiSkeleton.vue')
   const passthrough = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
   const button = defineComponent({ props: ['label'], setup: props => () => h('button', props.label) })
   return { NuxtLink: passthrough, UiButton: button, UiIcon: passthrough, UiTooltip: passthrough, UiSparkline: passthrough, UiSkeleton }

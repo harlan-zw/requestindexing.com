@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { UiTableColumn } from '~~/layers/design-system/app/shared/table'
+import type { UiTableColumn } from '@nuxtseo/design-system/app/shared/table'
 
 definePageMeta({ layout: 'kit' })
 useHead({ title: 'Data tables · Brand Kit' })

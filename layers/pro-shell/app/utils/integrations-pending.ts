@@ -3,7 +3,7 @@
 // what is pending, which upstream keeps inline in its nav composable. Here it
 // is a pure function of the same two row states the Integrations page renders,
 // so the rail entry and the page cannot disagree.
-import type { UiNavLink, UiNavSetup } from '#layers/design-system/app/shared/nav'
+import type { UiNavLink, UiNavSetup } from '@nuxtseo/design-system/app/shared/nav'
 import type { BingIntegrationState } from '#layers/pro-gsc/app/utils/bing-integration-view'
 import type { GscIntegrationState } from '#layers/pro-gsc/shared/gsc-integration-state'
 

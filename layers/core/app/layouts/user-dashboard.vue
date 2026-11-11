@@ -5,7 +5,7 @@
 // one rail, one drawer and one skip link. The nav rows are `UiNavList` links
 // rather than a second navigation component, so a row here behaves exactly
 // like a row in the Site sidebar.
-import type { UiNavLink } from '#layers/design-system/app/shared/nav'
+import type { UiNavLink } from '@nuxtseo/design-system/app/shared/nav'
 
 const route = useRoute()
 const { session } = useUserSession()

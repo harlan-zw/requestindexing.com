@@ -1,0 +1,276 @@
+/* Request Indexing brand over `@nuxtseo/design-system` (DESIGN.md: Verdant
+   Console). The layer owns every shared rule. This file sets only the values
+   where Request Indexing differs, as CSS custom properties and its own
+   utilities. It loads after the layer's `css/global.css`, and every rule here
+   is unlayered, so it wins over the layer's Tailwind theme layer as well. */
+
+/* ═══ Type ═══════════════════════════════════════════════════════════════
+   DM Sans carries body copy, Poppins the display scale. `font-title` is the
+   utility DESIGN.md names for the display family. Both families load from
+   the `fonts` config in layers/core/nuxt.config.ts. */
+:root {
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Poppins', system-ui, sans-serif;
+  --font-title: 'Poppins', system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* DM Sans and Poppins ship as static weights, so each value names a face
+     that is loaded (400/500/600/700). Neither has a width axis, so every
+     --wdth-* stays 100% rather than asking for synthesis. */
+  --wght-body: 400;
+  --wght-emphasis: 500;
+  --wght-heading: 600;
+  --wght-title: 700;
+  --wght-numeral: 500;
+  --wdth-heading: 100%;
+  --wdth-numeral: 100%;
+  --tracking-eyebrow: 0.08em;
+
+  /* Tighter than Nuxt UI's default 8px so buttons and badges carry more presence. */
+  --ui-radius: 0.625rem;
+}
+
+/* The layer's Tailwind theme has no `--font-title`, so no `font-title` utility
+   is generated. This class joins Tailwind's utilities layer, so it orders like
+   the utility it replaces. */
+@layer utilities {
+  .font-title {
+    font-family: var(--font-title);
+  }
+}
+
+/* ═══ Olive neutral ══════════════════════════════════════════════════════
+   Nuxt UI resolves `neutral: 'olive'` (app.config) to `--color-olive-*`.
+   Tailwind ships an olive scale at chroma ~0.003, which reads as near-grey.
+   DESIGN.md asks for visibly warm surfaces, so the scale is anchored to its
+   hex tokens (#f7f7eb, #e6e7d2, #67713a, #1c1f0e). Dark bg held above
+   near-black. */
+:root {
+  --color-olive-50: oklch(97.5% 0.014 105);
+  --color-olive-100: oklch(95.5% 0.022 105);
+  --color-olive-200: oklch(91% 0.035 105);
+  --color-olive-300: oklch(85% 0.052 105);
+  --color-olive-400: oklch(72% 0.070 108);
+  --color-olive-500: oklch(54% 0.082 111);
+  --color-olive-600: oklch(44% 0.076 110);
+  --color-olive-700: oklch(36% 0.065 108);
+  --color-olive-800: oklch(27% 0.050 106);
+  --color-olive-900: oklch(20% 0.038 105);
+  --color-olive-950: oklch(14% 0.028 105);
+}
+
+/* The layer pins three light text tokens to Nuxt SEO's violet hue. Request
+   Indexing binds them to the olive ramp. Dimmed keeps the layer's darker
+   47.5% lightness, which clears AA on white, at the olive hue. */
+.light {
+  --ui-text-dimmed: oklch(47.5% 0.078 110);
+  --ui-text: var(--ui-color-neutral-800);
+  --ui-text-highlighted: var(--ui-color-neutral-900);
+}
+
+/* One neutral ramp. Nuxt SEO runs a second (mauve) palette inside its
+   dashboard, because its marketing neutral is a different hue. Request
+   Indexing is olive everywhere, so `.dashboard-theme` keeps the olive ramp. */
+.dashboard-theme,
+.light.dashboard-theme,
+.dark.dashboard-theme {
+  --ui-color-neutral-50: var(--color-olive-50);
+  --ui-color-neutral-100: var(--color-olive-100);
+  --ui-color-neutral-200: var(--color-olive-200);
+  --ui-color-neutral-300: var(--color-olive-300);
+  --ui-color-neutral-400: var(--color-olive-400);
+  --ui-color-neutral-500: var(--color-olive-500);
+  --ui-color-neutral-600: var(--color-olive-600);
+  --ui-color-neutral-700: var(--color-olive-700);
+  --ui-color-neutral-800: var(--color-olive-800);
+  --ui-color-neutral-900: var(--color-olive-900);
+  --ui-color-neutral-950: var(--color-olive-950);
+}
+
+.light.dashboard-theme {
+  --ui-text-dimmed: oklch(47.5% 0.078 110);
+}
+
+/* Dark dimmed and muted share the 400 step, as the layer's `.dark` does: the
+   500 step falls under 4.5:1 on the raised surfaces. */
+.dark.dashboard-theme {
+  --ui-text-dimmed: var(--ui-color-neutral-400);
+  --ui-text-muted: var(--ui-color-neutral-400);
+}
+
+/* ═══ Primary text ═══════════════════════════════════════════════════════
+   Stock emerald 500 measures 2.5:1 on white, so primary text steps down to
+   the 700 stop (5.4:1). Dark mode keeps the 400 shade, which passes. */
+:root {
+  --ui-text-primary: var(--ui-color-primary-700);
+}
+
+.dark {
+  --ui-text-primary: var(--ui-primary);
+}
+
+/* Primary text on a primary tint (the `bg-primary/10` badges and pills, the
+   `bg-primary/5` row) sits on a darker surface than the page. On an elevated
+   card the tint drops primary 700 to 4.1:1, so text inside a tint steps down
+   one more stop: primary 800 holds 5.8:1 there. Light mode only. */
+.light [class*="bg-primary/"] {
+  --ui-text-primary: var(--ui-color-primary-800);
+}
+
+/* ═══ Greydients ═════════════════════════════════════════════════════════
+   The layer's family, re-hued onto the olive (hue 105) and emerald ramps.
+   ink twilight dawn dusk mist ash: see the layer's css/global.css. */
+:root {
+  --greydient-ink: linear-gradient(135deg in oklch, oklch(93% 0.012 140) 0%, oklch(89% 0.022 150) 55%, oklch(85% 0.03 160) 100%);
+  --greydient-twilight: linear-gradient(135deg in oklch, oklch(95% 0.015 120) 0%, oklch(90% 0.03 150) 48%, oklch(88% 0.025 165) 100%);
+  --greydient-dawn: linear-gradient(135deg in oklch, oklch(94% 0.02 75) 0%, oklch(91% 0.038 90) 50%, oklch(97% 0.012 100) 100%);
+  --greydient-dusk: linear-gradient(135deg in oklch, oklch(95% 0.018 120) 0%, oklch(89% 0.05 155) 46%, oklch(91% 0.02 105) 100%);
+  --greydient-mist: linear-gradient(135deg in oklch, oklch(96% 0.012 120) 0%, oklch(93% 0.018 105) 52%, oklch(97% 0.01 100) 100%);
+  --greydient-ash: linear-gradient(135deg in oklch, oklch(95% 0.004 105) 0%, oklch(91% 0.008 105) 50%, oklch(87% 0.012 105) 100%);
+}
+
+.dark {
+  --greydient-ink: linear-gradient(135deg in oklch, oklch(13% 0.02 140) 0%, oklch(21% 0.032 150) 55%, oklch(30% 0.045 160) 100%);
+  --greydient-twilight: linear-gradient(135deg in oklch, oklch(17% 0.04 120) 0%, oklch(72% 0.03 150) 48%, oklch(77% 0.032 165) 100%);
+  --greydient-dawn: linear-gradient(135deg in oklch, oklch(30% 0.035 70) 0%, oklch(74% 0.045 85) 50%, oklch(92% 0.018 100) 100%);
+  --greydient-dusk: linear-gradient(135deg in oklch, oklch(20% 0.05 120) 0%, oklch(52% 0.085 155) 46%, oklch(84% 0.028 105) 100%);
+  --greydient-mist: linear-gradient(135deg in oklch, oklch(66% 0.022 120) 0%, oklch(80% 0.024 105) 52%, oklch(91% 0.014 100) 100%);
+  --greydient-ash: linear-gradient(135deg in oklch, oklch(24% 0.006 105) 0%, oklch(54% 0.01 105) 50%, oklch(82% 0.014 105) 100%);
+}
+
+/* Text selection highlight, in emerald instead of the layer's violet. */
+:root {
+  --selection-hl: oklch(69.6% 0.17 162.5);
+  --selection-hl2: oklch(76.8% 0.233 130.85);
+}
+
+.dark {
+  --selection-hl: oklch(76.5% 0.177 163.2);
+  --selection-hl2: oklch(84.1% 0.238 128.85);
+}
+
+/* ═══ Chart colours ══════════════════════════════════════════════════════
+   Only the identity slots whose Request Indexing hue differs from the
+   layer's. Clicks take the emerald primary because a click is the outcome
+   the product sells. Impressions take the blue info accent, CTR the amber
+   warning accent. No violet: DESIGN.md's palette has no purple in it. The
+   other slots keep the layer's hue and its light mode contrast step. */
+:root {
+  --ui-viz-clicks: #10b981;
+  --ui-viz-impressions: #3b82f6;
+  --ui-viz-ctr: #f59e0b;
+  --ui-viz-pageviews: #f59e0b;
+  --ui-viz-cls: #10b981;
+  /* The comparison trail is context behind the current series, so it reads
+     as the olive earth of the palette. The layer uses one colour for the mark
+     and its text, so light mode takes a deeper olive that passes AA as text. */
+  --ui-viz-comparison: var(--color-olive-600);
+  --ui-viz-brand: #f59e0b;
+  --ui-viz-rank-2: #84cc16;
+  --ui-viz-rank-8: #38bdf8;
+  --ui-viz-category-5: #22d3ee;
+  /* An olive-tinted grey (hue ~105) that sits with the surface greys. */
+  --ui-viz-neutral: #a3a292;
+}
+
+.dark {
+  --ui-viz-comparison: #898a54;
+}
+
+/* ═══ Verdant utilities ══════════════════════════════════════════════════ */
+
+/* Verdant wash: organic emerald glow on a warm cream surface. Two soft
+   radial blooms keep energy in the corners without adding a non-brand hue. */
+.bg-verdant {
+  background:
+    radial-gradient(70% 80% at 85% 0%, color-mix(in oklab, var(--ui-primary) 18%, transparent), transparent 65%),
+    radial-gradient(55% 70% at 0% 100%, color-mix(in oklab, var(--ui-primary) 10%, transparent), transparent 60%),
+    var(--ui-bg-muted);
+}
+
+.dark .bg-verdant {
+  background:
+    radial-gradient(70% 80% at 85% 0%, color-mix(in oklab, var(--ui-primary) 14%, transparent), transparent 65%),
+    radial-gradient(55% 70% at 0% 100%, color-mix(in oklab, var(--ui-primary) 8%, transparent), transparent 60%),
+    var(--ui-bg);
+}
+
+/* Section divider: a tilted slice that lets a hero band bleed into the next
+   section. Matches the brand's "growing into" motif. */
+.divider-tilt {
+  position: relative;
+  overflow-x: clip;
+}
+
+.divider-tilt::after {
+  content: "";
+  position: absolute;
+  inset: auto -10px -70px -10px;
+  height: 140px;
+  background-color: var(--ui-bg);
+  transform: rotate(-2deg);
+  z-index: 5;
+}
+
+/* Below lg the slope spans fewer pixels, so the slice needs less depth. At the
+   full 70px it covered the bottom of the hero call to action on a phone. */
+@media (width < 64rem) {
+  .divider-tilt::after {
+    height: 110px;
+  }
+}
+
+/* Marketing eyebrow: display family, uppercase, tracked. */
+@layer components {
+  .eyebrow {
+    font-family: var(--font-display);
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: var(--wght-heading);
+    color: var(--ui-text-muted);
+  }
+}
+
+/* Staggered fade-in for list rows. The index arrives through --stagger-index
+   so markup avoids a per-item :style binding. */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+  animation-delay: calc(var(--stagger-index, 0) * 100ms);
+}
+
+/* reka-ui NavigationMenu viewport and content motion (Header.vue). */
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes scale-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes enter-from-left {
+  from { opacity: 0; transform: translateX(-20%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes enter-from-right {
+  from { opacity: 0; transform: translateX(20%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes exit-to-left {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-20%); }
+}
+
+@keyframes exit-to-right {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(20%); }
+}

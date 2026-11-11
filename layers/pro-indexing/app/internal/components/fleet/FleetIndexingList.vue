@@ -9,15 +9,15 @@
 // - "Copy indexing data" for an agent: agents read gscdump directly (VISION).
 // - Drag reordering and drag-to-zoom: no Site order column, and no zoomable
 //   chart in this app's design system.
-import type { MetricPanelRow } from '#layers/design-system/app/components/data/UiMetricBarPopover.vue'
+import type { MetricPanelRow } from '@nuxtseo/design-system/app/components/data/UiMetricBarPopover.vue'
 import type { FleetIndexingSite } from '#layers/pro-indexing/app/composables/useFleetIndexing'
 import type { SiteIndexingRead } from '#layers/pro-indexing/app/utils/fleet-indexing'
 import type { FleetSiteListRow } from '#layers/pro-saas/app/components/pro/ProFleetSiteList.vue'
+import { indexingVizColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
+import { formatNumber } from '@nuxtseo/design-system/app/composables/formatting'
+import { useGridCols } from '@nuxtseo/design-system/app/composables/useGridCols'
 import { computed } from 'vue'
 import { NuxtLink, ProFleetSiteList, UiAlert, UiButton, UiEmptyState, UiIcon, UiMetricBarPopover, UiMetricsRow, UiMetricStat, UiSkeleton, UiSparkline, UiSyncDot, UiTableShell, UiTableTd, UiTableTh, UiTooltip, UiTrend } from '#components'
-import { indexingVizColors } from '#layers/design-system/app/composables/dataVizColors'
-import { formatNumber } from '#layers/design-system/app/composables/formatting'
-import { useGridCols } from '#layers/design-system/app/composables/useGridCols'
 import FleetIndexingChart from '#layers/pro-indexing/app/internal/components/fleet/FleetIndexingChart.vue'
 import {
   aggregateIndexed as buildAggregateIndexed,

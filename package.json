@@ -55,6 +55,7 @@
     "@nuxt/scripts": "catalog:",
     "@nuxt/ui": "catalog:",
     "@nuxtjs/seo": "catalog:",
+    "@nuxtseo/design-system": "catalog:",
     "@takumi-rs/core": "catalog:",
     "@tanstack/table-core": "catalog:",
     "@tanstack/vue-table": "catalog:",

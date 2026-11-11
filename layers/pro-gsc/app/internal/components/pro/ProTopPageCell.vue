@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { getPath } from '@nuxtseo/design-system/app/composables/formatting'
 import { useRoute } from 'nuxt/app'
 import { computed } from 'vue'
-import { getPath } from '~~/layers/design-system/app/composables/formatting'
 import { NuxtLink } from '#components'
 
 // Presentational cell for the keyword table's "Top Page" column. The value is

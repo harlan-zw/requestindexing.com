@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { OverviewSnapshotCard, OverviewSnapshotKey } from './overview-snapshot'
+import { formatNumber } from '@nuxtseo/design-system/app/composables/formatting'
 import { computed } from 'vue'
-import { formatNumber } from '~~/layers/design-system/app/composables/formatting'
 import { NuxtLink, UiButton, UiIcon, UiSkeleton, UiSparkline, UiTooltip } from '#components'
 import { OVERVIEW_SNAPSHOT_META } from './overview-snapshot'
 
