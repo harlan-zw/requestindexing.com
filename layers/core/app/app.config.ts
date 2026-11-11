@@ -1,7 +1,8 @@
 // Request Indexing's brand over `@nuxtseo/design-system` (DESIGN.md: Verdant
 // Console). Nuxt merges every app.config with `defuFn`, so this file merges
 // over the layer's `app/app.config.ts`. Arrays concatenate. A function receives
-// the layer's value and returns the merged one.
+// the layer's value and returns the merged one. It is a plain object, as the
+// layer's README asks, so it needs no auto-import.
 
 interface ButtonCompoundVariant {
   color?: string
@@ -9,7 +10,7 @@ interface ButtonCompoundVariant {
   class?: string
 }
 
-export default defineAppConfig({
+export default {
   ui: {
     colors: {
       primary: 'emerald',
@@ -35,14 +36,13 @@ export default defineAppConfig({
     },
   },
 
-  // The layer's favicon plugin reads these. The layer ships Nuxt SEO's mark at
-  // the same paths in its public/, and `apps/marketing/public` shadows every
-  // one with Request Indexing's mark. `layers/core/app/app.vue` then replaces
-  // the PNG icon link with the theme-aware SVG mark.
+  // The layer's favicon plugin reads these and swaps the icon with the colour
+  // mode. Each link's MIME type follows the file extension. The files live in
+  // `apps/marketing/public`.
   favicon: {
-    light: '/favicon-light.png',
-    dark: '/favicon-dark.png',
+    light: '/icons/icon-light.svg',
+    dark: '/icons/icon-dark.svg',
     appleTouchLight: '/touch-icon.png',
     appleTouchDark: '/touch-icon-dark.png',
   },
-})
+}

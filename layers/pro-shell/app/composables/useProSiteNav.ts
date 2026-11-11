@@ -11,7 +11,7 @@
 // manifest facts, so the sidebar cannot disagree with what a server handler or
 // a deep link resolves for the same row.
 
-import type { UiIcon } from '@nuxtseo/design-system/shared/icons/index'
+import type { UiIcon } from '@nuxtseo/design-system/shared/icons'
 import type { ComputedRef, MaybeRefOrGetter } from 'vue'
 import type { IntegrationReadiness } from '#layers/pro-saas/shared/policies/integration-readiness'
 import type { ProFeatureFlags, ProSiteFeatureId } from '../../shared/manifest'

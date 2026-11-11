@@ -1,9 +1,6 @@
 import { join, resolve } from 'node:path'
-import { useNuxt } from 'nuxt/kit'
 
 const currentDir = import.meta.dirname
-
-const LAYER_ONLY_FONTS = new Set(['Hubot Sans', 'Fira Code'])
 
 export default defineNuxtConfig({
   // Request Indexing's brand over `@nuxtseo/design-system`. The layer's
@@ -18,7 +15,8 @@ export default defineNuxtConfig({
 
   // DM Sans carries body copy, Poppins the display scale (DESIGN.md). Both
   // come from the provider: this repository ships no self-hosted faces for
-  // either family. The layer's Hubot Sans and Fira Code stay declared.
+  // either family. The layer registers its Hubot Sans and Fira Code only with
+  // `designSystem.fonts`, which stays off.
   fonts: {
     families: [
       { name: 'DM Sans', weights: [400, 500, 600, 700], global: true },
@@ -26,15 +24,12 @@ export default defineNuxtConfig({
     ],
   },
 
+  designSystem: {
+    // A prose link to Request Indexing itself gets no external-link arrow.
+    internalLinkHosts: ['requestindexing.com', 'www.requestindexing.com'],
+  },
+
   hooks: {
-    // The layer declares Hubot Sans and Fira Code as global families, so
-    // @nuxt/fonts preloads both on every page. No token here points at either
-    // family, so drop them before @nuxt/fonts reads its options.
-    'modules:before': function () {
-      const fonts = useNuxt().options.fonts
-      if (fonts && fonts.families)
-        fonts.families = fonts.families.filter(family => !LAYER_ONLY_FONTS.has(family.name))
-    },
     'nitro:config': function (config) {
       config.typescript = config.typescript || {}
       config.typescript.tsConfig = config.typescript.tsConfig || {}

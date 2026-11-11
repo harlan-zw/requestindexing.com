@@ -82,11 +82,12 @@ The primitives, tokens, fonts, motion and chart helpers come from the published 
 | Seam | File |
 |------|------|
 | Nuxt UI colours, the emerald primary button, icon colour roles, favicon paths | `layers/core/app/app.config.ts` |
-| Fonts, the olive ramp, text tokens, greydients, chart colours (`--ui-viz-*`), Verdant utilities | `layers/core/app/assets/css/brand.css` |
+| Font families, own-site link hosts (`designSystem.internalLinkHosts`) | `layers/core/nuxt.config.ts` |
+| Font tokens, the olive ramp, the light text and dashboard tokens (`--ui-light-text*`, `--ui-dashboard-*`), greydients, chart colours (`--ui-viz-*` and `--ui-viz-<slot>-text`), Verdant utilities | `layers/core/app/assets/css/brand.css` |
 | The theme OG images compile against | `layers/core/app/assets/css/og-theme.css` |
-| Brand images at the layer's `public/` paths | `apps/marketing/public` |
+| The SVG favicons and touch icons that `app.config` names | `apps/marketing/public` |
 
-A site component or composable with a layer name loses: the layer registers at priority 10. A change that props, slots, tokens or `app.config` cannot express is a change to the layer in nuxtseo.com.
+Set a token through the layer's custom properties, never by overriding its selectors. A site component or composable with a layer name loses: the layer registers at priority 10. A change that props, slots, tokens or `app.config` cannot express is a change to the layer in nuxtseo.com.
 
 ## Aesthetic Direction
 
@@ -196,7 +197,7 @@ writing a label, heading, empty state or error.
 | Class / Token | What it does | When to use |
 |---------------|--------------|-------------|
 | `--ui-radius` (10px) | Tighter than Nuxt UI's default 8px to give buttons and badges slightly more presence | Auto-applied via Nuxt UI |
-| `font-title` | Poppins display family, a class in the utilities layer | Hero text, section titles, marketing headings — never body copy |
+| `font-title` | Poppins display family. The layer's utility, read from `--font-title` | Hero text, section titles, marketing headings — never body copy |
 | `.bg-verdant` | Two emerald radial blooms over `bg-muted` (light) / `bg-default` (dark). Signature hero/banner wash | Any large branded background — replaces multi-hue gradients |
 | `.divider-tilt` | `::after` pseudo-element with a -2deg tilted bar, 70px below the parent. Keeps the existing "growing into next section" motif | Bottom of hero or any band that should bleed into the following section |
 | `.pro-container` | Centres dashboard content at 1280px with responsive inline padding. Shared with nuxtseo.com | Dashboard page headers and bodies |
@@ -216,3 +217,4 @@ writing a label, heading, empty state or error.
 - **Pricing content is product, not design.** `pricing.vue` currently renders privacy-policy copy under a "Pricing" heading. Out of scope for the design refresh; flag separately for a content/product fix.
 - **`.divider-tilt` is the canonical hero-to-next-section transition.** Defined once in `brand.css`, applied via class — never re-hand-coded inline.
 - **The design system is the published `@nuxtseo/design-system` layer** (2026-11-11). The local `layers/design-system` copy is deleted. Request Indexing keeps only its brand overrides, through the seams in Design System Source. The layer's shared fixes, such as solid focus rings and the darker dimmed and error text, apply here too.
+- **The comparison mark and its text take two colours** (2026-11-12). The mark keeps `#898a54` in both modes. The "vs prev" pill text reads `--ui-viz-comparison-text`: olive 600 in light mode, olive 400 in dark mode. Both pass AA on the mark's 15% tint.

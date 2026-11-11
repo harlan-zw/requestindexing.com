@@ -5,9 +5,10 @@
    is unlayered, so it wins over the layer's Tailwind theme layer as well. */
 
 /* ═══ Type ═══════════════════════════════════════════════════════════════
-   DM Sans carries body copy, Poppins the display scale. `font-title` is the
-   utility DESIGN.md names for the display family. Both families load from
-   the `fonts` config in layers/core/nuxt.config.ts. */
+   DM Sans carries body copy, Poppins the display scale. `--font-title` feeds
+   the layer's `font-title` utility, which DESIGN.md names for the display
+   family. Both families load from the `fonts` config in
+   layers/core/nuxt.config.ts. */
 :root {
   --font-sans: 'DM Sans', system-ui, sans-serif;
   --font-display: 'Poppins', system-ui, sans-serif;
@@ -30,15 +31,6 @@
   --ui-radius: 0.625rem;
 }
 
-/* The layer's Tailwind theme has no `--font-title`, so no `font-title` utility
-   is generated. This class joins Tailwind's utilities layer, so it orders like
-   the utility it replaces. */
-@layer utilities {
-  .font-title {
-    font-family: var(--font-title);
-  }
-}
-
 /* ═══ Olive neutral ══════════════════════════════════════════════════════
    Nuxt UI resolves `neutral: 'olive'` (app.config) to `--color-olive-*`.
    Tailwind ships an olive scale at chroma ~0.003, which reads as near-grey.
@@ -59,43 +51,37 @@
   --color-olive-950: oklch(14% 0.028 105);
 }
 
-/* The layer pins three light text tokens to Nuxt SEO's violet hue. Request
-   Indexing binds them to the olive ramp. Dimmed keeps the layer's darker
-   47.5% lightness, which clears AA on white, at the olive hue. */
-.light {
-  --ui-text-dimmed: oklch(47.5% 0.078 110);
-  --ui-text: var(--ui-color-neutral-800);
-  --ui-text-highlighted: var(--ui-color-neutral-900);
+/* The layer's light text tokens sit on Nuxt SEO's violet hue. Request Indexing
+   binds them to the olive ramp. Dimmed keeps the layer's darker 47.5%
+   lightness, which clears AA on white, at the olive hue. */
+:root {
+  --ui-light-text-dimmed: oklch(47.5% 0.078 110);
+  --ui-light-text: var(--color-olive-800);
+  --ui-light-text-highlighted: var(--color-olive-900);
 }
 
 /* One neutral ramp. Nuxt SEO runs a second (mauve) palette inside its
    dashboard, because its marketing neutral is a different hue. Request
-   Indexing is olive everywhere, so `.dashboard-theme` keeps the olive ramp. */
-.dashboard-theme,
-.light.dashboard-theme,
-.dark.dashboard-theme {
-  --ui-color-neutral-50: var(--color-olive-50);
-  --ui-color-neutral-100: var(--color-olive-100);
-  --ui-color-neutral-200: var(--color-olive-200);
-  --ui-color-neutral-300: var(--color-olive-300);
-  --ui-color-neutral-400: var(--color-olive-400);
-  --ui-color-neutral-500: var(--color-olive-500);
-  --ui-color-neutral-600: var(--color-olive-600);
-  --ui-color-neutral-700: var(--color-olive-700);
-  --ui-color-neutral-800: var(--color-olive-800);
-  --ui-color-neutral-900: var(--color-olive-900);
-  --ui-color-neutral-950: var(--color-olive-950);
-}
-
-.light.dashboard-theme {
-  --ui-text-dimmed: oklch(47.5% 0.078 110);
-}
-
-/* Dark dimmed and muted share the 400 step, as the layer's `.dark` does: the
-   500 step falls under 4.5:1 on the raised surfaces. */
-.dark.dashboard-theme {
-  --ui-text-dimmed: var(--ui-color-neutral-400);
-  --ui-text-muted: var(--ui-color-neutral-400);
+   Indexing is olive everywhere, so `.dashboard-theme` keeps the olive ramp.
+   Each value names a `--color-olive-*` step: a `var()` here resolves on
+   `:root`, where `--ui-color-neutral-*` is the marketing ramp. */
+:root {
+  --ui-dashboard-neutral-50: var(--color-olive-50);
+  --ui-dashboard-neutral-100: var(--color-olive-100);
+  --ui-dashboard-neutral-200: var(--color-olive-200);
+  --ui-dashboard-neutral-300: var(--color-olive-300);
+  --ui-dashboard-neutral-400: var(--color-olive-400);
+  --ui-dashboard-neutral-500: var(--color-olive-500);
+  --ui-dashboard-neutral-600: var(--color-olive-600);
+  --ui-dashboard-neutral-700: var(--color-olive-700);
+  --ui-dashboard-neutral-800: var(--color-olive-800);
+  --ui-dashboard-neutral-900: var(--color-olive-900);
+  --ui-dashboard-neutral-950: var(--color-olive-950);
+  --ui-dashboard-light-text-dimmed: oklch(47.5% 0.078 110);
+  /* Dark dimmed and muted share the 400 step, as the layer's `.dark` does:
+     the 500 step falls under 4.5:1 on the raised surfaces. */
+  --ui-dashboard-dark-text-dimmed: var(--color-olive-400);
+  --ui-dashboard-dark-text-muted: var(--color-olive-400);
 }
 
 /* ═══ Primary text ═══════════════════════════════════════════════════════
@@ -162,9 +148,11 @@
   --ui-viz-pageviews: #f59e0b;
   --ui-viz-cls: #10b981;
   /* The comparison trail is context behind the current series, so it reads
-     as the olive earth of the palette. The layer uses one colour for the mark
-     and its text, so light mode takes a deeper olive that passes AA as text. */
-  --ui-viz-comparison: var(--color-olive-600);
+     as the olive earth of the palette. #898a54 sits between olive 400 and 500
+     and clears 3:1 as a mark in both modes. Its text takes a deeper olive,
+     which passes AA. */
+  --ui-viz-comparison: #898a54;
+  --ui-viz-comparison-text: var(--color-olive-600);
   --ui-viz-brand: #f59e0b;
   --ui-viz-rank-2: #84cc16;
   --ui-viz-rank-8: #38bdf8;
@@ -173,10 +161,10 @@
   --ui-viz-neutral: #a3a292;
 }
 
-/* Dark mode takes the 400 step for the same reason. The "vs prev" pill sets
-   this colour as text on its own 15% tint, where #898a54 measured 4.1:1. */
+/* Dark mode text takes the 400 step. The "vs prev" pill sets this colour as
+   text on the mark's 15% tint, where the #898a54 mark itself measured 4.1:1. */
 .dark {
-  --ui-viz-comparison: var(--color-olive-400);
+  --ui-viz-comparison-text: var(--color-olive-400);
 }
 
 /* ═══ Verdant utilities ══════════════════════════════════════════════════ */
