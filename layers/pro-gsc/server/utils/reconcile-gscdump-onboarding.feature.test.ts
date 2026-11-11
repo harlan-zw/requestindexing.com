@@ -9,18 +9,27 @@ import { releaseRefusedSites } from './site-registration-refusal'
 // property is verified, `registerSite` answers from `registrations`, and this
 // partner can read every Site it registered.
 const gscdump = vi.hoisted(() => ({
+  lifecycleReads: 0,
+  accountStatus: 'ready',
   registerSite: vi.fn(),
   readSiteAccess: vi.fn(),
 }))
 
 vi.mock('./gscdump-client', () => ({
   useGscdumpClient: () => ({
-    getUserLifecycle: async () => ({ account: { status: 'ready' }, sites: [] }),
-    waitForUserReady: async () => ({ account: { status: 'ready' }, sites: [] }),
+    getUserLifecycle: async () => {
+      gscdump.lifecycleReads++
+      return { account: { status: gscdump.accountStatus }, sites: [] }
+    },
+    waitForUserReady: async () => {
+      gscdump.lifecycleReads++
+      return { account: { status: 'ready' }, sites: [] }
+    },
     getAvailableSites: async () => ({
       sites: [
         { siteUrl: 'https://full.example/', permissionLevel: 'siteOwner', registered: false },
         { siteUrl: 'https://fits.example/', permissionLevel: 'siteOwner', registered: false },
+        { siteUrl: 'sc-domain:many.example', permissionLevel: 'siteOwner', registered: false },
       ],
     }),
     registerSite: gscdump.registerSite,
@@ -53,6 +62,8 @@ describe('reconcileGscdumpOnboardingForUser and refused Sites', () => {
     sqlite = migratedDatabase()
     db = proDatabase(sqlite) as unknown as ProDatabase
     vi.stubGlobal('useDrizzle', () => db)
+    gscdump.lifecycleReads = 0
+    gscdump.accountStatus = 'ready'
     gscdump.registerSite.mockReset()
     gscdump.readSiteAccess.mockReset().mockResolvedValue({ _tag: 'Readable' })
     gscdump.registerSite.mockImplementation(async ({ requestedUrl }: { requestedUrl: string }) =>
@@ -73,7 +84,7 @@ describe('reconcileGscdumpOnboardingForUser and refused Sites', () => {
   })
 
   function reconcile() {
-    return reconcileGscdumpOnboardingForUser({ userId, gscdumpUserId: 'u_ada', waitForReady: false })
+    return reconcileGscdumpOnboardingForUser({ userId, gscdumpUserId: 'u_ada' })
   }
 
   it('records a refused registration on the Site and links the rest', async () => {
@@ -137,6 +148,41 @@ describe('reconcileGscdumpOnboardingForUser and refused Sites', () => {
       expect(registeredUrls()).toEqual(['fits.example'])
       expect(sqlite.prepare('SELECT gscdump_site_id FROM sites WHERE id = ?').get('site-bob')).toEqual({ gscdump_site_id: 's_fits' })
     }
+  })
+
+  function addSites(count: number) {
+    const insert = sqlite.prepare('INSERT INTO sites (id, public_id, team_id, owner_id, property, domain, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, 0, 0)')
+    for (let i = 0; i < count; i++)
+      insert.run(`site-${i}`, `s_${i}`, teamId, userId, `https://s${i}.many.example/`, `s${i}.many.example`)
+  }
+
+  // A webhook for one gscdump user once fanned out one lifecycle read per
+  // Site, and gscdump answered 500 to part of the burst.
+  it.each(['ready', 'syncing'])('reads the %s lifecycle once however many Sites it links', async (status) => {
+    gscdump.accountStatus = status
+    addSites(12)
+
+    const result = await reconcile()
+
+    expect(result).toMatchObject({ attemptedSites: 14, linkedSites: 13 })
+    expect(gscdump.lifecycleReads).toBe(status === 'ready' ? 1 : 2)
+  })
+
+  it('keeps at most a few Site registrations in flight at once', async () => {
+    addSites(12)
+    let inFlight = 0
+    let peak = 0
+    gscdump.registerSite.mockImplementation(async () => {
+      peak = Math.max(peak, ++inFlight)
+      await new Promise(resolve => setTimeout(resolve, 1))
+      inFlight--
+      return { _tag: 'Registered', registration: { siteId: 's_fits', status: 'pending' } }
+    })
+
+    const result = await reconcile()
+
+    expect(result).toMatchObject({ attemptedSites: 14, linkedSites: 14 })
+    expect(peak).toBeLessThanOrEqual(4)
   })
 
   it('tries a refused Site again once the user acts', async () => {

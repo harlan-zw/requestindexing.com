@@ -3,7 +3,7 @@ import { defineListener } from '@harlan-zw/nuxt-domain-events/server'
 import { eq } from 'drizzle-orm'
 import { logWarn } from '~~/shared/logging'
 import { users } from '#layers/pro-saas/server/database'
-import { autoLinkGsc } from '../utils/auto-link-gsc'
+import { autoLinkGsc, waitForReadyGscdumpUser } from '../utils/auto-link-gsc'
 
 export default defineListener({
   name: 'gsc.site-added-auto-link',
@@ -16,7 +16,7 @@ export default defineListener({
       return
     const link = await autoLinkGsc({
       db,
-      gscdumpUserId: user.gscdumpUserId,
+      user: await waitForReadyGscdumpUser(user.gscdumpUserId),
       siteId,
       origin: url,
       // The connect route already matched a verified property in the caller's

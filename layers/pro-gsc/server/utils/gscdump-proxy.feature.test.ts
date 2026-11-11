@@ -1,5 +1,7 @@
 import type { H3Event } from 'h3'
+import type { LogSinkEntry } from '~~/shared/logging'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { addLogSink, removeLogSink } from '~~/shared/logging'
 import { loadGscdumpSettings, patchGscdumpSettings } from './gscdump-proxy'
 
 vi.mock('./gscdump-origin', () => ({ getGscdumpApiUrl: () => 'https://gscdump.test/api' }))
@@ -10,6 +12,8 @@ let put: ReturnType<typeof vi.fn>
 let remove: ReturnType<typeof vi.fn>
 let upstream: ReturnType<typeof vi.fn>
 let event: H3Event
+let reports: LogSinkEntry[]
+const recordReport = (entry: LogSinkEntry) => reports.push(entry)
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -26,8 +30,11 @@ beforeEach(() => {
   vi.stubGlobal('$fetch', upstream)
   vi.stubGlobal('createError', (error: unknown) => error)
   vi.spyOn(console, 'warn').mockImplementation(() => {})
+  reports = []
+  addLogSink(recordReport)
 })
 afterEach(() => {
+  removeLogSink(recordReport)
   vi.clearAllTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
@@ -67,6 +74,22 @@ it('releases an unanswered settings read at 800 ms and never caches its late res
   release({ browserAnalyzerEnabled: true })
   await vi.advanceTimersByTimeAsync(0)
   expect(put).not.toHaveBeenCalled()
+})
+
+// The fallback is safe and the next read asks again, so one slow read is
+// nothing to act on. It stays in the request log, out of Sentry issues.
+it('does not report a settings read that outlives the budget', async () => {
+  upstream.mockReturnValue(new Promise(() => {}))
+  const read = loadGscdumpSettings(event, 7, 'test-key')
+  await vi.advanceTimersByTimeAsync(800)
+  expect(await read).toEqual({ browserAnalyzerEnabled: false })
+  expect(reports).toEqual([])
+})
+
+it('reports a settings read that gscdump refused', async () => {
+  upstream.mockRejectedValue(new Error('Database not provisioned'))
+  expect(await loadGscdumpSettings(event, 7, 'test-key')).toEqual({ browserAnalyzerEnabled: false })
+  expect(reports).toMatchObject([{ name: 'gscdump.proxy.failed', ctx: { reason: 'read' } }])
 })
 
 it('does not start upstream work when a delayed KV read outlives the budget', async () => {

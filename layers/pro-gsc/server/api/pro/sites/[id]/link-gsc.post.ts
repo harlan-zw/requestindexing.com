@@ -31,7 +31,7 @@ export default defineProApiHandler({ body: bodySchema, site: { ability: 'write-d
   // Delegate to autoLinkGsc which handles: find matching GSC property, register if needed, update site row
   const link = await autoLinkGsc({
     db,
-    gscdumpUserId: user.gscdumpUserId,
+    user: await waitForReadyGscdumpUser(user.gscdumpUserId),
     siteId,
     origin: registrationTarget,
     preferredSiteUrl: gscSiteUrl,

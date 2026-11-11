@@ -28,6 +28,7 @@ vi.stubGlobal('readBody', async (event: { body: unknown }) => event.body)
 vi.stubGlobal('getRouterParam', (event: { params: Record<string, string> }, name: string) => event.params[name])
 vi.stubGlobal('useGscdumpClient', () => ({ deleteSite: h.deleteSite, getRegisteredHostIdentity: async (siteId: string) => ({ identity: { siteId, requestedUrl: 'https://a.example', userId: 'u_owner', teamId: 't_owner' } }) }))
 vi.stubGlobal('autoLinkGsc', h.autoLinkGsc)
+vi.stubGlobal('waitForReadyGscdumpUser', async (gscdumpUserId: string) => ({ _tag: 'ReadyGscdumpUser', gscdumpUserId }))
 
 let sqlite: DatabaseSync
 
