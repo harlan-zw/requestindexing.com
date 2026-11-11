@@ -258,8 +258,8 @@ catalogs:
       specifier: ^6.0.1
       version: 6.0.1
     '@nuxtseo/design-system':
-      specifier: ^0.1.0
-      version: 0.1.0
+      specifier: ^0.1.1
+      version: 0.1.1
     '@sentry/cloudflare':
       specifier: ^11.1.0
       version: 11.1.0
@@ -424,8 +424,6 @@ catalogs:
 overrides:
   '@nuxtseo/design-system>@nuxt/scripts': ^1.3.10
   '@nuxtseo/design-system>@vueuse/core': ^15.0.0
-  '@nuxtseo/design-system>motion-v': 2.5.1
-  '@nuxtseo/design-system>zod': 4.6.6
   oxc-parser: 0.151.0
   rolldown: 1.2.11
   sharp: 0.35.5
@@ -436,7 +434,6 @@ overrides:
 
 patchedDependencies:
   '@nuxt/ui@4.11.2': 5a11ca11a1099df7ea632a9cc9a9b98403b32a0480cdc429df8796f2d6cf6d0b
-  '@nuxtseo/design-system@0.1.0': 0c11fbf3fb717d3f54f525f5675e4673cf71e2d5cfe7d3ac2a651a196961a1e5
   nitropack@2.13.4: df91176649b904c944d2587187f91a3e2eb5bee5a9bb00fe515b2c7585fa959d
   nuxt-auth-utils@0.5.30: 3c0b1ac5c31a06f88c3245c37515fa964d126188bdc2decc4b27ec72477fd82d
   zod@4.6.6: c4ca1e62791f9b6c44833bf2eea69c99e08fd64437cc27226a4aa4ef1840e231
@@ -522,7 +519,7 @@ importers:
         version: 6.0.1(ac683c0f99e6edaf5feeccb47ef75f24)
       '@nuxtseo/design-system':
         specifier: 'catalog:'
-        version: 0.1.0(patch_hash=0c11fbf3fb717d3f54f525f5675e4673cf71e2d5cfe7d3ac2a651a196961a1e5)(3aa2b3847678d94919abcbad9ed990ad)
+        version: 0.1.1(257ff6b39e80049b7f7775b8b22490ca)
       '@takumi-rs/core':
         specifier: 'catalog:'
         version: 2.15.0(csstype@3.2.3)
@@ -2772,12 +2769,16 @@ packages:
       zod:
         optional: true
 
-  '@nuxtseo/design-system@0.1.0':
-    resolution: {integrity: sha512-QZTm1KBSRBQAB8LXEBmaVcHcMS/VC6oRCJV9fgQ42c6DfR/tQoryD/WdDft2oS9w1sb6vioaCHp70pFwZHHFKQ==}
+  '@nuxtseo/design-system@0.1.1':
+    resolution: {integrity: sha512-+obZOtBMJYZW4TbzXiNsfcyXJ5Rk1cIeOtefurVw1yfIrFtQaaKEiIgRKpg6gzrMSnoFEUC36DWEBzT1dvKkHA==}
     peerDependencies:
+      '@nuxt/ui': ^4.11.1
+      motion-v: ^2.4.2
       nuxt: ^4.6.0
+      tailwindcss: ^4.3.0
       typescript: '>=5.8.0 <7'
       vue: 3.5.43
+      zod: ^4.0.0
 
   '@opentelemetry/api@1.9.1':
     resolution: {integrity: sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q==}
@@ -12816,7 +12817,7 @@ snapshots:
       - unplugin
       - vue
 
-  '@nuxtseo/design-system@0.1.0(patch_hash=0c11fbf3fb717d3f54f525f5675e4673cf71e2d5cfe7d3ac2a651a196961a1e5)(3aa2b3847678d94919abcbad9ed990ad)':
+  '@nuxtseo/design-system@0.1.1(257ff6b39e80049b7f7775b8b22490ca)':
     dependencies:
       '@comark/nuxt': 0.7.0(593f98cb6b3e6fc866f976daab251317)
       '@iconify-json/hugeicons': 1.2.35
@@ -12857,10 +12858,7 @@ snapshots:
       - '@devframes/agentic'
       - '@farmfe/core'
       - '@googlemaps/markerclusterer'
-      - '@inertiajs/vue3'
-      - '@internationalized/date'
       - '@netlify/blobs'
-      - '@nuxt/content'
       - '@nuxt/schema'
       - '@oxc-project/types'
       - '@paypal/paypal-js'
@@ -12869,74 +12867,50 @@ snapshots:
       - '@rspack/core'
       - '@speedcurve/lux'
       - '@stripe/stripe-js'
-      - '@tiptap/extensions'
-      - '@tiptap/y-tiptap'
       - '@types/google.maps'
       - '@types/node'
       - '@types/vimeo__player'
       - '@types/youtube'
-      - '@unhead/cli'
       - '@unhead/vue'
       - '@upstash/redis'
       - '@vercel/blob'
       - '@vercel/functions'
       - '@vercel/kv'
-      - '@vitejs/devtools-kit'
       - '@vue/composition-api'
-      - ai
-      - async-validator
       - aws4fetch
-      - axios
       - beautiful-mermaid
       - bun-types-no-globals
       - cac
-      - change-case
       - confbox
       - db0
       - dotenv
-      - drauu
-      - embla-carousel
       - esbuild
-      - focus-trap
       - giget
       - idb-keyval
       - ioredis
       - jiti
-      - joi
-      - jwt-decode
       - katex
       - lightningcss
       - magic-string
       - magicast
       - mlly
-      - nprogress
       - nuxt-site-config
       - ocache
       - oxc-parser
       - postcss
       - posthog-js
-      - qrcode
-      - react
-      - react-dom
       - rolldown
       - rollup
       - shiki
-      - sortablejs
       - srvx
       - subset-font
-      - superstruct
       - supports-color
-      - universal-cookie
       - unloader
       - unplugin
       - unstorage
       - uploadthing
-      - valibot
       - vite
-      - vue-router
       - webpack
-      - yjs
-      - yup
 
   '@opentelemetry/api@1.9.1': {}
 

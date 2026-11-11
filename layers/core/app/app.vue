@@ -15,32 +15,6 @@ useHead({
   ],
 })
 
-// `id: 'favicon'` replaces the PNG icon link that `@nuxtseo/design-system`'s
-// favicon plugin emits, so the theme-aware SVG mark stays the only icon.
-const entry = useHead({
-  link: [
-    {
-      id: 'favicon',
-      rel: 'icon',
-      type: 'image/svg+xml',
-      href: `/icons/icon-${colorMode.value === 'system' ? 'dark' : colorMode.value}.svg`,
-    },
-  ],
-})
-// switch logos on colorMode
-watch(colorMode, () => {
-  entry.patch({
-    link: [
-      {
-        id: 'favicon',
-        rel: 'icon',
-        type: 'image/svg+xml',
-        href: `/icons/icon-${colorMode.value}.svg`,
-      },
-    ],
-  })
-})
-
 useSeoMeta({
   titleTemplate: '%s %separator Request Indexing',
   ogSiteName: 'Request Indexing',
