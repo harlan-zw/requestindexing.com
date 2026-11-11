@@ -31,10 +31,9 @@ export default defineNuxtConfig({
     // @nuxt/fonts preloads both on every page. No token here points at either
     // family, so drop them before @nuxt/fonts reads its options.
     'modules:before': function () {
-      const nuxt = useNuxt()
-      const families = nuxt.options.fonts?.families
-      if (families)
-        nuxt.options.fonts.families = families.filter(family => !LAYER_ONLY_FONTS.has(family.name))
+      const fonts = useNuxt().options.fonts
+      if (fonts && fonts.families)
+        fonts.families = fonts.families.filter(family => !LAYER_ONLY_FONTS.has(family.name))
     },
     'nitro:config': function (config) {
       config.typescript = config.typescript || {}
