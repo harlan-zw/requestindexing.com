@@ -173,8 +173,10 @@
   --ui-viz-neutral: #a3a292;
 }
 
+/* Dark mode takes the 400 step for the same reason. The "vs prev" pill sets
+   this colour as text on its own 15% tint, where #898a54 measured 4.1:1. */
 .dark {
-  --ui-viz-comparison: #898a54;
+  --ui-viz-comparison: var(--color-olive-400);
 }
 
 /* ═══ Verdant utilities ══════════════════════════════════════════════════ */
