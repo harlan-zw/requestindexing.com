@@ -3,9 +3,9 @@ definePageMeta({ layout: 'kit' })
 useHead({ title: 'Brand Kit · Verdant Console' })
 
 const stats = [
-  { label: 'Components', value: '122', hint: 'layers/design-system/app/components' },
-  { label: 'Composables', value: '15', hint: 'layers/design-system/app/composables' },
-  { label: 'Utils', value: '12', hint: 'layers/design-system/app/utils' },
+  { label: 'Components', value: '132', hint: '@nuxtseo/design-system/app/components' },
+  { label: 'Composables', value: '21', hint: '@nuxtseo/design-system/app/composables' },
+  { label: 'Utils', value: '11', hint: '@nuxtseo/design-system/app/utils' },
   { label: 'Brand colors', value: '2', hint: 'emerald + olive' },
 ]
 
@@ -13,14 +13,13 @@ const links = [
   { to: '/kit/colors', label: 'Colors', icon: 'i-lucide-palette', blurb: 'Emerald + olive scales, semantic roles, surfaces & text.' },
   { to: '/kit/typography', label: 'Typography', icon: 'i-lucide-type', blurb: 'Poppins display + DM Sans body, full type scale.' },
   { to: '/kit/buttons', label: 'Buttons & motion', icon: 'i-lucide-mouse-pointer-click', blurb: 'UButton variants + UiMotionButton spotlight FX.' },
-  { to: '/kit/forms', label: 'Forms', icon: 'i-lucide-edit-3', blurb: 'Inputs, selects, switches, UiPillSelect.' },
+  { to: '/kit/forms', label: 'Forms', icon: 'i-lucide-edit-3', blurb: 'Inputs, selects, switches.' },
   { to: '/kit/feedback', label: 'Feedback', icon: 'i-lucide-message-square', blurb: 'Badges, alerts, progress, tooltips.' },
-  { to: '/kit/elements', label: 'Elements', icon: 'i-lucide-shapes', blurb: 'UiIconBox, UiHelpLabel, UiProgressCircle, TrendPercentage, MetricGuage…' },
-  { to: '/kit/charts', label: 'Charts', icon: 'i-lucide-line-chart', blurb: 'GraphData, GraphPercent, GraphButtonGroup chart primitives.' },
+  { to: '/kit/elements', label: 'Elements', icon: 'i-lucide-shapes', blurb: 'UiIconBox, UiHelpLabel, UiProgressCircle, CardTitle…' },
   { to: '/kit/popovers', label: 'Popovers', icon: 'i-lucide-message-circle', blurb: 'UiPopover, UiTooltip, UiTooltipGrid.' },
   { to: '/kit/data-cells', label: 'Table cells', icon: 'i-lucide-grid-3x3', blurb: 'UiTableScoreTile, UiTableMetricCell, UiTableTrendCell, UiTablePathCell.' },
   { to: '/kit/tables', label: 'Data tables', icon: 'i-lucide-table', blurb: 'UiTable, UiTableShell, UiDataTableSection.' },
-  { to: '/kit/format', label: 'Formatters', icon: 'i-lucide-hash', blurb: 'formatValue, percent, number, date, currency…' },
+  { to: '/kit/format', label: 'Formatters', icon: 'i-lucide-hash', blurb: 'percentChange, calcTrendPercent, clamp.' },
   { to: '/kit/composables', label: 'Composables', icon: 'i-lucide-function-square', blurb: 'useScrollSpy, useGridCols, semantic + viz colors.' },
   { to: '/kit/utilities', label: 'Utilities', icon: 'i-lucide-sparkle', blurb: '.bg-verdant, .animate-fade-in, mega-menu motion.' },
 ]

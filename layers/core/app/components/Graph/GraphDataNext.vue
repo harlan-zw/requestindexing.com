@@ -1,10 +1,10 @@
 <script lang="ts" setup generic="I extends { date: string | number | Date, clicks?: number | null, impressions?: number | null, position?: number | null, ctr?: number | null }">
+import { gscMetricColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
 import { Scale } from '@unovis/ts'
 import { VisArea, VisAxis, VisCrosshair, VisLine, VisTooltip, VisXYContainer } from '@unovis/vue'
 import { format } from 'date-fns'
 import { graphLineMode } from '~~/layers/core/app/composables/state'
 import { resolveMetricDomain, resolvePlotRange } from '~~/layers/core/app/utils/dashboard-site-card'
-import { gscMetricColors } from '~~/layers/design-system/app/composables/dataVizColors'
 
 type MetricKey = 'clicks' | 'impressions' | 'position' | 'ctr'
 

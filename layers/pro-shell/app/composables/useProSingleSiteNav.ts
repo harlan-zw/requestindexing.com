@@ -6,8 +6,8 @@
 // from the route, so the fleet shell and the per-site shell render the SAME
 // sidebar and it never flips when the reader crosses between them.
 
+import type { UiNavLink } from '@nuxtseo/design-system/app/shared/nav'
 import type { MaybeRefOrGetter } from 'vue'
-import type { UiNavLink } from '#layers/design-system/app/shared/nav'
 import type { ProNavSection, ProSiteNavFlags, ProSiteNavLink } from './useProSiteNav'
 import { computed, toValue } from 'vue'
 import { readProFeatureFlags } from '../../shared/manifest'

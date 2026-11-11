@@ -7,8 +7,8 @@
 // named below. This app has two setup signals: whether the account has
 // connected Google Search Console, and whether any Integration is pending.
 
+import type { UiNavSetup } from '@nuxtseo/design-system/app/shared/nav'
 import type { SiteFleetRow } from '~~/layers/core/app/types/data'
-import type { UiNavSetup } from '#layers/design-system/app/shared/nav'
 import type { ProSiteNavLink } from './useProSiteNav'
 import { computed } from 'vue'
 import { useProBingIntegration } from '#layers/pro-gsc/app/composables/useProGscdump'

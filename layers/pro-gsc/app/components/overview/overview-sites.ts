@@ -1,5 +1,5 @@
 import type { SiteFleetRow } from '~~/layers/core/app/types'
-import { siteLabel } from '~~/layers/design-system/app/composables/formatting'
+import { siteLabel } from '~~/layers/core/app/utils/site-format'
 import { HELD_LABEL, holdMessage, SITE_LINK_REFUSED, SITE_NOT_LINKED_LABEL } from '../../../shared/entitlement-copy'
 import { inactiveSiteStatus } from '../../../shared/site-status'
 

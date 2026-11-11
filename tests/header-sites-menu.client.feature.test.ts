@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { createApp, defineComponent, h } from 'vue'
+import { siteLabel } from '~~/layers/core/app/utils/site-format'
 import { dashboardSiteHref } from '../layers/core/app/utils/dashboard-site-link'
-import { siteLabel } from '../layers/design-system/app/composables/formatting'
 
 // The component reaches `siteLabel` and `dashboardSiteHref` as Nuxt
 // auto-imports, so install them before the SFC module is evaluated.

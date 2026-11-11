@@ -11,7 +11,7 @@
 // same declaration. Presentation concerns (state resolvers, chrome components)
 // stay in each layer's `app/plugins/pro-feature.ts`.
 
-import type { UiIcon } from '#layers/design-system/shared/icons'
+import type { UiIcon } from '@nuxtseo/design-system/shared/icons/index'
 import type { IntegrationReadiness } from '#layers/pro-saas/shared/policies/integration-readiness'
 import type { ProNavGroupId } from './nav-groups'
 

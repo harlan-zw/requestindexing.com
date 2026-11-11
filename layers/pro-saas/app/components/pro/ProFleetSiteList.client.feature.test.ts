@@ -10,7 +10,7 @@ vi.mock('@vueuse/core', async (importOriginal) => {
 
 vi.mock('#components', async () => {
   const { defineComponent, h } = await import('vue')
-  const { default: UiSyncDot } = await import('../../../../design-system/app/components/element/UiSyncDot.vue')
+  const { default: UiSyncDot } = await import('@nuxtseo/design-system/app/components/element/UiSyncDot.vue')
   return {
     UiSyncDot,
     UiIcon: defineComponent({ setup: () => () => h('span') }),

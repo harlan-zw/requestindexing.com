@@ -1,11 +1,28 @@
-import { z } from 'zod'
 import {
-  ONBOARDING_INTENT_IDS,
-  ONBOARDING_OTHER_MAX,
+  ONBOARDING_OTHER_MAX_LENGTH,
   ONBOARDING_ROLE_IDS,
   ONBOARDING_SEO_EXPERIENCE_IDS,
   ONBOARDING_SITE_COUNT_IDS,
-} from '#layers/design-system/app/components/element/onboarding-answers'
+} from '@nuxtseo/design-system/app/components/element/onboarding-answers'
+import { z } from 'zod'
+
+/**
+ * The goals question and its options. `@nuxtseo/design-system` shares the
+ * other "About you" questions and their ids, and leaves the goals to each
+ * product. The ids are stored, so an id never changes.
+ */
+export const ONBOARDING_INTENTS_QUESTION = 'What do you want to do with Request Indexing?'
+
+export const ONBOARDING_INTENTS = [
+  { id: 'new-pages', label: 'Get new pages indexed', icon: 'i-lucide-file-plus' },
+  { id: 'why-not', label: 'Find why pages are not indexed', icon: 'search' },
+  { id: 'many-sites', label: 'Watch indexing across many sites', icon: 'i-lucide-layout-grid' },
+  { id: 'launch', label: 'Recover after a launch or migration', icon: 'i-lucide-rocket' },
+] as const satisfies readonly { id: string, label: string, icon: string }[]
+
+export type OnboardingIntentId = typeof ONBOARDING_INTENTS[number]['id']
+
+export const ONBOARDING_INTENT_IDS = ONBOARDING_INTENTS.map(intent => intent.id) as [OnboardingIntentId, ...OnboardingIntentId[]]
 
 /**
  * Onboarding Answers: what a user told the "About you" card on the sync step.
@@ -16,7 +33,7 @@ export const OnboardingAnswersSchema = z.object({
   siteCount: z.enum(ONBOARDING_SITE_COUNT_IDS).optional(),
   seoExperience: z.enum(ONBOARDING_SEO_EXPERIENCE_IDS).optional(),
   intents: z.array(z.enum(ONBOARDING_INTENT_IDS)).max(ONBOARDING_INTENT_IDS.length).refine(ids => new Set(ids).size === ids.length, 'Choose each goal once.').default([]),
-  other: z.string().trim().max(ONBOARDING_OTHER_MAX).transform(text => text || undefined).optional(),
+  other: z.string().trim().max(ONBOARDING_OTHER_MAX_LENGTH).transform(text => text || undefined).optional(),
 }).strict()
 
 export type OnboardingAnswers = z.output<typeof OnboardingAnswersSchema>

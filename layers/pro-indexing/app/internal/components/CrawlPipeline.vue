@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { InspectionSeverity } from '#layers/pro-indexing/app/utils/indexing-urls-table'
-import UiIcon from '#layers/design-system/app/components/element/UiIcon.vue'
-import UiSeverityDot from '#layers/design-system/app/components/element/UiSeverityDot.vue'
+import UiIcon from '@nuxtseo/design-system/app/components/element/UiIcon.vue'
+import UiSeverityDot from '@nuxtseo/design-system/app/components/element/UiSeverityDot.vue'
 
 /**
  * One URL's path through Google, from URL Inspection fields only: robots.txt,

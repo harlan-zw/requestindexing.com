@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SitePage } from '~~/layers/core/app/types'
-import { formatIndexingTimeAgo } from '~~/layers/design-system/app/composables/formatting'
+import { formatIndexingTimeAgo } from '~~/layers/core/app/utils/site-format'
 
 const props = defineProps<{
   value: SitePage

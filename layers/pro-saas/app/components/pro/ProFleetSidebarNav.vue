@@ -7,7 +7,7 @@
 // Rendered only when the resolved scope is more than one Site. At n=1 the
 // layout mounts `ProSingleSiteSidebarNav` instead, so a one-Site account never
 // sees a list of one and the sidebar never flips when crossing shells.
-import type { UiNavLink } from '#layers/design-system/app/shared/nav'
+import type { UiNavLink } from '@nuxtseo/design-system/app/shared/nav'
 import type { ProNavSite } from '#layers/pro-shell/app/composables/useProSingleSiteNav'
 import { computed } from 'vue'
 import { NuxtLink, UiFavicon, UiIcon, UiNavList, UiSkeleton } from '#components'

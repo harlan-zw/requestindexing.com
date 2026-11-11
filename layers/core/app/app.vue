@@ -1,5 +1,5 @@
 <script setup>
-import { domAnimation, LazyMotion, MotionConfig } from 'motion-v'
+import { MotionConfig } from 'motion-v'
 import { ConfigProvider } from 'reka-ui'
 import { isRuntimeOnlyRoute } from '~~/shared/routes'
 
@@ -15,9 +15,12 @@ useHead({
   ],
 })
 
+// `id: 'favicon'` replaces the PNG icon link that `@nuxtseo/design-system`'s
+// favicon plugin emits, so the theme-aware SVG mark stays the only icon.
 const entry = useHead({
   link: [
     {
+      id: 'favicon',
       rel: 'icon',
       type: 'image/svg+xml',
       href: `/icons/icon-${colorMode.value === 'system' ? 'dark' : colorMode.value}.svg`,
@@ -29,6 +32,7 @@ watch(colorMode, () => {
   entry.patch({
     link: [
       {
+        id: 'favicon',
         rel: 'icon',
         type: 'image/svg+xml',
         href: `/icons/icon-${colorMode.value}.svg`,
@@ -68,51 +72,49 @@ const { loggedIn } = useUserSession()
 
 <template>
   <ConfigProvider :use-id="useIdFunction" :scroll-body="scrollBody">
-    <LazyMotion :features="domAnimation">
-      <MotionConfig reduced-motion="user">
-        <UApp :toaster="null" :tooltip="{ delayDuration: 0 }" :scroll-body="scrollBody">
-          <NuxtLoadingIndicator />
+    <MotionConfig reduced-motion="user">
+      <UApp :toaster="null" :tooltip="{ delayDuration: 0 }" :scroll-body="scrollBody">
+        <NuxtLoadingIndicator />
 
-          <NuxtLayout>
-            <NuxtPage />
-          </NuxtLayout>
+        <NuxtLayout>
+          <NuxtPage />
+        </NuxtLayout>
 
-          <!--
-            Shown when the server reports a newer build than the one this tab
-            loaded. Paired with `skewProtection.reloadStrategy: 'prompt'` in
-            nuxt.config: the strategy detects the stale build, this renders the
-            choice. Without it, `prompt` would detect and then do nothing.
-          -->
-          <SkewNotification v-if="loggedIn" v-slot="{ isOpen, dismiss, reload }">
-            <Transition
-              enter-active-class="transition duration-300 ease-out"
-              enter-from-class="opacity-0 translate-y-2"
-              enter-to-class="opacity-100 translate-y-0"
-              leave-active-class="transition duration-200 ease-in"
-              leave-from-class="opacity-100 translate-y-0"
-              leave-to-class="opacity-0 translate-y-2"
-            >
-              <div v-if="isOpen" class="fixed bottom-4 right-4 z-50">
-                <div class="flex items-center gap-3 rounded-full bg-default px-4 py-3 shadow-lg ring ring-default">
-                  <UIcon name="i-lucide-sparkles" class="size-4 text-primary" />
-                  <span class="text-sm font-medium text-highlighted">New version available</span>
-                  <UButton size="xs" label="Refresh" @click="reload" />
-                  <UButton
-                    size="xs"
-                    color="neutral"
-                    variant="ghost"
-                    icon="i-lucide-x"
-                    aria-label="Dismiss update notification"
-                    @click="dismiss"
-                  />
-                </div>
+        <!--
+          Shown when the server reports a newer build than the one this tab
+          loaded. Paired with `skewProtection.reloadStrategy: 'prompt'` in
+          nuxt.config: the strategy detects the stale build, this renders the
+          choice. Without it, `prompt` would detect and then do nothing.
+        -->
+        <SkewNotification v-if="loggedIn" v-slot="{ isOpen, dismiss, reload }">
+          <Transition
+            enter-active-class="transition duration-300 ease-out"
+            enter-from-class="opacity-0 translate-y-2"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition duration-200 ease-in"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 translate-y-2"
+          >
+            <div v-if="isOpen" class="fixed bottom-4 right-4 z-50">
+              <div class="flex items-center gap-3 rounded-full bg-default px-4 py-3 shadow-lg ring ring-default">
+                <UIcon name="i-lucide-sparkles" class="size-4 text-primary" />
+                <span class="text-sm font-medium text-highlighted">New version available</span>
+                <UButton size="xs" label="Refresh" @click="reload" />
+                <UButton
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  icon="i-lucide-x"
+                  aria-label="Dismiss update notification"
+                  @click="dismiss"
+                />
               </div>
-            </Transition>
-          </SkewNotification>
-        </UApp>
-        <UiToaster v-bind="toasterConfig" />
-      </MotionConfig>
-    </LazyMotion>
+            </div>
+          </Transition>
+        </SkewNotification>
+      </UApp>
+      <UiToaster v-bind="toasterConfig" />
+    </MotionConfig>
   </ConfigProvider>
 </template>
 

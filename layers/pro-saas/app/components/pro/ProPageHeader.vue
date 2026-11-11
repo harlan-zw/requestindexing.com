@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { useUiAppShellNav } from '@nuxtseo/design-system/app/composables/useAppShellNav'
 import { useWindowScroll } from '@vueuse/core'
 import { computed } from 'vue'
 import { NuxtLink, UDropdownMenu, UiButton, UiIcon, UiPageHeader } from '#components'
-import { useUiAppShellNav } from '#layers/design-system/app/composables/useAppShellNav'
 import { useProHeaderMenu } from '../../composables/useProHeaderMenu'
 import { useProHeaderPageMeta } from '../../composables/useProHeaderPageMeta'
 

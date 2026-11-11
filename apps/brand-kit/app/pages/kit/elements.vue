@@ -120,32 +120,6 @@ function resolveGridTooltip({ row, col, value }: { row: number, col: number, val
     </KitSection>
 
     <KitSection
-      title="TrendPercentage"
-      code="<TrendPercentage>"
-      description="Trend delta vs a previous-period value. Computes the symmetric percent change; tooltip shows the prior value."
-    >
-      <UCard variant="outline">
-        <div class="space-y-4">
-          <KitRow label="Up">
-            <TrendPercentage :value="1240" :prev-value="980" />
-          </KitRow>
-          <KitRow label="Down">
-            <TrendPercentage :value="640" :prev-value="980" />
-          </KitRow>
-          <KitRow label="Same">
-            <TrendPercentage :value="500" :prev-value="500" />
-          </KitRow>
-          <KitRow label="Negative (lower=better)">
-            <TrendPercentage :value="2.4" :prev-value="3.8" negative symbol="s" />
-          </KitRow>
-          <KitRow label="Compact">
-            <TrendPercentage :value="1240" :prev-value="980" compact />
-          </KitRow>
-        </div>
-      </UCard>
-    </KitSection>
-
-    <KitSection
       title="UiProgressPercent"
       code="<UiProgressPercent>"
       description="Slot + UProgress wrapped in a tooltip. Designed for inline share-of-total bars in tables."
@@ -167,23 +141,6 @@ function resolveGridTooltip({ row, col, value }: { row: number, col: number, val
               <span>/pricing</span><span class="tabular-nums">7</span>
             </div>
           </UiProgressPercent>
-        </div>
-      </UCard>
-    </KitSection>
-
-    <KitSection
-      title="MetricGuage"
-      code="<MetricGuage>"
-      description="Lighthouse-style scored ring (0-100). Pass/average/fail color from score thresholds (90 / 50)."
-    >
-      <UCard variant="outline">
-        <div class="flex flex-wrap items-center gap-8">
-          <div v-for="s in [98, 84, 72, 49, 28]" :key="s" class="flex flex-col items-center gap-2">
-            <MetricGuage :score="s / 100">
-              {{ s }}
-            </MetricGuage>
-            <span class="text-[10px] text-dimmed font-mono">{{ s }}</span>
-          </div>
         </div>
       </UCard>
     </KitSection>
@@ -220,31 +177,6 @@ function resolveGridTooltip({ row, col, value }: { row: number, col: number, val
         <div class="text-xs text-muted">
           Card body content goes here.
         </div>
-      </UCard>
-    </KitSection>
-
-    <KitSection
-      title="DashboardPageTitle"
-      code="<DashboardPageTitle>"
-      description="Breadcrumb-style page chip used in dashboard headers. Auto-links back to the site root."
-    >
-      <UCard variant="outline">
-        <div class="space-y-3">
-          <DashboardPageTitle title="Overview" sub-title="" icon="i-lucide-gauge" />
-          <DashboardPageTitle title="Overview" sub-title="Performance" icon="i-lucide-zap" />
-        </div>
-      </UCard>
-    </KitSection>
-
-    <KitSection
-      title="EmptyPlaceholder"
-      code="<EmptyPlaceholder>"
-      description="Tiny divider used in zero-data table cells."
-    >
-      <UCard variant="outline">
-        <KitRow label="Default">
-          <EmptyPlaceholder />
-        </KitRow>
       </UCard>
     </KitSection>
 

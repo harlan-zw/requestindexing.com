@@ -5,7 +5,7 @@
 // `useDashboardSiteData.ts`, lifted out of the component so they can be tested.
 import type { GscdumpIndexingResponse } from '#layers/pro-gsc/shared/gscdump-api'
 import type { SiteIndexingTrendIssuePoint } from '#layers/pro-indexing/shared/site-indexing-issues'
-import { calcTrendPercent } from '#layers/design-system/app/composables/formatting'
+import { calcTrendPercent } from '@nuxtseo/design-system/app/composables/formatting'
 
 export interface FleetIndexingSummary {
   indexed: number

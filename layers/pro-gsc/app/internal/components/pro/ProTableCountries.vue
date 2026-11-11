@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { GscdumpDataRow } from '@gscdump/contracts'
+import type { UiTableColumn, UiTableFeatures } from '@nuxtseo/design-system/app/shared/table'
 import type { CellContext } from '@tanstack/vue-table'
-import type { UiTableColumn, UiTableFeatures } from '~~/layers/design-system/app/shared/table'
 import type { Period } from '../../../composables/useGscPeriod'
+import { countryCodeToFlagIcon, getCountryName } from '@nuxtseo/design-system/app/utils/countries'
 import { computed, h, watch, watchEffect } from 'vue'
-import { countryCodeToFlagIcon, getCountryName } from '~~/layers/design-system/app/utils/countries'
 import { UiIcon, UiProgressPercent, UiSkeleton } from '#components'
 import ProGscTableShell from '../../../components/pro/ProGscTableShell.vue'
 import { periodToDateRange } from '../../../composables/useGscPeriod'

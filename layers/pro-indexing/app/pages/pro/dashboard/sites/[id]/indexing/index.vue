@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { FactItem } from '#layers/design-system/app/components/data/UiFactsGrid.vue'
+import type { FactItem } from '@nuxtseo/design-system/app/components/data/UiFactsGrid.vue'
 import type { IndexingCoverageTrendViewState } from '#layers/pro-indexing/app/utils/indexing-coverage-trend'
 import type { IndexingPipelineEvidence } from '#layers/pro-indexing/app/utils/indexing-overview'
 import type { IndexCohortsResponse } from '#layers/pro-indexing/shared/contracts/index-cohorts'

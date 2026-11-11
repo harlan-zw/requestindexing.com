@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { GscColumn } from '@gscdump/sdk/period-presets'
 import type { GscDimension } from '../../../shared/gsc-dimension'
+import { countryData } from '@nuxtseo/design-system/app/utils/countries'
 import { computed, ref } from 'vue'
-import { countryData } from '~~/layers/design-system/app/utils/countries'
 import { UiFilterMenu, UiIcon, UiInput, UiMetricToggle, UiTogglePill } from '#components'
 import { useGscSavedFilters } from '../../composables/useGscSavedFilters'
 import { GSC_COLUMN_OPTIONS, GSC_COLUMN_TOOLTIPS, GSC_ENTITY_COUNT_OPTIONS, useProGscFilters } from '../../composables/useProGscFilters'

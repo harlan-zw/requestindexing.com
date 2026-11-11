@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { useUiAppShellNav } from '@nuxtseo/design-system/app/composables/useAppShellNav'
 import { UiButton, UiIcon } from '#components'
-import { useUiAppShellNav } from '#layers/design-system/app/composables/useAppShellNav'
 
 // Ported from nuxtseo.com's `layers/saas/app/components/pro/ProMobileNavTrigger.vue`.
 // The mobile drawer trigger for a screen with no page header. The shell sets

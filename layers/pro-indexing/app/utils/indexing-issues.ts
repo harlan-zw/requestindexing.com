@@ -1,5 +1,5 @@
 import type { IndexingIssueDetail, IssueSeverity } from '@gscdump/sdk/indexing-issues'
-import type { SemanticStatus } from '#layers/design-system/app/composables/semanticColors'
+import type { SemanticStatus } from '@nuxtseo/design-system/app/composables/semanticColors'
 import { issueDetails, issueGroups } from '@gscdump/sdk/indexing-issues'
 
 export type { IndexingIssue, IndexingIssueDetail, IssueGroup, IssueSeverity } from '@gscdump/sdk/indexing-issues'

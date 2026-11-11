@@ -1,8 +1,8 @@
 <script setup lang="ts" generic="T extends object">
-import type { UiTableColumn, UiTableRowId, UiTableSize } from '~~/layers/design-system/app/shared/table'
+import type { UiTableColumn, UiTableRowId, UiTableSize } from '@nuxtseo/design-system/app/shared/table'
+import { countryData } from '@nuxtseo/design-system/app/utils/countries'
 import { refDebounced } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
-import { countryData } from '~~/layers/design-system/app/utils/countries'
 import { UiAlert, UiButton, UiFilterMenu, UiIcon, UiInput, UiSkeleton, UiTable, UPagination } from '#components'
 import { useProHumanFriendlyNumber } from '#imports'
 import { useGscSavedFilters } from '../../composables/useGscSavedFilters'

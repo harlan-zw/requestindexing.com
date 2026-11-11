@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import type { OnboardingOption } from '#layers/design-system/app/components/element/onboarding-answers'
 import type { OnboardingAnswers, OnboardingAnswersState, OnboardingAnswersWrite, OnboardingAnswersWriteResult } from '#layers/pro-saas/shared/onboarding-answers'
-import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import {
   ONBOARDING_QUESTIONS,
   ONBOARDING_ROLES,
   ONBOARDING_SEO_EXPERIENCE,
   ONBOARDING_SITE_COUNTS,
-} from '#layers/design-system/app/components/element/onboarding-answers'
-import { ONBOARDING_ANSWERS_COPY as copy, EMPTY_ONBOARDING_ANSWERS } from '#layers/pro-saas/shared/onboarding-answers'
+} from '@nuxtseo/design-system/app/components/element/onboarding-answers'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
+import { ONBOARDING_ANSWERS_COPY as copy, EMPTY_ONBOARDING_ANSWERS, ONBOARDING_INTENTS_QUESTION } from '#layers/pro-saas/shared/onboarding-answers'
 
 // The "About you" card on the sync step. Every answer is optional and saves
 // as it is tapped, so a user who leaves early keeps what they gave. It never
@@ -32,7 +31,7 @@ const singles = [
   { key: 'role', question: ONBOARDING_QUESTIONS.role, options: ONBOARDING_ROLES },
   { key: 'siteCount', question: ONBOARDING_QUESTIONS.siteCount, options: ONBOARDING_SITE_COUNTS },
   { key: 'seoExperience', question: ONBOARDING_QUESTIONS.seoExperience, options: ONBOARDING_SEO_EXPERIENCE },
-] as const satisfies readonly { key: 'role' | 'siteCount' | 'seoExperience', question: string, options: readonly OnboardingOption[] }[]
+] as const satisfies readonly { key: 'role' | 'siteCount' | 'seoExperience', question: string, options: readonly { id: string, label: string }[] }[]
 
 // Writes go out in order, so a slow early tap never overwrites a later one.
 let writes: Promise<unknown> = Promise.resolve()
@@ -130,9 +129,9 @@ async function close(outcome: 'saved' | 'skipped') {
 
     <fieldset class="space-y-2">
       <legend class="text-sm font-medium text-highlighted">
-        {{ ONBOARDING_QUESTIONS.intents }}
+        {{ ONBOARDING_INTENTS_QUESTION }}
       </legend>
-      <UiIntentPicker
+      <ProIntentPicker
         v-model:selected="intents"
         v-model:other-text="otherText"
         :other-label="copy.otherLabel"

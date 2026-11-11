@@ -2,7 +2,7 @@
 import type { GoogleSubmissionReceiptV1 } from '@gscdump/contracts/v1'
 
 import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
-import type { UiTableColumn } from '#layers/design-system/app/shared/table'
+import type { UiTableColumn } from '@nuxtseo/design-system/app/shared/table'
 import type { GscdumpIndexingUrl } from '#layers/pro-gsc/shared/gscdump-api'
 import type { IndexingGrantRefusal, SubmissionAttempt } from '#layers/pro-indexing/app/utils/indexing-grant'
 import type { SiteIndexingGrant } from '#layers/pro-indexing/shared/contracts/indexing-grant'

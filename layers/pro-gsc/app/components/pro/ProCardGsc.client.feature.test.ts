@@ -1,7 +1,7 @@
+import UiSkeleton from '@nuxtseo/design-system/app/components/element/UiSkeleton.vue'
+import { gscMetricColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
 import { afterEach, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, onMounted, ref, useId } from 'vue'
-import UiSkeleton from '#layers/design-system/app/components/element/UiSkeleton.vue'
-import { gscMetricColors } from '#layers/design-system/app/composables/dataVizColors'
 import ProCardGsc from './ProCardGsc.vue'
 
 vi.mock('../../composables/useProGscFilters', () => ({ useProGscFilters: () => ({ period: ref('28d'), compareMode: ref('previous'), stableData: ref(false) }) }))

@@ -10,7 +10,7 @@ import type { GscFacet } from './utils/gsc-facets'
 import { SEARCH_TYPE_CAPABILITIES } from '@gscdump/contracts'
 import { parseCustomPeriod } from '@gscdump/sdk/period'
 import { PERIOD_PRESETS } from '@gscdump/sdk/period-presets'
-import { parseReportingDay } from '~~/layers/design-system/app/composables/formatting'
+import { parseReportingDay } from '@nuxtseo/design-system/app/composables/formatting'
 import { brandQueryVariants, foldBrandQuery, normalizeBrandKeywords } from './brand-queries'
 
 /** Stable data trims the incomplete tail of the reporting window by default. */

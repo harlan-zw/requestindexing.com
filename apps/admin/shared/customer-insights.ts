@@ -1,7 +1,7 @@
 import type { ObservedFunnelUser } from './funnel-observations'
 import type { AcquisitionEvidence } from './journey-evidence'
 import { z } from 'zod'
-import { ONBOARDING_INTENTS } from '#layers/design-system/app/components/element/onboarding-answers'
+import { ONBOARDING_INTENTS } from '#layers/pro-saas/shared/onboarding-answers'
 import { defaultFunnelDates } from './funnel'
 import { ADMIN_JOURNEY_COPY } from './journey-evidence'
 

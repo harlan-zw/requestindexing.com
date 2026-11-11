@@ -520,7 +520,8 @@ The reader selects Check again.
 
 The optional card on the last setup step. Every answer saves when the reader taps it.
 It never gates setup. `layers/pro-saas/shared/onboarding-answers.ts` holds the card strings.
-`layers/design-system/app/components/element/onboarding-answers.ts` holds the questions and options.
+`@nuxtseo/design-system` holds the shared questions and options, in `app/components/element/onboarding-answers.ts`.
+The goals question and its options are Request Indexing's own, in `layers/pro-saas/shared/onboarding-answers.ts`.
 
 | Asset | String |
 | --- | --- |

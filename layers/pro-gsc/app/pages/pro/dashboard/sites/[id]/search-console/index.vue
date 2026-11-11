@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { GscdumpDataRow } from '#layers/pro-gsc/app/composables/useProGscdump'
+import { fmtGscMetric, formatNumber, getPath } from '@nuxtseo/design-system/app/composables/formatting'
 import { computed, ref, watch } from 'vue'
-import { fmtGscMetric, formatNumber, getPath } from '~~/layers/design-system/app/composables/formatting'
 import ProCardGsc from '#layers/pro-gsc/app/components/pro/ProCardGsc.vue'
 import ProGscReadError from '#layers/pro-gsc/app/components/pro/ProGscReadError.vue'
 import ProGscSurfaceBar from '#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue'

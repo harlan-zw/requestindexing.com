@@ -1,0 +1,27 @@
+/* The Tailwind theme nuxt-og-image compiles OG images against. It reads one
+   Tailwind entry: the `#tailwindcss` alias, else the first CSS entry that
+   imports Tailwind, which is the layer's. That entry carries Nuxt SEO's fonts,
+   so this file adds Request Indexing's theme over it. Browsers never load it.
+   Keep the values in step with brand.css. */
+@import '@nuxtseo/design-system/css/global.css';
+
+@theme {
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Poppins', system-ui, sans-serif;
+  --font-title: 'Poppins', system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@theme static {
+  --color-olive-50: oklch(97.5% 0.014 105);
+  --color-olive-100: oklch(95.5% 0.022 105);
+  --color-olive-200: oklch(91% 0.035 105);
+  --color-olive-300: oklch(85% 0.052 105);
+  --color-olive-400: oklch(72% 0.070 108);
+  --color-olive-500: oklch(54% 0.082 111);
+  --color-olive-600: oklch(44% 0.076 110);
+  --color-olive-700: oklch(36% 0.065 108);
+  --color-olive-800: oklch(27% 0.050 106);
+  --color-olive-900: oklch(20% 0.038 105);
+  --color-olive-950: oklch(14% 0.028 105);
+}

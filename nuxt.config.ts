@@ -45,13 +45,15 @@ export default defineNuxtConfig({
     './apps/marketing',
     './apps/admin',
     './apps/brand-kit',
-    './layers/design-system',
     './layers/pro-shell',
     './layers/pro-saas-auth',
     './layers/pro-saas',
     './layers/pro-gsc',
     './layers/pro-indexing',
     './layers/core',
+    // Last, so every site layer above overrides its app.config and config.
+    // Its components still win a name clash: they register at priority 10.
+    '@nuxtseo/design-system',
   ],
   nuxtDx: {
     report: true,
@@ -143,7 +145,7 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2026-09-26',
 
-  // `layers/design-system` turns auto-imports off so every file in it imports
+  // `@nuxtseo/design-system` turns auto-imports off so every file in it imports
   // explicitly, the way nuxtseo.com writes them. Nuxt merges layer config into
   // one graph, so that switch would reach the whole app; re-assert it here.
   // The design-system files keep their explicit imports either way.

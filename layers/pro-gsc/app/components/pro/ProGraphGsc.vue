@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import type { CompareMode } from '../../composables/useGscPeriod'
+import { gscMetricColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
 import { Scale, TextAlign } from '@unovis/ts'
 import { VisArea, VisAxis, VisCrosshair, VisLine, VisScatter, VisTooltip, VisXYContainer } from '@unovis/vue'
-import { gscMetricColors } from '~~/layers/design-system/app/composables/dataVizColors'
 import { GSC_STABLE_LATENCY_DAYS } from '../../composables/useGscPeriod'
 import { alignPrev, calendarChartRows, isolatedChartValue, resolveCompareAligner, toUtcDay } from '../../utils/compare-align'
 

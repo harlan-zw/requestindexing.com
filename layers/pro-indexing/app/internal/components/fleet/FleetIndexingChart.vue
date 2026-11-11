@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { indexingVizColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
 // Index rate over time for one Site or for all of them. Stands in for
 // nuxtseo.com's `CardIndexing.vue`, drawn on this app's `UiLineChart`, so it
 // has no drag-to-zoom and no Timeline markers (neither exists here). The chart
@@ -6,7 +7,6 @@
 // would read as a rate.
 import { computed } from 'vue'
 import { UiLineChart, UiSkeleton } from '#components'
-import { indexingVizColors } from '#layers/design-system/app/composables/dataVizColors'
 import { formatIndexingCoverageDate } from '#layers/pro-indexing/app/utils/indexing-coverage-trend'
 
 const { data, height = 200, loading = false } = defineProps<{

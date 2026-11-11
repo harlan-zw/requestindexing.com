@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { CountryOpportunityRow } from '../../../shared/country-opportunity'
+import { useHumanFriendlyNumber } from '@nuxtseo/design-system/app/composables/formatting'
+import { countryCodeToFlagIcon, getCountryName } from '@nuxtseo/design-system/app/utils/countries'
 import { computed } from 'vue'
-import { useHumanFriendlyNumber } from '~~/layers/design-system/app/composables/formatting'
-import { countryCodeToFlagIcon, getCountryName } from '~~/layers/design-system/app/utils/countries'
 import { ClientOnly, UiEmptyState, UiIcon, UiScatterPlot } from '#components'
 import { COUNTRY_OPPORTUNITY_MIN_IMPRESSIONS, projectCountryOpportunity } from '../../../shared/country-opportunity'
 

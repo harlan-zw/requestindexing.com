@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import type { GscdumpDataRow } from '#layers/pro-gsc/app/composables/useProGscdump'
+import { gscMetricColors, vizTextColor } from '@nuxtseo/design-system/app/composables/dataVizColors'
+import { calcTrendPercent, formatNumber } from '@nuxtseo/design-system/app/composables/formatting'
 import { computed } from 'vue'
-import { gscMetricColors, vizTextColor } from '~~/layers/design-system/app/composables/dataVizColors'
-import { calcTrendPercent, formatNumber } from '~~/layers/design-system/app/composables/formatting'
 import ProCardGsc from '#layers/pro-gsc/app/components/pro/ProCardGsc.vue'
 import ProGscReadError from '#layers/pro-gsc/app/components/pro/ProGscReadError.vue'
 import ProGscSurfaceBar from '#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue'

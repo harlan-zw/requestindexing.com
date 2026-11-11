@@ -75,6 +75,19 @@ components:
 >
 > Front matter holds machine-readable tokens. Prose below holds rationale, behavioural rules, and judgment.
 
+## Design System Source
+
+The primitives, tokens, fonts, motion and chart helpers come from the published [`@nuxtseo/design-system`](https://www.npmjs.com/package/@nuxtseo/design-system) layer, which nuxtseo.com also extends. This repository keeps no copy of it. Request Indexing sets its brand through the layer's seams:
+
+| Seam | File |
+|------|------|
+| Nuxt UI colours, the emerald primary button, icon colour roles, favicon paths | `layers/core/app/app.config.ts` |
+| Fonts, the olive ramp, text tokens, greydients, chart colours (`--ui-viz-*`), Verdant utilities | `layers/core/app/assets/css/brand.css` |
+| The theme OG images compile against | `layers/core/app/assets/css/og-theme.css` |
+| Brand images at the layer's `public/` paths | `apps/marketing/public` |
+
+A site component or composable with a layer name loses: the layer registers at priority 10. A change that props, slots, tokens or `app.config` cannot express is a change to the layer in nuxtseo.com.
+
 ## Aesthetic Direction
 
 - **Theme**: Verdant Console — custom theme built on Nuxt UI's `emerald` + `olive` palettes. Not a stock theme; derives its voice from the product (indexing = pages going live = growth) rather than borrowed visual language.
@@ -119,7 +132,7 @@ components:
 
 ## Icons
 
-- **Collection**: one active set, chosen in `shared/icons/index.ts`. Today that is `hugeicons`, with lucide, carbon and solar as per-role fallbacks. The registry below replaced the earlier mixed convention.
+- **Collection**: one active set, chosen by `designSystem.iconSet` in the Nuxt config. Unset, it is `hugeicons`, with lucide, carbon and solar as per-role fallbacks. The registry below replaced the earlier mixed convention.
   - **Navigation & menus**: `i-ph-*-duotone` (Phosphor duotone). Warm, two-tone, friendly enough for a sidebar.
   - **Actions & controls**: `i-heroicons-*` (Heroicons outline by default, solid when active or selected).
   - **Brand marks**: `i-simple-icons-*` (only for third-party logos: GitHub, Google, Node.js, etc.).
@@ -178,12 +191,12 @@ writing a label, heading, empty state or error.
 
 ## Custom Utilities
 
-> Theme-specific classes that live in `app/assets/css/main.css`. Reference these instead of reinventing.
+> Theme-specific classes. Request Indexing's own live in `layers/core/app/assets/css/brand.css`; `.pro-container` comes from the layer. Reference these instead of reinventing.
 
 | Class / Token | What it does | When to use |
 |---------------|--------------|-------------|
 | `--ui-radius` (10px) | Tighter than Nuxt UI's default 8px to give buttons and badges slightly more presence | Auto-applied via Nuxt UI |
-| `font-title` | Poppins display family via Tailwind utility | Hero text, section titles, marketing headings — never body copy |
+| `font-title` | Poppins display family, a class in the utilities layer | Hero text, section titles, marketing headings — never body copy |
 | `.bg-verdant` | Two emerald radial blooms over `bg-muted` (light) / `bg-default` (dark). Signature hero/banner wash | Any large branded background — replaces multi-hue gradients |
 | `.divider-tilt` | `::after` pseudo-element with a -2deg tilted bar, 70px below the parent. Keeps the existing "growing into next section" motif | Bottom of hero or any band that should bleed into the following section |
 | `.pro-container` | Centres dashboard content at 1280px with responsive inline padding. Shared with nuxtseo.com | Dashboard page headers and bodies |
@@ -193,7 +206,7 @@ writing a label, heading, empty state or error.
 > Append-only log of intentional choices the team has confirmed. Updated through `/nuxt-frontend-design` polish runs.
 
 - **Emerald + olive palette is locked.** Confirmed at Phase 1 setup (2026-04-23). Changing primary or neutral is a brand-level decision, not a polish call.
-- **Superseded by the semantic icon registry** (2026-09-15). `layers/design-system/shared/icons/registry.ts` maps every role (`next`, `delete`, `search`) to a real icon in four candidate sets, and `ACTIVE_ICON_SET` picks the one that renders. Roles resolve to `@nuxt/icon` aliases at build time, so `<UButton icon="next">` follows the active set. Write a role name, not a raw `i-*` id; a raw id still passes through for a brand mark the registry has no role for. Changing the active set is a brand-level decision.
+- **Superseded by the semantic icon registry** (2026-09-15). `@nuxtseo/design-system/shared/icons/registry.ts` maps every role (`next`, `delete`, `search`) to a real icon in four candidate sets, and `designSystem.iconSet` picks the one that renders. Roles resolve to `@nuxt/icon` aliases at build time, so `<UButton icon="next">` follows the active set. Write a role name, not a raw `i-*` id; a raw id still passes through for a brand mark the registry has no role for. Changing the active set is a brand-level decision.
 - **The hero mock product card is part of the marketing identity.** Do not replace with an illustration or remove on small screens — drop it instead via `xl:` visibility.
 - **Light mode is primary.** Dark mode must work but the marketing hero is designed for the light wash; the dark fallback is a deliberate de-emphasis (no animated gradient).
 - **Emerald-500 + white button text is a documented contrast exception.** Raw ratio is 2.54:1 (below WCAG AA 4.5:1). Accepted because buttons are large bold targets, the brand identity depends on the brighter emerald, and Nuxt UI's button focus ring + hover state push the perceived contrast higher. Do not propagate `text-white on bg-primary-500` to body copy or non-button surfaces — that combination is forbidden.
@@ -201,4 +214,5 @@ writing a label, heading, empty state or error.
 - **Hero quick-feature grid trimmed to 3 items** (Request Indexing, Unified Dashboard, Data Retention). Open Source already appears in the trust section further down — keeping it in the hero double-stated value and competed with the product preview card.
 - **`/request-indexing` route deleted.** Legacy v3-era landing page with deprecated `ULandingSection`/`ULandingCTA`/`ULandingCard` components, old colour names, and emoji copy. Not worth refactoring — `index.vue` covers the same ground better.
 - **Pricing content is product, not design.** `pricing.vue` currently renders privacy-policy copy under a "Pricing" heading. Out of scope for the design refresh; flag separately for a content/product fix.
-- **`.divider-tilt` is the canonical hero-to-next-section transition.** Defined once in `main.css`, applied via class — never re-hand-coded inline.
+- **`.divider-tilt` is the canonical hero-to-next-section transition.** Defined once in `brand.css`, applied via class — never re-hand-coded inline.
+- **The design system is the published `@nuxtseo/design-system` layer** (2026-11-11). The local `layers/design-system` copy is deleted. Request Indexing keeps only its brand overrides, through the seams in Design System Source. The layer's shared fixes, such as solid focus rings and the darker dimmed and error text, apply here too.
