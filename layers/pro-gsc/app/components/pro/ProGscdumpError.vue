@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import type { SemanticStatus } from '@nuxtseo/design-system/app/composables/semanticColors'
 import type { GscdumpError, GscdumpErrorCode } from '#layers/pro-gsc/app/composables/_gscdump-error'
+import { semanticColors } from '@nuxtseo/design-system/app/composables/semanticColors'
 import { parseGscdumpError } from '#layers/pro-gsc/app/composables/_gscdump-error'
 
 const props = defineProps<{

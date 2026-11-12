@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useHumanFriendlyNumber } from '@nuxtseo/design-system/app/composables/formatting'
 import { BaselineSeries, ColorType, createChart, LineSeries } from 'lightweight-charts'
 
 const props = defineProps<{

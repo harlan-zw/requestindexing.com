@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { SemanticStatus } from '@nuxtseo/design-system/app/composables/semanticColors'
+import { semanticColors } from '@nuxtseo/design-system/app/composables/semanticColors'
 
 const { status = 'neutral', icon, label, size = 'sm' } = defineProps<{
   status?: SemanticStatus

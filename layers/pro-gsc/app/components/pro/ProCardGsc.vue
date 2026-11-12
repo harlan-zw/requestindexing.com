@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { Period } from '../../composables/useGscPeriod'
+import { gscMetricColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
 import { useChartBrush } from '@nuxtseo/design-system/app/composables/useChartBrush'
 import { onKeyStroke } from '@vueuse/core'
 import { AnimatePresence, motion, useMotionValue, useSpring } from 'motion-v'

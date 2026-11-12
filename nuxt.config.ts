@@ -88,21 +88,6 @@ export default defineNuxtConfig({
     '@nuxt/image',
     '@nuxt/ui',
     '@vueuse/nuxt',
-    (_, nuxt) => {
-      nuxt.hook('imports:sources', (sources) => {
-        for (const source of sources) {
-          if (!('from' in source) || source.from !== '@vueuse/core' || !Array.isArray(source.imports))
-            continue
-          source.imports = source.imports.filter((entry) => {
-            if (typeof entry === 'string')
-              return entry !== 'formatTimeAgo'
-            if (Array.isArray(entry))
-              return entry[0] !== 'formatTimeAgo'
-            return !('name' in entry) || entry.name !== 'formatTimeAgo'
-          })
-        }
-      })
-    },
     '@harlan-zw/comark-content',
     '@nuxtjs/seo',
     '@nuxt/scripts',

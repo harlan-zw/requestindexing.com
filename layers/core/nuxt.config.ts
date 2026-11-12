@@ -15,8 +15,7 @@ export default defineNuxtConfig({
 
   // DM Sans carries body copy, Poppins the display scale (DESIGN.md). Both
   // come from the provider: this repository ships no self-hosted faces for
-  // either family. The layer registers its Hubot Sans and Fira Code only with
-  // `designSystem.fonts`, which stays off.
+  // either family. The layer ships and registers no faces of its own.
   fonts: {
     families: [
       { name: 'DM Sans', weights: [400, 500, 600, 700], global: true },

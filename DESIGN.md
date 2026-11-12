@@ -86,6 +86,9 @@ The primitives, tokens, fonts, motion and chart helpers come from the published 
 | Font tokens, the olive ramp, the light text and dashboard tokens (`--ui-light-text*`, `--ui-dashboard-*`), greydients, chart colours (`--ui-viz-*` and `--ui-viz-<slot>-text`), Verdant utilities | `layers/core/app/assets/css/brand.css` |
 | The theme OG images compile against | `layers/core/app/assets/css/og-theme.css` |
 | The SVG favicons and touch icons that `app.config` names | `apps/marketing/public` |
+| The About you card's option buttons and goals grid, through the `#option` and `#intents` slots of `UiOnboardingAnswers` | `layers/pro-saas/app/components/pro/ProOnboardingAnswers.vue` |
+
+The layer shares the site's copy of each peer, including `@nuxt/scripts` and `@vueuse/core`, so the site needs no `overrides` for it. Its composables and utils are not auto-imports here. Import them by path, such as `@nuxtseo/design-system/app/composables/semanticColors`.
 
 Set a token through the layer's custom properties, never by overriding its selectors. A site component or composable with a layer name loses: the layer registers at priority 10. A change that props, slots, tokens or `app.config` cannot express is a change to the layer in nuxtseo.com.
 

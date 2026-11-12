@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import type { SemanticStatus } from '@nuxtseo/design-system/app/composables/semanticColors'
+import { semanticColors } from '@nuxtseo/design-system/app/composables/semanticColors'
+
 const { color = 'info', icon, title } = defineProps<{
   /** Semantic color for accent bar + icon */
   color?: SemanticStatus

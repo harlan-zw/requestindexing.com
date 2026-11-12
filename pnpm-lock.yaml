@@ -258,8 +258,8 @@ catalogs:
       specifier: ^6.0.1
       version: 6.0.1
     '@nuxtseo/design-system':
-      specifier: ^0.1.1
-      version: 0.1.1
+      specifier: ^0.1.2
+      version: 0.1.2
     '@sentry/cloudflare':
       specifier: ^11.1.0
       version: 11.1.0
@@ -422,8 +422,6 @@ catalogs:
       version: 7.1.0-beta
 
 overrides:
-  '@nuxtseo/design-system>@nuxt/scripts': ^1.3.10
-  '@nuxtseo/design-system>@vueuse/core': ^15.0.0
   oxc-parser: 0.151.0
   rolldown: 1.2.11
   sharp: 0.35.5
@@ -519,7 +517,7 @@ importers:
         version: 6.0.1(ac683c0f99e6edaf5feeccb47ef75f24)
       '@nuxtseo/design-system':
         specifier: 'catalog:'
-        version: 0.1.1(257ff6b39e80049b7f7775b8b22490ca)
+        version: 0.1.2(e762ccbead158b44a90f5677db052025)
       '@takumi-rs/core':
         specifier: 'catalog:'
         version: 2.15.0(csstype@3.2.3)
@@ -2769,10 +2767,12 @@ packages:
       zod:
         optional: true
 
-  '@nuxtseo/design-system@0.1.1':
-    resolution: {integrity: sha512-+obZOtBMJYZW4TbzXiNsfcyXJ5Rk1cIeOtefurVw1yfIrFtQaaKEiIgRKpg6gzrMSnoFEUC36DWEBzT1dvKkHA==}
+  '@nuxtseo/design-system@0.1.2':
+    resolution: {integrity: sha512-O1MCz1Pt8yt7YIoKIR2iImNNc/r7B/fjUhd0NAxXcq4E5r6yMf9Od/wB3yThmPTxDX/ILwvve18HAnUad3SiTw==}
     peerDependencies:
+      '@nuxt/scripts': ^1.3.10 || ^2.0.0-beta.14
       '@nuxt/ui': ^4.11.1
+      '@vueuse/core': ^14.0.0 || ^15.0.0
       motion-v: ^2.4.2
       nuxt: ^4.6.0
       tailwindcss: ^4.3.0
@@ -12817,7 +12817,7 @@ snapshots:
       - unplugin
       - vue
 
-  '@nuxtseo/design-system@0.1.1(257ff6b39e80049b7f7775b8b22490ca)':
+  '@nuxtseo/design-system@0.1.2(e762ccbead158b44a90f5677db052025)':
     dependencies:
       '@comark/nuxt': 0.7.0(593f98cb6b3e6fc866f976daab251317)
       '@iconify-json/hugeicons': 1.2.35
@@ -12857,21 +12857,12 @@ snapshots:
       - '@deno/kv'
       - '@devframes/agentic'
       - '@farmfe/core'
-      - '@googlemaps/markerclusterer'
       - '@netlify/blobs'
       - '@nuxt/schema'
-      - '@oxc-project/types'
-      - '@paypal/paypal-js'
       - '@planetscale/database'
       - '@rsbuild/core'
       - '@rspack/core'
-      - '@speedcurve/lux'
-      - '@stripe/stripe-js'
-      - '@types/google.maps'
       - '@types/node'
-      - '@types/vimeo__player'
-      - '@types/youtube'
-      - '@unhead/vue'
       - '@upstash/redis'
       - '@vercel/blob'
       - '@vercel/functions'
@@ -12898,7 +12889,6 @@ snapshots:
       - ocache
       - oxc-parser
       - postcss
-      - posthog-js
       - rolldown
       - rollup
       - shiki
