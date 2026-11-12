@@ -1,5 +1,6 @@
-import { afterEach, expect, it, vi } from 'vitest'
-import { computed, createApp, defineComponent, h, nextTick, onMounted, ref, watch } from 'vue'
+import type { MockInstance } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { computed, createApp, defineComponent, h, nextTick, onMounted, onScopeDispose, ref, Suspense, watch } from 'vue'
 
 // The page runs on `@nuxtseo/pro-shell`'s real flow and frame. Only the Nuxt
 // seams they read are stood in for: the route, the app config with this app's
@@ -26,9 +27,14 @@ vi.mock('#components', () => {
   return { UiCard: passthrough, UiSkeleton: passthrough, UiWizardProgress: defineComponent({ render: () => null }), UiWizardNav: passthrough }
 })
 
+vi.mock('~~/layers/core/app/composables/fetch', () => ({
+  fetchSites: async () => ({ data: ref({ sites: [{ siteId: 'ri_1' }] }) }),
+}))
+
 const session = ref({ hasSites: true, gscdumpConnected: true })
 Object.assign(globalThis, {
   onMounted,
+  onScopeDispose,
   watch,
   useFetch: () => ({ data: ref({ _tag: 'Missing' }) }),
   definePageMeta: () => {},
@@ -42,10 +48,10 @@ Object.assign(globalThis, {
 const { default: Onboarding } = await import('./onboarding.vue')
 const apps: ReturnType<typeof createApp>[] = []
 
-function mount() {
+async function mount() {
   const host = document.createElement('div')
   document.body.appendChild(host)
-  const app = createApp(Onboarding)
+  const app = createApp({ render: () => h(Suspense, null, { default: () => h(Onboarding) }) })
   for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'UIcon', 'UButton', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
     app.component(name, defineComponent({ render: () => null }))
   app.component('UiWizardProgress', defineComponent({ render: () => null }))
@@ -59,8 +65,22 @@ function mount() {
   }))
   app.mount(host)
   apps.push(app)
+  for (let index = 0; index < 12; index++) {
+    await Promise.resolve()
+    await nextTick()
+  }
   return host
 }
+
+let warnings: MockInstance<typeof console.warn>
+beforeEach(() => {
+  warnings = vi.spyOn(console, 'warn')
+})
+afterEach(() => {
+  const renderWarnings = warnings.mock.calls.map(([message]) => String(message)).filter(message => /Failed to resolve component|no <Suspense> boundary/.test(message))
+  warnings.mockRestore()
+  expect(renderWarnings).toEqual([])
+})
 
 afterEach(() => {
   apps.splice(0).forEach(app => app.unmount())
@@ -69,16 +89,17 @@ afterEach(() => {
 
 it('resumes a connected account without claiming a new sync', async () => {
   session.value = { hasSites: true, gscdumpConnected: true }
-  const host = mount()
+  const host = await mount()
   await nextTick()
   expect(host.textContent).toContain('indexing evidence for your connected Sites')
+  expect(host.querySelector('[data-testid="first-site-report"]')).not.toBeNull()
   expect(host.textContent).not.toContain('First sync started')
   expect(host.textContent).not.toContain('pulling your Search Console history now')
 })
 
 it('offers recovery instead of setup success when a bookmarked final step has no Site', async () => {
   session.value = { hasSites: false, gscdumpConnected: true }
-  const host = mount()
+  const host = await mount()
   await nextTick()
   expect(host.textContent).toContain('Connect a Site to finish setup')
   expect(host.querySelector('button')?.disabled).toBe(true)

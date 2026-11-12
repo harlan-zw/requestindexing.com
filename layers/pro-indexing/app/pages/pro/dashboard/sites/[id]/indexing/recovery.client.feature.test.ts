@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { MockInstance } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, ref } from 'vue'
 import RecoveryPage from './recovery.vue'
 
@@ -25,10 +26,22 @@ function mount() {
       setup: (props, { slots }) => () => h('div', [props.title, props.description, slots.default?.()]),
     }))
   }
+  app.component('ConnectSearchConsoleButton', defineComponent({ render: () => null }))
+  app.component('UiButton', defineComponent({ setup: (_, { slots }) => () => h('button', slots.default?.()) }))
   app.mount(host)
   apps.push(app)
   return host
 }
+let warnings: MockInstance<typeof console.warn>
+beforeEach(() => {
+  warnings = vi.spyOn(console, 'warn')
+})
+afterEach(() => {
+  const renderWarnings = warnings.mock.calls.map(([message]) => String(message)).filter(message => /Failed to resolve component|no <Suspense> boundary/.test(message))
+  warnings.mockRestore()
+  expect(renderWarnings).toEqual([])
+})
+
 afterEach(() => {
   for (const app of apps.splice(0)) app.unmount()
   document.body.innerHTML = ''

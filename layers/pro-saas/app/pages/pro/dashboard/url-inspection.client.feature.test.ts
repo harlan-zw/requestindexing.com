@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest'
 import type { PageEvidenceRead, PageInspectionResult } from '#layers/pro-indexing/shared/page-evidence'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { computed, createApp, defineComponent, h, nextTick, onMounted, onScopeDispose, ref, Suspense, useTemplateRef, watch } from 'vue'
@@ -54,6 +55,16 @@ beforeEach(() => {
     return { recorded: true }
   })
 })
+let warnings: MockInstance<typeof console.warn>
+beforeEach(() => {
+  warnings = vi.spyOn(console, 'warn')
+})
+afterEach(() => {
+  const renderWarnings = warnings.mock.calls.map(([message]) => String(message)).filter(message => /Failed to resolve component|no <Suspense> boundary/.test(message))
+  warnings.mockRestore()
+  expect(renderWarnings).toEqual([])
+})
+
 afterEach(() => {
   app?.unmount()
   document.body.innerHTML = ''
@@ -70,6 +81,8 @@ async function mount() {
   host = document.createElement('div')
   document.body.appendChild(host)
   app = createApp(defineComponent({ setup: () => () => h(Suspense, null, { default: () => h(Page) }) }))
+  for (const name of ['ProSetupExample', 'ProSetupExitFeedback'])
+    app.component(name, defineComponent({ render: () => null }))
   app.component('UButton', defineComponent({
     props: ['label', 'loading', 'to'],
     setup: (props, { attrs, slots }) => () => props.to ? h('a', { ...attrs, href: props.to }, props.label ?? slots.default?.()) : h('button', { ...attrs, disabled: props.loading }, props.label ?? slots.default?.()),
