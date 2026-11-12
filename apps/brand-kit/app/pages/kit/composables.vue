@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useGridCols } from '@nuxtseo/design-system/app/composables/useGridCols'
+import { useScrollSpy } from '@nuxtseo/design-system/app/composables/useScrollSpy'
+
 definePageMeta({ layout: 'kit' })
 useHead({ title: 'Composables · Brand Kit' })
 

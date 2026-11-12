@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { gscMetricColors, indexingVizColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
+import { healthToSemantic, semanticColors, thresholdToSemantic, trendToSemantic } from '@nuxtseo/design-system/app/composables/semanticColors'
+import { getIconColor } from '@nuxtseo/design-system/app/utils/icon-color'
+
 definePageMeta({ layout: 'kit' })
 useHead({ title: 'Icon palette · Brand Kit' })
 

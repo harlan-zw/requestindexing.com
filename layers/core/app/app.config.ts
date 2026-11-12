@@ -34,6 +34,9 @@ export default {
     iconColors: {
       lime: { bg: 'bg-lime-500/10', text: 'text-lime-500' },
     },
+    // `UiAtmosphere` behind the setup and empty-state surfaces draws its grain
+    // and masks its bloom. The layer draws neither unless a site asks.
+    atmosphere: { grain: true, bloomMask: true },
   },
 
   // The layer's favicon plugin reads these and swaps the icon with the colour

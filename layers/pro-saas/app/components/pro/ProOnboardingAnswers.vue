@@ -1,17 +1,18 @@
 <script setup lang="ts">
+import type { OnboardingAnswersCopy, OnboardingAnswersDraft } from '@nuxtseo/design-system/app/components/element/onboarding-answers'
 import type { OnboardingAnswers, OnboardingAnswersState, OnboardingAnswersWrite, OnboardingAnswersWriteResult } from '#layers/pro-saas/shared/onboarding-answers'
-import {
-  ONBOARDING_QUESTIONS,
-  ONBOARDING_ROLES,
-  ONBOARDING_SEO_EXPERIENCE,
-  ONBOARDING_SITE_COUNTS,
-} from '@nuxtseo/design-system/app/components/element/onboarding-answers'
+import { ONBOARDING_OTHER_MAX_LENGTH } from '@nuxtseo/design-system/app/components/element/onboarding-answers'
+import { useId } from 'vue'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
-import { ONBOARDING_ANSWERS_COPY as copy, EMPTY_ONBOARDING_ANSWERS, ONBOARDING_INTENTS_QUESTION } from '#layers/pro-saas/shared/onboarding-answers'
+import { UiIcon, UiOnboardingAnswers, UTextarea } from '#components'
+import { ONBOARDING_ANSWERS_COPY as copy, EMPTY_ONBOARDING_ANSWERS, ONBOARDING_INTENTS, ONBOARDING_INTENTS_QUESTION } from '#layers/pro-saas/shared/onboarding-answers'
 
 // The "About you" card on the sync step. Every answer is optional and saves
 // as it is tapped, so a user who leaves early keeps what they gave. It never
 // gates setup: the wizard's own buttons finish setup whatever this card does.
+// `UiOnboardingAnswers` owns the questions and the answer logic; this card
+// draws the controls through its slots and owns the heading, Skip, Save and
+// every write.
 
 const { data } = useFetch<OnboardingAnswersState>('/api/pro/onboarding/answers', { server: false, lazy: true })
 
@@ -27,11 +28,13 @@ watch(() => data.value, (state) => {
 
 const visible = computed(() => data.value?._tag === 'Open' && (status.value === 'open' || status.value === 'failed'))
 
-const singles = [
-  { key: 'role', question: ONBOARDING_QUESTIONS.role, options: ONBOARDING_ROLES },
-  { key: 'siteCount', question: ONBOARDING_QUESTIONS.siteCount, options: ONBOARDING_SITE_COUNTS },
-  { key: 'seoExperience', question: ONBOARDING_QUESTIONS.seoExperience, options: ONBOARDING_SEO_EXPERIENCE },
-] as const satisfies readonly { key: 'role' | 'siteCount' | 'seoExperience', question: string, options: readonly { id: string, label: string }[] }[]
+const answersCopy: Partial<OnboardingAnswersCopy> = {
+  intentsQuestion: ONBOARDING_INTENTS_QUESTION,
+  intentsHint: '',
+  otherLabel: copy.otherLabel,
+  otherPlaceholder: copy.otherPlaceholder,
+}
+const otherId = useId()
 
 // Writes go out in order, so a slow early tap never overwrites a later one.
 let writes: Promise<unknown> = Promise.resolve()
@@ -69,18 +72,23 @@ watch(otherText, (value, previous) => {
 })
 onBeforeUnmount(flushText)
 
-function choose(key: typeof singles[number]['key'], id: string) {
-  answers.value = { ...answers.value, [key]: answers.value[key] === id ? undefined : id }
+const draft = computed<OnboardingAnswersDraft>(() => ({ ...answers.value, other: otherText.value }))
+
+// A tap saves at once. Typing in the free-text box waits for a pause.
+function update(next: OnboardingAnswersDraft) {
+  if (next.other !== otherText.value) {
+    otherText.value = next.other
+    return
+  }
+  answers.value = {
+    ...answers.value,
+    role: next.role,
+    siteCount: next.siteCount,
+    seoExperience: next.seoExperience,
+    intents: next.intents as OnboardingAnswers['intents'],
+  }
   void save()
 }
-
-const intents = computed({
-  get: () => answers.value.intents as string[],
-  set: (ids) => {
-    answers.value = { ...answers.value, intents: ids as OnboardingAnswers['intents'] }
-    void save()
-  },
-})
 
 async function close(outcome: 'saved' | 'skipped') {
   clearTimeout(textTimer)
@@ -88,6 +96,10 @@ async function close(outcome: 'saved' | 'skipped') {
   status.value = outcome
   await save(true)
 }
+
+const cardClass = 'relative flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 pr-8 text-left text-sm outline-none transition-[background-color,border-color,box-shadow] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-default active:translate-y-px'
+const selectedClass = 'border-primary bg-primary/10 ring-1 ring-primary/40'
+const restClass = 'border-accented bg-default/80 hover:border-primary/60 hover:bg-elevated'
 </script>
 
 <template>
@@ -109,36 +121,62 @@ async function close(outcome: 'saved' | 'skipped') {
       <UButton color="neutral" variant="ghost" class="min-h-11 shrink-0" :label="copy.skip" data-testid="onboarding-answers-skip" @click="close('skipped')" />
     </header>
 
-    <fieldset v-for="single in singles" :key="single.key" class="space-y-2">
-      <legend class="text-sm font-medium text-highlighted">
-        {{ single.question }}
-      </legend>
-      <div class="flex flex-wrap gap-2">
+    <!-- The layer spaces its questions 24px and 10px apart; this card keeps 20px and 8px. -->
+    <UiOnboardingAnswers
+      :model-value="draft"
+      :intents="ONBOARDING_INTENTS"
+      :copy="answersCopy"
+      class="space-y-5! [&_fieldset]:space-y-2!"
+      @update:model-value="update"
+    >
+      <template #option="{ option, selected, pick }">
         <UButton
-          v-for="option in single.options"
-          :key="option.id"
-          :color="answers[single.key] === option.id ? 'primary' : 'neutral'"
-          :variant="answers[single.key] === option.id ? 'soft' : 'outline'"
-          :aria-pressed="answers[single.key] === option.id"
+          :color="selected ? 'primary' : 'neutral'"
+          :variant="selected ? 'soft' : 'outline'"
+          :aria-pressed="selected"
           :label="option.label"
           class="min-h-11"
-          @click="choose(single.key, option.id)"
+          @click="pick"
         />
-      </div>
-    </fieldset>
+      </template>
+      <template #intents="{ intents, selected, toggle, other, setOther }">
+        <div class="space-y-3" @blur.capture="flushText">
+          <div class="grid gap-2 sm:grid-cols-2">
+            <button
+              v-for="intent in intents"
+              :key="intent.id"
+              type="button"
+              :aria-pressed="selected.includes(intent.id)"
+              :class="[cardClass, selected.includes(intent.id) ? selectedClass : restClass]"
+              @click="toggle(intent.id)"
+            >
+              <UiIcon :name="intent.icon" class="size-4 shrink-0 text-highlighted" aria-hidden="true" />
+              <span class="font-medium text-highlighted">{{ intent.label }}</span>
+              <UiIcon
+                v-if="selected.includes(intent.id)"
+                name="check"
+                class="absolute top-1/2 right-3 size-4 -translate-y-1/2 text-primary"
+                aria-hidden="true"
+              />
+            </button>
+          </div>
 
-    <fieldset class="space-y-2">
-      <legend class="text-sm font-medium text-highlighted">
-        {{ ONBOARDING_INTENTS_QUESTION }}
-      </legend>
-      <ProIntentPicker
-        v-model:selected="intents"
-        v-model:other-text="otherText"
-        :other-label="copy.otherLabel"
-        :other-placeholder="copy.otherPlaceholder"
-        @blur.capture="flushText"
-      />
-    </fieldset>
+          <div class="space-y-1.5">
+            <label :for="otherId" class="block text-sm text-muted">{{ copy.otherLabel }}</label>
+            <UTextarea
+              :id="otherId"
+              :model-value="other"
+              :maxlength="ONBOARDING_OTHER_MAX_LENGTH"
+              :placeholder="copy.otherPlaceholder"
+              :rows="2"
+              autoresize
+              class="w-full"
+              @update:model-value="setOther(String($event ?? ''))"
+            />
+          </div>
+        </div>
+      </template>
+    </UiOnboardingAnswers>
 
     <div class="flex flex-wrap items-center gap-3">
       <UButton color="neutral" variant="outline" class="min-h-11" :label="copy.done" data-testid="onboarding-answers-done" @click="close('saved')" />

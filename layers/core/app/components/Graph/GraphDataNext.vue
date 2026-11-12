@@ -1,5 +1,6 @@
 <script lang="ts" setup generic="I extends { date: string | number | Date, clicks?: number | null, impressions?: number | null, position?: number | null, ctr?: number | null }">
 import { gscMetricColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
+import { useHumanFriendlyNumber } from '@nuxtseo/design-system/app/composables/formatting'
 import { Scale } from '@unovis/ts'
 import { VisArea, VisAxis, VisCrosshair, VisLine, VisTooltip, VisXYContainer } from '@unovis/vue'
 import { format } from 'date-fns'

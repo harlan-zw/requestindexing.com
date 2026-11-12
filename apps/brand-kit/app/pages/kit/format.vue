@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { clamp, percentChange } from '@nuxtseo/design-system/app/utils/number'
+
 definePageMeta({ layout: 'kit' })
 useHead({ title: 'Formatters · Brand Kit' })
 

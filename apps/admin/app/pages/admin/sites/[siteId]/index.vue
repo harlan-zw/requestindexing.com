@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { JobSelect } from '#shared/types/database'
+import { useHumanFriendlyNumber } from '@nuxtseo/design-system/app/composables/formatting'
 
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 

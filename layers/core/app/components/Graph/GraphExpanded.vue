@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { SeriesMarker } from 'lightweight-charts'
+import { useHumanFriendlyNumber } from '@nuxtseo/design-system/app/composables/formatting'
 import { AreaSeries, ColorType, createChart, createSeriesMarkers, LineSeries } from 'lightweight-charts'
 
 const props = defineProps<{
