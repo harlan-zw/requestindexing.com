@@ -6,12 +6,12 @@ import { feedback } from '../../database/_surface'
 import { defineAdminResource } from '../admin-shell'
 
 interface FeedbackRow {
-  id: string
+  id: number
   path: string
   thumb: 'up' | 'down' | null
   comment: string | null
   createdAt: Date | null
-  userId: string | null
+  userId: number | null
 }
 
 const sortableMap: Record<string, SQLWrapper> = {
@@ -95,7 +95,7 @@ export default defineAdminResource<FeedbackRow>({
         const ids = rows.map((r: FeedbackRow) => r.id)
         if (!ids.length)
           return
-        await db.delete(feedback).where(inArray(feedback.id, ids))
+        await db.delete(feedback).where(inArray(feedback.feedbackId, ids))
         return { message: `Deleted ${ids.length} feedback entr${ids.length === 1 ? 'y' : 'ies'}` }
       },
     },
@@ -118,7 +118,7 @@ export default defineAdminResource<FeedbackRow>({
 
     const [rows, totalRows] = await Promise.all([
       db.select({
-        id: feedback.id,
+        id: feedback.feedbackId,
         path: feedback.path,
         thumb: feedback.thumb,
         comment: feedback.comment,
@@ -134,7 +134,7 @@ export default defineAdminResource<FeedbackRow>({
     ])
     const total = totalRows[0]?.n ?? 0
 
-    const userIds = [...new Set(rows.map(r => r.userId).filter((id): id is string => Boolean(id)))]
+    const userIds = [...new Set(rows.map(r => r.userId).filter((id): id is number => id !== null))]
     const meta = await getUserDisplayMetaMap(db, userIds)
     const userRels: Record<string, Record<string, unknown>> = {}
     for (const id of userIds) {
@@ -150,10 +150,10 @@ export default defineAdminResource<FeedbackRow>({
     }
   },
   show: async ({ db }, id) => {
-    const [row] = await db.select().from(feedback).where(eq(feedback.id, id)).limit(1)
+    const [row] = await db.select().from(feedback).where(eq(feedback.feedbackId, Number(id))).limit(1)
     return (row as FeedbackRow | undefined) ?? null
   },
   destroy: async ({ db }, id) => {
-    await db.delete(feedback).where(eq(feedback.id, id))
+    await db.delete(feedback).where(eq(feedback.feedbackId, Number(id)))
   },
 })

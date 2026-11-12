@@ -7,16 +7,18 @@
 // list, so the palette cannot offer a surface the sidebar does not have, and a
 // flagged row (Bing) stays hidden in both while its flag is off.
 import type { CommandPaletteItem } from '@nuxt/ui'
-import type { ProNavSite } from '#layers/pro-shell/app/composables/useProSingleSiteNav'
+import type { ProNavSite } from '#layers/pro-features/app/composables/useProSingleSiteNav'
+import { useProShellCommandPalette } from '@nuxtseo/pro-shell/app/composables/useProShellCommandPalette'
 import { computed, ref } from 'vue'
 import { UDashboardSearch, UiFavicon, UiNavIcon } from '#components'
-import { expandProSiteRoute, proSiteFeatureManifest, proSiteFeatureNavOrder, readProFeatureFlags } from '#layers/pro-shell/shared/manifest'
-import { proNavGroups } from '#layers/pro-shell/shared/nav-groups'
-import { useProCommandPalette } from '../../composables/useProCommandPalette'
+import { expandProSiteRoute, proSiteFeatureManifest, proSiteFeatureNavOrder, readProFeatureFlags } from '#layers/pro-features/shared/manifest'
+import { proNavGroups } from '#layers/pro-features/shared/nav-groups'
 
 const { sites } = defineProps<{ sites: ProNavSite[] }>()
 
-const { open } = useProCommandPalette()
+// The shell frame owns the open state: its sidebar trigger and Cmd+K open
+// this palette, and the frame mounts it on the first open.
+const { open } = useProShellCommandPalette()
 const searchTerm = ref('')
 const flags = computed(() => readProFeatureFlags(useRuntimeConfig().public))
 

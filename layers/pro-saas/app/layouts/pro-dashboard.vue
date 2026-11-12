@@ -1,17 +1,34 @@
 <script setup lang="ts">
-import type { SiteLookup, SiteResource } from '#layers/pro-saas/shared/site-lookup'
 // The one dashboard shell. Every `/pro/dashboard/**` page renders through it
-// (the pro-shell module assigns this layout in `pages:extend`, so a page in a
+// (the pro-features module assigns this layout in `pages:extend`, so a page in a
 // feature layer does not have to remember to).
+//
+// The chrome is `@nuxtseo/pro-shell`'s Dashboard frame: sidebar header and
+// command palette trigger, the sidebar nav, the user menu, the page header and
+// the Site switcher. This layout keeps what only this app knows: the Site read,
+// the Search Console scope alert, the error boundary, and the nav source the
+// frame reads.
 //
 // Sidebar bodies follow nuxtseo.com: the SAME component goes into `#sidebar`
 // and `#mobile`, so the desktop rail and the drawer cannot diverge. Scope
 // decides which body, not which shell: a Site in the route, or an account with
 // exactly one Site, gets the Site nav; anything wider gets the fleet roster.
-import type { ProNavSite } from '#layers/pro-shell/app/composables/useProSingleSiteNav'
+import type { ProNavSite } from '#layers/pro-features/app/composables/useProSingleSiteNav'
+import type { SiteLookup, SiteResource } from '#layers/pro-saas/shared/site-lookup'
+import ProShellDashboardFrame from '@nuxtseo/pro-shell/app/components/ProShellDashboardFrame.vue'
+import ProShellFeedbackDrawer from '@nuxtseo/pro-shell/app/components/ProShellFeedbackDrawer.vue'
+import ProShellMobileNavTrigger from '@nuxtseo/pro-shell/app/components/ProShellMobileNavTrigger.vue'
+import ProShellPageHeader from '@nuxtseo/pro-shell/app/components/ProShellPageHeader.vue'
+import ProShellSiteSwitcher from '@nuxtseo/pro-shell/app/components/ProShellSiteSwitcher.vue'
+import ProShellUserMenu from '@nuxtseo/pro-shell/app/components/ProShellUserMenu.vue'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 import { MISSING_SITE_PATH, readSiteLookup, siteLookupKey } from '#layers/pro-saas/shared/site-lookup'
+import { useProFeedback } from '../composables/useProFeedback'
+import { useProHeaderMenu } from '../composables/useProHeaderMenu'
+import { provideProNavSource } from '../composables/useProNavSource'
+import { useProUserMenu } from '../composables/useProUserMenu'
+import { proNavSiteRef } from '../utils/pro-shell-sites'
 
 const route = useRoute()
 const router = useRouter()
@@ -65,18 +82,22 @@ const sites = computed<ProNavSite[]>(() => (siteData.value?.sites ?? []) as ProN
 const sitesLoading = computed(() => sitesStatus.value === 'pending')
 const singleSite = computed(() => sites.value.length === 1)
 
+const site = computed<SiteResource | null>(() => siteLookup.value?._tag === 'Found' ? siteLookup.value.site : null)
+
 /**
  * The Site the sidebar is scoped to, or `null` for the fleet.
  *
  * A Site in the route always wins, even before the roster arrives: the sidebar
  * would otherwise render the fleet list for a beat on every deep link and then
- * swap under the reader's cursor. An account with a single Site collapses to
- * the same body, so the sidebar never flips when crossing shells.
+ * swap under the reader's cursor. The roster row names the Site, as the
+ * sidebar always has; the layout's own read covers a Site the roster lacks.
+ * An account with a single Site collapses to the same body, so the sidebar
+ * never flips when crossing shells.
  */
 const scopedSite = computed<ProNavSite | null>(() => {
   const id = routeSiteId.value
   if (id)
-    return sites.value.find(site => (site.publicId ?? site.siteId ?? site.id) === id) ?? { publicId: id }
+    return sites.value.find(row => proNavSiteRef(row) === id) ?? (site.value as ProNavSite | null) ?? { publicId: id }
   return singleSite.value ? sites.value[0]! : null
 })
 
@@ -85,7 +106,6 @@ const scopedSite = computed<ProNavSite | null>(() => {
 // one Site has nowhere wider to go, so it gets none.
 const showSiteBack = computed(() => !!routeSiteId.value && !singleSite.value)
 
-const site = computed<SiteResource | null>(() => siteLookup.value?._tag === 'Found' ? siteLookup.value.site : null)
 const siteStatus = computed(() => {
   if (!routeSiteId.value)
     return 'idle'
@@ -110,17 +130,42 @@ watch(siteLookup, (value) => {
 provide('site', site)
 provide('siteStatus', siteStatus)
 
+// The frame, the switcher, the sidebar gates and the user menu read this.
+provideProNavSource({
+  sites: computed(() => sitesLoading.value && !siteData.value ? null : sites.value),
+  scopedSite,
+  routeSiteRef: routeSiteId,
+})
+
+const { items: userMenu } = useProUserMenu({ singleSite })
+
+// Send feedback opens from the page header and the user menu. The drawer
+// files the report against the page it opened on.
+const feedback = useProFeedback()
+const feedbackOpen = feedback.isOpen
+const feedbackContext = computed(() => ({
+  path: route.path,
+  intent: feedback.intent.value,
+  ...(routeSiteId.value ? { siteId: routeSiteId.value } : {}),
+}))
+const feedbackAccount = computed(() => session.value?.user
+  ? { email: session.value.user.email ?? null, id: session.value.user.id != null ? String(session.value.user.id) : null }
+  : null)
+
 /**
- * The dashboard's one `h1`, drawn by `ProPageHeader`, as nuxtseo.com's
+ * The dashboard's one `h1`, drawn by `ProShellPageHeader`, as nuxtseo.com's
  * `pro-dashboard` layout draws it.
  *
  * This app's pages are flat (no parent feature route wrapping a
  * `<NuxtPage>`), so the shell is the one place that mounts the header. Titles
  * come from `definePageMeta({ title })`; a detail page overrides it with
- * `definePageMeta({ proHeader })`. The error page renders inside this layout
- * and names the error in its own heading, so the header steps aside for it.
+ * `definePageMeta({ proHeader })`, whose ancestors extend the title trail.
+ * The error page renders inside this layout and names the error in its own
+ * heading, so the header steps aside for it.
  */
-const { title: headerMetaTitle } = useProHeaderPageMeta()
+const { title: headerMetaTitle, crumbs: headerMetaCrumbs } = useProHeaderPageMeta()
+const headerAncestorCrumbs = computed(() => headerMetaCrumbs.value.slice(0, -1))
+const { groups: headerMenuGroups } = useProHeaderMenu()
 const nuxtError = useError()
 const headerTitle = computed(() => {
   if (nuxtError.value)
@@ -139,9 +184,9 @@ function onPageError(error: unknown) {
 </script>
 
 <template>
-  <UiAppShell inline-mobile-nav content-class="pt-2 pb-4 sm:py-6 lg:py-3">
-    <template #brand>
-      <ProSidebarHeader to="/pro/dashboard" />
+  <ProShellDashboardFrame>
+    <template #brand-mark>
+      <OgBrand :size="24" semantic />
     </template>
 
     <template #sidebar>
@@ -152,44 +197,41 @@ function onPageError(error: unknown) {
     </template>
 
     <template #mobile="{ closeNav }">
-      <div class="flex min-h-full flex-col gap-3">
-        <ProSidebarHeader to="/pro/dashboard" @navigate="closeNav" />
-        <div class="flex min-w-0 flex-1 flex-col">
-          <ProSidebarScope :show-back="showSiteBack" class="flex-1" @navigate="closeNav">
-            <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" @navigate="closeNav" />
-            <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" @navigate="closeNav" />
-          </ProSidebarScope>
-          <ProSidebarFooterMobile :single-site="singleSite" @navigate="closeNav" />
-        </div>
+      <div class="flex min-w-0 flex-1 flex-col">
+        <ProSidebarScope :show-back="showSiteBack" class="flex-1" @navigate="closeNav">
+          <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" @navigate="closeNav" />
+          <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" @navigate="closeNav" />
+        </ProSidebarScope>
+        <ProShellUserMenu variant="drawer" :items="userMenu" @navigate="closeNav" />
       </div>
     </template>
 
     <template #footer>
-      <ProSidebarFooter :single-site="singleSite" />
+      <ProShellUserMenu :items="userMenu" />
     </template>
 
-    <template #extras>
+    <template #command-palette>
       <ProCommandPalette :sites="sites" />
     </template>
 
     <!-- Sticky, so the Site crumb survives scrolling. `v-show`, never `v-if`:
-         a page teleports header actions into `#pro-dashboard-header-actions`,
-         and the target must already be in the DOM when that page mounts. On a
-         client-side arrival from a route with no header, `v-if` would create
-         the target after the page, the teleport would resolve to null, and
-         the action would silently never render. -->
-    <ProPageHeader v-show="headerTitle" sticky :title="headerTitle ?? ''">
-      <template #crumb>
-        <ProSiteSwitcher v-if="routeSiteId" :sites="sites" :site="site" />
+         toggling the header must not remount the Site switcher on every
+         navigation between a titled and an untitled route. -->
+    <ProShellPageHeader
+      v-show="headerTitle"
+      sticky
+      :title="headerTitle ?? ''"
+      :crumbs="headerAncestorCrumbs"
+      :menu-groups="headerMenuGroups"
+    >
+      <template v-if="routeSiteId" #crumb>
+        <ProShellSiteSwitcher />
       </template>
-      <template #actions>
-        <div id="pro-dashboard-header-actions" class="contents" />
-      </template>
-    </ProPageHeader>
+    </ProShellPageHeader>
 
     <div class="pro-container pt-4 pb-10 sm:pt-5">
       <!-- With no header on screen, a phone has no other way to the drawer. -->
-      <ProMobileNavTrigger v-if="!headerTitle" class="mb-4" />
+      <ProShellMobileNavTrigger v-if="!headerTitle" class="mb-4" />
 
       <ProGscScopeMissingAlert v-if="gscScopeMissing" :retry-to="gscRetryTo" class="mb-6" />
 
@@ -229,5 +271,12 @@ function onPageError(error: unknown) {
         </template>
       </ProPageErrorBoundary>
     </div>
-  </UiAppShell>
+
+    <ProShellFeedbackDrawer
+      v-model:open="feedbackOpen"
+      :context="feedbackContext"
+      :account="feedbackAccount"
+      :submit="feedback.submit"
+    />
+  </ProShellDashboardFrame>
 </template>

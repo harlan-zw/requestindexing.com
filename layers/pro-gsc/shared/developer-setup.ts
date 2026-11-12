@@ -1,6 +1,9 @@
 // Setup steps for the Developers page. Each command exists twice: `display`
 // masks the API key for the screen, and `copy` holds the full key for the
 // clipboard. Before a key exists, both show the same placeholder.
+import type { SetupCompletion } from '@nuxtseo/pro-shell/shared/setup-offers'
+import type { DeveloperApiKeysState } from './developer-api-keys'
+import { SETUP_COMPLETE, SETUP_PENDING, SETUP_UNAVAILABLE, SETUP_UNKNOWN } from '@nuxtseo/pro-shell/shared/setup-offers'
 import { CONNECT_SITE_ROUTE } from '#layers/pro-saas/shared/onboarding'
 
 export type SetupMethod = 'cli' | 'mcp' | 'api'
@@ -212,4 +215,31 @@ Give sanitized expected and actual behavior, plus a workaround.
 If a response supplies a request ID, pass --request-id. Keep the returned report ID for follow-up.
 Do not include this API key, cookies, private URLs, customer data or raw responses.
 If reporting fails, tell me once and continue. Do not retry the report.`
+}
+
+/** The Setup completion of the three agent setup offers on the dashboard home. */
+export interface DeveloperSetupCompletion {
+  skill: SetupCompletion
+  mcp: SetupCompletion
+  api: SetupCompletion
+}
+
+/**
+ * Whether the account still owes the agent skill, MCP and API setup, read from
+ * the Developers page's API key state.
+ *
+ * gscdump reports one fact this app can read: when each API key was last
+ * used. It does not say which client used it. So a key that has made a request
+ * completes all three offers: the account reached gscdump through one of them,
+ * and three prompts would outrun the evidence. Before Search Console is
+ * connected no key can exist, so the offers do not apply. Null is a read that
+ * has not landed.
+ */
+export function developerSetupCompletion(state: DeveloperApiKeysState | null): DeveloperSetupCompletion {
+  const all = (completion: SetupCompletion): DeveloperSetupCompletion => ({ skill: completion, mcp: completion, api: completion })
+  if (!state)
+    return all(SETUP_UNKNOWN)
+  if (state._tag === 'SearchConsoleRequired')
+    return all(SETUP_UNAVAILABLE)
+  return all(state.keys.some(key => key.lastUsedAt !== null) ? SETUP_COMPLETE : SETUP_PENDING)
 }

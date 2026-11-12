@@ -1,4 +1,4 @@
-import { proFeatureSetup } from '#layers/pro-shell/app/utils/registry-factories'
+import { proFeatureSetup } from '#layers/pro-features/app/utils/registry-factories'
 import { useGscFeatureDataState } from '../composables/useGscFeatureDataState'
 
 /**

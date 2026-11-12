@@ -12,9 +12,9 @@
 // gap with its boot progress, which this app does not port.
 
 import type { SiteHoldReason } from '@gscdump/contracts'
+import { INTEGRATIONS_ROUTE } from '#layers/pro-features/app/utils/integrations-pending'
 import { HELD_TITLE, holdMessage, SITE_LINK_REFUSED } from '#layers/pro-gsc/shared/entitlement-copy'
 import { SITES_ROUTE } from '#layers/pro-saas/shared/site-lookup'
-import { INTEGRATIONS_ROUTE } from '#layers/pro-shell/app/utils/integrations-pending'
 
 export interface SiteSearchStateInput {
   /** The Site has a gscdump link (`sites.gscdumpSiteId`). */

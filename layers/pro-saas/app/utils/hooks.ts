@@ -4,7 +4,7 @@
  * pro-saas is the producer; consumer layers (pro-gsc, pro-perf, pro-reports,
  * nuxt-seo-pro) listen via `app/plugins/*.ts`. See
  * docs/adr/0010-page-flows-via-nuxt-layer-hooks.md and ADR-0015 (Site
- * Features now live in pro-shell's build-time registry).
+ * Features now live in pro-features's build-time registry).
  *
  * The `pro:onboarding:step` registry is gone. Onboarding is a three-step
  * wizard at `/pro/dashboard/onboarding` whose order is fixed, so a per-layer

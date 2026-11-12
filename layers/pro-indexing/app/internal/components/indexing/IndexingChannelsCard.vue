@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { expandProSiteRoute, proSiteFeatureManifest } from '#layers/pro-shell/shared/manifest'
+import { expandProSiteRoute, proSiteFeatureManifest } from '#layers/pro-features/shared/manifest'
 
 // The two channels a Site can notify, side by side. The Submit to Google page
 // and the IndexNow page both render this card, so a person reads the same

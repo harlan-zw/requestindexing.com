@@ -545,6 +545,54 @@ The goals question and its options are Request Indexing's own, in `layers/pro-sa
 | Admin explanation | Self-reported answers from the optional About you card. Unanswered questions are not counted. |
 | Admin free text | Anything else |
 
+## Dashboard shell assets
+
+The dashboard frame, the setup offers, Invite member, Send feedback and the onboarding frame come from `@nuxtseo/pro-shell`. Its defaults are canonical in nuxtseo.com's COPY.md (Dashboard CTA assets). This table lists only the strings Request Indexing changes or adds, in `layers/pro-saas/app/pro-shell.ts` (`proShell.copy`). Change a row here first, then that file. A string the table does not list is the shell default.
+
+| Asset | String | Why it differs |
+| --- | --- | --- |
+| Brand link label | Request Indexing dashboard | Names the product |
+| Back to every Site | All Sites | Site is capitalised (GLOSSARY.md) |
+| Site switcher label | Switch Site, current Site: {site} | Site is capitalised |
+| Non-production Site tooltip | Non-production Site. | Site is capitalised |
+| User menu fallback name | Account | The label the menu showed before |
+| Team switch confirm title | Switch Team? | Never Workspace for a Team |
+| Team switch confirm body | Switching to {workspace} leaves the current Site. Unsaved filters on this page are lost. | Never Workspace for a Team |
+| Team switch confirm action | Switch Team | Never Workspace for a Team |
+| Refused action tooltip | Your Team role does not allow this. Ask a Team admin. | Says who can change it |
+| Agent skill offer body | Let your coding agent read your indexing record through the gscdump CLI. | The skill is gscdump's |
+| MCP offer body | Read your Search Console data from hosted AI clients. | Names the data this app reads |
+| API offer body | Call the gscdump HTTP API with an API key. | There is no typed SDK here |
+| Bing offer title | Connect Bing Webmaster Tools | Bing submission is not claimed (Truth rules) |
+| Bing offer body, one Site | Read Bing crawl evidence for this Site. | Bing submission is not claimed |
+| Bing offer body, every Site | Connect Bing once, then link each Site to read its Bing crawl evidence. | Bing submission is not claimed |
+| Another Site offer title | Connect another Site | Connect is the verb for a Site |
+| Another Site offer body | See which pages Google has indexed on more of your Sites. | The product's question |
+| Another Site offer action | Connect a Site | Connect is the verb for a Site |
+| Invite action | Invite member | The page is Members |
+| Invite dialog title | Invite a member | The page is Members |
+| Invite access label | Role | Members lists a Role column |
+| Invitation created | Invitation created | No email is sent yet |
+| Invitation created detail | Copy its link from Pending invitations and send it to your teammate. | No email is sent yet |
+| Invitation renewed | Invitation renewed | A second invite renews the link |
+| Invitation renewed detail | The previous link stopped working. Copy the new link from Pending invitations. | No email is sent yet |
+| Pending invitations heading | Pending invitations | Members page |
+| Copy invitation link | Copy invitation link | Members page |
+| Invitation link copied | Link copied | Members page |
+| Setup progress label | Setup progress | Onboarding is called setup |
+
+Onboarding Step words, under `proShell.copy.onboarding.steps`:
+
+| Step | Rail label | Heading | Description | Action |
+| --- | --- | --- | --- | --- |
+| `connect` | Connect Google | Connect Google Search Console | Request Indexing reads your Search Console data to find pages Google has missed, then submits them for you. | Continue (shell default) |
+| `sites` | Connect Sites | Connect your Sites | Choose a property from your Search Console. Request Indexing reads each Site from its property. | Continue (shell default) |
+| `sync` | Finish setup | Setup completion assets | Setup completion assets | Go to dashboard |
+| `connect-site` (dashboard card) | | Connect your first Site | Connect a Site to see which of its pages Google has indexed, and why the rest are not. | Connect a Site |
+| `connect-search-console` (dashboard card) | | Connect Google Search Console | Indexing status and coverage for your Sites come from Search Console. We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify. | The Connect Search Console button |
+
+**Never claim an invitation email was sent.** `team-domain.ts` logs the invitation instead of sending it. Until Postmark sends it, the copy points at the link on Members.
+
 ## Setup completion
 
 The final setup step confirms a connected Site. It does not read or start an engine sync.

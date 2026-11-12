@@ -22,6 +22,22 @@ vi.mock('~~/layers/core/app/composables/events', () => ({ useJobListener: () => 
 vi.mock('#layers/pro-saas/app/composables/useNoSearchConsoleProperty', () => ({ useNoSearchConsoleProperty: () => ref(false) }))
 vi.mock('#layers/pro-gsc/app/components/overview/ProLiveJobProgress.vue', () => ({ default: defineComponent(() => () => null) }))
 vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewOnboardingCard.vue', () => ({ default: defineComponent(() => () => h('aside', { 'data-onboarding': true })) }))
+vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewSetupOffers.vue', () => ({ default: defineComponent(() => () => null) }))
+// The setup card reads the `dashboard-card` flow. The real resolver runs over
+// the registered steps; only the Nuxt-bound composable is stood in for.
+vi.mock('@nuxtseo/pro-shell/app/composables/useProShellOnboarding', async () => {
+  const { evaluateOnboardingSteps, resolveOnboarding } = await import('@nuxtseo/pro-shell/shared/onboarding')
+  const { DASHBOARD_CARD_STEPS } = await import('#layers/pro-saas/shared/onboarding')
+  return {
+    useProShellOnboardingSteps: () => computed(() => DASHBOARD_CARD_STEPS),
+    useProShellOnboardingFlow: (options: { steps: unknown, context: unknown }) => ({
+      current: computed(() => {
+        const resolution = resolveOnboarding({ steps: evaluateOnboardingSteps(toValue(options.steps as never), toValue(options.context as never)), requested: null })
+        return resolution._tag === 'Current' ? { id: resolution.current.id } : null
+      }),
+    }),
+  }
+})
 vi.mock('#layers/pro-saas/app/components/pro/ProNoPropertyNotice.vue', () => ({ default: defineComponent(() => () => null) }))
 vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewSitesColumn.vue', () => ({ default: defineComponent({
   props: ['entries'],

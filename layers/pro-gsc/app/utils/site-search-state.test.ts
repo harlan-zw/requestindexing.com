@@ -1,7 +1,7 @@
 import type { SiteSearchStateInput } from './site-search-state'
 import { describe, expect, it } from 'vitest'
+import { INTEGRATIONS_ROUTE } from '#layers/pro-features/app/utils/integrations-pending'
 import { SITES_ROUTE } from '#layers/pro-saas/shared/site-lookup'
-import { INTEGRATIONS_ROUTE } from '#layers/pro-shell/app/utils/integrations-pending'
 import { resolveSiteSearchState, sampleOverlay } from './site-search-state'
 
 const LINKED_SYNCED: SiteSearchStateInput = { linked: true, lifecycleSettled: true, hold: null, syncing: false, ready: true }

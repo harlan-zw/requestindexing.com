@@ -7,7 +7,7 @@
 // A new GSC scope (or a new integration entirely) is one new union member
 // plus one new case in `checkIntegration`.
 
-import { INTEGRATIONS_ROUTE } from '#layers/pro-shell/app/utils/integrations-pending'
+import { INTEGRATIONS_ROUTE } from '#layers/pro-features/app/utils/integrations-pending'
 
 // Account holds the Indexing API grant; Integrations holds Search Console.
 const ACCOUNT_ROUTE = '/pro/dashboard/account'

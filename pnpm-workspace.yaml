@@ -60,7 +60,8 @@ minimumReleaseAgeExclude:
   - '@takumi-rs/helpers@2.15.0'
   - '@takumi-rs/wasm@2.15.0'
   - sitemapd@0.2.3
-  - '@nuxtseo/design-system@0.1.2'
+  - '@nuxtseo/design-system@0.1.3'
+  - '@nuxtseo/pro-shell@0.1.3'
 
 trustPolicy: no-downgrade
 trustPolicyExclude:
@@ -175,7 +176,8 @@ catalog:
   '@nuxt/test-utils': ^4.3.2
   '@nuxt/ui': ^4.11.2
   '@nuxtjs/seo': ^6.0.1
-  '@nuxtseo/design-system': ^0.1.2
+  '@nuxtseo/design-system': ^0.1.3
+  '@nuxtseo/pro-shell': ^0.1.3
   '@sentry/cloudflare': ^11.1.0
   '@sentry/nuxt': ^11.1.0
   '@takumi-rs/core': ^2.15.0

@@ -15,6 +15,7 @@ export const LOG_CATALOG = {
   // Pro lifecycle / events
   'pro_event.record_failed': 'proEvent insert failed during a "first X" milestone',
   'telemetry.insert_failed': 'pro telemetry event insert failed',
+  'feedback.record_failed': 'a dashboard feedback report could not be stored; the drawer showed its retry message',
 
   // gscdump bridge
   'gscdump.unlink.remote_failed': 'gscdump.com API call failed during local unlink/reconcile',

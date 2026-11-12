@@ -13,6 +13,7 @@ import { eq, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 import { createError, getQuery, getRequestHeader, getRequestURL, getRouterParam, readBody } from 'h3'
 import { teamSites } from '~~/layers/core/server/db/schema'
+import { readProFeatureFlags } from '#layers/pro-features/shared/manifest'
 import {
   resolveGscdumpV1ProxyOperation,
   selectGscdumpV1ProxyBody,
@@ -25,7 +26,6 @@ import { getGscdumpApiUrl } from '#layers/pro-gsc/server/utils/gscdump-origin'
 import { assertRegisteredGscSiteScope, registeredSiteTeamPrincipals } from '#layers/pro-gsc/server/utils/registered-site-scope'
 import { sites, teams, users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
-import { readProFeatureFlags } from '#layers/pro-shell/shared/manifest'
 
 function requestIdForUpstream(requestId: string): string {
   return `req_${requestId.replace(/[^\w-]/g, '_')}`

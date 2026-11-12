@@ -1,28 +1,11 @@
-// Ported from nuxtseo.com's `layers/saas/app/composables/useProUserMenu.ts`,
-// cut to what this app offers: no billing, API tokens, preferences, support
-// page, feedback drawer or workspace creation.
+// The user menu groups `ProShellUserMenu` draws, ported from nuxtseo.com's
+// `useProUserMenu` and cut to what this app offers: no billing, API tokens,
+// preferences or workspace creation.
 //
 // Three groups, laid out as two columns plus a full-width footer row:
-// Team (switch team, team pages), Account (person pages), then Sign out.
-import type { DropdownMenuItem } from '@nuxt/ui'
-import type { ProWorkspace } from './useCurrentWorkspace'
-
-export interface ProUserMenuItem extends DropdownMenuItem {
-  /** Workspace rows render their team avatar instead of a nav icon. */
-  workspaceTeam?: ProWorkspace
-  /** Marks the currently active workspace row. */
-  workspaceActive?: boolean
-}
-
-export const proUserMenuUi = {
-  content: 'w-64 max-w-[calc(100vw-1.5rem)] border border-accented bg-muted ring-0 lg:w-[28rem]',
-  viewport: 'grid grid-cols-1 divide-y-0 lg:grid-cols-2',
-  group: 'min-w-0 p-2 border-default [&:nth-child(2)]:border-t lg:[&:nth-child(2)]:border-t-0 lg:[&:nth-child(2)]:border-l last:col-span-full last:border-t last:flex last:flex-col lg:last:flex-row',
-  label: 'mb-1 text-xs font-medium tracking-wide text-muted',
-  item: 'min-h-11 items-center cursor-pointer lg:min-h-0',
-  itemLeadingIcon: 'hidden',
-  separator: '-mx-2',
-}
+// Team (switch Team, Team pages), Account (person pages), then Send feedback
+// and Sign out.
+import type { ProShellUserMenuItem } from '@nuxtseo/pro-shell/shared/user-menu'
 
 export function useProUserMenu(options: { singleSite: MaybeRefOrGetter<boolean> }) {
   const toast = useToast()
@@ -39,49 +22,51 @@ export function useProUserMenu(options: { singleSite: MaybeRefOrGetter<boolean> 
       })
   }
 
-  const items = computed<ProUserMenuItem[][]>(() => {
-    const workspace: ProUserMenuItem[] = [
+  const items = computed<ProShellUserMenuItem[][]>(() => {
+    const workspace: ProShellUserMenuItem[] = [
       { label: teams.value.length > 1 ? 'Teams' : 'Team', type: 'label' },
-      ...teams.value.map<ProUserMenuItem>((team) => {
+      ...teams.value.map<ProShellUserMenuItem>((team) => {
         const active = team.id === currentTeam.value?.id
         return {
           label: teamLabel(team),
           description: active ? undefined : teamRoleLabel(team.role),
-          workspaceTeam: team,
-          workspaceActive: active,
+          team: { id: String(team.id), name: team.name, personalTeam: team.personalTeam },
+          active,
           onSelect: () => { void selectWorkspace(team.id) },
         }
       }),
       { type: 'separator' },
       { label: 'General', icon: 'settings', to: '/pro/dashboard/team/settings' },
-      { label: 'Members', icon: 'users', to: '/pro/dashboard/team/members' },
+      { label: 'Members', icon: 'users', action: { _tag: 'Route', name: 'teamMembers' } },
     ]
     // At one Site the sidebar has no Sites roster and no connect control, so
     // growing to a second Site lives here, as upstream does.
     if (toValue(options.singleSite) && can('manage-sites')) {
       workspace.push(
         { type: 'separator' },
-        { label: 'Connect a Site', icon: 'add', to: '/pro/dashboard/sites/connect' },
+        { label: 'Connect a Site', icon: 'add', action: { _tag: 'Route', name: 'addSite' } },
       )
     }
 
-    const personal: ProUserMenuItem[] = [
+    const personal: ProShellUserMenuItem[] = [
       { label: 'Account', type: 'label' },
       { label: 'Account', icon: 'user', to: '/pro/dashboard/account' },
       // nuxtseo.com's user menu carries "Billing & Usage". The Free allowance
       // is counted per account, so Usage sits with Account here.
       { label: 'Usage', icon: 'gauge', to: '/pro/dashboard/usage' },
       // Always here. The rail carries Integrations only while one is pending.
-      { label: 'Integrations', icon: 'plug', to: '/pro/dashboard/integrations' },
-      { label: 'Developers', icon: 'terminal', to: '/pro/dashboard/developers' },
+      { label: 'Integrations', icon: 'plug', action: { _tag: 'Route', name: 'integrations' } },
+      { label: 'Developers', icon: 'terminal', action: { _tag: 'Route', name: 'developers' } },
     ]
 
-    const signOut: ProUserMenuItem[] = [
-      { label: 'Sign out', icon: 'log-out', to: '/auth/logout', external: true },
+    const footer: ProShellUserMenuItem[] = [
+      { icon: 'message', action: { _tag: 'Feedback' } },
+      // A full page load, so the session cookie clears before the next render.
+      { label: 'Sign out', icon: 'log-out', onSelect: () => { void navigateTo('/auth/logout', { external: true }) } },
     ]
 
-    return [workspace, personal, signOut]
+    return [workspace, personal, footer]
   })
 
-  return { items, menuUi: proUserMenuUi }
+  return { items }
 }

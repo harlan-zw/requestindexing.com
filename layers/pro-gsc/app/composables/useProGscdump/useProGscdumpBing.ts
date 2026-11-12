@@ -20,7 +20,7 @@ import type {
 import type { BingReportingWindow } from '../../../shared/bing-reporting-window'
 import type { BingIntegrationRow, BingIntegrationSiteRef, BingIntegrationState, BingSitemapSubmitOutcome } from '../../utils/bing-integration-view'
 import type { BingIndexingEvidence } from '../../utils/bing-view'
-import { readProFeatureFlags } from '#layers/pro-shell/shared/manifest'
+import { readProFeatureFlags } from '#layers/pro-features/shared/manifest'
 import { bingGrantTarget, summarizeBingIntegration, toBingIntegrationRows } from '../../utils/bing-integration-view'
 import { parseGscdumpError } from '../_gscdump-error'
 import { useGscdumpQuery } from './_internal'

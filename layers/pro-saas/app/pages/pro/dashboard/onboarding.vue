@@ -1,37 +1,36 @@
 <script setup lang="ts">
-import type { OnboardingStep } from '#layers/pro-saas/shared/onboarding'
+import ProShellOnboardingFrame from '@nuxtseo/pro-shell/app/components/ProShellOnboardingFrame.vue'
+import { useProShellCopy } from '@nuxtseo/pro-shell/app/composables/useProShellCopy'
+import { useProShellOnboardingFlow, useProShellOnboardingSteps } from '@nuxtseo/pro-shell/app/composables/useProShellOnboarding'
+import { REQUEST_HONOUR } from '@nuxtseo/pro-shell/shared/onboarding'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 
 import ProSetupFirstSiteReport from '~~/layers/pro-indexing/app/components/ProSetupFirstSiteReport.vue'
 import {
-  canAdvanceOnboardingStep,
-  canSkipOnboardingSites,
   DASHBOARD_ROUTE,
+  FIRST_RUN_FLOW,
   ONBOARDING_COMPLETION_COPY,
-  ONBOARDING_STEP_LABELS,
-  ONBOARDING_STEPS,
-  onboardingStepIndex,
   parseOnboardingStep,
   resolveGscConnection,
-  resolveOnboardingNav,
-  resolveOnboardingResumeStep,
 } from '#layers/pro-saas/shared/onboarding'
 import { PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 
 // First-run setup, three steps, the step in the URL.
 //
-// The step lives in `?step=` so a Google round trip comes back where it left
-// off, and so does a reload. Nothing is stored: the step a user resumes at is
-// derived from what they have actually done, which is the only state that
-// survives an abandoned tab.
+// The steps are registered on `@nuxtseo/pro-shell`'s Step registry
+// (`shared/onboarding.ts`), and the shell's flow resolves the current one. The
+// step lives in `?step=` so a Google round trip comes back where it left off,
+// and so does a reload. Nothing is stored: a bare URL resumes from what the
+// user has actually done, which is the only state that survives an abandoned
+// tab. Each step draws its own nav from the frame's `controls`.
 definePageMeta({
   layout: 'pro-onboarding',
   title: 'Set up',
 })
 
 const route = useRoute()
-const router = useRouter()
 const toast = useToast()
+const frameCopy = useProShellCopy().onboarding
 const { session, fetch: refreshSession } = useUserSession()
 const { data: savedPage } = useFetch('/api/onboarding/page', { server: false, lazy: true })
 watch(() => savedPage.value?._tag, (state) => {
@@ -55,40 +54,13 @@ const hasSites = computed(() => siteCount.value > 0)
 
 const signedInWithGithub = computed(() => session.value?.user?.authProvider === 'github')
 
-function resumeStep(): OnboardingStep {
-  return resolveOnboardingResumeStep({ gsc: gsc.value, hasSites: hasSites.value })
-}
-
-const step = ref<OnboardingStep>(parseOnboardingStep(route.query.step) ?? resumeStep())
-const stepIndex = computed(() => onboardingStepIndex(step.value))
-
-const progressSteps = ONBOARDING_STEPS.map(id => ({ id, label: ONBOARDING_STEP_LABELS[id] }))
-
-function goStep(next: string) {
-  const parsed = parseOnboardingStep(next)
-  if (!parsed)
-    return
-  step.value = parsed
-  router.replace({ query: { ...route.query, step: parsed } })
-}
-
-// The URL is the source of truth, so a back button moves the wizard.
-watch(() => route.query.step, (value) => {
-  const parsed = parseOnboardingStep(value)
-  if (parsed && parsed !== step.value)
-    step.value = parsed
-})
-
-const returnToSites = '/pro/dashboard/onboarding?step=sites'
-const gscConnectUrl = `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent(returnToSites)}`
-
-// Coming back from Google, the session cookie is fresh but this page's copy is
-// not. Refreshing on mount is what makes the connect step flip to "connected".
-onMounted(async () => {
-  await refreshSession()
-  if (!parseOnboardingStep(route.query.step))
-    goStep(resumeStep())
-})
+// nuxtseo.com's escape hatch. The sites step needs a Site, but a Site that
+// cannot connect must not trap the user: a Google account with no Search
+// Console property, a gscdump outage, or a full Free allowance would. The form
+// reports a property list with nothing to connect, a failed attempt, or a full
+// allowance, and only then does the step's skip rule offer a skip. Skipping
+// finishes setup with no Site, and the dashboard's Connect a Site takes over.
+const sitesBlocked = ref(false)
 
 const finishing = ref(false)
 
@@ -113,151 +85,147 @@ async function finish(options: { skipSites?: boolean } = {}) {
   }
 }
 
-function next() {
-  if (step.value === 'connect')
-    return goStep('sites')
-  if (step.value === 'sites')
-    return goStep('sync')
-  return finish()
-}
-
-const nextLabel = computed(() => step.value === 'sync' ? 'Go to dashboard' : 'Continue')
-const nextDisabled = computed(() => !canAdvanceOnboardingStep(step.value, {
-  gsc: gsc.value,
-  hasSites: hasSites.value,
-}))
-
-// nuxtseo.com's escape hatch. The sites step needs a Site, but a Site that
-// cannot connect must not trap the user: a Google account with no Search
-// Console property, a gscdump outage, or a full Free allowance would. The form
-// reports a property list with nothing to connect, a failed attempt, or a full
-// allowance, and only then does the step offer a skip. Skipping finishes setup
-// with no Site, and the dashboard's Connect a Site takes over.
-const sitesBlocked = ref(false)
-const canSkipSites = computed(() => canSkipOnboardingSites({
-  hasSites: hasSites.value,
-  connectBlocked: sitesBlocked.value,
-}))
-
 function skipSites() {
   return finish({ skipSites: true })
 }
 
-// Search Console is an offer, so the way past it has to be visible. The rule
-// lives in `resolveOnboardingNav`: one way forward per step.
-const nav = computed(() => resolveOnboardingNav(step.value, gsc.value))
+const flow = useProShellOnboardingFlow({
+  steps: useProShellOnboardingSteps(FIRST_RUN_FLOW),
+  context: computed(() => ({ gsc: gsc.value, hasSites: hasSites.value, connectBlocked: sitesBlocked.value })),
+  policy: REQUEST_HONOUR,
+  finish: () => finish(),
+})
+const currentStep = computed(() => parseOnboardingStep(flow.current.value?.id) ?? 'connect')
 
-function back() {
-  goStep(ONBOARDING_STEPS[Math.max(0, stepIndex.value - 1)]!)
-}
+const returnToSites = '/pro/dashboard/onboarding?step=sites'
+const gscConnectUrl = `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent(returnToSites)}`
+
+// Coming back from Google, the session cookie is fresh but this page's copy is
+// not. Refreshing on mount is what makes the connect step flip to "connected".
+onMounted(() => refreshSession())
 
 useRobotsRule(false)
 useSeoMeta({ title: 'Set up Request Indexing' })
 </script>
 
 <template>
-  <div class="space-y-8">
-    <UiWizardProgress :steps="progressSteps" :current-index="stepIndex" @select="goStep" />
+  <ProShellOnboardingFrame :flow="flow">
+    <template #step-connect="{ step, controls }">
+      <div class="space-y-5">
+        <UiAuthHeading size="md" :title="step.copy.title" :description="step.copy.description" />
 
-    <section v-if="step === 'connect'" class="space-y-5">
-      <UiAuthHeading
-        size="md"
-        title="Connect Google Search Console"
-        description="Request Indexing reads your Search Console data to find pages Google has missed, then submits them for you."
-      />
+        <ProAlert
+          v-if="signedInWithGithub && !gscConnected"
+          color="warning"
+          icon="i-lucide-shield-check"
+          title="Search Console needs a Google account"
+          description="You signed in with GitHub. Connecting below links your Google account to this login; you keep signing in with GitHub."
+        />
 
-      <ProAlert
-        v-if="signedInWithGithub && !gscConnected"
-        color="warning"
-        icon="i-lucide-shield-check"
-        title="Search Console needs a Google account"
-        description="You signed in with GitHub. Connecting below links your Google account to this login; you keep signing in with GitHub."
-      />
+        <ProGscScopeMissingAlert v-if="gsc._tag === 'ScopeMissing'" />
 
-      <ProGscScopeMissingAlert v-if="gsc._tag === 'ScopeMissing'" />
-
-      <div v-if="gscConnected" class="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 px-3 py-3">
-        <UIcon name="i-heroicons-check-circle" class="size-5 shrink-0 text-primary" aria-hidden="true" />
-        <div class="min-w-0">
-          <p class="text-sm font-medium text-highlighted">
-            Google Search Console is connected
-          </p>
-          <p v-if="session?.gscEmail" class="truncate text-xs text-muted">
-            {{ session.gscEmail }}
-          </p>
+        <div v-if="gscConnected" class="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 px-3 py-3">
+          <UIcon name="i-heroicons-check-circle" class="size-5 shrink-0 text-primary" aria-hidden="true" />
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-highlighted">
+              Google Search Console is connected
+            </p>
+            <p v-if="session?.gscEmail" class="truncate text-xs text-muted">
+              {{ session.gscEmail }}
+            </p>
+          </div>
         </div>
+
+        <template v-else>
+          <ProSetupExample />
+          <ul class="space-y-2 text-sm text-muted">
+            <li class="flex gap-2">
+              <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+              Read your queries, pages and coverage.
+            </li>
+            <li class="flex gap-2">
+              <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+              Submit to Google. Google documents the Indexing API for job posting and livestream pages only.
+            </li>
+            <li class="flex gap-2">
+              <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+              Keep your data past Google's 16-month window.
+            </li>
+          </ul>
+          <UButton
+            :to="gscConnectUrl"
+            external
+            size="lg"
+            class="min-h-11"
+            icon="i-simple-icons-google"
+            label="Connect Google Search Console"
+            data-testid="connect-gsc-btn"
+          />
+        </template>
       </div>
 
-      <template v-else>
-        <ProSetupExample />
-        <ul class="space-y-2 text-sm text-muted">
-          <li class="flex gap-2">
-            <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-            Read your queries, pages and coverage.
-          </li>
-          <li class="flex gap-2">
-            <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-            Submit to Google. Google documents the Indexing API for job posting and livestream pages only.
-          </li>
-          <li class="flex gap-2">
-            <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-            Keep your data past Google's 16-month window.
-          </li>
-        </ul>
-        <UButton
-          :to="gscConnectUrl"
-          external
-          size="lg"
-          class="min-h-11"
-          icon="i-simple-icons-google"
-          label="Connect Google Search Console"
-          data-testid="connect-gsc-btn"
-        />
-      </template>
-    </section>
-
-    <section v-else-if="step === 'sites'" class="space-y-5">
-      <UiAuthHeading
-        size="md"
-        title="Connect your Sites"
-        description="Choose a property from your Search Console. Request Indexing reads each Site from its property."
+      <!-- One way forward: before a grant the Connect button drives the
+           advance, so the footer offers only the skip; after, only Continue. -->
+      <UiWizardNav
+        :skip-label="step.skippable ? frameCopy.skip : undefined"
+        :show-next="gscConnected"
+        :next-label="frameCopy.next"
+        @skip="controls.skip()"
+        @next="controls.next()"
       />
-      <ProSiteAddForm :gsc-return-to="returnToSites" @changed="siteCount = $event" @blocked="sitesBlocked = true" />
-      <p v-if="canSkipSites" class="flex flex-wrap items-center gap-x-1 text-sm text-muted">
-        Can't connect your Site right now?
-        <UButton
-          variant="link"
-          color="neutral"
-          class="min-h-11 px-0 underline"
-          label="Skip and connect it later"
-          :loading="finishing"
-          data-testid="skip-sites"
-          @click="skipSites"
-        />
-      </p>
-    </section>
+    </template>
 
-    <section v-else class="space-y-5">
-      <UiAuthHeading
-        size="md"
-        :title="hasSites ? ONBOARDING_COMPLETION_COPY.connected.title : ONBOARDING_COMPLETION_COPY.missingSite.title"
-        :description="hasSites ? ONBOARDING_COMPLETION_COPY.connected.description : ONBOARDING_COMPLETION_COPY.missingSite.description"
+    <template #step-sites="{ step, controls }">
+      <div class="space-y-5">
+        <UiAuthHeading size="md" :title="step.copy.title" :description="step.copy.description" />
+        <ProSiteAddForm :gsc-return-to="returnToSites" @changed="siteCount = $event" @blocked="sitesBlocked = true" />
+        <p v-if="step.skippable" class="flex flex-wrap items-center gap-x-1 text-sm text-muted">
+          Can't connect your Site right now?
+          <UButton
+            variant="link"
+            color="neutral"
+            class="min-h-11 px-0 underline"
+            label="Skip and connect it later"
+            :loading="finishing"
+            data-testid="skip-sites"
+            @click="skipSites"
+          />
+        </p>
+      </div>
+
+      <UiWizardNav
+        can-back
+        :next-label="frameCopy.next"
+        :next-disabled="!hasSites"
+        @back="controls.back()"
+        @next="controls.next()"
       />
-      <ProSetupFirstSiteReport v-if="hasSites" />
-      <ProOnboardingAnswers />
-    </section>
+    </template>
 
-    <UiWizardNav
-      :can-back="stepIndex > 0"
-      :skip-label="nav.skipLabel"
-      :show-next="nav.showNext"
-      :next-label="nextLabel"
-      :next-disabled="nextDisabled"
-      :next-loading="finishing"
-      @back="back"
-      @skip="next"
-      @next="next"
-    />
-    <ProSetupExitFeedback :step="step" />
-  </div>
+    <template #step-sync="{ step, controls }">
+      <div class="space-y-5">
+        <UiAuthHeading
+          size="md"
+          :title="hasSites ? ONBOARDING_COMPLETION_COPY.connected.title : ONBOARDING_COMPLETION_COPY.missingSite.title"
+          :description="hasSites ? ONBOARDING_COMPLETION_COPY.connected.description : ONBOARDING_COMPLETION_COPY.missingSite.description"
+        />
+        <ProSetupFirstSiteReport v-if="hasSites" />
+        <ProOnboardingAnswers />
+      </div>
+
+      <!-- Finishing is refused without a Site, so the advance waits for one. -->
+      <UiWizardNav
+        can-back
+        :next-label="step.copy.cta || frameCopy.finish"
+        :next-disabled="!hasSites"
+        :next-loading="finishing"
+        @back="controls.back()"
+        @next="controls.next()"
+      />
+    </template>
+
+    <template #after>
+      <ProSetupExitFeedback :step="currentStep" />
+    </template>
+  </ProShellOnboardingFrame>
 </template>

@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import ProShellOnboardingSurface from '@nuxtseo/pro-shell/app/components/ProShellOnboardingSurface.vue'
+
 // Focused chrome for first-run setup: no sidebar, no dashboard nav, one column.
+// `@nuxtseo/pro-shell`'s surface draws it; the brand mark is this app's own.
 // The account row is the only way out, so a user who signed in with the wrong
 // account is never trapped.
 const { session } = useUserSession()
@@ -8,8 +11,8 @@ const accountLabel = computed(() => session.value?.user?.email ?? session.value?
 </script>
 
 <template>
-  <UiWizardShell class="min-h-screen" :show-exit="false">
-    <template #logo>
+  <ProShellOnboardingSurface class="min-h-screen" :show-exit="false">
+    <template #brand>
       <NuxtLink to="/" class="inline-flex min-h-11 items-center rounded-md text-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
         <OgBrand :size="26" wordmark semantic />
       </NuxtLink>
@@ -28,5 +31,5 @@ const accountLabel = computed(() => session.value?.user?.email ?? session.value?
     </template>
 
     <slot />
-  </UiWizardShell>
+  </ProShellOnboardingSurface>
 </template>

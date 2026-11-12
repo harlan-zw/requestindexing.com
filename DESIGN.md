@@ -92,6 +92,20 @@ The layer shares the site's copy of each peer, including `@nuxt/scripts` and `@v
 
 Set a token through the layer's custom properties, never by overriding its selectors. A site component or composable with a layer name loses: the layer registers at priority 10. A change that props, slots, tokens or `app.config` cannot express is a change to the layer in nuxtseo.com.
 
+### Dashboard shell
+
+The signed-in dashboard frame and its calls to action come from the published [`@nuxtseo/pro-shell`](https://www.npmjs.com/package/@nuxtseo/pro-shell) layer, which extends the design system. `nuxt.config.ts` extends the shell; the shell brings the design system. The frame, the sidebar nav, the Site switcher, the user menu, the page header, the setup offers, the invite dialog, the feedback drawer and the onboarding frame are its `ProShell*` components. This app passes data and actions in through these seams:
+
+| Seam | File |
+|------|------|
+| Route map, copy overrides, nav collapse storage key (`proShell` in app.config) | `layers/pro-saas/app/app.config.ts`, `layers/pro-saas/app/pro-shell.ts` |
+| Nav source: Sites, the Site in view, the account, access, feature flags, feedback | `layers/pro-saas/app/composables/useProNavSource.ts` |
+| Frame slots: brand mark, sidebar bodies, user menu, command palette, page header | `layers/pro-saas/app/layouts/pro-dashboard.vue` |
+| Nav manifests from the pro-features registry | `layers/pro-saas/app/components/pro/ProSingleSiteSidebarNav.vue`, `ProFleetSidebarNav.vue` |
+| Onboarding Steps on the Step registry | `layers/pro-saas/shared/onboarding.ts`, `layers/pro-saas/app/plugins/onboarding-steps.ts` |
+
+The brand mark always goes in a slot (`#brand-mark`, `#brand`, `#site-mark`); the shell ships none. The local `layers/pro-features` layer is a different thing: the build-time feature registry that builds the Site nav rows.
+
 ## Aesthetic Direction
 
 - **Theme**: Verdant Console — custom theme built on Nuxt UI's `emerald` + `olive` palettes. Not a stock theme; derives its voice from the product (indexing = pages going live = growth) rather than borrowed visual language.
@@ -220,4 +234,5 @@ writing a label, heading, empty state or error.
 - **Pricing content is product, not design.** `pricing.vue` currently renders privacy-policy copy under a "Pricing" heading. Out of scope for the design refresh; flag separately for a content/product fix.
 - **`.divider-tilt` is the canonical hero-to-next-section transition.** Defined once in `brand.css`, applied via class — never re-hand-coded inline.
 - **The design system is the published `@nuxtseo/design-system` layer** (2026-11-11). The local `layers/design-system` copy is deleted. Request Indexing keeps only its brand overrides, through the seams in Design System Source. The layer's shared fixes, such as solid focus rings and the darker dimmed and error text, apply here too.
+- **The dashboard shell is the published `@nuxtseo/pro-shell` layer** (2026-11-12). The local copies of the sidebar header, nav section, Site switcher, user menu, page header and mobile drawer trigger are deleted. Its layout details win where they differ from the copies: the mobile page header puts the Site crumb on a small line above the title, the sidebar keeps 20px between nav groups on a phone, and a personal Team shows a solid swatch in the user menu.
 - **The comparison mark and its text take two colours** (2026-11-12). The mark keeps `#898a54` in both modes. The "vs prev" pill text reads `--ui-viz-comparison-text`: olive 600 in light mode, olive 400 in dark mode. Both pass AA on the mark's 15% tint.
