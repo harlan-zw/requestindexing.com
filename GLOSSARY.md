@@ -41,6 +41,9 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 | Checkpoint | gscdump scheduled URL Inspection for a Watched URL | Watched URL 1—N retained observations | Checkpoint |
 | onboarding drip | drip_emails table, `onboarded` sequence | User 0—1 row per sequence; three emails after onboarding | (internal) |
 | Product updates | notification_optouts, category `lifecycle` | Address 0—1 opt-out per category | product updates |
+| Setup offer | `@nuxtseo/pro-shell` `ProShellSetupOffers`, dashboard home | Account 0 to 5 open offers under "Finish setting up" | (the card title) |
+| Onboarding Step | `@nuxtseo/pro-shell` Step registry, `FIRST_RUN_STEPS` and `DASHBOARD_CARD_STEPS` | Flow 1 to N steps, one Step state each | step |
+| Feedback report | feedback table, Send feedback drawer | User 0 to N reports | feedback |
 
 Collisions: the product's submission history and Google's indexing state are different evidence. Never imply one proves the other.
 
@@ -203,6 +206,28 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 **Never:** Cloud, cloud mode, the cloud. Since `@gscdump/cli` 4.3.0 the CLI rejects `--mode cloud`.
 
 **Casing:** `Hosted mode` in prose, `--mode hosted` as the flag.
+
+### Setup offer
+
+**Is:** one "Finish setting up" card on the dashboard home: the agent skill, MCP, the first API request, Bing, or another Site. Each shows while its Setup completion is pending. nuxtseo.com's glossary owns the term; `@nuxtseo/pro-shell` draws it.
+
+**Use for:** code and docs about those cards.
+
+**Never:** CTA card, nudge, or task in prose.
+
+### Onboarding Step
+
+**Is:** one step of a setup flow, registered on `@nuxtseo/pro-shell`'s Step registry: `connect`, `sites` and `sync` in the first-run wizard, and `connect-site` and `connect-search-console` on the dashboard card. Its Step state (`Pending`, `Complete`, `Optional`, `Unknown`, `NotApplicable`) comes from this app's data.
+
+**Use for:** code and docs about setup flows. The reader sees setup, never step ids.
+
+### Feedback report
+
+**Is:** one message from the Send feedback drawer, stored in `feedback` with its diagnostics in `metadata`.
+
+**Use for:** the drawer, the feedback endpoint, and the admin feedback resources.
+
+**Never:** ticket or support request. A report gets no tracked reply.
 
 ### Product updates
 
