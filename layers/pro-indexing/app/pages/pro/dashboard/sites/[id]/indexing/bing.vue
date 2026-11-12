@@ -12,6 +12,7 @@
 import type { BingConnectionV1 } from '@gscdump/contracts/v1/http'
 import type { BingCrawlDetailView } from '#layers/pro-gsc/app/utils/bing-view'
 import { siteLabel } from '~~/layers/core/app/utils/site-format'
+import { INTEGRATIONS_ROUTE } from '#layers/pro-features/app/utils/integrations-pending'
 import { useProGscdumpBingConnection, useProGscdumpBingData, useProGscdumpBingEvidence } from '#layers/pro-gsc/app/composables/useProGscdump'
 import ProBingCrawlStats from '#layers/pro-gsc/app/internal/components/bing/ProBingCrawlStats.vue'
 import ProBingSitemap from '#layers/pro-gsc/app/internal/components/bing/ProBingSitemap.vue'
@@ -26,7 +27,6 @@ import {
   toBingCrawlDetailViews,
 } from '#layers/pro-gsc/app/utils/bing-view'
 import { BING_REPORTING_WINDOW_DAYS, bingReportingWindow } from '#layers/pro-gsc/shared/bing-reporting-window'
-import { INTEGRATIONS_ROUTE } from '#layers/pro-shell/app/utils/integrations-pending'
 
 definePageMeta({
   proTab: { feature: 'indexing', label: 'Bing', icon: 'i-lucide-search-check', order: 50 },

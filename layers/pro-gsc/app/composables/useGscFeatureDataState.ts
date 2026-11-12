@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import type { FeatureDataState } from '../../../pro-shell/shared/types'
+import type { FeatureDataState } from '../../../pro-features/shared/types'
 import { computed } from 'vue'
 import { searchConsoleLinkCta } from '../utils/site-search-state'
 import { useProGscStatus } from './useProGscStatus'

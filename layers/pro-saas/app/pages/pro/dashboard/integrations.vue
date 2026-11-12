@@ -13,13 +13,13 @@ import { formatTimeAgo } from '@nuxtseo/design-system/app/composables/formatting
 // feature flag, and gscdump returns a Microsoft round trip to this page.
 import { useMounted } from '@vueuse/core'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
+import { INTEGRATIONS_ROUTE } from '#layers/pro-features/app/utils/integrations-pending'
 import { useProBingIntegration } from '#layers/pro-gsc/app/composables/useProGscdump'
 import ProBingIntegrationCard from '#layers/pro-gsc/app/internal/components/bing/ProBingIntegrationCard.vue'
 import { bingIntegrationStatusLine } from '#layers/pro-gsc/app/utils/bing-integration-view'
 import { projectGscIntegrationState } from '#layers/pro-gsc/shared/gsc-integration-state'
 import { INTEGRATIONS_NO_PROPERTY } from '#layers/pro-gsc/shared/no-property-copy'
 import ProNoPropertyNotice from '#layers/pro-saas/app/components/pro/ProNoPropertyNotice.vue'
-import { INTEGRATIONS_ROUTE } from '#layers/pro-shell/app/utils/integrations-pending'
 
 definePageMeta({
   layout: 'pro-dashboard',

@@ -1,9 +1,9 @@
+import { INTEGRATIONS_ROUTE } from '#layers/pro-features/app/utils/integrations-pending'
+import { proFeatureSetup } from '#layers/pro-features/app/utils/registry-factories'
 import { useGscFeatureDataState } from '#layers/pro-gsc/app/composables/useGscFeatureDataState'
-import { INTEGRATIONS_ROUTE } from '#layers/pro-shell/app/utils/integrations-pending'
-import { proFeatureSetup } from '#layers/pro-shell/app/utils/registry-factories'
 
 /**
- * Registers the indexing feature with pro-shell.
+ * Registers the indexing feature with pro-features.
  *
  * Every Indexing tab reads gscdump through the Search Console grant, so that
  * grant alone decides the feature state. The Indexing API grant matters only

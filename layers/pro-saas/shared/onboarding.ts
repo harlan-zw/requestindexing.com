@@ -8,8 +8,15 @@
 // `connect`. nuxtseo.com's `help` step is not a step here: its questions sit on
 // the `sync` step as the optional "About you" card (Onboarding Answers), so they
 // add no time and never gate completion.
+//
+// The steps register on `@nuxtseo/pro-shell`'s Step registry
+// (`app/plugins/onboarding-steps.ts`), and its pure resolver picks the current
+// one. This file keeps what the shell leaves to the site: the Step states, the
+// gate, and the completion rule.
 
 import type { AccountStatus } from '@gscdump/contracts'
+import type { ProShellOnboardingStep } from '@nuxtseo/pro-shell/shared/onboarding'
+import { evaluateOnboardingSteps, resolveOnboarding, STEP_COMPLETE, STEP_OPTIONAL, STEP_PENDING } from '@nuxtseo/pro-shell/shared/onboarding'
 import { GSC_SCOPE_MISSING_ERROR, isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
 import { PAGE_TASK_ROUTE } from './page-task'
 
@@ -46,12 +53,6 @@ export const ONBOARDING_STEPS = ['connect', 'sites', 'sync'] as const
 
 export type OnboardingStep = typeof ONBOARDING_STEPS[number]
 
-export const ONBOARDING_STEP_LABELS: Record<OnboardingStep, string> = {
-  connect: 'Connect Google',
-  sites: 'Connect Sites',
-  sync: 'Finish setup',
-}
-
 /** COPY.md: setup completion describes the setup, never an unread sync lifecycle. */
 export const ONBOARDING_COMPLETION_COPY = {
   connected: {
@@ -69,10 +70,6 @@ export function parseOnboardingStep(value: unknown): OnboardingStep | null {
   if (typeof value !== 'string')
     return null
   return (ONBOARDING_STEPS as readonly string[]).includes(value) ? value as OnboardingStep : null
-}
-
-export function onboardingStepIndex(step: OnboardingStep): number {
-  return ONBOARDING_STEPS.indexOf(step)
 }
 
 /**
@@ -115,6 +112,102 @@ export function resolveGscConnection(input: GscConnectionInput): GscConnection {
   return input.gscdumpConnected ? { _tag: 'Connected' } : { _tag: 'NotConnected' }
 }
 
+/** The signals every Onboarding Step reads, augmented onto the shell's context. */
+declare module '@nuxtseo/pro-shell/shared/onboarding' {
+  interface ProShellOnboardingContext {
+    gsc: GscConnection
+    /** The user's current team owns at least one site. */
+    hasSites: boolean
+    /**
+     * Nothing on the sites step can connect: the property list offers no
+     * verified property, a connect attempt failed, or the Free allowance is
+     * full.
+     */
+    connectBlocked: boolean
+  }
+}
+
+export const FIRST_RUN_FLOW = 'first-run'
+export const DASHBOARD_CARD_FLOW = 'dashboard-card'
+
+/**
+ * The first-run wizard as Onboarding Steps for `@nuxtseo/pro-shell`'s Step
+ * registry. No component: the page fills each `#step-<id>` slot. Copy lives
+ * under `proShell.copy.onboarding.steps` (COPY.md, Setup steps).
+ *
+ * Registering a site is the only requirement. Connecting Search Console is a
+ * capability the product offers, not a stage that gates it: a user who has not
+ * verified a property, who signed in with GitHub, or whose grant fails cannot
+ * satisfy it on demand. This mirrors nuxtseo.com ADR-0035.
+ *
+ * - `connect` is `Optional` once a Site exists, so a user who already
+ *   registered one is never sent back to it: that is the state they land in
+ *   when Google is unreachable. Before any Site it is `Pending`, so a fresh
+ *   account starts on it. It draws its own nav: Skip until Search Console is
+ *   connected, then Continue, never both (nuxtseo.com's `UiWizardNav` rule).
+ * - `sites` needs a Site. Its skip ("Skip and connect it later") shows only
+ *   once connecting is blocked, so it never reads as the first choice. It
+ *   draws its own Continue, disabled until a Site exists.
+ * - `sync` is terminal. Next finishes setup. It draws its own nav too: Go to
+ *   dashboard waits for a Site, because finishing without one is refused.
+ */
+export const FIRST_RUN_STEPS: readonly ProShellOnboardingStep[] = [
+  {
+    id: 'connect',
+    flow: FIRST_RUN_FLOW,
+    order: 10,
+    titleKey: 'connect',
+    nav: 'step',
+    state: (ctx) => {
+      if (ctx.gsc._tag === 'Connected')
+        return STEP_COMPLETE
+      return ctx.hasSites ? STEP_OPTIONAL : STEP_PENDING
+    },
+    skip: ctx => ctx.gsc._tag !== 'Connected',
+  },
+  {
+    id: 'sites',
+    flow: FIRST_RUN_FLOW,
+    order: 20,
+    titleKey: 'sites',
+    nav: 'step',
+    state: ctx => ctx.hasSites ? STEP_COMPLETE : STEP_PENDING,
+    skip: ctx => !ctx.hasSites && ctx.connectBlocked,
+  },
+  {
+    id: 'sync',
+    flow: FIRST_RUN_FLOW,
+    order: 30,
+    titleKey: 'sync',
+    nav: 'step',
+    state: () => STEP_PENDING,
+  },
+]
+
+/**
+ * The dashboard home's setup card. With no Site the card offers Connect a
+ * Site; with one, it offers Search Console until the account connects it. A
+ * missing scope is not offered here: the layout's alert says so.
+ */
+export const DASHBOARD_CARD_STEPS: readonly ProShellOnboardingStep[] = [
+  {
+    id: 'connect-site',
+    flow: DASHBOARD_CARD_FLOW,
+    order: 10,
+    titleKey: 'connect-site',
+    link: { route: 'addSite' },
+    state: ctx => ctx.hasSites ? STEP_COMPLETE : STEP_PENDING,
+  },
+  {
+    id: 'connect-search-console',
+    flow: DASHBOARD_CARD_FLOW,
+    order: 20,
+    titleKey: 'connect-search-console',
+    link: { route: 'searchConsole' },
+    state: ctx => ctx.hasSites && ctx.gsc._tag === 'NotConnected' ? STEP_PENDING : STEP_COMPLETE,
+  },
+]
+
 export interface OnboardingResumeSignals {
   gsc: GscConnection
   /** The user's current team owns at least one site. */
@@ -126,73 +219,16 @@ export interface OnboardingResumeSignals {
  * There is no "current step" column, so a Google round trip or a closed tab
  * cannot strand the user on a step they already finished.
  *
- * A connected site outranks a missing Google grant. `connect` is an offer, not
- * a requirement, so a user who already registered a site must never be sent
- * back to it: that is the state they land in when Google is unreachable, and
- * they would resume onto the one step they cannot finish.
+ * The shell's resolver answers it over the same steps the wizard draws, so the
+ * gate and the page cannot disagree. A connected site outranks a missing
+ * Google grant: `connect` is `Optional` then.
  */
 export function resolveOnboardingResumeStep(signals: OnboardingResumeSignals): OnboardingStep {
-  if (signals.hasSites)
-    return 'sync'
-  return signals.gsc._tag === 'Connected' ? 'sites' : 'connect'
-}
-
-/**
- * Whether the wizard may leave `step`.
- *
- * Registering a site is the only requirement. Connecting Search Console is a
- * capability the product offers, not a stage that gates it: a user who has not
- * verified a property, who signed in with GitHub, or whose grant fails cannot
- * satisfy it on demand, and gating on it left them on step one with a disabled
- * Continue and no way forward. This mirrors nuxtseo.com ADR-0035.
- */
-export function canAdvanceOnboardingStep(step: OnboardingStep, signals: OnboardingResumeSignals): boolean {
-  return step === 'connect' ? true : signals.hasSites
-}
-
-export interface SitesSkipInput {
-  hasSites: boolean
-  /**
-   * Nothing on this step can connect: the property list offers no verified
-   * property, a connect attempt failed, or the Free allowance is full.
-   */
-  connectBlocked: boolean
-}
-
-/**
- * Whether the sites step offers "Skip and connect it later".
- *
- * nuxtseo.com's rule: the step needs a Site, but a Site that cannot connect
- * must never trap the user. A gscdump outage or a full Free allowance would.
- * The skip shows only after connecting is blocked, so it never reads as the
- * first choice.
- */
-export function canSkipOnboardingSites(input: SitesSkipInput): boolean {
-  return !input.hasSites && input.connectBlocked
-}
-
-/** The footer controls of one wizard step. */
-export interface OnboardingNavControls {
-  /** The skip link beside the advance button. Undefined renders none. */
-  skipLabel: string | undefined
-  /** Whether the advance button renders. */
-  showNext: boolean
-}
-
-/**
- * The footer controls of `step`. Every step gets exactly one way forward.
- *
- * Before a grant, the connect step's own Connect button drives the advance,
- * because the Google round trip returns to the sites step. Continue then did
- * the same thing as "Skip for now", and read as a second Connect. So the
- * footer offers only the skip until Search Console is connected, and only
- * Continue after. This is nuxtseo.com's `UiWizardNav` rule: hide the advance
- * button while the step's own CTA drives the advance.
- */
-export function resolveOnboardingNav(step: OnboardingStep, gsc: GscConnection): OnboardingNavControls {
-  if (step === 'connect' && gsc._tag !== 'Connected')
-    return { skipLabel: 'Skip for now', showNext: false }
-  return { skipLabel: undefined, showNext: true }
+  const resolution = resolveOnboarding({
+    steps: evaluateOnboardingSteps(FIRST_RUN_STEPS, { ...signals, connectBlocked: false }),
+    requested: null,
+  })
+  return resolution._tag === 'Current' ? parseOnboardingStep(resolution.current.id) ?? 'sync' : 'sync'
 }
 
 /**

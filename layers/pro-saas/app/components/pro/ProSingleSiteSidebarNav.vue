@@ -1,15 +1,18 @@
 <script setup lang="ts">
 // The single-Site sidebar body, rendered by the desktop rail AND the mobile
 // drawer so the two cannot diverge. Ported from nuxtseo.com's
-// `ProSingleSiteSidebarNav.vue`.
+// `ProSingleSiteSidebarNav.vue`: the pro-features registry builds the rows,
+// and `ProShellSidebarNav` draws them.
 //
 // The favicon plus site-name header row IS the Site landing link, which is why
 // `useProSingleSiteNav` suppresses the synthesized Overview row.
-import type { ProNavSite } from '#layers/pro-shell/app/composables/useProSingleSiteNav'
+import type { ProNavSite } from '#layers/pro-features/app/composables/useProSingleSiteNav'
+import ProShellSidebarNav from '@nuxtseo/pro-shell/app/components/ProShellSidebarNav.vue'
 import { useRoute } from 'nuxt/app'
 import { computed } from 'vue'
-import { NuxtLink, ProNavSection, UiFavicon, UiNavList } from '#components'
-import { useProSingleSiteNav } from '#layers/pro-shell/app/composables/useProSingleSiteNav'
+import { NuxtLink, UiFavicon } from '#components'
+import { useProSingleSiteNav } from '#layers/pro-features/app/composables/useProSingleSiteNav'
+import { gatedSiteNavItems, gatedSiteNavSections } from '../../utils/pro-shell-nav'
 
 const { site } = defineProps<{ site: ProNavSite }>()
 
@@ -21,13 +24,18 @@ function onNavigate() {
 const route = useRoute()
 const nav = useProSingleSiteNav(() => site)
 const headerActive = computed(() => route.path === nav.siteTo.value)
+const manifest = computed(() => ({
+  pinnedLabel: 'Site',
+  pinned: gatedSiteNavItems(nav.pinnedLinks.value),
+  sections: gatedSiteNavSections(nav.sections.value),
+  railLabel: 'Site settings',
+  rail: gatedSiteNavItems(nav.railLinks.value),
+}))
 </script>
 
 <template>
-  <!-- flex + min-h-full so the bottom rail (`mt-auto`) pins above the footer
-       when the nav is short. -->
-  <div class="flex min-h-full flex-col gap-3 lg:gap-5">
-    <div>
+  <ProShellSidebarNav :manifest="manifest" @navigate="onNavigate">
+    <template #header>
       <div class="mb-0.5 flex items-center justify-between px-1 lg:mb-2">
         <!-- The header IS the Site landing row, so it renders like one: the
              same raised active surface every UiNavList row gets. -->
@@ -45,34 +53,6 @@ const headerActive = computed(() => route.path === nav.siteTo.value)
           <span class="truncate">{{ nav.siteLabel.value }}</span>
         </NuxtLink>
       </div>
-      <UiNavList
-        v-if="nav.pinnedLinks.value.length"
-        variant="sidebar"
-        tone="default"
-        label="Site"
-        :links="nav.pinnedLinks.value"
-        @click="onNavigate"
-      />
-    </div>
-
-    <div class="flex flex-col gap-3 lg:gap-5">
-      <ProNavSection
-        v-for="section in nav.sections.value"
-        :key="section.id"
-        :group-id="section.id"
-        :label="section.label"
-        :links="section.links"
-        @navigate="onNavigate"
-      />
-    </div>
-
-    <div class="mt-auto border-t border-default pt-2 lg:pt-3">
-      <UiNavList
-        variant="sidebar"
-        label="Site settings"
-        :links="nav.railLinks.value"
-        @click="onNavigate"
-      />
-    </div>
-  </div>
+    </template>
+  </ProShellSidebarNav>
 </template>

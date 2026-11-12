@@ -1,6 +1,6 @@
 import type { SetupMethod, SetupStep } from './developer-setup'
 import { describe, expect, it } from 'vitest'
-import { buildAgentSetupPrompt, buildSetupSteps } from './developer-setup'
+import { buildAgentSetupPrompt, buildSetupSteps, developerSetupCompletion } from './developer-setup'
 
 const RAW_KEY = 'gsd_user_0123456789abcdef0123456789abcdef'
 const METHODS: SetupMethod[] = ['cli', 'mcp', 'api']
@@ -74,5 +74,20 @@ describe('buildAgentSetupPrompt', () => {
     const prompt = buildAgentSetupPrompt(RAW_KEY, null)
     expect(prompt).toContain('gscdump indexing summary --json')
     expect(prompt).not.toContain('--site s_')
+  })
+})
+
+describe('developerSetupCompletion', () => {
+  const key = (lastUsedAt: number | null) => ({ keyId: 'k', preview: 'gsd_user_01', label: 'Laptop', createdAt: 1, lastUsedAt })
+
+  it('offers the agent setup until a key has made a request', () => {
+    expect(developerSetupCompletion({ _tag: 'Ready', keys: [] })).toEqual({ skill: { _tag: 'pending' }, mcp: { _tag: 'pending' }, api: { _tag: 'pending' } })
+    expect(developerSetupCompletion({ _tag: 'Ready', keys: [key(null)] }).api).toEqual({ _tag: 'pending' })
+    expect(developerSetupCompletion({ _tag: 'Ready', keys: [key(null), key(1_700_000_000_000)] })).toEqual({ skill: { _tag: 'complete' }, mcp: { _tag: 'complete' }, api: { _tag: 'complete' } })
+  })
+
+  it('shows nothing before Search Console is connected, and waits on an unread state', () => {
+    expect(developerSetupCompletion({ _tag: 'SearchConsoleRequired' }).skill).toEqual({ _tag: 'unavailable' })
+    expect(developerSetupCompletion(null).mcp).toEqual({ _tag: 'unknown' })
   })
 })

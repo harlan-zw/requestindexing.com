@@ -1,5 +1,4 @@
 import type { ResolvedHttpV1Operation } from '@gscdump/contracts/v1/http'
-import type { Caller } from '#layers/pro-saas/shared/caller'
 // Pure decision logic for the same-origin gscdump v1 browser proxy
 // (`server/api/_gscdump/[surface]/v1/[...path].ts`). No DB, no fetch: this
 // module only decides *which* v1 operations the browser may reach and
@@ -15,7 +14,8 @@ import type { Caller } from '#layers/pro-saas/shared/caller'
 // `NUXT_PUBLIC_FEATURES_BING` is on, which is the same flag the sidebar reads
 // for the two Bing rows. With the flag off the pages do not exist, so the
 // relay must not carry their calls either.
-import type { ProFeatureFlags } from '#layers/pro-shell/shared/manifest'
+import type { ProFeatureFlags } from '#layers/pro-features/shared/manifest'
+import type { Caller } from '#layers/pro-saas/shared/caller'
 import { createGscdumpV1Protocol, resolveHttpOperation } from '@gscdump/contracts/v1/http'
 import { callerCan } from '#layers/pro-saas/shared/policies/team-policy'
 

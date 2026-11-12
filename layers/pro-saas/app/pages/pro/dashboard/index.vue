@@ -1,18 +1,20 @@
 <script lang="ts" setup>
 import type { OverviewSiteEntry } from '#layers/pro-gsc/app/components/overview/overview-sites'
 import type { OverviewSnapshotKey, OverviewSnapshotSite } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
+import { useProShellOnboardingFlow, useProShellOnboardingSteps } from '@nuxtseo/pro-shell/app/composables/useProShellOnboarding'
 import { useJobListener } from '~~/layers/core/app/composables/events'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { isOverviewReadTarget, overviewSiteLabel, soleSiteLandingPath } from '#layers/pro-gsc/app/components/overview/overview-sites'
 import { overviewReadRange, overviewSiteClicks, overviewSnapshotCards } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
 import ProLiveJobProgress from '#layers/pro-gsc/app/components/overview/ProLiveJobProgress.vue'
 import ProOverviewOnboardingCard from '#layers/pro-gsc/app/components/overview/ProOverviewOnboardingCard.vue'
+import ProOverviewSetupOffers from '#layers/pro-gsc/app/components/overview/ProOverviewSetupOffers.vue'
 import ProOverviewSitesColumn from '#layers/pro-gsc/app/components/overview/ProOverviewSitesColumn.vue'
 import ProOverviewSnapshot from '#layers/pro-gsc/app/components/overview/ProOverviewSnapshot.vue'
 import { useProOverviewReads } from '#layers/pro-gsc/app/composables/useProOverviewReads'
 import ProNoPropertyNotice from '#layers/pro-saas/app/components/pro/ProNoPropertyNotice.vue'
 import { useNoSearchConsoleProperty } from '#layers/pro-saas/app/composables/useNoSearchConsoleProperty'
-import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
+import { DASHBOARD_CARD_FLOW, resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 
 // The Team home, rebuilt on nuxtseo.com's overview through gscdump.com's
 // Search Console cut of it: a verdict plus doorways, shaped by the Site count.
@@ -22,8 +24,10 @@ import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 //   n Sites  "Which Site needs me first?"  -> the live banner, the Sites
 //                                            column, the Search Console band
 //
-// Upstream's crawl, analytics, Lighthouse, DataForSEO, Ask, agent setup, Next
-// Actions and group surfaces have no source here and are not ported.
+// Both other shapes carry `@nuxtseo/pro-shell`'s setup offers ("Finish setting
+// up") under the setup card. Upstream's crawl, analytics, Lighthouse,
+// DataForSEO, Ask, Next Actions and group surfaces have no source here and are
+// not ported.
 definePageMeta({
   layout: 'pro-dashboard',
   title: 'Dashboard',
@@ -39,11 +43,21 @@ if (landing)
   await navigateTo({ path: landing, query: route.query }, { replace: true })
 
 const { session } = useUserSession()
-const gscNotConnected = computed(() => resolveGscConnection({
+const gsc = computed(() => resolveGscConnection({
   gscdumpConnected: !!session.value?.gscdumpConnected,
   accountStatus: session.value?.gscdumpAccountStatus ?? null,
   error: route.query.error,
-})._tag === 'NotConnected')
+}))
+
+// The setup card draws the resume step of the `dashboard-card` flow on the
+// shell's Step registry: Connect a Site with no Site, then Search Console
+// until the account connects it. The card keeps no URL state.
+const cardFlow = useProShellOnboardingFlow({
+  steps: useProShellOnboardingSteps(DASHBOARD_CARD_FLOW),
+  context: computed(() => ({ gsc: gsc.value, hasSites: sites.value.length > 0, connectBlocked: false })),
+  state: { _tag: 'none' },
+})
+const cardStep = computed(() => cardFlow.current.value)
 
 // No Site, and a Google account with no Search Console property: Connect a
 // Site can only say so, so the home says it first (2026-10-01 replay, N6).
@@ -111,10 +125,14 @@ useJobListener('sites/sync-finished', async ({ siteId }) => {
       <ProNoPropertyNotice heading-tag="h2" :email="session?.gscEmail ?? null" gsc-return-to="/pro/dashboard" />
     </UiCard>
 
-    <ProOverviewOnboardingCard v-else-if="!error && !sites.length" step="connect-site" />
+    <template v-else-if="!error && !sites.length">
+      <ProOverviewOnboardingCard v-if="cardStep" :step="cardStep" />
+      <ProOverviewSetupOffers :sites="sites" />
+    </template>
 
     <template v-else-if="sites.length">
-      <ProOverviewOnboardingCard v-if="gscNotConnected" step="connect-search-console" />
+      <ProOverviewOnboardingCard v-if="cardStep" :step="cardStep" />
+      <ProOverviewSetupOffers :sites="sites" />
       <ProLiveJobProgress :sites="sites" />
       <ProOverviewSitesColumn :entries="entries" />
       <ProOverviewSnapshot :cards="cards" :pending-keys="pendingKeys" :failed-sites="failedSites" :refresh-failed="refreshFailed" @retry="refreshReads()" />

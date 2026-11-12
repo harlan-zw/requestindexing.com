@@ -1,5 +1,30 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { createApp, defineComponent, h, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, createApp, defineComponent, h, nextTick, onMounted, ref, watch } from 'vue'
+
+// The page runs on `@nuxtseo/pro-shell`'s real flow and frame. Only the Nuxt
+// seams they read are stood in for: the route, the app config with this app's
+// copy, and the Step registry, which a plugin fills in the app.
+const route = vi.hoisted(() => ({ query: { step: 'sync' } as Record<string, string> }))
+vi.mock('nuxt/app', async () => {
+  const { PRO_SHELL_COPY_OVERRIDES } = await import('../../../pro-shell')
+  return {
+    tryUseNuxtApp: () => ({}),
+    useRoute: () => route,
+    useRouter: () => ({ replace: vi.fn() }),
+    useAppConfig: () => ({ proShell: { copy: PRO_SHELL_COPY_OVERRIDES } }),
+  }
+})
+vi.mock('@nuxtseo/pro-shell/app/composables/useProShellOnboarding', async (original) => {
+  const { FIRST_RUN_STEPS } = await import('#layers/pro-saas/shared/onboarding')
+  return {
+    ...await original<typeof import('@nuxtseo/pro-shell/app/composables/useProShellOnboarding')>(),
+    useProShellOnboardingSteps: () => computed(() => FIRST_RUN_STEPS),
+  }
+})
+vi.mock('#components', () => {
+  const passthrough = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
+  return { UiCard: passthrough, UiSkeleton: passthrough, UiWizardProgress: defineComponent({ render: () => null }), UiWizardNav: passthrough }
+})
 
 const session = ref({ hasSites: true, gscdumpConnected: true })
 Object.assign(globalThis, {
@@ -7,8 +32,8 @@ Object.assign(globalThis, {
   watch,
   useFetch: () => ({ data: ref({ _tag: 'Missing' }) }),
   definePageMeta: () => {},
-  useRoute: () => ({ query: { step: 'sync' } }),
-  useRouter: () => ({ replace: vi.fn() }),
+  useRoute: () => route,
+  useToast: () => ({ add: vi.fn() }),
   useUserSession: () => ({ session, fetch: vi.fn() }),
   useRobotsRule: () => {},
   useSeoMeta: () => {},
@@ -21,7 +46,7 @@ function mount() {
   const host = document.createElement('div')
   document.body.appendChild(host)
   const app = createApp(Onboarding)
-  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'UIcon', 'UButton', 'ProSiteAddForm'])
+  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'UIcon', 'UButton', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
     app.component(name, defineComponent({ render: () => null }))
   app.component('UiWizardProgress', defineComponent({ render: () => null }))
   app.component('UiAuthHeading', defineComponent({

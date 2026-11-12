@@ -45,7 +45,7 @@ export default defineNuxtConfig({
     './apps/marketing',
     './apps/admin',
     './apps/brand-kit',
-    './layers/pro-shell',
+    './layers/pro-features',
     './layers/pro-saas-auth',
     './layers/pro-saas',
     './layers/pro-gsc',
@@ -53,7 +53,8 @@ export default defineNuxtConfig({
     './layers/core',
     // Last, so every site layer above overrides its app.config and config.
     // Its components still win a name clash: they register at priority 10.
-    '@nuxtseo/design-system',
+    // The published shell extends `@nuxtseo/design-system`, so one entry brings both.
+    '@nuxtseo/pro-shell',
   ],
   nuxtDx: {
     report: true,
@@ -457,7 +458,7 @@ export default defineNuxtConfig({
       // Nav rows a flag can switch off. `bing` covers both Bing surfaces and
       // the Integrations card. gscdump 4.8.0 ships the partner operations they
       // read, so it is on; set NUXT_PUBLIC_FEATURES_BING=false to hide them.
-      // See layers/pro-shell/shared/manifest.ts.
+      // See layers/pro-features/shared/manifest.ts.
       features: {
         bing: true,
       },

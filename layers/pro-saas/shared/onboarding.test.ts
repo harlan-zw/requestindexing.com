@@ -1,18 +1,17 @@
 import type { GscConnection } from './onboarding'
+import { evaluateOnboardingSteps, REQUEST_HONOUR, resolveOnboarding } from '@nuxtseo/pro-shell/shared/onboarding'
 import { describe, expect, it } from 'vitest'
 import {
-  canAdvanceOnboardingStep,
-  canSkipOnboardingSites,
+  DASHBOARD_CARD_STEPS,
+  FIRST_RUN_STEPS,
   gscScopeMissingRedirect,
   ONBOARDING_ROUTE,
   ONBOARDING_STEPS,
-  onboardingStepIndex,
   parseOnboardingCompletedFlag,
   parseOnboardingStep,
   resolveGscConnection,
   resolveOnboardingCompletion,
   resolveOnboardingGate,
-  resolveOnboardingNav,
   resolveOnboardingResumeStep,
 } from './onboarding'
 
@@ -90,55 +89,69 @@ describe('resolveOnboardingResumeStep', () => {
   })
 })
 
-describe('canAdvanceOnboardingStep', () => {
-  it('lets a user leave the connect step without a Google grant', () => {
-    expect(canAdvanceOnboardingStep('connect', { gsc: NOT_CONNECTED, hasSites: false })).toBe(true)
+// The wizard's rules now live in its registered steps, and the shell's
+// resolver applies them. These read the steps through that resolver, as the
+// page and the gate do.
+function resolveFirstRun(ctx: { gsc: GscConnection, hasSites: boolean, connectBlocked?: boolean }, requested: string | null = null) {
+  return resolveOnboarding({
+    steps: evaluateOnboardingSteps(FIRST_RUN_STEPS, { connectBlocked: false, ...ctx }),
+    requested,
+    policy: REQUEST_HONOUR,
   })
+}
 
-  it('holds the sites step until a site exists', () => {
-    expect(canAdvanceOnboardingStep('sites', { gsc: CONNECTED, hasSites: false })).toBe(false)
-    expect(canAdvanceOnboardingStep('sites', { gsc: NOT_CONNECTED, hasSites: true })).toBe(true)
-  })
+function current(ctx: Parameters<typeof resolveFirstRun>[0], requested: string | null = null) {
+  const resolution = resolveFirstRun(ctx, requested)
+  if (resolution._tag !== 'Current')
+    throw new Error(`expected a current step, got ${resolution._tag}`)
+  return resolution
+}
 
-  it('lets the last step finish', () => {
-    expect(canAdvanceOnboardingStep('sync', { gsc: NOT_CONNECTED, hasSites: true })).toBe(true)
-  })
-})
-
-describe('canSkipOnboardingSites', () => {
-  it('offers the skip once connecting is blocked and no site exists', () => {
-    // A gscdump outage or a full Free allowance must not trap the user here.
-    expect(canSkipOnboardingSites({ hasSites: false, connectBlocked: true })).toBe(true)
-  })
-
-  it('keeps the skip hidden until a connect attempt fails', () => {
-    expect(canSkipOnboardingSites({ hasSites: false, connectBlocked: false })).toBe(false)
-  })
-
-  it('hides the skip once a site exists, because Continue works', () => {
-    expect(canSkipOnboardingSites({ hasSites: true, connectBlocked: true })).toBe(false)
-  })
-})
-
-describe('resolveOnboardingNav', () => {
-  it('offers only the skip on the connect step before a grant', () => {
-    // Connect drives the advance here, so a Continue beside it read as a
-    // second Connect (UX replay A13).
+describe('first-run steps', () => {
+  it('lets a user leave the connect step without a Google grant, through its skip', () => {
     for (const gsc of [NOT_CONNECTED, SCOPE_MISSING])
-      expect(resolveOnboardingNav('connect', gsc)).toEqual({ skipLabel: 'Skip for now', showNext: false })
+      expect(current({ gsc, hasSites: false }, 'connect').skip).toEqual({ _tag: 'Go', step: 'sites' })
   })
 
-  it('offers only Continue on the connect step once Search Console is connected', () => {
-    expect(resolveOnboardingNav('connect', CONNECTED)).toEqual({ skipLabel: undefined, showNext: true })
+  it('offers no skip on the connect step once Search Console is connected', () => {
+    // The step draws only Continue then (UX replay A13: never both).
+    expect(current({ gsc: CONNECTED, hasSites: false }, 'connect').skip).toBeNull()
   })
 
-  it('never renders the skip and the advance button side by side', () => {
-    for (const step of ONBOARDING_STEPS) {
-      for (const gsc of [CONNECTED, NOT_CONNECTED, SCOPE_MISSING]) {
-        const nav = resolveOnboardingNav(step, gsc)
-        expect([nav.skipLabel !== undefined, nav.showNext].filter(Boolean)).toHaveLength(1)
-      }
-    }
+  it('offers the sites skip once connecting is blocked and no site exists', () => {
+    // A gscdump outage or a full Free allowance must not trap the user here.
+    expect(current({ gsc: CONNECTED, hasSites: false, connectBlocked: true }, 'sites').current.skippable).toBe(true)
+    expect(current({ gsc: CONNECTED, hasSites: false, connectBlocked: false }, 'sites').current.skippable).toBe(false)
+    expect(current({ gsc: CONNECTED, hasSites: true, connectBlocked: true }, 'sites').current.skippable).toBe(false)
+  })
+
+  it('keeps every step in the rail and finishes from the last one', () => {
+    const resolution = current({ gsc: NOT_CONNECTED, hasSites: true }, 'sync')
+    expect(resolution.steps.map(step => step.id)).toEqual([...ONBOARDING_STEPS])
+    expect(resolution.next).toEqual({ _tag: 'Finish' })
+    expect(resolution.back).toBe('sites')
+  })
+
+  it('shows a requested step as asked, even one the user already finished', () => {
+    expect(current({ gsc: CONNECTED, hasSites: true }, 'connect').current.id).toBe('connect')
+  })
+})
+
+describe('dashboard card steps', () => {
+  function cardStep(gsc: GscConnection, hasSites: boolean): string | null {
+    const resolution = resolveOnboarding({ steps: evaluateOnboardingSteps(DASHBOARD_CARD_STEPS, { gsc, hasSites, connectBlocked: false }), requested: null })
+    return resolution._tag === 'Current' ? resolution.current.id : null
+  }
+
+  it('offers the first Site, then Search Console, then nothing', () => {
+    expect(cardStep(NOT_CONNECTED, false)).toBe('connect-site')
+    expect(cardStep(CONNECTED, false)).toBe('connect-site')
+    expect(cardStep(NOT_CONNECTED, true)).toBe('connect-search-console')
+    expect(cardStep(CONNECTED, true)).toBeNull()
+  })
+
+  it('leaves a missing scope to the layout alert', () => {
+    expect(cardStep(SCOPE_MISSING, true)).toBeNull()
   })
 })
 
@@ -154,14 +167,6 @@ describe('parseOnboardingStep', () => {
     expect(parseOnboardingStep('')).toBeNull()
     expect(parseOnboardingStep(undefined)).toBeNull()
     expect(parseOnboardingStep(['sites'])).toBeNull()
-  })
-})
-
-describe('onboardingStepIndex', () => {
-  it('orders the steps as the progress rail renders them', () => {
-    expect(onboardingStepIndex('connect')).toBe(0)
-    expect(onboardingStepIndex('sites')).toBe(1)
-    expect(onboardingStepIndex('sync')).toBe(2)
   })
 })
 
