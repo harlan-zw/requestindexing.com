@@ -593,6 +593,24 @@ Onboarding Step words, under `proShell.copy.onboarding.steps`:
 
 **Never claim an invitation email was sent.** `team-domain.ts` logs the invitation instead of sending it. Until Postmark sends it, the copy points at the link on Members.
 
+## Dashboard indexing section assets
+
+The fleet Indexing tabs (Overview, Issues, Changes) and the per-Site indexing sections come from `@nuxtseo/pro-indexing`. Its defaults are canonical in nuxtseo.com's COPY.md (Indexing section assets). This table lists only the strings Request Indexing changes or adds, in `layers/indexing/app/pro-indexing.ts` (`proIndexing.copy`) and the fleet page. Change a row here first, then that file. A string the table does not list is the section default.
+
+| Asset | String | Why it differs |
+| --- | --- | --- |
+| Indexed tile tooltip | Share of inspected URLs that Google reports as indexed. | The counts are URL Inspection results, not submitted URLs |
+| Not indexed tile tooltip | Inspected URLs that Google does not report as indexed. | The counts are URL Inspection results, not submitted URLs |
+| Site breakdown, no coverage yet | Google has not reported coverage for this Site yet. The breakdown appears after the first Search Console sync. | Site is capitalised (GLOSSARY.md) |
+| Site breakdown, all indexed | Every inspected URL is indexed, so there is nothing to break down. | The counts are URL Inspection results |
+| Changes count note | Counts at most 500 URL Inspection changes per Site, so a large Site can show fewer than the real total. | Changes come from each Site's URL Inspection transitions, at most 500 per read |
+| Fleet tabs | Overview, Issues, Changes | Fleet page tab strip |
+| Copy export | Copy as Markdown | Fleet Overview toolbar |
+| Download export | Download Markdown | Fleet Overview toolbar |
+| Export title | Indexing coverage: All Sites | The SDK writes the heading; All Sites is the scope |
+
+The Markdown body is `buildIndexingPortfolioMarkdown` from `@gscdump/sdk/indexing`. Its words are gscdump's.
+
 ## Setup completion
 
 The final setup step confirms a connected Site. It does not read or start an engine sync.

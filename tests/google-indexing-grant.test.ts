@@ -14,7 +14,7 @@ const h = vi.hoisted(() => ({
 vi.mock('~~/layers/core/server/app/utils/auth', () => ({
   authenticateUser: async () => ({ userId: 1, email: 'dev@requestindexing.test' }),
 }))
-vi.mock('~~/layers/pro-indexing/server/utils/google-indexing', () => ({
+vi.mock('~~/layers/indexing/server/utils/google-indexing', () => ({
   googleIndexingClient: () => h.client,
   gscdumpUserIdFor: async () => h.gscdumpUserId,
   toGoogleSubmissionError: (error: unknown) => {

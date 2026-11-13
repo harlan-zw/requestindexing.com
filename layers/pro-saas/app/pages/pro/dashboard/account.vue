@@ -6,10 +6,10 @@
 //
 // The layer that owns `ProConnectedAccounts` opts out of auto-import, so the
 // component is imported by path.
-import type { IndexingGrant } from '#layers/pro-indexing/shared/contracts/indexing-grant'
+import type { IndexingGrant } from '#layers/indexing/shared/contracts/indexing-grant'
 
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
-import { INDEXING_API_UNAVAILABLE } from '#layers/pro-indexing/shared/indexing-copy'
+import { INDEXING_API_UNAVAILABLE } from '#layers/indexing/shared/indexing-copy'
 import ProConnectedAccounts from '#layers/pro-saas-auth/app/components/auth/ProConnectedAccounts.vue'
 import { ACCOUNT_DELETED_PATH, accountDeletionCopy } from '#layers/pro-saas/shared/account-deletion-copy'
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'

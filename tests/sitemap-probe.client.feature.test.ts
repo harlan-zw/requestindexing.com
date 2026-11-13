@@ -3,8 +3,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createApp, effectScope, nextTick, reactive, ref } from 'vue'
 // @ts-expect-error Vitest resolves the installed Nuxt runtime.
 import { useAsyncData } from '#test/nuxt-async-data'
-import Indexing from '../layers/pro-indexing/app/pages/pro/dashboard/sites/[id]/indexing/index.vue'
-import Sitemaps from '../layers/pro-indexing/app/pages/pro/dashboard/sites/[id]/indexing/sitemaps.vue'
+import Indexing from '../layers/indexing/app/pages/pro/dashboard/sites/[id]/indexing/index.vue'
+import Sitemaps from '../layers/indexing/app/pages/pro/dashboard/sites/[id]/indexing/sitemaps.vue'
 
 const state = vi.hoisted(() => ({ app: {} as Record<string, any>, fetch: vi.fn() }))
 vi.mock('../node_modules/nuxt/dist/app/nuxt.js', () => ({ useNuxtApp: () => state.app, tryUseNuxtApp: () => state.app, useRuntimeConfig: () => ({ public: {} }) }))

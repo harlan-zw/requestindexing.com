@@ -40,7 +40,8 @@ const manifest = computed<ProShellNavManifest>(() => ({
   pinnedLabel: 'Team',
   pinned: [
     { id: 'dashboard', label: 'Dashboard', icon: 'home', target: { _tag: 'Route', name: 'dashboard' }, active: (p: string) => p === dashboardTo },
-    { id: 'indexing', label: 'Indexing', icon: 'database', target: { _tag: 'Path', to: '/pro/dashboard/indexing' } },
+    // Active on every fleet Indexing tab: Overview, Issues and Changes.
+    { id: 'indexing', label: 'Indexing', icon: 'database', target: { _tag: 'Path', to: '/pro/dashboard/indexing' }, active: (p: string) => p === '/pro/dashboard/indexing' || p.startsWith('/pro/dashboard/indexing/') },
   ],
   railLabel: 'Manage',
   rail: [

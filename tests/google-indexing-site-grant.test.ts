@@ -20,7 +20,7 @@ vi.hoisted(() => {
 vi.mock('#layers/pro-saas/server/utils/handler', () => ({ defineProApiHandler: (handler: unknown) => handler }))
 // The feature boundary suite covers local authorization and authoritative host proof.
 vi.mock('#layers/pro-gsc/server/utils/registered-site-scope', () => ({ assertLocalRegisteredGscSiteScope: async () => ({ _tag: 'Registered' }) }))
-vi.mock('~~/layers/pro-indexing/server/utils/google-indexing', () => ({
+vi.mock('~~/layers/indexing/server/utils/google-indexing', () => ({
   googleIndexingClient: () => fixture.configured ? { clientId: 'client', clientSecret: 'secret' } : null,
   toGoogleSubmissionError: (error: unknown) => { throw error },
 }))
@@ -33,7 +33,7 @@ vi.mock('#layers/pro-gsc/server/utils/gscdump-origin', () => ({
     },
   }),
 }))
-const { default: handler } = await import('../layers/pro-indexing/server/api/sites/[siteId]/indexing/google-grant.get')
+const { default: handler } = await import('../layers/indexing/server/api/sites/[siteId]/indexing/google-grant.get')
 
 function readSiteGrant() {
   const req = new IncomingMessage(new Socket())

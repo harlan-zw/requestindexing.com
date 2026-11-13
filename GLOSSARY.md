@@ -44,6 +44,7 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 | Setup offer | `@nuxtseo/pro-shell` `ProShellSetupOffers`, dashboard home | Account 0 to 5 open offers under "Finish setting up" | (the card title) |
 | Onboarding Step | `@nuxtseo/pro-shell` Step registry, `FIRST_RUN_STEPS` and `DASHBOARD_CARD_STEPS` | Flow 1 to N steps, one Step state each | step |
 | Feedback report | feedback table, Send feedback drawer | User 0 to N reports | feedback |
+| Indexing capability | `@nuxtseo/pro-indexing` `IndexingSource` optional field; nuxtseo.com GLOSSARY.md owns the term | Source 0 to N capabilities; a missing one hides its section | (internal) |
 
 Collisions: the product's submission history and Google's indexing state are different evidence. Never imply one proves the other.
 

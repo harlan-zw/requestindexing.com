@@ -8,7 +8,7 @@ const fixture = vi.hoisted(() => ({
   grant: { _tag: 'missing' } as Record<string, unknown>,
 }))
 vi.mock('~~/layers/core/server/app/utils/auth', () => ({ authenticateUser: async () => ({ userId: 1 }) }))
-vi.mock('~~/layers/pro-indexing/server/utils/google-indexing', () => ({
+vi.mock('~~/layers/indexing/server/utils/google-indexing', () => ({
   googleIndexingClient: () => fixture.configured ? { clientId: 'client', clientSecret: 'secret' } : null,
   gscdumpUserIdFor: async () => 'u_engine',
   toGoogleSubmissionError: (error: unknown) => { throw error },
@@ -16,7 +16,7 @@ vi.mock('~~/layers/pro-indexing/server/utils/google-indexing', () => ({
 vi.mock('#layers/pro-gsc/server/utils/gscdump-origin', () => ({
   createGscdumpPublicV1Client: () => ({ getUserIndexingApiGrant: async () => ({ data: fixture.grant }) }),
 }))
-const { default: handler } = await import('../layers/pro-indexing/server/api/indexing/auth.get')
+const { default: handler } = await import('../layers/indexing/server/api/indexing/auth.get')
 function readGrant() {
   const req = new IncomingMessage(new Socket())
   return handler(createEvent(req, new ServerResponse(req)))
