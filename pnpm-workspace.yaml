@@ -205,7 +205,7 @@ catalog:
   googlethis: ^1.8.0
   gscdump: 7.13.0
   h3: ^1.15.11
-  happy-dom: ^20.0.0
+  happy-dom: ^21.0.4
   hookable: ^6.1.2
   jsonc-parser: 3.3.1
   klona: ^2.0.6
@@ -213,7 +213,7 @@ catalog:
   motion-v: 2.5.1
   nanoid: ^6.0.1
   nitro-cloudflare-dev: ^0.2.2
-  nuxt: ^4.6.1
+  nuxt: ^4.6.3
   nuxt-auth-utils: ^0.5.30
   nuxtseo-devtools-host: ^1.0.2
   ohash: ^2.0.12
