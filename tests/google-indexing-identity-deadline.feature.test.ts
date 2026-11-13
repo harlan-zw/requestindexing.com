@@ -2,9 +2,9 @@ import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
 import { createEvent } from 'h3'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import grant from '../layers/indexing/server/api/sites/[siteId]/indexing/google-grant.get'
+import submit from '../layers/indexing/server/api/sites/[siteId]/indexing/google-submissions.post'
 import { DEFAULT_PARTNER_TIMEOUT_MS } from '../layers/pro-gsc/server/utils/gscdump-client'
-import grant from '../layers/pro-indexing/server/api/sites/[siteId]/indexing/google-grant.get'
-import submit from '../layers/pro-indexing/server/api/sites/[siteId]/indexing/google-submissions.post'
 
 vi.mock('#layers/pro-saas/server/utils/handler', () => ({ defineProApiHandler: (handler: unknown) => handler }))
 // Keep the production body validator, replacing only request-stream I/O while

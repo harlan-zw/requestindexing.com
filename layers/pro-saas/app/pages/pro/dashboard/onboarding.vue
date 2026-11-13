@@ -5,7 +5,7 @@ import { useProShellOnboardingFlow, useProShellOnboardingSteps } from '@nuxtseo/
 import { REQUEST_HONOUR } from '@nuxtseo/pro-shell/shared/onboarding'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 
-import ProSetupFirstSiteReport from '~~/layers/pro-indexing/app/components/ProSetupFirstSiteReport.vue'
+import ProSetupFirstSiteReport from '~~/layers/indexing/app/components/ProSetupFirstSiteReport.vue'
 import {
   DASHBOARD_ROUTE,
   FIRST_RUN_FLOW,

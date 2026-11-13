@@ -1,4 +1,4 @@
-import type { PageEvidenceRead, PageInspectionResult } from '#layers/pro-indexing/shared/page-evidence'
+import type { PageEvidenceRead, PageInspectionResult } from '#layers/indexing/shared/page-evidence'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { computed, createApp, defineComponent, h, nextTick, onMounted, onScopeDispose, ref, Suspense, useTemplateRef, watch } from 'vue'
 

@@ -2,7 +2,7 @@ import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, ref } from 'vue'
 
-import Sitemaps from '../layers/pro-indexing/app/pages/pro/dashboard/sites/[id]/indexing/sitemaps.vue'
+import Sitemaps from '../layers/indexing/app/pages/pro/dashboard/sites/[id]/indexing/sitemaps.vue'
 
 type Submission = GscdumpV1OperationResponse<'partner.sites.sitemaps.submission.get'>['data']
 const mocks = vi.hoisted(() => ({

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { PageEvidenceRead, PageInspectionResult } from '#layers/pro-indexing/shared/page-evidence'
+import type { PageEvidenceRead, PageInspectionResult } from '#layers/indexing/shared/page-evidence'
 import { useClipboard } from '@vueuse/core'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
-import ProFirstSiteReport from '~~/layers/pro-indexing/app/components/ProFirstSiteReport.vue'
+import ProFirstSiteReport from '~~/layers/indexing/app/components/ProFirstSiteReport.vue'
 import ProSiteAddForm from '#layers/pro-saas/app/components/pro/ProSiteAddForm.vue'
 import { PAGE_SETUP_COPY as copy, PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 
