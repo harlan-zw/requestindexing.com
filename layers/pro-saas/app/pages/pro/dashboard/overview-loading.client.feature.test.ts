@@ -1,3 +1,4 @@
+import type { MockInstance } from 'vitest'
 import type { SiteFleetRow } from '~~/layers/core/app/types'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, createApp, defineComponent, h, nextTick, onMounted, ref, Suspense, toValue, watch } from 'vue'
@@ -81,6 +82,7 @@ async function mount() {
   const host = document.createElement('div')
   document.body.appendChild(host)
   const app = createApp({ render: () => h(Suspense, null, { default: () => h(Dashboard) }) })
+  app.component('ProSavedPageResume', defineComponent({ render: () => null }))
   app.component('UiAlert', defineComponent({ props: ['title'], setup: (props, { slots }) => () => h('div', { role: 'alert' }, [props.title, slots.default?.(), slots.action?.()]) }))
   for (const name of ['UiButton', 'UiLoadingState', 'UiCard'])
     app.component(name, defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) }))
@@ -106,6 +108,16 @@ beforeEach(() => {
   engine.daily.mockReset()
   engine.indexing.mockReset()
 })
+let warnings: MockInstance<typeof console.warn>
+beforeEach(() => {
+  warnings = vi.spyOn(console, 'warn')
+})
+afterEach(() => {
+  const renderWarnings = warnings.mock.calls.map(([message]) => String(message)).filter(message => /Failed to resolve component|no <Suspense> boundary/.test(message))
+  warnings.mockRestore()
+  expect(renderWarnings).toEqual([])
+})
+
 afterEach(() => {
   for (const app of apps.splice(0)) app.unmount()
   document.body.innerHTML = ''
