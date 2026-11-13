@@ -30,6 +30,10 @@ const links: NavigationMenuItem[] = [{
   icon: 'i-lucide-globe',
   to: '/admin/sites',
 }, {
+  label: 'Feedback',
+  icon: 'i-lucide-message-square-quote',
+  to: '/admin/feedback',
+}, {
   label: 'Jobs',
   icon: 'i-lucide-list-checks',
   to: '/admin/jobs',

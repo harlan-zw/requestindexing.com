@@ -240,13 +240,16 @@ export async function inviteTeamMember(event: H3Event, ctx: CurrentTeamContext, 
     .orderBy(desc(userIdentities.lastUsedAt))
     .get()
 
-  await ctx.team.sendInvite({
+  // The row above is the invitation. The email only carries its link, so a
+  // send that did not leave is reported, never thrown.
+  const emailDelivery = await ctx.team.sendInvite({
     email,
     role,
     inviterName: inviterIdentity?.displayName || inviterIdentity?.email || 'A teammate',
     acceptUrl,
     expiresAt,
     invitationId: invitation.teamInvitationId,
+    invitedById: ctx.caller.user.id,
   })
 
   await ctx.team.audit({
@@ -257,7 +260,7 @@ export async function inviteTeamMember(event: H3Event, ctx: CurrentTeamContext, 
     metadata: { email, role },
   })
 
-  return { invitation, acceptUrl }
+  return { invitation, acceptUrl, emailDelivery }
 }
 
 export async function revokeTeamInvitation(ctx: CurrentTeamContext, invitationId: number) {

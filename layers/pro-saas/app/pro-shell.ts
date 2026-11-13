@@ -65,9 +65,9 @@ export const PRO_SHELL_COPY_OVERRIDES = {
     title: 'Invite a member',
     roleLabel: 'Role',
     sentTitle: 'Invitation created',
-    sentDescription: 'Copy its link from Pending invitations and send it to your teammate.',
+    sentDescription: 'Pending invitations shows its link and whether the email was sent.',
     resentTitle: 'Invitation renewed',
-    resentDescription: 'The previous link stopped working. Copy the new link from Pending invitations.',
+    resentDescription: 'The previous link stopped working. Pending invitations shows the new link and whether the email was sent.',
   },
   onboarding: {
     progressLabel: 'Setup progress',

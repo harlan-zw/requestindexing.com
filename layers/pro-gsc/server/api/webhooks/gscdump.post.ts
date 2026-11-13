@@ -122,6 +122,10 @@ async function applyDelivery(event: H3Event, envelope: CanonicalWebhookEnvelope)
     // Dev observability: a local run sends nothing.
     if (outcome._tag === 'Skipped')
       console.warn(`[webhooks/gscdump] allowance email not sent (${outcome.reason})`)
+    // The Worker refuses to boot without the token, so only a dev or preview
+    // server lands here. The notice is acknowledged and not retried.
+    if (outcome._tag === 'NotConfigured')
+      logWarn('email.not_configured', new Error('NUXT_POSTMARK_API_KEY is not set'), { stage: 'allowance_notice' })
     return { ok: true, notice: outcome }
   }
 

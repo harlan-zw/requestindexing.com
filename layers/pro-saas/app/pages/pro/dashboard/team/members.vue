@@ -2,10 +2,12 @@
 import type { TableColumn } from '@nuxt/ui'
 import type { InviteRoleOption } from '@nuxtseo/pro-shell/shared/invite'
 import type { TeamRole } from '#layers/pro-saas/shared/policies/team-policy'
+import type { InviteEmailDelivery } from '#layers/pro-saas/shared/team-invite-email'
 import ProShellAbilityGate from '@nuxtseo/pro-shell/app/components/ProShellAbilityGate.vue'
 import ProShellInviteDialog from '@nuxtseo/pro-shell/app/components/ProShellInviteDialog.vue'
 import { useProShellCopy } from '@nuxtseo/pro-shell/app/composables/useProShellCopy'
 import { useClipboard } from '@vueuse/core'
+import { inviteEmailCopy } from '#layers/pro-saas/shared/team-invite-email'
 import { invitationCreateSchema } from '#layers/pro-saas/shared/validators/invitations'
 import { createTeamInviteAdapter } from '../../../../utils/team-invite'
 
@@ -40,9 +42,9 @@ const columns: TableColumn<MemberRow>[] = [
   { accessorKey: 'role', header: 'Role' },
 ]
 
-// Invite member, through the shell dialog. The invitation email is not wired
-// yet (`team-domain.ts` logs it), so the link a teammate needs comes from the
-// Pending invitations list below.
+// Invite member, through the shell dialog. The server emails the invitation
+// and says whether the email left. Each invitation keeps its link in Pending
+// invitations, so a teammate is reachable when the email did not leave.
 const { caller } = useCaller()
 const teamId = computed(() => caller.value?.currentTeamId ?? null)
 const proFetch = useProFetch()
@@ -62,10 +64,27 @@ const roles: InviteRoleOption<TeamRole>[] = [
   { value: 'viewer', label: 'Viewer' },
 ]
 
+// What this page learned about each invitation email it sent, by lowercased
+// address. Only this visit knows it: after a reload, no row claims either way.
+const deliveries = ref<Record<string, InviteEmailDelivery>>({})
+const toast = useToast()
 const invite = createTeamInviteAdapter({
   send: (email, role) => proFetch(`/api/pro/teams/${teamId.value}/invitations`, { method: 'POST', body: { email, role } }),
-  pendingEmails: () => pendingInvitations.value.map(invitation => invitation.email),
+  pendingEmails: () => pendingInvitations.value.map(invitation => invitation.email.toLowerCase()),
+  recordDelivery: (email, delivery) => {
+    deliveries.value = { ...deliveries.value, [email]: delivery }
+    if (delivery._tag === 'NotSent') {
+      toast.add({
+        title: inviteEmailCopy.notSentTitle,
+        description: inviteEmailCopy.notSentDescription.replace('{email}', email),
+        color: 'warning',
+      })
+    }
+  },
 })
+function deliveryOf(invitation: PendingInvitation): InviteEmailDelivery | undefined {
+  return deliveries.value[invitation.email.toLowerCase()]
+}
 
 const origin = useRequestURL().origin
 const { copy, copied } = useClipboard({ legacy: true })
@@ -120,6 +139,12 @@ function roleLabel(role: TeamRole): string {
             </p>
             <p class="text-xs text-muted">
               {{ roleLabel(invitation.role) }}
+            </p>
+            <p v-if="deliveryOf(invitation)?._tag === 'Sent'" class="text-xs text-muted">
+              {{ inviteEmailCopy.sentNote }}
+            </p>
+            <p v-else-if="deliveryOf(invitation)?._tag === 'NotSent'" class="text-xs text-warning">
+              {{ inviteEmailCopy.notSentNote }}
             </p>
           </div>
           <UiButton size="sm" purpose="secondary" icon="copy" class="min-h-11 lg:min-h-0" @click="copyLink(invitation)">
