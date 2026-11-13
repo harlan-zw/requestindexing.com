@@ -74,6 +74,7 @@ export const LOG_CATALOG = {
 
   // Transactional email (drip, invites, discord role assign, etc.)
   'email.send_failed': 'transactional email send failed; user does not see it but it should have shipped',
+  'email.not_configured': 'NUXT_POSTMARK_API_KEY is not set, so a transactional email was not sent; only a dev or preview server lacks it',
 
   // Google Indexing API
 

@@ -572,10 +572,10 @@ The dashboard frame, the setup offers, Invite member, Send feedback and the onbo
 | Invite action | Invite member | The page is Members |
 | Invite dialog title | Invite a member | The page is Members |
 | Invite access label | Role | Members lists a Role column |
-| Invitation created | Invitation created | No email is sent yet |
-| Invitation created detail | Copy its link from Pending invitations and send it to your teammate. | No email is sent yet |
+| Invitation created | Invitation created | The invitation exists before its email |
+| Invitation created detail | Pending invitations shows its link and whether the email was sent. | The email can fail, so the toast never claims it left |
 | Invitation renewed | Invitation renewed | A second invite renews the link |
-| Invitation renewed detail | The previous link stopped working. Copy the new link from Pending invitations. | No email is sent yet |
+| Invitation renewed detail | The previous link stopped working. Pending invitations shows the new link and whether the email was sent. | The email can fail, so the toast never claims it left |
 | Pending invitations heading | Pending invitations | Members page |
 | Copy invitation link | Copy invitation link | Members page |
 | Invitation link copied | Link copied | Members page |
@@ -591,7 +591,30 @@ Onboarding Step words, under `proShell.copy.onboarding.steps`:
 | `connect-site` (dashboard card) | | Connect your first Site | Connect a Site to see which of its pages Google has indexed, and why the rest are not. | Connect a Site |
 | `connect-search-console` (dashboard card) | | Connect Google Search Console | Indexing status and coverage for your Sites come from Search Console. We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify. | The Connect Search Console button |
 
-**Never claim an invitation email was sent.** `team-domain.ts` logs the invitation instead of sending it. Until Postmark sends it, the copy points at the link on Members.
+**Claim an invitation email only when Postmark accepted it.** The server returns the delivery with the invitation. The toast stays neutral, and the Pending invitations row says which one happened.
+
+## Team invitation email assets
+
+The invitation email and the Members page words about it. `layers/pro-saas/shared/team-invite-email.ts` holds them. Change them here first.
+
+The email is account mail: plain text, like the Free allowance emails, with no unsubscribe link. It ports the nuxtseo.com invitation email (`layers/saas/server/notifications/team-invite.ts`). The inviter leads, and the expiry and the fallback come after the link.
+
+`{team}` is the Team name. It is `their Team` when the inviter owns it as their personal Team, because a personal Team carries the name of its owner. `{role}` is Admin, Editor, or Viewer. `{date}` renders as a month and a day, for example November 20.
+
+| Asset | String |
+| --- | --- |
+| Email subject | {inviter} invited you to {team} on Request Indexing |
+| Email, opening | {inviter} invited you to {team} as {role}. You see the same Sites and indexing evidence they see. |
+| Email, link line | Accept the invitation: {url} |
+| Email, expiry | This link works until {date}. Sign in with this email address to accept it. |
+| Email, not expected | If you were not expecting this, ignore this email. |
+| Email, sign-off | Request Indexing |
+| Members row, email sent | Invitation email sent |
+| Members row, email not sent | Invitation email not sent. Copy the link and send it to your teammate. |
+| Toast title, email not sent | Invitation email not sent |
+| Toast detail, email not sent | Request Indexing could not email {email}. Copy the link from Pending invitations and send it to your teammate. |
+
+Never say the teammate joined or was added. That is true only after they accept.
 
 ## Dashboard indexing section assets
 

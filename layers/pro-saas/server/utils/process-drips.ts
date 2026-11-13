@@ -149,7 +149,7 @@ export async function processDueDrips(deps: ProcessDripsDeps): Promise<ProcessDr
       logError('email.send_failed', error, { type: 'drip', dripEmailId: row.id, sequence: row.sequence, stepIndex: row.stepIndex })
       return null
     })
-    if (!outcome || outcome._tag === 'Skipped') {
+    if (!outcome || outcome._tag !== 'Sent') {
       await db.update(dripEmails).set({ nextSendAt: row.nextSendAt }).where(claimedStep)
       report.failed++
       continue

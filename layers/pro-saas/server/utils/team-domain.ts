@@ -5,18 +5,15 @@
 
 import type { H3Event } from 'h3'
 import type { AuthIdentityRow } from '#layers/pro-saas-auth/shared/types/auth'
+import type { InviteEmailDelivery } from '../../shared/team-invite-email'
 import type { Team, TeamAuditEventKind } from '../database'
 import { and, eq, exists, gte, inArray, isNull, sql } from 'drizzle-orm'
+import { sendEmail } from '~~/layers/core/server/utils/email'
 import { logWarn } from '~~/shared/logging'
 import { logger } from '~~/shared/server/logger'
 import { dispatchEvent } from '#domain-events/server'
 import { teamAuditEvents, teamInvitations, teamMemberships, userIdentities, users } from '../database'
-
-// `sendEmail` from the upstream host was deleted during port. Stub to a logger
-// call until request-indexing wires Postmark (already a dep in package.json).
-async function sendEmail(_event: H3Event, opts: { to: string, subject: string, html: string }) {
-  console.warn('[email.send_stub]', { to: opts.to, subject: opts.subject })
-}
+import { sendTeamInviteEmail } from './team-invite-email'
 
 export interface AuditOpts {
   actorUserId: number | null
@@ -145,76 +142,16 @@ export interface SendInviteOpts {
   acceptUrl: string
   expiresAt: Date
   invitationId: number
+  invitedById: number
 }
 
 export interface TeamOps {
   audit: (opts: AuditOpts) => Promise<void>
-  sendInvite: (opts: SendInviteOpts) => Promise<void>
+  /** Emails the invitation. Never throws: a failed send is a `NotSent` value. */
+  sendInvite: (opts: SendInviteOpts) => Promise<InviteEmailDelivery>
 }
 
 export type TeamWithOps = Team & TeamOps
-
-function escHtml(s: string): string {
-  return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!))
-}
-
-interface RenderInviteOpts {
-  inviterName: string
-  teamName: string
-  role: 'admin' | 'editor' | 'viewer'
-  acceptUrl: string
-  expiresAt: Date
-}
-
-function renderInviteEmail(opts: RenderInviteOpts): { subject: string, html: string } {
-  const expiresLabel = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(opts.expiresAt)
-  const subject = `${opts.inviterName} invited you to ${opts.teamName} on Nuxt SEO Pro`
-
-  const html = `<!doctype html>
-<html>
-<body style="font-family:system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif;background:#fafafa;margin:0;padding:32px 16px;color:#111">
-  <table role="presentation" style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;border:1px solid #e5e5e5;overflow:hidden">
-    <tr>
-      <td style="padding:32px 32px 8px">
-        <div style="font-size:14px;color:#666;margin-bottom:8px">Nuxt SEO Pro</div>
-        <h1 style="margin:0;font-size:20px;line-height:1.3;color:#111">
-          ${escHtml(opts.inviterName)} invited you to <strong>${escHtml(opts.teamName)}</strong>
-        </h1>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:8px 32px 24px">
-        <p style="margin:8px 0 0;font-size:14px;color:#444;line-height:1.6">
-          You've been invited to join the team as <strong>${escHtml(opts.role)}</strong>.
-          Click the button below to accept. This invitation expires on ${escHtml(expiresLabel)}.
-        </p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 32px 24px">
-        <a href="${escHtml(opts.acceptUrl)}"
-           style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px;font-size:14px">
-          Accept invitation
-        </a>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 32px 32px;border-top:1px solid #eee">
-        <p style="margin:24px 0 0;font-size:12px;color:#888;line-height:1.6">
-          If the button doesn't work, paste this link into your browser:<br>
-          <span style="font-family:ui-monospace,monospace;color:#666;word-break:break-all">${escHtml(opts.acceptUrl)}</span>
-        </p>
-        <p style="margin:16px 0 0;font-size:12px;color:#888">
-          If you weren't expecting this, you can ignore this email.
-        </p>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`
-
-  return { subject, html }
-}
 
 /**
  * Wrap a Team row with operations bound to db/event. Closures hold references
@@ -224,23 +161,19 @@ export function attachTeamOps(
   team: Team,
   deps: { db: ReturnType<typeof useDrizzle>, event: H3Event },
 ): TeamWithOps {
-  const { db, event } = deps
+  const { db } = deps
 
   const audit: TeamOps['audit'] = opts => recordTeamAuditEvent({ db, teamId: team.teamId, ...opts })
 
-  const sendInvite: TeamOps['sendInvite'] = async (opts) => {
-    const { subject, html } = renderInviteEmail({
-      inviterName: opts.inviterName,
-      teamName: team.name,
-      role: opts.role,
-      acceptUrl: opts.acceptUrl,
-      expiresAt: opts.expiresAt,
-    })
-    // Best-effort: failing email shouldn't roll back invitation row; user can resend or copy link.
-    await sendEmail(event, { to: opts.email, subject, html }).catch((err: { message?: string } | undefined) => {
-      logWarn('email.send_failed', err, { stage: 'team_invite' })
-    })
-  }
+  const sendInvite: TeamOps['sendInvite'] = opts => sendTeamInviteEmail({ send: sendEmail }, opts.email, {
+    inviterName: opts.inviterName,
+    teamName: team.name,
+    // Only the owner inviting from their own personal Team gets "their Team".
+    teamIsInvitersPersonal: !!team.personalTeam && team.ownerId === opts.invitedById,
+    role: opts.role,
+    acceptUrl: opts.acceptUrl,
+    expiresAt: opts.expiresAt,
+  }, { invitationId: opts.invitationId })
 
   return Object.assign(Object.create(null) as Team, team, { audit, sendInvite }) as TeamWithOps
 }
