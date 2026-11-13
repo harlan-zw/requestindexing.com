@@ -323,6 +323,19 @@ Retained observations do not establish lifetime first use.
 | Sign-in provider | Sign-in provider |
 | Acquisition channel | Acquisition channel |
 
+## Admin feedback reports
+
+The `/admin/feedback` page lists Feedback reports through the `pro-feedback` admin resource. `apps/admin/app/pages/admin/feedback.vue` holds these strings.
+
+| Asset | String |
+| --- | --- |
+| Nav label | Feedback |
+| Heading | Feedback reports |
+| Explanation | Reports from the Send feedback drawer, newest first. |
+| Columns | Submitted · User · Intent · Sentiment · Comment · Path |
+| Empty | No feedback reports yet. |
+| Read failure | Feedback reports could not load. |
+
 ## Saved-page setup
 
 These strings apply when a reader continues from a checked page.
