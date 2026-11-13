@@ -49,12 +49,13 @@ export default defineNuxtConfig({
     './layers/pro-saas-auth',
     './layers/pro-saas',
     './layers/pro-gsc',
-    './layers/pro-indexing',
+    './layers/indexing',
     './layers/core',
     // Last, so every site layer above overrides its app.config and config.
     // Its components still win a name clash: they register at priority 10.
-    // The published shell extends `@nuxtseo/design-system`, so one entry brings both.
-    '@nuxtseo/pro-shell',
+    // `@nuxtseo/pro-indexing` extends `@nuxtseo/pro-shell`, which extends
+    // `@nuxtseo/design-system`, so one entry brings all three.
+    '@nuxtseo/pro-indexing',
   ],
   nuxtDx: {
     report: true,

@@ -10,7 +10,7 @@ import {
 import { withQuery } from 'ufo'
 import { randomUUID } from 'uncrypto'
 import { authenticateUser } from '~~/layers/core/server/app/utils/auth'
-import { googleIndexingClient, gscdumpUserIdFor, toGoogleSubmissionError } from '~~/layers/pro-indexing/server/utils/google-indexing'
+import { googleIndexingClient, gscdumpUserIdFor, toGoogleSubmissionError } from '~~/layers/indexing/server/utils/google-indexing'
 import { createGscdumpPublicV1Client } from '#layers/pro-gsc/server/utils/gscdump-origin'
 import { safeAuthRedirect } from '#layers/pro-saas-auth/shared/utils/auth-redirect'
 

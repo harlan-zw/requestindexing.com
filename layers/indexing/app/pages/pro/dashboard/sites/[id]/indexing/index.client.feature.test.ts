@@ -1,0 +1,247 @@
+import { beforeEach, expect, it, vi } from 'vitest'
+import { createApp, defineComponent, h, nextTick, ref } from 'vue'
+
+const refresh = vi.hoisted(() => ({
+  status: vi.fn(),
+  diagnostics: vi.fn(),
+  sitemaps: vi.fn(),
+  urls: vi.fn(),
+  progress: vi.fn(),
+  proFetch: vi.fn(),
+}))
+
+const fixture = vi.hoisted(() => ({
+  diagnostics: null as Record<string, unknown> | null,
+  sitemaps: null as Record<string, unknown> | null,
+  error: null as Error | null,
+  sitemapsError: null as Error | null,
+  processing: 1,
+  completed: 0,
+  lifecyclePhase: 'discovering',
+  sitemapPhase: 'discovering',
+  settled: true,
+  indexingStatus: 'pending',
+  lifecycleError: false,
+}))
+
+vi.mock('#layers/pro-gsc/app/composables/useProGscdump', () => ({
+  useProGscdump: () => ({ listSiteIndexingTransitions: vi.fn() }),
+  useProGscdumpIndexing: () => ({ data: ref({ meta: { indexingStatus: fixture.indexingStatus, inspectedCount: 0, sitemapTotal: 0 }, trend: [] }), status: ref('success'), error: ref(null), refresh: refresh.progress }),
+  useProGscdumpIndexingDiagnostics: () => ({ data: ref(fixture.diagnostics), status: ref('success'), error: ref(fixture.error), refresh: refresh.diagnostics }),
+  useProGscdumpSitemaps: () => ({ data: ref(fixture.sitemaps), status: ref(fixture.sitemapsError ? 'error' : 'success'), error: ref(fixture.sitemapsError), refresh: refresh.sitemaps }),
+  useProGscdumpIndexingUrls: () => ({ data: ref({ urls: [], pagination: { total: 0, hasMore: false } }), status: ref('success'), error: ref(null), refresh: refresh.urls }),
+}))
+
+// The page draws the shared `@nuxtseo/pro-indexing` panel. The real one is
+// loaded below and handed out lazily, because it imports this mock itself.
+const layer = vi.hoisted(() => ({ panel: null as unknown }))
+
+vi.mock('#components', () => ({
+  get IndexingDiagnosisPanel() {
+    return layer.panel
+  },
+  IndexingCoverageTrend: defineComponent({ render: () => null }),
+  IndexingCohortList: defineComponent({ render: () => null }),
+  UiCard: defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) }),
+  UiButton: defineComponent({ props: ['to'], setup: (props, { slots }) => () => h('a', { href: props.to }, slots.default?.()) }),
+  UiStatusBadge: defineComponent({ props: ['label'], setup: props => () => h('span', props.label) }),
+  UiSkeleton: defineComponent({ setup: () => () => h('span', 'Loading evidence') }),
+  UiEmptyState: defineComponent({ setup: () => () => null }),
+  ConnectSearchConsoleButton: defineComponent({ setup: () => () => h('button', 'Connect Search Console') }),
+}))
+
+vi.mock('../../../../../../components/ProFirstSiteReport.vue', () => ({
+  default: defineComponent({ render: () => null }),
+}))
+
+Object.assign(globalThis, {
+  definePageMeta: () => {},
+  useSite: () => ({
+    siteId: ref('app-site'),
+    gscdumpSiteId: ref('engine-site'),
+    isNotConnected: ref(false),
+    isLifecycleSettled: ref(fixture.settled),
+    gscStatusError: ref(fixture.lifecycleError),
+    refreshGscStatus: refresh.status,
+    gscData: ref({ sitemapStatus: fixture.sitemapPhase, indexingStatus: fixture.lifecyclePhase, indexing: { processing: fixture.processing, completed: fixture.completed } }),
+  }),
+  useProFetch: () => refresh.proFetch,
+  useAsyncData: () => ({ data: ref(null), error: ref(null), status: ref('success') }),
+})
+
+layer.panel = (await import('@nuxtseo/pro-indexing/app/components/IndexingDiagnosisPanel.vue')).default
+const { default: Indexing } = await import('./index.vue')
+
+async function render(interact?: (container: HTMLElement) => Promise<void>) {
+  const app = createApp(Indexing)
+  for (const name of ['ProPageZone', 'ProSecondaryGrid', 'UiCard'])
+    app.component(name, defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) }))
+  app.component('UiAlert', defineComponent({
+    props: ['title', 'description'],
+    setup: (props, { slots }) => () => h('div', [props.title, props.description, slots.action?.()]),
+  }))
+  app.component('UiButton', defineComponent({ setup: (_, { slots }) => () => h('button', slots.default?.()) }))
+  for (const name of ['UiSkeleton', 'UiStat', 'UiFactsGrid', 'ProFunnel', 'UiProgressPercent'])
+    app.component(name, defineComponent({ render: () => null }))
+  const container = document.createElement('div')
+  app.mount(container)
+  try {
+    await interact?.(container)
+    return container.innerHTML
+  }
+  finally {
+    app.unmount()
+  }
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  fixture.diagnostics = { summary: { totalUrls: 0, indexed: 0, indexedPercent: 0 }, issues: [], meta: { indexingStatus: 'pending' } }
+  fixture.sitemaps = { sitemaps: [], history: [] }
+  fixture.error = null
+  fixture.sitemapsError = null
+  fixture.processing = 1
+  fixture.completed = 0
+  fixture.lifecyclePhase = 'discovering'
+  fixture.sitemapPhase = 'discovering'
+  fixture.settled = true
+  fixture.indexingStatus = 'pending'
+  fixture.lifecycleError = false
+})
+
+it('waits for authoritative first collection instead of diagnosing an undiscovered sitemap as missing', async () => {
+  const html = await render()
+  expect(html).toContain('Waiting for indexing evidence')
+  expect(html).not.toContain('Fix the sitemap signal')
+})
+
+it('waits for authoritative first collection before diagnostics exist', async () => {
+  fixture.diagnostics = null
+  const html = await render()
+  expect(html).toContain('Waiting for indexing evidence')
+  expect(html).not.toContain('Indexing evidence is unavailable')
+})
+
+it('keeps a failed evidence read visible during first collection', async () => {
+  fixture.diagnostics = null
+  fixture.error = new Error('network failed')
+  expect(await render()).toContain('Indexing diagnosis failed to load')
+})
+
+it('keeps a failed lifecycle read visible when required evidence has not arrived', async () => {
+  fixture.diagnostics = null
+  fixture.lifecycleError = true
+  expect(await render()).toContain('Indexing coverage failed to load')
+})
+
+it.each(['ready', 'no_urls'])('offers sitemap recovery once collection settles as %s with no sitemap', async (phase) => {
+  fixture.processing = 0
+  fixture.lifecyclePhase = phase
+  fixture.sitemapPhase = 'none_found'
+  const html = await render()
+  expect(html).toContain('No sitemap is submitted in Search Console')
+  expect(html).toContain('Review sitemap')
+})
+
+it.each(['waiting_for_sitemaps', 'discovering', 'checking'])('honors authoritative %s despite completed job counters', async (phase) => {
+  fixture.lifecyclePhase = phase
+  fixture.completed = 1
+  fixture.processing = 0
+  const html = await render()
+  expect(html).toContain('Waiting for indexing evidence')
+  expect(html).not.toContain('No sitemap is submitted')
+})
+
+it('waits for the first lifecycle read before diagnosing an empty discovery snapshot', async () => {
+  fixture.settled = false
+  const html = await render()
+  expect(html).toContain('Loading evidence')
+  expect(html).not.toContain('No sitemap is submitted')
+})
+
+it('retains observed partial evidence and its refresh error while discovery continues', async () => {
+  fixture.lifecyclePhase = 'waiting_for_sitemaps'
+  fixture.completed = 1
+  fixture.indexingStatus = 'partial'
+  fixture.diagnostics = { summary: { totalUrls: 1, indexed: 0, indexedPercent: 0 }, issues: [{ type: 'unknown_to_google', count: 1 }], meta: { indexingStatus: 'partial' } }
+  fixture.sitemaps = { sitemaps: [{ path: 'https://example.com/sitemap.xml', urlCount: 1, lastDownloaded: new Date().toISOString(), isIndex: false, errors: 0, warnings: 0 }], history: [] }
+  fixture.error = new Error('refresh failed')
+  const html = await render()
+  expect(html).toContain('Why pages stop')
+  expect(html).toContain('Indexing diagnosis failed to load')
+  expect(html).not.toContain('Waiting for indexing evidence')
+})
+
+it('offers a status refresh for failed sitemap collection with no inspected evidence', async () => {
+  fixture.lifecyclePhase = 'no_urls'
+  fixture.sitemapPhase = 'failed'
+  fixture.completed = 2
+  fixture.processing = 0
+  const html = await render()
+  expect(html).toContain('Latest sitemap collection failed')
+  expect(html).toContain('Sitemap collection failed. Refresh status to check for changes.')
+  expect(html).not.toContain('failed to load')
+  expect(html).not.toContain('Retry')
+  expect(html).not.toContain('No sitemap is submitted')
+  expect(html).not.toContain('Waiting for indexing evidence')
+})
+
+it('retains observed coverage and warns when the authoritative sitemap source fails', async () => {
+  fixture.lifecyclePhase = 'ready'
+  fixture.sitemapPhase = 'failed'
+  fixture.indexingStatus = 'partial'
+  fixture.diagnostics = { summary: { totalUrls: 1, indexed: 0, indexedPercent: 0 }, issues: [{ type: 'unknown_to_google', count: 1 }], meta: { indexingStatus: 'partial' } }
+  fixture.sitemaps = { sitemaps: [{ path: 'https://example.com/sitemap.xml', urlCount: 1, lastDownloaded: new Date().toISOString(), isIndex: false, errors: 0, warnings: 0 }], history: [] }
+  const html = await render()
+  expect(html).toContain('Why pages stop')
+  expect(html).toContain('Latest sitemap collection failed')
+  expect(html).toContain('Showing the last available indexing evidence. Refresh status to check for changes.')
+  expect(html).not.toContain('failed to load')
+})
+
+it('keeps observed coverage without inferring sitemap absence from a failed empty source', async () => {
+  fixture.lifecyclePhase = 'no_urls'
+  fixture.sitemapPhase = 'failed'
+  fixture.indexingStatus = 'partial'
+  fixture.diagnostics = { summary: { totalUrls: 1, indexed: 1, indexedPercent: 100 }, issues: [], meta: { indexingStatus: 'partial' } }
+  const html = await render()
+  expect(html).toContain('The inspected sample looks indexed')
+  expect(html).toContain('View inspected URLs')
+  expect(html).toContain('Latest sitemap collection failed')
+  expect(html).not.toContain('No sitemap is submitted')
+})
+
+it.each([false, true])('distinguishes collection failure from a failed read (read error: %s) and only refreshes evidence', async (readFailed) => {
+  fixture.lifecyclePhase = 'ready'
+  fixture.sitemapPhase = 'failed'
+  fixture.indexingStatus = 'complete'
+  fixture.diagnostics = { summary: { totalUrls: 2, indexed: 1, indexedPercent: 50 }, issues: [{ type: 'unknown_to_google', count: 1 }], meta: { indexingStatus: 'complete' } }
+  fixture.sitemaps = { sitemaps: [{ path: 'https://example.com/sitemap.xml', urlCount: 2, lastDownloaded: new Date().toISOString(), isIndex: false, errors: 0, warnings: 0 }], history: [] }
+  fixture.sitemapsError = readFailed ? new Error('Sitemap request failed') : null
+  const label = readFailed ? 'Retry loading' : 'Refresh status'
+  const html = await render(async (container) => {
+    const action = Array.from(container.querySelectorAll('button')).find(button => button.textContent?.trim() === label)
+    expect(action).toBeDefined()
+    action!.click()
+    await nextTick()
+  })
+  expect(html).toContain(readFailed ? 'Sitemap evidence failed to load' : 'Latest sitemap collection failed')
+  expect(html).not.toContain(readFailed ? 'Latest sitemap collection failed' : 'Sitemap evidence failed to load')
+  expect(html).toContain('Showing the last available indexing evidence')
+  // The retained diagnosis still renders. The shared panel no longer prints
+  // the indexed scope line (`1 of 2 URLs indexed`), so the action stands in.
+  expect(html).toContain('Make these URLs discoverable')
+  for (const read of [refresh.status, refresh.diagnostics, refresh.sitemaps, refresh.urls, refresh.progress])
+    expect(read).toHaveBeenCalledExactlyOnceWith()
+  expect(refresh.proFetch).not.toHaveBeenCalled()
+})
+
+it('keeps a sitemap transport failure visible without retained sitemap evidence', async () => {
+  fixture.sitemaps = null
+  fixture.sitemapsError = new Error('Sitemap request failed')
+  const html = await render()
+  expect(html).toContain('Sitemap evidence failed to load')
+  expect(html).toContain('Required indexing evidence could not be loaded')
+  expect(html).toContain('Retry loading')
+  expect(html).not.toContain('Latest sitemap collection failed')
+})

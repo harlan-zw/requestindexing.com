@@ -13,7 +13,7 @@ vi.mock('h3', async importOriginal => ({
   sendRedirect: (_event: unknown, location: string) => location,
 }))
 vi.mock('~~/layers/core/server/app/utils/auth', () => ({ authenticateUser: async () => ({ userId: 42, email: 'user@example.test' }) }))
-vi.mock('~~/layers/pro-indexing/server/utils/google-indexing', () => ({
+vi.mock('~~/layers/indexing/server/utils/google-indexing', () => ({
   googleIndexingClient: () => ({ clientId: 'client', clientSecret: 'secret' }),
   gscdumpUserIdFor: async () => 'u_user',
   toGoogleSubmissionError: (error: unknown) => { throw error },
