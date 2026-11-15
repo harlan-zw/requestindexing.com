@@ -640,6 +640,8 @@ The fleet Indexing tabs (Overview, Issues, Changes) and the per-Site indexing se
 | Site breakdown, no coverage yet | Google has not reported coverage for this Site yet. The breakdown appears after the first Search Console sync. | Site is capitalised (GLOSSARY.md) |
 | Site breakdown, all indexed | Every inspected URL is indexed, so there is nothing to break down. | The counts are URL Inspection results |
 | Changes count note | Counts at most 500 URL Inspection changes per Site, so a large Site can show fewer than the real total. | Changes come from each Site's URL Inspection transitions, at most 500 per read |
+| Diagnosis site-wide line | {indexed} URLs indexed site-wide. | The section default draws no scope line. The headline names one part of the Site, so this line gives the whole |
+| URL row, Search Console link | Inspect in Search Console | The product names the tool in full |
 | Fleet tabs | Overview, Issues, Changes | Fleet page tab strip |
 | Copy export | Copy as Markdown | Fleet Overview toolbar |
 | Download export | Download Markdown | Fleet Overview toolbar |

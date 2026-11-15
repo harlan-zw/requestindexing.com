@@ -22,7 +22,9 @@ import { PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 // step lives in `?step=` so a Google round trip comes back where it left off,
 // and so does a reload. Nothing is stored: a bare URL resumes from what the
 // user has actually done, which is the only state that survives an abandoned
-// tab. Each step draws its own nav from the frame's `controls`.
+// tab. `connect` and `sites` draw their own nav from the frame's `controls`;
+// `sync` uses the frame's, which waits for a Site because finishing without
+// one is refused.
 definePageMeta({
   layout: 'pro-onboarding',
   title: 'Set up',
@@ -109,7 +111,11 @@ useSeoMeta({ title: 'Set up Request Indexing' })
 </script>
 
 <template>
-  <ProShellOnboardingFrame :flow="flow">
+  <ProShellOnboardingFrame
+    :flow="flow"
+    :next-disabled="currentStep === 'sync' && !hasSites"
+    :next-loading="finishing"
+  >
     <template #step-connect="{ step, controls }">
       <div class="space-y-5">
         <UiAuthHeading size="md" :title="step.copy.title" :description="step.copy.description" />
@@ -202,7 +208,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       />
     </template>
 
-    <template #step-sync="{ step, controls }">
+    <template #step-sync>
       <div class="space-y-5">
         <UiAuthHeading
           size="md"
@@ -212,16 +218,6 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         <ProSetupFirstSiteReport v-if="hasSites" />
         <ProOnboardingAnswers />
       </div>
-
-      <!-- Finishing is refused without a Site, so the advance waits for one. -->
-      <UiWizardNav
-        can-back
-        :next-label="step.copy.cta || frameCopy.finish"
-        :next-disabled="!hasSites"
-        :next-loading="finishing"
-        @back="controls.back()"
-        @next="controls.next()"
-      />
     </template>
 
     <template #after>

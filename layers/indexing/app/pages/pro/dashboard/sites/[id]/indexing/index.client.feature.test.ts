@@ -32,6 +32,12 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscdump', () => ({
   useProGscdumpIndexingUrls: () => ({ data: ref({ urls: [], pagination: { total: 0, hasMore: false } }), status: ref('success'), error: ref(null), refresh: refresh.urls }),
 }))
 
+// The shared sections read this app's `proIndexing.copy` from app.config.
+vi.mock('nuxt/app', async () => {
+  const { PRO_INDEXING_COPY_OVERRIDES } = await import('../../../../../../pro-indexing')
+  return { tryUseNuxtApp: () => ({}), useAppConfig: () => ({ proIndexing: { copy: PRO_INDEXING_COPY_OVERRIDES } }) }
+})
+
 // The page draws the shared `@nuxtseo/pro-indexing` panel. The real one is
 // loaded below and handed out lazily, because it imports this mock itself.
 const layer = vi.hoisted(() => ({ panel: null as unknown }))
@@ -80,7 +86,7 @@ async function render(interact?: (container: HTMLElement) => Promise<void>) {
     props: ['title', 'description'],
     setup: (props, { slots }) => () => h('div', [props.title, props.description, slots.action?.()]),
   }))
-  app.component('UiButton', defineComponent({ setup: (_, { slots }) => () => h('button', slots.default?.()) }))
+  app.component('UiButton', defineComponent({ props: ['to'], setup: (props, { slots }) => () => h('button', { 'data-to': props.to }, slots.default?.()) }))
   for (const name of ['UiSkeleton', 'UiStat', 'UiFactsGrid', 'ProFunnel', 'UiProgressPercent'])
     app.component(name, defineComponent({ render: () => null }))
   const container = document.createElement('div')
@@ -111,14 +117,19 @@ beforeEach(() => {
 
 it('waits for authoritative first collection instead of diagnosing an undiscovered sitemap as missing', async () => {
   const html = await render()
-  expect(html).toContain('Waiting for indexing evidence')
+  expect(html).toContain('Waiting for indexing data')
+  // A connected Site is never asked to connect Search Console again. The
+  // Sitemap is the one control that moves this state.
+  expect(html).not.toContain('Connect Search Console')
+  expect(html).toContain('data-to="/pro/dashboard/sites/app-site/indexing/sitemaps"')
+  expect(html).toContain('Review sitemap')
   expect(html).not.toContain('Fix the sitemap signal')
 })
 
 it('waits for authoritative first collection before diagnostics exist', async () => {
   fixture.diagnostics = null
   const html = await render()
-  expect(html).toContain('Waiting for indexing evidence')
+  expect(html).toContain('Waiting for indexing data')
   expect(html).not.toContain('Indexing evidence is unavailable')
 })
 
@@ -148,7 +159,7 @@ it.each(['waiting_for_sitemaps', 'discovering', 'checking'])('honors authoritati
   fixture.completed = 1
   fixture.processing = 0
   const html = await render()
-  expect(html).toContain('Waiting for indexing evidence')
+  expect(html).toContain('Waiting for indexing data')
   expect(html).not.toContain('No sitemap is submitted')
 })
 
@@ -169,7 +180,7 @@ it('retains observed partial evidence and its refresh error while discovery cont
   const html = await render()
   expect(html).toContain('Why pages stop')
   expect(html).toContain('Indexing diagnosis failed to load')
-  expect(html).not.toContain('Waiting for indexing evidence')
+  expect(html).not.toContain('Waiting for indexing data')
 })
 
 it('offers a status refresh for failed sitemap collection with no inspected evidence', async () => {
@@ -183,7 +194,7 @@ it('offers a status refresh for failed sitemap collection with no inspected evid
   expect(html).not.toContain('failed to load')
   expect(html).not.toContain('Retry')
   expect(html).not.toContain('No sitemap is submitted')
-  expect(html).not.toContain('Waiting for indexing evidence')
+  expect(html).not.toContain('Waiting for indexing data')
 })
 
 it('retains observed coverage and warns when the authoritative sitemap source fails', async () => {
@@ -228,9 +239,9 @@ it.each([false, true])('distinguishes collection failure from a failed read (rea
   expect(html).toContain(readFailed ? 'Sitemap evidence failed to load' : 'Latest sitemap collection failed')
   expect(html).not.toContain(readFailed ? 'Latest sitemap collection failed' : 'Sitemap evidence failed to load')
   expect(html).toContain('Showing the last available indexing evidence')
-  // The retained diagnosis still renders. The shared panel no longer prints
-  // the indexed scope line (`1 of 2 URLs indexed`), so the action stands in.
+  // The retained diagnosis still renders, with its site-wide indexed line.
   expect(html).toContain('Make these URLs discoverable')
+  expect(html).toContain('1 of 2 inspected URLs indexed site-wide.')
   for (const read of [refresh.status, refresh.diagnostics, refresh.sitemaps, refresh.urls, refresh.progress])
     expect(read).toHaveBeenCalledExactlyOnceWith()
   expect(refresh.proFetch).not.toHaveBeenCalled()

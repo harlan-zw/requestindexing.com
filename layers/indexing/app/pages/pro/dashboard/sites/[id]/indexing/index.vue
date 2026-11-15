@@ -7,11 +7,12 @@ import type { SitemapLiveness } from '#layers/indexing/shared/contracts/sitemap-
 import type { FunnelStep } from '#layers/pro-saas/app/components/pro/ProFunnel.vue'
 import { buildIndexingOverviewModel, countInspectionStages, indexCohortFilterValue, selectIndexCohortLead, selectIndexingRegressionLead, sitemapHistoryCollapsed } from '@gscdump/sdk/indexing'
 import { useIndexingSource } from '@nuxtseo/pro-indexing/app/composables/useIndexingSource'
+import { resolveProIndexingCopy } from '@nuxtseo/pro-indexing/shared/copy'
 import { buildIndexingCoverageTrend } from '@nuxtseo/pro-indexing/shared/coverage-trend'
 import { withQuery } from 'ufo'
-import { IndexingCohortList, IndexingCoverageTrend, IndexingDiagnosisPanel } from '#components'
+import { ConnectSearchConsoleButton, IndexingCohortList, IndexingCoverageTrend, IndexingDiagnosisPanel } from '#components'
 import { INDEXING_OVERVIEW_URLS_LIMIT } from '#layers/indexing/app/composables/useRequestIndexingSource'
-import SiteIndexingWaiting from '#layers/indexing/app/internal/components/indexing/SiteIndexingWaiting.vue'
+import { PRO_INDEXING_COPY_OVERRIDES } from '#layers/indexing/app/pro-indexing'
 import { formatIndexingFreshness, resolveIndexingFreshness } from '#layers/indexing/app/utils/indexing-freshness'
 import { requestIndexingTrustGate } from '#layers/indexing/app/utils/indexing-trust'
 import { sitemapLivenessSchema } from '#layers/indexing/shared/contracts/sitemap-liveness'
@@ -290,6 +291,8 @@ function indexingRoute(page: 'sitemaps' | 'urls', query?: Record<string, string>
   return query ? withQuery(base, query) : base
 }
 
+// The words the shared panel uses, for the control this page draws in it.
+const indexingCopy = resolveProIndexingCopy(PRO_INDEXING_COPY_OVERRIDES)
 const urlsRoute = computed(() => indexingRoute('urls'))
 const sitemapsRoute = computed(() => indexingRoute('sitemaps'))
 const primaryActionRoute = computed(() => {
@@ -549,21 +552,25 @@ const overviewErrorDescription = computed(() => {
     </div>
 
     <ProPageZone tier="primary" first :aria-busy="overviewLoading">
-      <SiteIndexingWaiting
-        v-if="overviewModel?._tag === 'waiting'"
-        :model="overviewModel"
-        :sitemap-to="sitemapsRoute"
-      />
-
       <IndexingDiagnosisPanel
-        v-else-if="overviewModel"
+        v-if="overviewModel"
         :state="{ _tag: 'ready', model: overviewModel }"
         :action-to="primaryActionRoute"
         :sitemap-to="sitemapsRoute"
         :freshness="diagnosisFreshness"
         :lead="cohortLead"
         :lead-to="cohortLeadTo"
-      />
+        lead-detail
+      >
+        <!-- The one control that clears each waiting state: connect before
+             any Search Console grant, the Sitemap before any inspection. -->
+        <template #waiting-actions="{ model }">
+          <ConnectSearchConsoleButton v-if="model.state === 'not_connected'" />
+          <UiButton v-else-if="model.state === 'pending' && !model.progress" :to="sitemapsRoute" purpose="secondary" trailing-icon="next" class="min-h-11">
+            {{ indexingCopy.diagnosis.reviewSitemap }}
+          </UiButton>
+        </template>
+      </IndexingDiagnosisPanel>
 
       <UiAlert
         v-else-if="overviewError"

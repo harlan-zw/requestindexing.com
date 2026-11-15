@@ -10,20 +10,24 @@ import { createApp, defineComponent, h, nextTick, ref } from 'vue'
 // sections: the sections draw this app's data, a capability the source leaves
 // out hides its section, and inspect keeps the daily URL Inspection limit.
 
-const gscdump = vi.hoisted(() => ({ inspect: vi.fn() }))
+const gscdump = vi.hoisted(() => ({ inspect: vi.fn(), indexingUrls: vi.fn(), proFetch: vi.fn() }))
+const asyncData = vi.hoisted(() => ({ handlers: [] as Array<{ key: () => string, run: () => Promise<unknown> }> }))
 const layer = vi.hoisted(() => ({ issues: null as unknown, gate: null as unknown, changes: null as unknown }))
 
 vi.mock('#imports', () => ({
-  useAsyncData: () => ({ data: ref(null), status: ref('idle'), error: ref(null), refresh: async () => {} }),
+  useAsyncData: (key: { value: string }, run: () => Promise<unknown>) => {
+    asyncData.handlers.push({ key: () => key.value, run })
+    return { data: ref(null), status: ref('idle'), error: ref(null), refresh: async () => {} }
+  },
   useToast: () => ({ add: vi.fn() }),
 }))
 vi.mock('nuxt/app', () => ({ tryUseNuxtApp: () => null, useAppConfig: () => ({}) }))
-vi.mock('#layers/pro-saas/app/composables/useProFetch', () => ({ useProFetch: () => vi.fn() }))
+vi.mock('#layers/pro-saas/app/composables/useProFetch', () => ({ useProFetch: () => gscdump.proFetch }))
 vi.mock('#layers/pro-gsc/app/composables/useProGscdump', () => ({
   useProGscdump: () => ({}),
   useProGscdumpCanonicalMismatches: vi.fn(),
   useProGscdumpIndexingDiagnostics: vi.fn(),
-  useProGscdumpIndexingUrls: vi.fn(),
+  useProGscdumpIndexingUrls: gscdump.indexingUrls,
   useProGscdumpInspectUrls: () => gscdump.inspect,
 }))
 
@@ -61,6 +65,9 @@ const apps: ReturnType<typeof createApp>[] = []
 afterEach(() => {
   apps.splice(0).forEach(app => app.unmount())
   gscdump.inspect.mockReset()
+  gscdump.indexingUrls.mockReset()
+  gscdump.proFetch.mockReset()
+  asyncData.handlers.length = 0
 })
 
 async function mount(component: unknown, props: Record<string, unknown>, source: IndexingSource, slots?: Record<string, () => unknown>) {
@@ -112,9 +119,9 @@ describe('the shared sections read Request Indexing data', () => {
 
 describe('indexing capabilities', () => {
   it('has Watched URLs, and the Portfolio capabilities only with a Portfolio', () => {
-    expect(indexingCapabilities(useRequestIndexingSource())).toEqual(['diagnose', 'inspect', 'canonicalMismatches', 'cohorts', 'watchedUrls'])
+    expect(indexingCapabilities(useRequestIndexingSource())).toEqual(['diagnose', 'inspect', 'canonicalMismatches', 'cohorts', 'watchedUrls', 'cohortFilter'])
     expect(indexingCapabilities(useRequestIndexingSource({ portfolio: () => rows.map(toIndexingSite) })))
-      .toEqual(['diagnose', 'inspect', 'canonicalMismatches', 'cohorts', 'sitemapProblems', 'changesRollup', 'watchedUrls'])
+      .toEqual(['diagnose', 'inspect', 'canonicalMismatches', 'cohorts', 'sitemapProblems', 'changesRollup', 'watchedUrls', 'cohortFilter'])
     expect(hasIndexingCapability(useRequestIndexingSource({ canInspect: false }), 'inspect')).toBe(false)
   })
 
@@ -130,6 +137,40 @@ describe('indexing capabilities', () => {
     const element = await mount(layer.changes, { entries }, useRequestIndexingSource())
     expect(element.querySelector('[data-pro-indexing-section]')).toBeNull()
     expect(element.textContent).toBe('')
+  })
+})
+
+describe('urls', () => {
+  const site = toIndexingSite(rows[0]!)
+  const idleRead = { data: ref(null), status: ref('idle'), error: ref(null), refresh: async () => {} }
+
+  function siteIdOf(call: unknown[]): string {
+    return (call[0] as { value: string }).value
+  }
+
+  it('reads an exact Index cohort through this app\'s cohort route', async () => {
+    gscdump.indexingUrls.mockReturnValue(idleRead)
+    const body = { urls: [], pagination: { total: 0, limit: 25, offset: 0, hasMore: false }, meta: { siteUrl: 'https://one.example/', status: 'not_indexed', issue: null } }
+    gscdump.proFetch.mockResolvedValue(body)
+    useRequestIndexingSource().urls(site, { limit: 25, offset: 25, status: 'not_indexed', search: '/docs', cohort: 'lifecycle:versioned' })
+    // The gscdump read stays off: it knows no cohort.
+    expect(siteIdOf(gscdump.indexingUrls.mock.calls[0]!)).toBe('')
+    const cohortRead = asyncData.handlers.find(handler => handler.key().startsWith('indexing-cohort-urls:'))!
+    await expect(cohortRead.run()).resolves.toBe(body)
+    expect(gscdump.proFetch).toHaveBeenCalledWith('/api/pro/sites/s_one/indexing/cohorts/urls', {
+      query: { cohort: 'lifecycle:versioned', limit: 25, offset: 25, search: '/docs' },
+    })
+  })
+
+  it('reads every other view from gscdump under the key the first-page seed writes', async () => {
+    gscdump.indexingUrls.mockReturnValue(idleRead)
+    useRequestIndexingSource().urls(site, { limit: 25, offset: 0, status: undefined, cohort: undefined })
+    const [siteId, params] = gscdump.indexingUrls.mock.calls[0]!
+    expect((siteId as { value: string }).value).toBe('g_one')
+    expect(JSON.stringify((params as { value: unknown }).value)).toBe(JSON.stringify({ limit: 25, offset: 0 }))
+    const cohortRead = asyncData.handlers.find(handler => handler.key().startsWith('indexing-cohort-urls:'))!
+    await expect(cohortRead.run()).resolves.toBeNull()
+    expect(gscdump.proFetch).not.toHaveBeenCalled()
   })
 })
 
