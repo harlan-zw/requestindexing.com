@@ -27,4 +27,10 @@ export const PRO_INDEXING_COPY_OVERRIDES = {
   changes: {
     sampledCounts: 'Counts at most 500 URL Inspection changes per Site, so a large Site can show fewer than the real total.',
   },
+  diagnosis: {
+    scope: '{indexed} URLs indexed site-wide.',
+  },
+  urls: {
+    inspectInGsc: 'Inspect in Search Console',
+  },
 } as const satisfies ProIndexingCopyOverrides

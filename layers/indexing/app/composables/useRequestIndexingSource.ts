@@ -8,10 +8,11 @@
 
 import type { IndexCohortsResponse } from '@gscdump/sdk/indexing'
 import type { IndexingChangesRollup } from '@nuxtseo/pro-indexing/shared/changes'
-import type { IndexingRead, IndexingSite, IndexingSitemapProblems, IndexingSource } from '@nuxtseo/pro-indexing/shared/source'
+import type { IndexingRead, IndexingSite, IndexingSitemapProblems, IndexingSource, IndexingUrlsReadParams } from '@nuxtseo/pro-indexing/shared/source'
 import type { MaybeRefOrGetter } from 'vue'
 import type { SiteSitemapEvidence, SiteTransitionsRead } from '#layers/indexing/app/utils/indexing-source'
-import { buildIndexCohortsFromIndexingUrls } from '@gscdump/sdk/indexing'
+import type { GscdumpIndexingUrlsResponse, IndexingUrlsParams } from '#layers/pro-gsc/shared/gscdump-api'
+import { buildIndexCohortsFromIndexingUrls, indexCohortFilterValue, parseIndexCohortFilter } from '@gscdump/sdk/indexing'
 import { withQuery } from 'ufo'
 import { computed, toValue } from 'vue'
 import { useAsyncData } from '#imports'
@@ -98,6 +99,54 @@ function useCohorts(site: SiteInput): IndexingRead<IndexCohortsResponse> {
 }
 
 /**
+ * One page of a Site's inspected URLs. gscdump knows no Index cohort, so a
+ * read with `params.cohort` (the `cohortFilter` capability) pages and searches
+ * the exact cohort on this app's cohort route instead. That route answers the
+ * cohort's not-indexed URLs, which is what every cohort link shows. The read
+ * not in use stays off.
+ */
+function useUrls(site: SiteInput, params: MaybeRefOrGetter<IndexingUrlsReadParams>): IndexingRead<GscdumpIndexingUrlsResponse> {
+  const proFetch = useProFetch()
+  const cohort = computed(() => {
+    const parsed = parseIndexCohortFilter(toValue(params).cohort)
+    return parsed._tag === 'ok' ? parsed.filter : undefined
+  })
+  // Without `cohort`, so a clean first page has the key the seed writes.
+  const gscdumpParams = computed<IndexingUrlsParams>(() => {
+    const { cohort: _cohort, ...rest } = toValue(params)
+    return rest
+  })
+  // The URLs page seeds the clean first page into the SSR payload under this
+  // query's key (`useIndexingUrlsFirstPageSeed`). Hydration reuses it. An
+  // empty Site id reads nothing.
+  const gscdumpRead = useProGscdumpIndexingUrls(
+    computed(() => cohort.value ? '' : dataId(site)),
+    gscdumpParams,
+    { immediate: !!dataId(site) && !cohort.value, seedFromSsrPayload: true },
+  )
+  const cohortRead = useAsyncData<GscdumpIndexingUrlsResponse | null>(
+    computed(() => `indexing-cohort-urls:${toValue(site)?.id ?? ''}:${cohort.value ? indexCohortFilterValue(cohort.value) : ''}:${JSON.stringify(gscdumpParams.value)}`),
+    async () => {
+      const current = toValue(site)
+      if (!current?.dataId || !cohort.value)
+        return null
+      const { limit, offset, search } = gscdumpParams.value
+      return proFetch<GscdumpIndexingUrlsResponse>(`/api/pro/sites/${current.id}/indexing/cohorts/urls`, {
+        query: { cohort: indexCohortFilterValue(cohort.value), limit, offset, search },
+      })
+    },
+    { server: false },
+  )
+  const active = () => cohort.value ? cohortRead : gscdumpRead
+  return {
+    data: computed(() => active().data.value),
+    status: computed(() => active().status.value),
+    error: computed(() => active().error.value),
+    refresh: () => active().refresh(),
+  }
+}
+
+/**
  * Sitemap problems across the Portfolio, from each Site's Sitemaps report and
  * the live probe of its first Sitemap. The probe route caches each answer for
  * 30 minutes, and the Site Overview probes the same Sitemap.
@@ -149,9 +198,7 @@ export function useRequestIndexingSource(options: RequestIndexingSourceOptions =
   const { portfolio, canInspect = true } = options
   return {
     diagnostics: site => useProGscdumpIndexingDiagnostics(computed(() => dataId(site)), { immediate: !!dataId(site) }),
-    // The URLs page seeds the clean first page into the SSR payload under this
-    // query's key (`useIndexingUrlsFirstPageSeed`). Hydration reuses it.
-    urls: (site, params) => useProGscdumpIndexingUrls(computed(() => dataId(site)), params, { immediate: !!dataId(site), seedFromSsrPayload: true }),
+    urls: (site, params) => useUrls(site, params),
     diagnose: input => diagnoseIndexing(input),
     ...(canInspect
       ? {
@@ -175,5 +222,6 @@ export function useRequestIndexingSource(options: RequestIndexingSourceOptions =
         }
       : {}),
     watchedUrls: true,
+    cohortFilter: true,
   }
 }
