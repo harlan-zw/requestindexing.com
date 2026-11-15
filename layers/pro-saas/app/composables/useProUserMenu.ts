@@ -62,7 +62,7 @@ export function useProUserMenu(options: { singleSite: MaybeRefOrGetter<boolean> 
     const footer: ProShellUserMenuItem[] = [
       { icon: 'message', action: { _tag: 'Feedback' } },
       // A full page load, so the session cookie clears before the next render.
-      { label: 'Sign out', icon: 'log-out', onSelect: () => { void navigateTo('/auth/logout', { external: true }) } },
+      { label: 'Sign out', icon: 'log-out', to: '/auth/logout', external: true },
     ]
 
     return [workspace, personal, footer]

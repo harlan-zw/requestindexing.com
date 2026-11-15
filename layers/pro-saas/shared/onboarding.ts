@@ -148,8 +148,9 @@ export const DASHBOARD_CARD_FLOW = 'dashboard-card'
  * - `sites` needs a Site. Its skip ("Skip and connect it later") shows only
  *   once connecting is blocked, so it never reads as the first choice. It
  *   draws its own Continue, disabled until a Site exists.
- * - `sync` is terminal. Next finishes setup. It draws its own nav too: Go to
- *   dashboard waits for a Site, because finishing without one is refused.
+ * - `sync` is terminal. Next finishes setup. It uses the frame's nav, which
+ *   the onboarding page disables until a Site exists, because finishing
+ *   without one is refused.
  */
 export const FIRST_RUN_STEPS: readonly ProShellOnboardingStep[] = [
   {
@@ -179,7 +180,6 @@ export const FIRST_RUN_STEPS: readonly ProShellOnboardingStep[] = [
     flow: FIRST_RUN_FLOW,
     order: 30,
     titleKey: 'sync',
-    nav: 'step',
     state: () => STEP_PENDING,
   },
 ]

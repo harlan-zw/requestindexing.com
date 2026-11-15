@@ -264,3 +264,17 @@
   from { opacity: 1; transform: translateX(0); }
   to { opacity: 0; transform: translateX(20%); }
 }
+
+/* ═══ Dashboard sidebar ══════════════════════════════════════════════════
+   The gap between `ProShellSidebarNav` blocks, as Tailwind's `gap-3` below
+   lg and `gap-5` from lg. The shell default is `gap-5` everywhere, which
+   loosens the rows on a phone. */
+:root {
+  --pro-shell-nav-gap: 0.75rem;
+}
+
+@media (width >= 64rem) {
+  :root {
+    --pro-shell-nav-gap: 1.25rem;
+  }
+}

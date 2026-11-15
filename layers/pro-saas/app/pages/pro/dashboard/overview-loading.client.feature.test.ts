@@ -1,7 +1,9 @@
 import type { MockInstance } from 'vitest'
 import type { SiteFleetRow } from '~~/layers/core/app/types'
+import { provideProShellOnboardingSteps } from '@nuxtseo/pro-shell/app/composables/useProShellOnboarding'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, createApp, defineComponent, h, nextTick, onMounted, ref, Suspense, toValue, watch } from 'vue'
+import { DASHBOARD_CARD_STEPS } from '#layers/pro-saas/shared/onboarding'
 import Dashboard from './index.vue'
 
 const engine = vi.hoisted(() => ({ daily: vi.fn(), indexing: vi.fn() }))
@@ -24,21 +26,14 @@ vi.mock('#layers/pro-saas/app/composables/useNoSearchConsoleProperty', () => ({ 
 vi.mock('#layers/pro-gsc/app/components/overview/ProLiveJobProgress.vue', () => ({ default: defineComponent(() => () => null) }))
 vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewOnboardingCard.vue', () => ({ default: defineComponent(() => () => h('aside', { 'data-onboarding': true })) }))
 vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewSetupOffers.vue', () => ({ default: defineComponent(() => () => null) }))
-// The setup card reads the `dashboard-card` flow. The real resolver runs over
-// the registered steps; only the Nuxt-bound composable is stood in for.
-vi.mock('@nuxtseo/pro-shell/app/composables/useProShellOnboarding', async () => {
-  const { evaluateOnboardingSteps, resolveOnboarding } = await import('@nuxtseo/pro-shell/shared/onboarding')
-  const { DASHBOARD_CARD_STEPS } = await import('#layers/pro-saas/shared/onboarding')
-  return {
-    useProShellOnboardingSteps: () => computed(() => DASHBOARD_CARD_STEPS),
-    useProShellOnboardingFlow: (options: { steps: unknown, context: unknown }) => ({
-      current: computed(() => {
-        const resolution = resolveOnboarding({ steps: evaluateOnboardingSteps(toValue(options.steps as never), toValue(options.context as never)), requested: null })
-        return resolution._tag === 'Current' ? { id: resolution.current.id } : null
-      }),
-    }),
-  }
-})
+// The setup card runs the shell's real `dashboard-card` flow over the steps
+// the host provides. Only the Nuxt seams the flow imports are stood in for.
+vi.mock('nuxt/app', () => ({
+  tryUseNuxtApp: () => null,
+  useRoute: () => ({ query: {} }),
+  useRouter: () => ({ replace: vi.fn() }),
+  useAppConfig: () => ({}),
+}))
 vi.mock('#layers/pro-saas/app/components/pro/ProNoPropertyNotice.vue', () => ({ default: defineComponent(() => () => null) }))
 vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewSitesColumn.vue', () => ({ default: defineComponent({
   props: ['entries'],
@@ -81,7 +76,12 @@ async function flush() {
 async function mount() {
   const host = document.createElement('div')
   document.body.appendChild(host)
-  const app = createApp({ render: () => h(Suspense, null, { default: () => h(Dashboard) }) })
+  const app = createApp({
+    setup() {
+      provideProShellOnboardingSteps(DASHBOARD_CARD_STEPS)
+      return () => h(Suspense, null, { default: () => h(Dashboard) })
+    },
+  })
   app.component('ProSavedPageResume', defineComponent({ render: () => null }))
   app.component('UiAlert', defineComponent({ props: ['title'], setup: (props, { slots }) => () => h('div', { role: 'alert' }, [props.title, slots.default?.(), slots.action?.()]) }))
   for (const name of ['UiButton', 'UiLoadingState', 'UiCard'])

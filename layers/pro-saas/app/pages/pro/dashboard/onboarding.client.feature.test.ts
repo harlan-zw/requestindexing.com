@@ -1,10 +1,12 @@
 import type { MockInstance } from 'vitest'
+import { provideProShellOnboardingSteps } from '@nuxtseo/pro-shell/app/composables/useProShellOnboarding'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { computed, createApp, defineComponent, h, nextTick, onMounted, onScopeDispose, ref, Suspense, watch } from 'vue'
+import { createApp, defineComponent, h, nextTick, onMounted, onScopeDispose, ref, Suspense, watch } from 'vue'
+import { FIRST_RUN_STEPS } from '#layers/pro-saas/shared/onboarding'
 
 // The page runs on `@nuxtseo/pro-shell`'s real flow and frame. Only the Nuxt
-// seams they read are stood in for: the route, the app config with this app's
-// copy, and the Step registry, which a plugin fills in the app.
+// seams they read are stood in for: the route and the app config with this
+// app's copy. The host provides the steps a plugin registers in the app.
 const route = vi.hoisted(() => ({ query: { step: 'sync' } as Record<string, string> }))
 vi.mock('nuxt/app', async () => {
   const { PRO_SHELL_COPY_OVERRIDES } = await import('../../../pro-shell')
@@ -15,16 +17,14 @@ vi.mock('nuxt/app', async () => {
     useAppConfig: () => ({ proShell: { copy: PRO_SHELL_COPY_OVERRIDES } }),
   }
 })
-vi.mock('@nuxtseo/pro-shell/app/composables/useProShellOnboarding', async (original) => {
-  const { FIRST_RUN_STEPS } = await import('#layers/pro-saas/shared/onboarding')
-  return {
-    ...await original<typeof import('@nuxtseo/pro-shell/app/composables/useProShellOnboarding')>(),
-    useProShellOnboardingSteps: () => computed(() => FIRST_RUN_STEPS),
-  }
-})
 vi.mock('#components', () => {
   const passthrough = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
-  return { UiCard: passthrough, UiSkeleton: passthrough, UiWizardProgress: defineComponent({ render: () => null }), UiWizardNav: passthrough }
+  // The frame's Next: a button that reports its label and disabled state.
+  const nav = defineComponent({
+    props: ['nextLabel', 'nextDisabled'],
+    setup: props => () => h('button', { disabled: props.nextDisabled }, props.nextLabel),
+  })
+  return { UiCard: passthrough, UiSkeleton: passthrough, UiWizardProgress: defineComponent({ render: () => null }), UiWizardNav: nav }
 })
 
 vi.mock('~~/layers/core/app/composables/fetch', () => ({
@@ -51,7 +51,12 @@ const apps: ReturnType<typeof createApp>[] = []
 async function mount() {
   const host = document.createElement('div')
   document.body.appendChild(host)
-  const app = createApp({ render: () => h(Suspense, null, { default: () => h(Onboarding) }) })
+  const app = createApp({
+    setup() {
+      provideProShellOnboardingSteps(FIRST_RUN_STEPS)
+      return () => h(Suspense, null, { default: () => h(Onboarding) })
+    },
+  })
   for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'UIcon', 'UButton', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
     app.component(name, defineComponent({ render: () => null }))
   app.component('UiWizardProgress', defineComponent({ render: () => null }))
@@ -95,6 +100,7 @@ it('resumes a connected account without claiming a new sync', async () => {
   expect(host.querySelector('[data-testid="first-site-report"]')).not.toBeNull()
   expect(host.textContent).not.toContain('First sync started')
   expect(host.textContent).not.toContain('pulling your Search Console history now')
+  expect(host.querySelector('button')?.disabled).toBe(false)
 })
 
 it('offers recovery instead of setup success when a bookmarked final step has no Site', async () => {
