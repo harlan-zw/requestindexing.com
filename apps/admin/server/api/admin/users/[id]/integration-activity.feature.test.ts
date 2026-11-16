@@ -34,9 +34,10 @@ afterEach(() => {
   sqlite.close()
   vi.unstubAllGlobals()
 })
-async function read(id = '1') {
+async function read(id = '1', query = '') {
   const handler = (await import('./integration-activity.get')).default
   const request = new IncomingMessage(new Socket())
+  request.url = `/api/admin/users/${id}/integration-activity${query}`
   const event = createEvent(request, new ServerResponse(request))
   event.context.params = { id }
   return handler(event)
@@ -62,5 +63,20 @@ it('keeps unlinked and missing accounts distinct without engine calls', async ()
   sqlite.exec('UPDATE users SET gscdump_user_id = NULL WHERE user_id = 1')
   await expect(read()).resolves.toEqual({ _tag: 'Unlinked' })
   await expect(read('2')).rejects.toMatchObject({ statusCode: 404 })
+  expect(fixture.read).not.toHaveBeenCalled()
+})
+it('adds signup timing while keeping setup and successful use separate', async () => {
+  fixture.read.mockResolvedValue({ data: { measuredAt: '2026-11-10T00:00:00.000Z', activities: [{ surface: 'cli', client: 'gscdump-cli', label: 'CLI', configuredUsers: 1, successfulUsers: 1, successfulCalls: 3, firstObservedAt: '2026-11-02T00:00:00.000Z', lastObservedAt: '2026-11-04T00:00:00.000Z', coverage: 'retained', note: 'Credential-bound observations.' }] } })
+  await expect(read()).resolves.toMatchObject({ localJourney: { _tag: 'Observed', signedUpAt: '2026-11-01T00:00:00.000Z', firstSuccessfulAt: '2026-11-02T00:00:00.000Z', returnedAt: '2026-11-04T00:00:00.000Z' } })
+})
+it('exports only the selected authorized engine account and explicit coverage', async () => {
+  const result = await read('1', '?format=csv')
+  expect(result).toContain('"u_engine","integration","cli"')
+  expect(result).toContain('"reported_skill"')
+  expect(result).toContain('"unavailable"')
+  expect(result).not.toContain('must-not-leak')
+})
+it('rejects an unsupported export format before engine access', async () => {
+  await expect(read('1', '?format=html')).rejects.toMatchObject({ statusCode: 400 })
   expect(fixture.read).not.toHaveBeenCalled()
 })

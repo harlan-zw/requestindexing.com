@@ -22,4 +22,10 @@ Optional setup feedback describes the latest self-reported reason per step. It i
 
 gscdump hosts the product's MCP, CLI and API traffic. Local API key metadata does not prove a configured client or successful call. Request Indexing reports unavailable integration activity instead of zero counts. The operator can correlate the opaque engine user ID with gscdump's report.
 
+Per-user details can load credential-owned integration activity from gscdump. That read resolves the stored engine identity after administrator authorization. It does not accept an engine identity from the browser.
+
+The per-user view shows the first retained successful MCP or CLI call after local signup. It also shows the latest observed return at least 24 hours later. Return timing does not establish the first return. Signup uses the first recorded signup event, with account creation as fallback. Missing, future and reversed observations remain unmeasured.
+
+The per-user CSV keeps configuration counts separate from successful users and calls. It retains the measurement clock, coverage, reported client and source note. Skill names and versions are caller-reported context. If the engine omits skill context, the view keeps it unmeasured. A truncated skill list carries its truncation warning into the export.
+
 `GET /api/admin/funnel` and its CSV export check administrator access before reading data. The JSON report returns up to 50 users per page. `GET /api/admin/analytics/customer-insights` supplies the shared admin contract with bounded pagination and optional user detail. Both routes project report fields only. They return no OAuth tokens or engine keys and make no Google or engine calls.

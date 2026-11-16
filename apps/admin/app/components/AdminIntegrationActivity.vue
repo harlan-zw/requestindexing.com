@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import type { CustomerIntegrationActivity } from '../../shared/customer-insights'
+import type { AgentActivityRead } from '../../shared/agent-use-export'
 import { ADMIN_JOURNEY_COPY as copy } from '../../shared/journey-evidence'
 
 const { userId } = defineProps<{ userId: number }>()
-type ActivityRead = { _tag: 'Unlinked' } | { _tag: 'Available', measuredAt: string, activities: CustomerIntegrationActivity[] }
-const { data, status, error, execute } = useFetch<ActivityRead>(() => `/api/admin/users/${userId}/integration-activity`, { immediate: false, server: false, watch: false })
+const { data, status, error, execute } = useFetch<AgentActivityRead>(() => `/api/admin/users/${userId}/integration-activity`, { immediate: false, server: false, watch: false })
 </script>
 
 <template>
@@ -26,6 +25,26 @@ const { data, status, error, execute } = useFetch<ActivityRead>(() => `/api/admi
       <p v-if="!data.activities.length" class="text-sm text-muted">
         No retained activity was returned. Historical use remains unknown.
       </p>
+      <p class="text-sm text-muted">
+        {{ copy.agentScope }}
+      </p>
+      <dl v-if="data.localJourney._tag === 'Observed'" class="grid gap-1 text-sm">
+        <dt>{{ copy.agentSignup }}</dt>
+        <dd><time :datetime="data.localJourney.signedUpAt">{{ data.localJourney.signedUpAt }}</time></dd>
+        <dt>{{ copy.agentFirst }}</dt>
+        <dd><time :datetime="data.localJourney.firstSuccessfulAt">{{ data.localJourney.firstSuccessfulAt }}</time></dd>
+        <dt>{{ copy.agentLast }}</dt>
+        <dd><time :datetime="data.localJourney.lastSuccessfulAt">{{ data.localJourney.lastSuccessfulAt }}</time></dd>
+        <dt>{{ copy.agentReturn }}</dt>
+        <dd>
+          <time v-if="data.localJourney.returnedAt" :datetime="data.localJourney.returnedAt">{{ data.localJourney.returnedAt }}</time>
+          <span v-else>{{ copy.agentReturnMissing }}</span>
+        </dd>
+      </dl>
+      <p v-else class="text-sm text-muted">
+        {{ copy.agentMissing }}
+      </p>
+      <a :href="`/api/admin/users/${userId}/integration-activity?format=csv`" class="inline-flex min-h-11 items-center underline">{{ copy.export }}</a>
       <dl v-for="activity in data.activities" :key="`${activity.surface}:${activity.client}`" class="space-y-1 text-sm">
         <dt class="font-medium">
           {{ activity.label }} · {{ activity.client }}
@@ -37,6 +56,31 @@ const { data, status, error, execute } = useFetch<ActivityRead>(() => `/api/admi
         <dd>First observed: {{ activity.firstObservedAt ?? copy.unavailable }}</dd>
         <dd>Last observed: {{ activity.lastObservedAt ?? copy.unavailable }}</dd>
         <dd>{{ activity.note }}</dd>
+      </dl>
+      <h4 class="text-sm font-medium">
+        {{ copy.reportedSkill }}
+      </h4>
+      <p class="text-sm text-muted">
+        {{ copy.reportedSkillHelp }}
+      </p>
+      <p v-if="data.skills === undefined" class="text-sm text-muted">
+        {{ copy.reportedSkillMissing }}
+      </p>
+      <p v-else-if="!data.skills.length" class="text-sm text-muted">
+        {{ copy.reportedSkillEmpty }}
+      </p>
+      <p v-if="data.skillsTruncated" role="status" class="text-sm">
+        {{ copy.reportedSkillTruncated }}
+      </p>
+      <dl v-for="skill in data.skills ?? []" :key="`${skill.surface}:${skill.client}:${skill.name}:${skill.version}`" class="space-y-1 text-sm">
+        <dt class="font-medium">
+          {{ skill.name }} {{ skill.version ?? copy.unavailable }}
+        </dt>
+        <dd>{{ skill.surface.toUpperCase() }} · {{ skill.client }}</dd>
+        <dd>Successful calls: {{ skill.successfulCalls ?? copy.unavailable }}</dd>
+        <dd>First observed: {{ skill.firstObservedAt ?? copy.unavailable }}</dd>
+        <dd>Last observed: {{ skill.lastObservedAt ?? copy.unavailable }}</dd>
+        <dd>{{ skill.note }}</dd>
       </dl>
     </template>
   </section>
