@@ -2,18 +2,7 @@ import type { UserIntegrationActivityV1 } from '@gscdump/contracts/v1'
 import type { AgentUseJourney } from './agent-use'
 import { csvCell } from './funnel-export'
 
-export interface ReportedSkillActivity {
-  surface: 'mcp' | 'cli' | 'api'
-  client: string
-  name: string
-  version: string | null
-  successfulUsers: number | null
-  successfulCalls: number | null
-  firstObservedAt: string | null
-  lastObservedAt: string | null
-  note: string
-}
-export type AgentActivityData = UserIntegrationActivityV1 & { skills?: ReportedSkillActivity[], skillsTruncated?: boolean }
+export type AgentActivityData = UserIntegrationActivityV1
 export type AgentActivityRead = { _tag: 'Unlinked' } | ({ _tag: 'Available', localJourney: AgentUseJourney } & AgentActivityData)
 
 export function exportAgentUseCsv(input: Extract<AgentActivityRead, { _tag: 'Available' }>, engineUserId: string): string {
