@@ -7,7 +7,7 @@ const error = ref<unknown>(null)
 const status = ref('idle')
 const apps: ReturnType<typeof createApp>[] = []
 beforeEach(() => {
-  read.mockReset().mockResolvedValue({ _tag: 'Available', measuredAt: '2026-11-10T00:00:00.000Z', activities: [{ surface: 'cli', client: 'gscdump-cli', label: 'CLI', configuredUsers: null, successfulUsers: 1, successfulCalls: 2, firstObservedAt: null, lastObservedAt: null, coverage: 'retained', note: 'Recorded credential activity.' }] })
+  read.mockReset().mockResolvedValue({ _tag: 'Available', measuredAt: '2026-11-10T00:00:00.000Z', localJourney: { _tag: 'Unavailable', signedUpAt: '2026-11-01T00:00:00.000Z', reason: 'success_time' }, activities: [{ surface: 'cli', client: 'gscdump-cli', label: 'CLI', configuredUsers: null, successfulUsers: 1, successfulCalls: 2, firstObservedAt: null, lastObservedAt: null, coverage: 'retained', note: 'Recorded credential activity.' }] })
   data.value = null
   error.value = null
   status.value = 'idle'
@@ -59,6 +59,18 @@ it('reads one selected user on demand and keeps unavailable measurements distinc
   expect(host.textContent).toContain('Successful calls: 2')
   expect(host.textContent).toContain('2026-11-10T00:00:00.000Z')
   expect(host.textContent).toContain('A successful call does not prove a useful answer.')
+  expect(host.textContent).toContain('Skill context is not measured for this account.')
+})
+it('shows qualified return use and reported skill context without claiming a first return', async () => {
+  read.mockResolvedValue({ _tag: 'Available', measuredAt: '2026-11-10T00:00:00.000Z', localJourney: { _tag: 'Observed', signedUpAt: '2026-11-01T00:00:00.000Z', firstSuccessfulAt: '2026-11-02T00:00:00.000Z', lastSuccessfulAt: '2026-11-04T00:00:00.000Z', returnedAt: '2026-11-04T00:00:00.000Z', firstUseSeconds: 86400, returnAfterSeconds: 86400, returnBasis: 'last_observed_success' }, activities: [], skills: [{ surface: 'cli', client: 'gscdump-cli', name: 'gscdump', version: '7.14.0', successfulUsers: 1, successfulCalls: 3, firstObservedAt: '2026-11-02T00:00:00.000Z', lastObservedAt: '2026-11-04T00:00:00.000Z', note: 'Caller-reported context.' }], skillsTruncated: true })
+  const host = await mount()
+  host.querySelector('button')!.click()
+  await settle()
+  expect(host.textContent).toContain('Latest observed return after 24 hours')
+  expect(host.textContent).toContain('2026-11-04T00:00:00.000Z')
+  expect(host.textContent).toContain('gscdump 7.14.0')
+  expect(host.textContent).toContain('Counts describe returned skill groups only.')
+  expect(host.querySelector('a')?.getAttribute('href')).toBe('/api/admin/users/7/integration-activity?format=csv')
 })
 it('shows a failed read without inventing zero usage', async () => {
   read.mockRejectedValue(new Error('Engine unavailable'))

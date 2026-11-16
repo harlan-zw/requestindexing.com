@@ -295,6 +295,18 @@ Retained observations do not establish lifetime first use.
 | Feedback explanation | These are the latest self-reported reasons for each setup step. They are not customer goals. |
 | Integration heading | Integration activity |
 | Integration unavailable | gscdump hosts MCP, CLI, and API activity. Request Indexing has no local successful-use evidence. |
+| Agent use signup | Signed up (UTC) |
+| Agent use first | First observed successful MCP or CLI call |
+| Agent use last | Latest observed successful MCP or CLI call |
+| Agent use return | Latest observed return after 24 hours |
+| Agent use scope | Timing starts at the first signup event, with account creation as fallback. Engine history can be incomplete. |
+| Agent use missing | Successful MCP or CLI timing is not measured for this account. |
+| Agent use return missing | No qualifying return is recorded. Earlier history can be missing. |
+| Reported skill heading | Reported skill context |
+| Reported skill explanation | Skill names are caller-reported. A successful call does not prove that an agent loaded a skill. |
+| Reported skill unavailable | Skill context is not measured for this account. |
+| Reported skill empty | No retained skill context was returned. Earlier history remains unknown. |
+| Reported skill truncated | This list is truncated. Counts describe returned skill groups only. |
 | Site inventory heading | Current Team Sites |
 | Site inventory explanation | Site counts describe the current Team. Site sizes are unknown in this local cache. |
 | Export action | Export CSV |
