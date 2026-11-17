@@ -622,7 +622,7 @@ const overviewErrorDescription = computed(() => {
           <UiCard title="Sitemap" variant="subtle" size="sm">
             <UiSkeleton :lines="2" :base="120" :range="40" />
           </UiCard>
-          <UiStat title="Submitted URLs" loading card size="sm" />
+          <UiStat title="Sitemap URLs" loading card size="sm" />
           <UiStat title="Reported issues" loading card size="sm" />
         </div>
       </ProSecondaryGrid>
@@ -737,8 +737,8 @@ const overviewErrorDescription = computed(() => {
             </div>
           </UiCard>
           <UiStat
-            title="Submitted URLs"
-            tooltip="URLs currently reported across submitted sitemap files."
+            title="Sitemap URLs"
+            tooltip="URLs currently listed across your sitemap files."
             :value="sitemapCurrentUrlCount"
             :trend="sitemapUrlDelta"
             :trend-label="sitemapTrendLabel"

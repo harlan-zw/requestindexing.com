@@ -729,7 +729,7 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
           <UiEntitySummary
             stack-header-on-mobile
             :heading="selectedSitemap.path"
-            title="Submitted URLs"
+            title="Sitemap URLs"
             :value="selectedSitemap.urlCount"
             suffix="URLs"
             :caption="historyCaption"
