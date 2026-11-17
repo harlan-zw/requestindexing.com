@@ -1,15 +1,17 @@
 <script lang="ts" setup>
 import type { OverviewSiteEntry } from '#layers/pro-gsc/app/components/overview/overview-sites'
 import type { OverviewSnapshotKey, OverviewSnapshotSite } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
+import ProShellFleetSites from '@nuxtseo/pro-shell/app/components/ProShellFleetSites.vue'
 import { useProShellOnboardingFlow, useProShellOnboardingSteps } from '@nuxtseo/pro-shell/app/composables/useProShellOnboarding'
+import { PRO_SHELL_TONE_DOT, PRO_SHELL_TONE_TEXT } from '@nuxtseo/pro-shell/shared/fleet-sites'
 import { useJobListener } from '~~/layers/core/app/composables/events'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
-import { isOverviewReadTarget, overviewSiteLabel, soleSiteLandingPath } from '#layers/pro-gsc/app/components/overview/overview-sites'
+import { UiTooltip } from '#components'
+import { isOverviewReadTarget, overviewFleetRows, overviewSiteLabel, soleSiteLandingPath } from '#layers/pro-gsc/app/components/overview/overview-sites'
 import { overviewReadRange, overviewSiteClicks, overviewSnapshotCards } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
 import ProLiveJobProgress from '#layers/pro-gsc/app/components/overview/ProLiveJobProgress.vue'
 import ProOverviewOnboardingCard from '#layers/pro-gsc/app/components/overview/ProOverviewOnboardingCard.vue'
 import ProOverviewSetupOffers from '#layers/pro-gsc/app/components/overview/ProOverviewSetupOffers.vue'
-import ProOverviewSitesColumn from '#layers/pro-gsc/app/components/overview/ProOverviewSitesColumn.vue'
 import ProOverviewSnapshot from '#layers/pro-gsc/app/components/overview/ProOverviewSnapshot.vue'
 import { useProOverviewReads } from '#layers/pro-gsc/app/composables/useProOverviewReads'
 import ProNoPropertyNotice from '#layers/pro-saas/app/components/pro/ProNoPropertyNotice.vue'
@@ -76,6 +78,8 @@ const entries = computed<OverviewSiteEntry[]>(() => sites.value.map((site): Over
   return { site, clicks: { _tag: 'Unread' } }
 }))
 
+const fleetRows = computed(() => overviewFleetRows(entries.value))
+
 const snapshotSites = computed<OverviewSnapshotSite[]>(() => sites.value.flatMap((site) => {
   const read = reads.value[site.siteId]
   if (!read)
@@ -134,7 +138,25 @@ useJobListener('sites/sync-finished', async ({ siteId }) => {
       <ProOverviewOnboardingCard v-if="cardStep" :step="cardStep" />
       <ProOverviewSetupOffers :sites="sites" />
       <ProLiveJobProgress :sites="sites" />
-      <ProOverviewSitesColumn :entries="entries" />
+      <!-- The status is the gscdump lifecycle (overview-sites.ts). Only a state
+           the owner must act on spends colour, so a calm roster paints once. -->
+      <ProShellFleetSites :rows="fleetRows">
+        <template #status="{ row }">
+          <UiTooltip
+            :title="row.detail.label"
+            :description="row.detail.action ? `${row.detail.summary} ${row.detail.action}` : row.detail.summary"
+            side="top"
+            align="end"
+            size="sm"
+            trigger-as="button"
+          >
+            <span class="flex min-h-11 min-w-0 items-center gap-1.5 sm:min-h-0">
+              <span class="size-1.5 shrink-0 rounded-full" :class="PRO_SHELL_TONE_DOT[row.detail.tone]" aria-hidden="true" />
+              <span class="truncate text-xs" :class="row.detail.urgent ? PRO_SHELL_TONE_TEXT[row.detail.tone] : 'text-dimmed'">{{ row.detail.label }}</span>
+            </span>
+          </UiTooltip>
+        </template>
+      </ProShellFleetSites>
       <ProOverviewSnapshot :cards="cards" :pending-keys="pendingKeys" :failed-sites="failedSites" :refresh-failed="refreshFailed" @retry="refreshReads()" />
     </template>
   </div>

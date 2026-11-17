@@ -22,8 +22,8 @@ const points = computed(() => data.map(point => ({
 })))
 
 const series = [
-  { key: 'indexed', label: 'Indexed', color: indexingVizColors.indexed.hex, area: true },
-  { key: 'notIndexed', label: 'Not indexed', color: indexingVizColors.notIndexed.hex, area: false },
+  { key: 'indexed', label: 'Indexed', color: indexingVizColors.indexed.color, area: true },
+  { key: 'notIndexed', label: 'Not indexed', color: indexingVizColors.notIndexed.color, area: false },
 ]
 
 function formatRate(value: number): string {

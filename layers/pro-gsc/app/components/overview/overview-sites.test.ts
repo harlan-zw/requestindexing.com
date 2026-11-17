@@ -1,6 +1,6 @@
 import type { OverviewSite, OverviewSiteEntry } from './overview-sites'
 import { describe, expect, it } from 'vitest'
-import { invalidatedTargets, isOverviewReadTarget, isSiteBroken, overviewColumnPage, overviewSiteStatus, soleSiteLandingPath } from './overview-sites'
+import { invalidatedTargets, isOverviewReadTarget, isSiteBroken, overviewFleetRows, overviewSiteStatus, soleSiteLandingPath } from './overview-sites'
 
 function site(overrides: Partial<OverviewSite> & { siteId: string }): OverviewSite {
   return {
@@ -74,35 +74,41 @@ describe('isSiteBroken', () => {
   })
 })
 
-describe('overviewColumnPage', () => {
+describe('overviewFleetRows', () => {
   it('ranks broken Sites first, first syncs last, then by clicks', () => {
-    const { rows } = overviewColumnPage([
+    const rows = overviewFleetRows([
       entry({ siteId: 'quiet' }, 10),
       entry({ siteId: 'new', syncStatus: 'pending', syncedRange: { oldest: null, newest: null } }),
       entry({ siteId: 'busy' }, 900),
       entry({ siteId: 'lost', permissionLost: true }, 0),
       entry({ siteId: 'failed', syncStatus: 'error' }, 5),
       entry({ siteId: 'partial', syncStatus: 'partial' }, 3),
-    ], 0)
-    expect(rows.map(row => row.site.siteId)).toEqual(['failed', 'partial', 'lost', 'busy', 'quiet', 'new'])
+    ])
+    expect(rows.map(row => row.id)).toEqual(['failed', 'partial', 'lost', 'busy', 'quiet', 'new'])
   })
 
   it('breaks a clicks tie by label so the order is stable', () => {
-    const { rows } = overviewColumnPage([entry({ siteId: 'zeta' }, 3), entry({ siteId: 'alpha' }, 3)], 0)
-    expect(rows.map(row => row.site.siteId)).toEqual(['alpha', 'zeta'])
+    const rows = overviewFleetRows([entry({ siteId: 'zeta' }, 3), entry({ siteId: 'alpha' }, 3)])
+    expect(rows.map(row => row.id)).toEqual(['alpha', 'zeta'])
   })
 
-  it('pages seven rows at a time', () => {
-    const entries = Array.from({ length: 9 }, (_, index) => entry({ siteId: `s${index}` }, 100 - index))
-    expect(overviewColumnPage(entries, 0)).toMatchObject({ page: 0, pageCount: 2 })
-    expect(overviewColumnPage(entries, 1).rows.map(row => row.site.siteId)).toEqual(['s7', 's8'])
+  it('links each row to its Site and names it by host', () => {
+    const [row] = overviewFleetRows([entry({ siteId: 's_abc', domain: 'nuxt.com' }, 3)])
+    expect(row).toMatchObject({ name: 'nuxt.com', host: 'nuxt.com', to: '/pro/dashboard/sites/s_abc' })
   })
 
-  it('clamps a page past the end of a shrunken roster onto the last page', () => {
-    const entries = Array.from({ length: 3 }, (_, index) => entry({ siteId: `s${index}` }))
-    const result = overviewColumnPage(entries, 4)
-    expect(result.page).toBe(0)
-    expect(result.rows).toHaveLength(3)
+  it('tints the run only when the status is urgent', () => {
+    const [failed, synced] = overviewFleetRows([
+      { site: site({ siteId: 'a', syncStatus: 'error' }), clicks: { _tag: 'Read', clicks: 9, clicksSpark: [1, 2] } },
+      { site: site({ siteId: 'b' }), clicks: { _tag: 'Read', clicks: 1, clicksSpark: [3] } },
+    ])
+    expect(failed!.spark).toEqual({ _tag: 'Read', data: [1, 2], tone: 'error' })
+    expect(synced!.spark).toEqual({ _tag: 'Read', data: [3], tone: 'neutral' })
+  })
+
+  it('draws no run for a Site the home does not read, and a placeholder while it reads', () => {
+    const rows = overviewFleetRows([entry({ siteId: 'a' }), { site: site({ siteId: 'b' }), clicks: { _tag: 'Reading' } }])
+    expect(rows.map(row => row.spark._tag)).toEqual(['None', 'Reading'])
   })
 })
 

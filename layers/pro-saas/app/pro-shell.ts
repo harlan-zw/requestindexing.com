@@ -33,6 +33,14 @@ export const PRO_SHELL_COPY_OVERRIDES = {
     switchLabel: 'Switch Site, current Site: {site}',
     preview: 'Non-production Site.',
   },
+  sidebarModes: {
+    backLabel: 'Team navigation',
+  },
+  fleetSites: {
+    sparkTitle: 'Clicks, last 90 days',
+    previousPage: 'Previous page of Sites',
+    nextPage: 'Next page of Sites',
+  },
   userMenu: {
     fallbackName: 'Account',
     switchTitle: 'Switch Team?',

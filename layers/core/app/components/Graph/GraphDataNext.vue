@@ -40,10 +40,10 @@ const chartMargin = { left: 0, right: 0, top: 0, bottom: 24 }
 const chartId = useId().replace(/:/g, '')
 const clicksGradientId = `clicks-gradient-${chartId}`
 const metricColors = computed(() => ({
-  clicks: props.colors?.clicks ?? gscMetricColors.clicks.hex,
-  impressions: props.colors?.impressions ?? gscMetricColors.impressions.hex,
-  position: props.colors?.position ?? gscMetricColors.position.hex,
-  ctr: props.colors?.ctr ?? gscMetricColors.ctr.hex,
+  clicks: props.colors?.clicks ?? gscMetricColors.clicks.color,
+  impressions: props.colors?.impressions ?? gscMetricColors.impressions.color,
+  position: props.colors?.position ?? gscMetricColors.position.color,
+  ctr: props.colors?.ctr ?? gscMetricColors.ctr.color,
 }))
 
 const svgDefs = computed(() => `

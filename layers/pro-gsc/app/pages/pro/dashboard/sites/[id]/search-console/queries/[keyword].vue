@@ -178,7 +178,7 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
         trend-suffix="%"
         :caption="heroCaption"
         :sparkline="clicksSparkline"
-        :sparkline-color="gscMetricColors.clicks.hex"
+        :sparkline-color="gscMetricColors.clicks.color"
       >
         <template #heading>
           <div class="min-w-0 flex items-center gap-3">

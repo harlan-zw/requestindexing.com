@@ -42,10 +42,10 @@ const loading = computed(() => loadingProp || devSkeleton.value)
 // Series colour comes from the one metric-identity map, not from literals here.
 // The map holds CSS colours, so translucent variants come from color-mix().
 const gscColors = {
-  clicks: { line: translucentColor(gscMetricColors.clicks.hex, 0.9), area: 'url(#gradient-clicks)', prev: translucentColor(gscMetricColors.clicks.hex, 0.3) },
-  impressions: { line: translucentColor(gscMetricColors.impressions.hex, 0.7), area: 'url(#gradient-impressions)', prev: translucentColor(gscMetricColors.impressions.hex, 0.3) },
-  ctr: { line: translucentColor(gscMetricColors.ctr.hex, 0.9), prev: translucentColor(gscMetricColors.ctr.hex, 0.3) },
-  position: { line: translucentColor(gscMetricColors.position.hex, 0.9), prev: translucentColor(gscMetricColors.position.hex, 0.3) },
+  clicks: { line: translucentColor(gscMetricColors.clicks.color, 0.9), area: 'url(#gradient-clicks)', prev: translucentColor(gscMetricColors.clicks.color, 0.3) },
+  impressions: { line: translucentColor(gscMetricColors.impressions.color, 0.7), area: 'url(#gradient-impressions)', prev: translucentColor(gscMetricColors.impressions.color, 0.3) },
+  ctr: { line: translucentColor(gscMetricColors.ctr.color, 0.9), prev: translucentColor(gscMetricColors.ctr.color, 0.3) },
+  position: { line: translucentColor(gscMetricColors.position.color, 0.9), prev: translucentColor(gscMetricColors.position.color, 0.3) },
 }
 
 // Shared config for overlaid containers
@@ -56,12 +56,12 @@ const chartInnerHeight = computed(() => chartHeight.value - margin.top - margin.
 
 const svgDefs = `
   <linearGradient id="gradient-clicks" gradientTransform="rotate(90)">
-    <stop offset="0%" stop-color="${translucentColor(gscMetricColors.clicks.hex, 0.25)}" />
-    <stop offset="100%" stop-color="${translucentColor(gscMetricColors.clicks.hex, 0.01)}" />
+    <stop offset="0%" stop-color="${translucentColor(gscMetricColors.clicks.color, 0.25)}" />
+    <stop offset="100%" stop-color="${translucentColor(gscMetricColors.clicks.color, 0.01)}" />
   </linearGradient>
   <linearGradient id="gradient-impressions" gradientTransform="rotate(90)">
-    <stop offset="0%" stop-color="${translucentColor(gscMetricColors.impressions.hex, 0.2)}" />
-    <stop offset="100%" stop-color="${translucentColor(gscMetricColors.impressions.hex, 0.01)}" />
+    <stop offset="0%" stop-color="${translucentColor(gscMetricColors.impressions.color, 0.2)}" />
+    <stop offset="100%" stop-color="${translucentColor(gscMetricColors.impressions.color, 0.01)}" />
   </linearGradient>`
 
 // Pair comparison rows using the selected window, including sparse series.

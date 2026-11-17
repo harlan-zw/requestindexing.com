@@ -87,7 +87,7 @@ const healthMap = [
     <KitSection
       title="semanticColors"
       code="composables/semanticColors.ts"
-      description="text/bg/dot/border/hex sets for system status. Plus mappers: healthToSemantic, thresholdToSemantic, trendToSemantic."
+      description="text/bg/dot/border/color sets for system status. Plus mappers: healthToSemantic, thresholdToSemantic, trendToSemantic."
     >
       <UCard variant="outline">
         <table class="w-full text-sm">
@@ -106,7 +106,7 @@ const healthMap = [
                 Bg
               </th>
               <th class="text-left text-[10px] uppercase tracking-wider text-dimmed font-semibold py-2">
-                Hex
+                Color
               </th>
             </tr>
           </thead>
@@ -125,7 +125,7 @@ const healthMap = [
                 <span class="inline-flex items-center gap-1 rounded px-2 py-0.5" :class="[s.set.bg, s.set.text]">sample</span>
               </td>
               <td class="py-2.5 font-mono text-xs text-dimmed">
-                {{ s.set.hex }}
+                {{ s.set.color }}
               </td>
             </tr>
           </tbody>
@@ -208,7 +208,7 @@ const healthMap = [
                 <code class="font-mono text-[10px] text-dimmed">{{ d.key }}</code>
               </td>
               <td class="py-2.5 font-mono text-xs text-dimmed">
-                {{ d.set.hex }}
+                {{ d.set.color }}
               </td>
             </tr>
           </tbody>
