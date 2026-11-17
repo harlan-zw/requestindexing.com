@@ -15,12 +15,16 @@
 // exactly one Site, gets the Site nav; anything wider gets the fleet roster.
 import type { ProNavSite } from '#layers/pro-features/app/composables/useProSingleSiteNav'
 import type { SiteLookup, SiteResource } from '#layers/pro-saas/shared/site-lookup'
+import ProShellCommandPalette from '@nuxtseo/pro-shell/app/components/ProShellCommandPalette.vue'
 import ProShellDashboardFrame from '@nuxtseo/pro-shell/app/components/ProShellDashboardFrame.vue'
 import ProShellFeedbackDrawer from '@nuxtseo/pro-shell/app/components/ProShellFeedbackDrawer.vue'
 import ProShellMobileNavTrigger from '@nuxtseo/pro-shell/app/components/ProShellMobileNavTrigger.vue'
 import ProShellPageHeader from '@nuxtseo/pro-shell/app/components/ProShellPageHeader.vue'
+import ProShellSidebarModes from '@nuxtseo/pro-shell/app/components/ProShellSidebarModes.vue'
 import ProShellSiteSwitcher from '@nuxtseo/pro-shell/app/components/ProShellSiteSwitcher.vue'
 import ProShellUserMenu from '@nuxtseo/pro-shell/app/components/ProShellUserMenu.vue'
+import { useProShellCopy } from '@nuxtseo/pro-shell/app/composables/useProShellCopy'
+import { useProShellRoute } from '@nuxtseo/pro-shell/app/composables/useProShellRoute'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 import { MISSING_SITE_PATH, readSiteLookup, siteLookupKey } from '#layers/pro-saas/shared/site-lookup'
@@ -28,6 +32,7 @@ import { useProFeedback } from '../composables/useProFeedback'
 import { useProHeaderMenu } from '../composables/useProHeaderMenu'
 import { provideProNavSource } from '../composables/useProNavSource'
 import { useProUserMenu } from '../composables/useProUserMenu'
+import { PRO_FLEET_COMMAND_GROUP } from '../utils/pro-command-palette'
 import { proNavSiteRef } from '../utils/pro-shell-sites'
 
 const route = useRoute()
@@ -105,6 +110,9 @@ const scopedSite = computed<ProNavSite | null>(() => {
 // one Site gets a way back to all of them above the Site nav. An account with
 // one Site has nowhere wider to go, so it gets none.
 const showSiteBack = computed(() => !!routeSiteId.value && !singleSite.value)
+const allSitesLabel = useProShellCopy().siteSwitcher.allSites
+const dashboardTo = useProShellRoute()('dashboard')
+const sidebarBack = computed(() => showSiteBack.value && dashboardTo ? { label: allSitesLabel, to: dashboardTo } : null)
 
 const siteStatus = computed(() => {
   if (!routeSiteId.value)
@@ -190,18 +198,18 @@ function onPageError(error: unknown) {
     </template>
 
     <template #sidebar>
-      <ProSidebarScope :show-back="showSiteBack">
-        <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" />
-        <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" />
-      </ProSidebarScope>
+      <ProShellSidebarModes :back="sidebarBack">
+        <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" class="flex-1" />
+        <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" class="flex-1" />
+      </ProShellSidebarModes>
     </template>
 
     <template #mobile="{ closeNav }">
       <div class="flex min-w-0 flex-1 flex-col">
-        <ProSidebarScope :show-back="showSiteBack" class="flex-1" @navigate="closeNav">
-          <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" @navigate="closeNav" />
-          <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" @navigate="closeNav" />
-        </ProSidebarScope>
+        <ProShellSidebarModes :back="sidebarBack" class="flex-1" @navigate="closeNav">
+          <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" class="flex-1" @navigate="closeNav" />
+          <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" class="flex-1" @navigate="closeNav" />
+        </ProShellSidebarModes>
         <ProShellUserMenu variant="drawer" :items="userMenu" @navigate="closeNav" />
       </div>
     </template>
@@ -211,7 +219,7 @@ function onPageError(error: unknown) {
     </template>
 
     <template #command-palette>
-      <ProCommandPalette :sites="sites" />
+      <ProShellCommandPalette site-commands :groups="[PRO_FLEET_COMMAND_GROUP]" />
     </template>
 
     <!-- Sticky, so the Site crumb survives scrolling. `v-show`, never `v-if`:

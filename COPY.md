@@ -572,12 +572,16 @@ The goals question and its options are Request Indexing's own, in `layers/pro-sa
 
 ## Dashboard shell assets
 
-The dashboard frame, the setup offers, Invite member, Send feedback and the onboarding frame come from `@nuxtseo/pro-shell`. Its defaults are canonical in nuxtseo.com's COPY.md (Dashboard CTA assets). This table lists only the strings Request Indexing changes or adds, in `layers/pro-saas/app/pro-shell.ts` (`proShell.copy`). Change a row here first, then that file. A string the table does not list is the shell default.
+The dashboard frame, the command palette, the sidebar back link, the Fleet Sites list, the setup offers, Invite member, Send feedback and the onboarding frame come from `@nuxtseo/pro-shell`. Its defaults are canonical in nuxtseo.com's COPY.md (Dashboard CTA assets). This table lists only the strings Request Indexing changes or adds, in `layers/pro-saas/app/pro-shell.ts` (`proShell.copy`). Change a row here first, then that file. A string the table does not list is the shell default.
 
 | Asset | String | Why it differs |
 | --- | --- | --- |
 | Brand link label | Request Indexing dashboard | Names the product |
 | Back to every Site | All Sites | Site is capitalised (GLOSSARY.md) |
+| Back link landmark | Team navigation | The landmark name the sidebar had before |
+| Fleet Sites list run tooltip | Clicks, last 90 days | The words the dashboard home had before |
+| Fleet Sites list previous page | Previous page of Sites | Names what the pager moves through |
+| Fleet Sites list next page | Next page of Sites | Names what the pager moves through |
 | Site switcher label | Switch Site, current Site: {site} | Site is capitalised |
 | Non-production Site tooltip | Non-production Site. | Site is capitalised |
 | User menu fallback name | Account | The label the menu showed before |

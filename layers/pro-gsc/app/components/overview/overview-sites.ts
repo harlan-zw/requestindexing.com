@@ -1,9 +1,10 @@
+import type { ProShellFleetSiteRow, ProShellTone } from '@nuxtseo/pro-shell/shared/fleet-sites'
 import type { SiteFleetRow } from '~~/layers/core/app/types'
 import { siteLabel } from '~~/layers/core/app/utils/site-format'
 import { HELD_LABEL, holdMessage, SITE_LINK_REFUSED, SITE_NOT_LINKED_LABEL } from '../../../shared/entitlement-copy'
 import { inactiveSiteStatus } from '../../../shared/site-status'
 
-// Shared projection for the dashboard home's Sites column. One place decides
+// Shared projection for the dashboard home's Fleet Sites list. One place decides
 // what a Site's status reads as and which Site outranks which, so no two
 // surfaces can drift into two orderings of one roster.
 //
@@ -14,8 +15,12 @@ import { inactiveSiteStatus } from '../../../shared/site-status'
 
 export type OverviewSite = Pick<SiteFleetRow, 'siteId' | 'domain' | 'property' | 'syncStatus' | 'permissionLost' | 'syncedRange' | 'hold'>
 
-export type Tone = 'success' | 'info' | 'warning' | 'error' | 'neutral'
+export type Tone = ProShellTone
 
+// The status dot and label classes. They stay here, not in the shell's
+// `PRO_SHELL_TONE_*`: Tailwind scans each layer's `app/` only, so a class that
+// lives only in `@nuxtseo/pro-shell/shared` (the neutral dot's arbitrary
+// colour) is never generated and the dot draws nothing.
 export const TONE_TEXT: Record<Tone, string> = {
   success: 'text-success',
   info: 'text-info',
@@ -31,12 +36,6 @@ export const TONE_BAR: Record<Tone, string> = {
   error: 'bg-error',
   neutral: 'bg-[var(--ui-border-accented)]',
 }
-
-/**
- * Row budget for the Sites column. One constant, so the page size and the
- * pager threshold cannot drift apart.
- */
-export const OVERVIEW_COLUMN_ROW_LIMIT = 7
 
 /**
  * The Search Console numbers a row carries beside its status.
@@ -146,7 +145,7 @@ export function overviewSiteLabel(site: Pick<OverviewSite, 'domain' | 'property'
 }
 
 /**
- * Deterministic attention order for the Sites column. Broken Sites first, then
+ * Deterministic attention order for the Fleet Sites list. Broken Sites first, then
  * Sites with history before Sites still on their first sync, then the clicks
  * at stake, with the label as the stable final tiebreak.
  */
@@ -169,21 +168,36 @@ export function compareAttention(a: OverviewSiteEntry, b: OverviewSiteEntry): nu
 }
 
 /**
- * One page of the Sites column: the ranked roster sliced to the page asked for.
- *
- * The requested page is clamped into range first. A roster that shrinks below
- * the page a reader was on must keep showing rows; an unclamped slice lands
- * past the end, renders nothing, and the pager that could leave it disappears.
+ * One Sites list row: the Site joined to its read, with the status the
+ * `#status` slot draws as a dot, a label, and a tooltip.
  */
-export function overviewColumnPage(entries: readonly OverviewSiteEntry[], page: number): { page: number, pageCount: number, rows: OverviewSiteEntry[] } {
-  const ranked = [...entries].sort(compareAttention)
-  const pageCount = Math.max(1, Math.ceil(ranked.length / OVERVIEW_COLUMN_ROW_LIMIT))
-  const clamped = Math.min(Math.max(0, page), pageCount - 1)
-  return {
-    page: clamped,
-    pageCount,
-    rows: ranked.slice(clamped * OVERVIEW_COLUMN_ROW_LIMIT, (clamped + 1) * OVERVIEW_COLUMN_ROW_LIMIT),
-  }
+export interface OverviewFleetRow extends ProShellFleetSiteRow {
+  readonly entry: OverviewSiteEntry
+  readonly detail: OverviewSiteStatus
+}
+
+/**
+ * The Sites list rows in attention order. The shell pages them in this order.
+ * The run is quiet unless the status is urgent.
+ */
+export function overviewFleetRows(entries: readonly OverviewSiteEntry[]): OverviewFleetRow[] {
+  return [...entries].sort(compareAttention).map((entry) => {
+    const label = overviewSiteLabel(entry.site)
+    const detail = overviewSiteStatus(entry.site)
+    const spark: ProShellFleetSiteRow['spark'] = entry.clicks._tag === 'Read'
+      ? { _tag: 'Read', data: entry.clicks.clicksSpark, tone: detail.urgent ? detail.tone : 'neutral' }
+      : entry.clicks._tag === 'Reading' ? { _tag: 'Reading' } : { _tag: 'None' }
+    return {
+      id: entry.site.siteId,
+      name: label,
+      host: label,
+      to: siteRoute(entry.site),
+      spark,
+      status: { label: detail.label, tone: detail.tone, urgent: detail.urgent },
+      entry,
+      detail,
+    }
+  })
 }
 
 /**

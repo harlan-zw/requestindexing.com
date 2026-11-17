@@ -35,9 +35,9 @@ vi.mock('nuxt/app', () => ({
   useAppConfig: () => ({}),
 }))
 vi.mock('#layers/pro-saas/app/components/pro/ProNoPropertyNotice.vue', () => ({ default: defineComponent(() => () => null) }))
-vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewSitesColumn.vue', () => ({ default: defineComponent({
-  props: ['entries'],
-  setup: props => () => h('aside', props.entries.map((entry: { site: { siteId: string }, clicks: { _tag: string, clicks?: number } }) =>
+vi.mock('@nuxtseo/pro-shell/app/components/ProShellFleetSites.vue', () => ({ default: defineComponent({
+  props: ['rows'],
+  setup: props => () => h('aside', props.rows.map(({ entry }: { entry: { site: { siteId: string }, clicks: { _tag: string, clicks?: number } } }) =>
     h('p', { 'data-site': entry.site.siteId }, entry.clicks._tag === 'Read' ? `${entry.clicks.clicks} clicks` : entry.clicks._tag))),
 }) }))
 vi.mock('#components', async () => {
