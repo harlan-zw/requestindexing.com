@@ -15,6 +15,7 @@ routines:
         - cron: '0 6 * * *'
     timezone: Australia/Sydney
     mode: propose
+    when: changed
     enabled: true
   - name: dependency-updates
     on:

@@ -1,6 +1,11 @@
 <script lang="ts" setup>
 import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
 
+// PRODUCT-09. Kept as literals: importing `@gscdump/contracts/v1` would pull
+// its top-level zod schemas into the home page chunk.
+const SUBMISSIONS_PER_SITE_DAILY = 5
+const RESUBMIT_WAIT_DAYS = 7
+
 const { loggedIn, user } = useUserSession()
 
 useSeoMeta({
@@ -51,7 +56,7 @@ const walkthroughSteps = [
     eyebrow: 'Connect',
     title: 'Sign in with your Google account',
     description: 'One OAuth sign-in. We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify.',
-    bullets: ['Search Console read access, plus sitemap submission', 'Revoke any time from your Google account', 'Tokens encrypted at rest'],
+    bullets: ['Search Console and Indexing API access', 'Revoke any time from your Google account', 'Tokens encrypted at rest'],
   },
   {
     num: '02',
@@ -64,8 +69,8 @@ const walkthroughSteps = [
     num: '03',
     eyebrow: 'Submit',
     title: 'Submit URLs to the Indexing API',
-    description: 'Submit any URL from your dashboard with one click. We respect Google\'s 200/day publish quota so you don\'t have to track it yourself.',
-    bullets: ['New and updated URLs', 'Duplicate submissions skipped for 48 hours', 'Google supports the API for job posting and livestream pages'],
+    description: `Submit a job posting or livestream URL from your dashboard. Each Site can send ${SUBMISSIONS_PER_SITE_DAILY} Submissions a day, and Request Indexing counts them for you.`,
+    bullets: ['New and updated URLs', `Submit a URL again ${RESUBMIT_WAIT_DAYS} days after Google accepts it`, 'Google supports the API for job posting and livestream pages'],
   },
   {
     num: '04',
@@ -156,7 +161,7 @@ const marketingTools = [
                     </div>
                     <div class="flex items-center gap-1.5">
                       <span class="size-2 rounded-full bg-primary-400 animate-pulse" />
-                      <span class="text-xs text-muted">Live</span>
+                      <span class="text-xs text-muted">Example</span>
                     </div>
                   </div>
                   <!-- Mock URL rows -->
@@ -226,7 +231,7 @@ const marketingTools = [
               <div class="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
                 <span class="inline-flex items-center gap-2 text-default">
                   <UIcon name="i-heroicons-check-circle" class="size-4 text-primary" />
-                  <span class="font-medium">200 publish requests/day</span>
+                  <span class="font-medium">Job posting and livestream pages</span>
                 </span>
                 <span class="inline-flex items-center gap-2 text-default">
                   <UIcon name="i-heroicons-check-circle" class="size-4 text-primary" />
@@ -260,7 +265,7 @@ const marketingTools = [
             <p class="text-toned text-sm leading-relaxed">
               Search Console only shows the last <NuxtLink to="https://gscdump.com/learn-google-search-console/limits/16-month-data-retention" target="_blank" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
                 16 months
-              </NuxtLink> of data, and older days age out every day. Request Indexing keeps your history past that window, searchable and exportable.
+              </NuxtLink> of data, and older days age out every day. Request Indexing keeps your history past that window.
             </p>
           </div>
 
@@ -271,7 +276,7 @@ const marketingTools = [
               Open, portable, yours
             </h3>
             <p class="text-toned text-sm leading-relaxed">
-              MIT on GitHub. Self-host on Cloudflare with your own Google OAuth app if you'd rather own the full stack.
+              MIT on GitHub. Read the code, fork it, or run your own copy of the app on Cloudflare. A copy still uses the hosted gscdump engine.
             </p>
           </div>
 
@@ -291,7 +296,7 @@ const marketingTools = [
       <!-- How It Works -->
       <UPageSection
         headline="How it works"
-        title="From Search Console to indexed in four steps"
+        title="From Search Console to Google's answer in four steps"
         description="Connect your Google account once, submit URLs to the Indexing API, and see what Google reports for each one. No dark arts."
         :ui="{ container: 'max-w-7xl', title: 'font-title' }"
       >
@@ -352,7 +357,7 @@ const marketingTools = [
                       </button>
                     </div>
                     <p class="text-xs text-muted">
-                      Search Console access, plus sitemap submission
+                      Search Console and Indexing API access
                     </p>
                   </div>
                 </div>
@@ -401,7 +406,7 @@ const marketingTools = [
   <span class="text-default">-H</span> <span class="text-toned">"Content-Type: application/json"</span> \
   <span class="text-default">-H</span> <span class="text-toned">"Authorization: Bearer $TOKEN"</span> \
   <span class="text-default">--data</span> <span class="text-toned">'{
-    "url": "https://example.com/new-page",
+    "url": "https://example.com/jobs/frontend-developer",
     "type": "URL_UPDATED"
   }'</span> \
   <span class="text-primary">indexing.googleapis.com/v3/urlNotifications:publish</span></code></pre>
@@ -456,7 +461,7 @@ const marketingTools = [
       <UPageSection
         headline="Free tools"
         title="Check indexing without signing up"
-        description="Three single-purpose tools for a quick answer. No account, no email, no tracking."
+        description="Three single-purpose tools for a quick answer. No account and no email."
         :ui="{ container: 'max-w-7xl', title: 'font-title' }"
       >
         <UPageGrid>
@@ -626,7 +631,7 @@ const marketingTools = [
                     Keep it past 16 months
                   </div>
                   <div class="text-muted text-sm">
-                    Request Indexing keeps your history after Google drops it. Export it any time.
+                    Request Indexing keeps your history after Google drops it.
                   </div>
                 </div>
               </div>
@@ -637,7 +642,7 @@ const marketingTools = [
                     Own your data
                   </div>
                   <div class="text-muted text-sm">
-                    Export it, or delete it. It's yours.
+                    Delete it any time. It's yours.
                   </div>
                 </div>
               </div>

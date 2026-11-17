@@ -51,14 +51,14 @@ claims more than the marketing site does today. See Truth rules.
 
 | Context | Register | Example |
 | --- | --- | --- |
-| Landing H1 and section headings | Sentence case, outcome not feature | "From Search Console to indexed in four steps" |
+| Landing H1 and section headings | Sentence case, outcome not feature | "From Search Console to Google's answer in four steps" |
 | Meta title | Title case, the search intent first | "Request Google Indexing and See Why Pages Are Not Indexed" |
-| Body copy | Technical but friendly, second person | "Submit any URL from your dashboard with one click." |
+| Body copy | Technical but friendly, second person | "Submit a job posting or livestream URL from your dashboard." |
 | Button labels | Verb-object | "Get Started", "Submit URL", "View Code". Never "OK", "Submit", "Click here" |
 | Empty states | Acknowledge, explain the value, give the action | "Search Console keeps data for the last 16 months" then the quote then the CTA |
 | Errors | What broke, why it matters, how to fix. Never blame the reader | three parts, in that order |
-| Quota and limits | State the number and who tracks it | "We respect Google's 200/day publish quota so you don't have to track it yourself." |
-| Free allowance refusals and holds | State the number, what did not happen, and the next step inside this app | "You have connected all 3 Sites in your Free allowance. Remove a Site to connect another." |
+| Quota and limits | State the number and who tracks it | "Each Site can send 5 Submissions a day, and Request Indexing counts them for you." |
+| Free allowance refusals and holds | State the number, what did not happen, and the next step inside this app | "You have connected all {limit} Sites in your Free allowance. Remove a Site to connect another." |
 | Onboarding emails from Harlan | First person, plain text, one next step per email, signed Harlan. Templates in `layers/pro-saas/server/emails/` | "If something is unclear or broken, reply to this email. It comes straight to me." |
 
 **Headings are sentence case, meta titles are title case.** Both ship today and the split is
@@ -82,7 +82,8 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | Claim | Evidence |
 | --- | --- |
 | Google keeps 16 months of Search Console data | Google's documented retention window |
-| Google's Indexing API publish quota is 200 per day | GOOGLE-03 in `apps/marketing/content/VERIFIED-CLAIMS.md`. It is the default for one Google Cloud project. This app spreads accounts across several projects and limits each account to 100 calls a day (PRODUCT-03). A dashboard page never shows 200 as the reader's own limit |
+| Google's Indexing API publish quota is 200 per day | GOOGLE-03 in `apps/marketing/content/VERIFIED-CLAIMS.md`. It is the default for one Google Cloud project, never the reader's own limit. No page shows 200 as the reader's own limit |
+| Each Site can send 5 Submissions a day, and a URL can be submitted again 7 days after Google accepts it | PRODUCT-09 in `apps/marketing/content/VERIFIED-CLAIMS.md`. Dashboard pages render both numbers from `GOOGLE_SUBMISSION_SITE_DAILY_LIMIT` and `GOOGLE_SUBMISSION_URL_COOLDOWN_DAYS` in `@gscdump/contracts/v1`. Marketing pages state them as literals with a PRODUCT-09 comment, because that module adds zod to the page chunk. Recheck the literals when the contracts pin moves |
 | Google documents the Indexing API for job posting and livestream pages only | GOOGLE-01 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
 | IndexNow notifies Bing and other participating search engines, and Google is not one of them | INDEXNOW-01 and INDEXNOW-02 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
 | IndexNow takes any page type on the host, and needs a key file on the site | INDEXNOW-03 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
@@ -98,10 +99,10 @@ app's OAuth client, and gscdump holds its token. gscdump's user cleanup skips a 
 client issued (`partner_issued`). The delete revokes only the tokens `google_accounts` stores. The
 copy sends the reader to their Google Account instead.
 
-**Not claimed until it ships.** Bing and IndexNow submission arrive by upgrading the gscdump
-protocol, not by building them here. The plumbing exists (`getSiteBingData`,
-`getSiteBingConnection`) and the marketing site says nothing about either, which is correct
-today. Do not put multi-engine submission on a marketing page before the protocol ships it.
+**IndexNow ships; Bing submission does not.** IndexNow submission arrived through the gscdump
+protocol (PRODUCT-10), so a marketing page may name it with the IndexNow channel strings below.
+Bing Webmaster Tools reads crawl evidence only, behind the `bing` flag. Do not claim Bing
+submission, or "multi-engine submission", until the protocol ships it.
 
 ## Indexing channel assets
 
@@ -614,7 +615,7 @@ Onboarding Step words, under `proShell.copy.onboarding.steps`:
 
 | Step | Rail label | Heading | Description | Action |
 | --- | --- | --- | --- | --- |
-| `connect` | Connect Google | Connect Google Search Console | Request Indexing reads your Search Console data to find pages Google has missed, then submits them for you. | Continue (shell default) |
+| `connect` | Connect Google | Connect Google Search Console | Request Indexing reads your Search Console data to find pages Google has missed, and the reason Google gives for each. | Continue (shell default) |
 | `sites` | Connect Sites | Connect your Sites | Choose a property from your Search Console. Request Indexing reads each Site from its property. | Continue (shell default) |
 | `sync` | Finish setup | Setup completion assets | Setup completion assets | Go to dashboard |
 | `connect-site` (dashboard card) | | Connect your first Site | Connect a Site to see which of its pages Google has indexed, and why the rest are not. | Connect a Site |

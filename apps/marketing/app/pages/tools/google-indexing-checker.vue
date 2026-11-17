@@ -6,7 +6,7 @@ import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
 const faqs = [
   {
     question: 'How do I check if Google indexed my page?',
-    answer: 'Use the site: search operator (for example, site:example.com/page), Search Console\'s URL Inspection tool, or this free checker. The site: operator shows whether Google has the page in its index. URL Inspection adds the detailed coverage state.',
+    answer: 'Use the site: search operator (for example, site:example.com/page), Search Console\'s URL Inspection tool, or this free checker. A site: search gives an estimate from public search results. URL Inspection gives Google\'s own verdict and the detailed coverage state.',
   },
   {
     question: 'Why is my page not showing in Google?',
@@ -30,7 +30,7 @@ const faqs = [
   },
   {
     question: 'How does this tool check indexing status?',
-    answer: 'This tool runs a site: search through an API to see whether your URL is in Google\'s search results. If it appears, it is indexed. For the detailed status, such as "Discovered" or "Crawled" but not indexed, connect your Google Search Console account.',
+    answer: 'This tool runs a site: search through an API to see whether your URL is in Google\'s search results. The result is an estimate. For Google\'s own verdict and the detailed status, such as "Discovered" or "Crawled" but not indexed, connect your Google Search Console account.',
   },
 ]
 

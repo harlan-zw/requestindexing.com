@@ -219,7 +219,7 @@ function onPageError(error: unknown) {
     </template>
 
     <template #command-palette>
-      <ProShellCommandPalette site-commands :groups="[PRO_FLEET_COMMAND_GROUP]" />
+      <ProShellCommandPalette site-commands :groups="[PRO_FLEET_COMMAND_GROUP]" :group-order="{ _tag: 'SiteGroupsFirst' }" />
     </template>
 
     <!-- Sticky, so the Site crumb survives scrolling. `v-show`, never `v-if`:

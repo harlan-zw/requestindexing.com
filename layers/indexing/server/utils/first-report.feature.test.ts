@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3'
 import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
+import { GscdumpV1Error } from '@gscdump/sdk/v1'
 import { createError, createEvent } from 'h3'
 import { beforeEach, expect, it, vi } from 'vitest'
 import viewedRoute from '../api/sites/[siteId]/onboarding/first-report-view.post'
@@ -66,6 +67,24 @@ async function preview() {
 it('previews known scoped URLs without spending inspection quota', async () => {
   expect(await preview()).toMatchObject({ urls: ['https://example.com/docs/a'], canInspect: true })
   expect(h.client.inspectSiteUrls).not.toHaveBeenCalled()
+})
+
+it('previews a Site with no published Sitemap as empty', async () => {
+  h.client.listSitemapUrls.mockRejectedValue(new GscdumpV1Error({ code: 'invalid_request', message: 'No published sitemap generation', status: 400, retryable: false, details: { reason: 'no_generation' } }))
+  expect(await previewRoute(event('GET'))).toEqual({ _tag: 'Empty' })
+})
+
+it('refuses Inspect as changed when the Sitemap is no longer published', async () => {
+  const plan = await preview()
+  h.client.listSitemapUrls.mockRejectedValue(new GscdumpV1Error({ code: 'invalid_request', message: 'No published sitemap generation', status: 400, retryable: false, details: { reason: 'no_generation' } }))
+  await expect(inspectRoute(event('POST', { token: plan.token }))).rejects.toMatchObject({ statusCode: 409 })
+  expect(h.client.inspectSiteUrls).not.toHaveBeenCalled()
+})
+
+it('keeps other Sitemap refusals as failed loads', async () => {
+  const refusal = new GscdumpV1Error({ code: 'invalid_request', message: 'Invalid sitemap URL page: cursor', status: 400, retryable: false, details: {} })
+  h.client.listSitemapUrls.mockRejectedValue(refusal)
+  await expect(previewRoute(event('GET'))).rejects.toBe(refusal)
 })
 
 it('runs only the reviewed URLs after an explicit authorized request', async () => {

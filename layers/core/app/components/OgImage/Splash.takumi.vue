@@ -36,7 +36,7 @@ const mockRows = [
         <div class="flex items-center" style="gap: 8px; padding-bottom: 8px; border-bottom: 1px solid #e6e7d2;">
           <div style="width: 10px; height: 10px; border-radius: 9999px; background-color: #10b981;" />
           <div style="font-size: 15px; font-weight: 600; color: #1c1f0e;">
-            Live from Search Console
+            Example from Search Console
           </div>
         </div>
 

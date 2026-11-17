@@ -6,28 +6,15 @@ name: CI
 #
 # The jobs live in harlan-zw/harlan-nuxt so every site shares one pinned copy.
 
+# Pull requests always start a run. The `changes` job decides whether the
+# checks run or skip, because `harlan-desktop / lint`, `/ typecheck` and
+# `/ test` are required checks. A path filter at the event starts no run for a
+# docs-only pull request, so the required checks never report and it blocks. A
+# skipped check passes.
 on:
   pull_request:
-    paths:
-      - '**'
-      - '!**/*.md'
-      - '!docs/**'
-      - '!.editorconfig'
-      - '!.gitignore'
-      - '!.idea/**'
-      - '!.vscode/**'
-      - 'apps/marketing/content/**/*.md'
   push:
     branches: [main]
-    paths:
-      - '**'
-      - '!**/*.md'
-      - '!docs/**'
-      - '!.editorconfig'
-      - '!.gitignore'
-      - '!.idea/**'
-      - '!.vscode/**'
-      - 'apps/marketing/content/**/*.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -37,10 +24,47 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    # GitHub-hosted for the same reason as the checks: this repository is public.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request'
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      # Push builds always run in full. A pull request runs the checks when any
+      # changed file is code, or site content that renders.
+      - id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          code=true
+          if [ "$EVENT" = pull_request ]; then
+            files=$(git diff --name-only "$BASE...$HEAD")
+            code=false
+            while IFS= read -r file; do
+              case "$file" in
+                apps/marketing/content/*) code=true; break ;;
+                *.md|docs/*|.editorconfig|.gitignore|.idea/*|.vscode/*|'') ;;
+                *) code=true; break ;;
+              esac
+            done <<< "$files"
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
   harlan-desktop:
+    needs: changes
+    if: ${{ !cancelled() }}
     uses: harlan-zw/harlan-nuxt/.github/workflows/harlan-desktop-site-ci.yml@main
     with:
       node-version: 26.13.0
+      skip: ${{ needs.changes.outputs.code == 'false' }}
       # GitHub-hosted on purpose. This repository is public, and a self-hosted
       # runner on a public repository lets a fork pull request run code on the
       # workstation.
@@ -57,7 +81,8 @@ jobs:
 
   build:
     # Main builds in the deploy workflow. Keep the build check on pull requests.
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:

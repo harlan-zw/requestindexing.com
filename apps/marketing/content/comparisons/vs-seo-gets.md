@@ -17,9 +17,9 @@ Checked 15 September 2026 against SEO Gets' documentation and Request Indexing's
 | Product | Documented or inspected action |
 | --- | --- |
 | SEO Gets | Opens Search Console's URL Inspection tool with the selected URL loaded |
-| Request Indexing | Sends an Indexing API notification with your connected Google credentials, after a check for recent notifications |
+| Request Indexing | Sends an Indexing API notification with your Google grant, up to 5 a day for each Site |
 
-SEO Gets explains its shortcut on its [Index Reporting](https://seogets.com/features/index-reporting) page. You can read Request Indexing's behavior in its [notification endpoint](https://github.com/harlan-zw/requestindexing.com/blob/cf640ac56542cca8850b2ce3ab773f35c8910e21/apps/app/server/api/indexing/%5Burl%5D.post.ts).
+SEO Gets explains its shortcut on its [Index Reporting](https://seogets.com/features/index-reporting) page. You can read Request Indexing's limits on its [Submit to Google page](https://github.com/harlan-zw/requestindexing.com/blob/35342bb3b7afdbac9ffb445e2a0a8d1bacfa36e1/layers/indexing/app/pages/pro/dashboard/sites/%5Bid%5D/indexing/submit.vue).
 
 For an ordinary blog post, opening Search Console can be the right next step. Google's API notification path supports only eligible job and livestream pages. Read [which Google interface fits a blog post](/indexing-api-for-blog-posts) before you compare convenience.
 
