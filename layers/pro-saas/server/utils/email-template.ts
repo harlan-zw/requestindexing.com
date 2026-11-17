@@ -33,7 +33,6 @@ function buildTokens(ctx: EmailTemplateContext): Record<string, string> {
     firstName: ctx.firstName?.trim() || 'there',
     DASHBOARD_URL: `${baseUrl}/pro/dashboard`,
     INDEXING_URL: `${baseUrl}${ctx.resumePage ? '/pro/dashboard/url-inspection' : '/pro/dashboard/indexing'}`,
-    DEVELOPERS_URL: `${baseUrl}/pro/dashboard/developers`,
   }
 }
 
