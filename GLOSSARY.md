@@ -29,7 +29,8 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 | Link | gscdump Site binding; Bing `partner.sites.indexing.bing.link.create` | A Site has 0 or 1 link per Integration that reads it | link, linked |
 | Onboarding Answers | users.onboarding_answers | User 0—1 set of optional answers from the About you card | About you |
 | funnel milestone | pro_events table | First-time record of one step toward an active account | (internal) |
-| Submission | gscdump Submission Receipt (`google_indexing_submissions`, gscdump.com ADR-0016) | Site 1—N Submission, unique on (site, idempotency key) in gscdump | "Submit" |
+| Submission | gscdump Submission Receipt: Google (`google_indexing_submissions`, gscdump.com ADR-0016) and IndexNow (`indexnow_submissions`, ADR-0013) | Site 1—N Submission, unique on (site, idempotency key) in gscdump | "Submit", Submissions |
+| Automatic sending | gscdump IndexNow connection `automaticSending` (gscdump.com ADR-0031) | Site 0—1 switch; creates IndexNow Submissions with `trigger: automatic` | Automatic sending, Automatic |
 | IndexNow | gscdump `partner.sites.indexing.indexnow.*`, IndexNow page | Site 0—1 verified key; notifies participating search engines, never Google | IndexNow |
 | Investigation | indexing_investigations table | Site 1—N Investigation, unique on (site, url, issue) | (not surfaced as a noun) |
 | Quota | gscdump `google_indexing_quota_daily` (gscdump.com ADR-0016) | Cloud project 1—N Pacific-day counter, kept by gscdump | "quota" |
@@ -46,7 +47,7 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 | Feedback report | feedback table, Send feedback drawer | User 0 to N reports | feedback |
 | Indexing capability | `@nuxtseo/pro-indexing` `IndexingSource` optional field; nuxtseo.com GLOSSARY.md owns the term | Source 0 to N capabilities; a missing one hides its section | (internal) |
 
-Collisions: the product's submission history and Google's indexing state are different evidence. Never imply one proves the other.
+Collisions: the product's submission history and Google's indexing state are different evidence. Never imply one proves the other. When a page shows Google's verdict after a Submission, "afterwards" shows order in time, never cause, and never a timeframe.
 
 The Google Indexing API and IndexNow are separate channels. The Indexing API notifies Google only. IndexNow notifies Bing and other participating search engines, and Google is not one of them. Never call one channel by the other's name. Never imply that an IndexNow receipt says anything about Google.
 
@@ -128,15 +129,15 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 ### Submission
 
-**Is:** one Indexing API notification sent for one URL, and its outcome. gscdump sends it and keeps the Submission Receipt (gscdump.com ADR-0016); this app keeps no copy.
+**Is:** one notification sent to a search engine, and its outcome. It goes through one channel: Google's Indexing API, for one URL, or IndexNow, for one or more URLs. gscdump sends it and keeps the Submission Receipt (gscdump.com ADR-0016 and ADR-0013); this app keeps no copy. A sitemap submission to Search Console is a separate act, and lowercase.
 
-**Use for:** the act and the record. The control that starts it says **Submit**. The Site page and nav row that hold it say **Submit to Google**, so the row names the one search engine it reaches.
+**Use for:** the act and the record. The control that starts it says **Submit**. The Site nav row and page that hold every channel say **Submissions**. The page for one channel names it: **Submit to Google** or **IndexNow**. Those two pages are reached from Submissions and have no nav row.
 
-**Never:** request, push, ping, or index (as a verb). A Submission is a notification Google accepted, never evidence that a page is indexed. The Banned table below holds that line.
+**Never:** request, push, ping, or index (as a verb). An accepted Submission is a notification a search engine received, never evidence that a page is indexed. The Banned table below holds that line.
 
 **Exception:** a meta title may echo the searcher's own words, so the landing title says "Request Google Indexing". Searchers type "google index request". Body copy and controls keep Submit and Submission.
 
-**Casing:** `Submission` in prose, `submit` on a control, `googleSubmission` in identifiers.
+**Casing:** `Submission` in prose, `submit` on a control, `googleSubmission` and `indexNowSubmission` in identifiers.
 
 ### IndexNow
 
@@ -147,6 +148,16 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 **Never:** Bing submission, because IndexNow reaches more engines than Bing. Never imply that IndexNow reaches Google.
 
 **Casing:** `IndexNow`, one word, capital I and N.
+
+### Automatic sending
+
+**Is:** a per-Site IndexNow switch in gscdump. While it is on, gscdump sends the Site's new and changed sitemap URLs to IndexNow after each sitemap update. Each Submission it creates carries `trigger: automatic`. gscdump owns the term (gscdump.com ADR-0031). Request Indexing turns it on when a reader verifies an IndexNow key.
+
+**Use for:** the switch on the IndexNow page, its state on Submissions, and the **Automatic** badge on a receipt.
+
+**Never:** auto-submit, automatic indexing, or auto IndexNow. Never imply that it reaches Google, or that an engine indexed a URL it sent.
+
+**Casing:** `Automatic sending` at the start of a label, `automatic sending` in prose, `automaticSending` in identifiers.
 
 ### Investigation
 
@@ -247,6 +258,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 | indexed successfully for an accepted notification | notification accepted | Receipt does not establish indexing. |
 | guaranteed indexing | exact observed or documented outcome | No reviewed source establishes a guarantee. |
 | cloud mode, `--mode cloud` | Hosted mode, `--mode hosted` | The gscdump CLI rejects `cloud` since 4.3.0. |
+| auto-submit, automatic indexing | Automatic sending | It sends notifications. Engines decide indexing. |
 
 These restrictions apply to prose meanings, not stored enum values or existing route segments.
 
