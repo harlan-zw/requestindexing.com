@@ -1,7 +1,8 @@
 import { z } from 'zod'
+import { isRuntimeOnlyRoute, PERMANENT_REDIRECTS } from '~~/shared/routes'
 
 export const SIGNUP_TOUCH_COOKIE = 'pro-first-touch'
-const landingPaths = ['/', '/tools', '/guides', '/pro/onboarding', '/pro/dashboard', '/login', '/auth'] as const
+const landingPaths = ['/', '/tools', '/guides', '/comparisons', '/pro/onboarding', '/pro/dashboard', '/login', '/auth'] as const
 const base = { landingPath: z.enum(landingPaths), capturedAt: z.iso.datetime() }
 const campaignToken = (max: number) => z.string().min(1).max(max).regex(/^[a-z0-9._+-]+$/)
 const domain = z.string().min(1).max(253).regex(/^[a-z0-9.-]+$/)
@@ -27,6 +28,8 @@ export interface SignupAttribution {
   referrerDomain?: string
 }
 
+/** Root paths that are not guides. `isRuntimeOnlyRoute` covers the app routes. */
+const nonGuidePages = new Set<string>(['/privacy', '/terms', ...Object.keys(PERMANENT_REDIRECTS)])
 function routeGroup(path: string): typeof landingPaths[number] | null {
   if (path === '/')
     return '/'
@@ -41,6 +44,11 @@ function routeGroup(path: string): typeof landingPaths[number] | null {
   if (/^\/tools(?:\/|$)/.test(path))
     return '/tools'
   if (/^\/guides(?:\/|$)/.test(path))
+    return '/guides'
+  if (/^\/comparisons(?:\/|$)/.test(path))
+    return '/comparisons'
+  // Guides render from content at one root slug. The group keeps no slug.
+  if (/^\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path) && !isRuntimeOnlyRoute(path) && !nonGuidePages.has(path))
     return '/guides'
   return null
 }

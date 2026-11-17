@@ -3,10 +3,11 @@ import type { OverviewSiteEntry } from '#layers/pro-gsc/app/components/overview/
 import type { OverviewSnapshotKey, OverviewSnapshotSite } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
 import ProShellFleetSites from '@nuxtseo/pro-shell/app/components/ProShellFleetSites.vue'
 import { useProShellOnboardingFlow, useProShellOnboardingSteps } from '@nuxtseo/pro-shell/app/composables/useProShellOnboarding'
+import { PRO_SHELL_TONE_DOT, PRO_SHELL_TONE_TEXT } from '@nuxtseo/pro-shell/shared/fleet-sites'
 import { useJobListener } from '~~/layers/core/app/composables/events'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { UiTooltip } from '#components'
-import { isOverviewReadTarget, overviewFleetRows, overviewSiteLabel, soleSiteLandingPath, TONE_BAR, TONE_TEXT } from '#layers/pro-gsc/app/components/overview/overview-sites'
+import { isOverviewReadTarget, overviewFleetRows, overviewSiteLabel, soleSiteLandingPath } from '#layers/pro-gsc/app/components/overview/overview-sites'
 import { overviewReadRange, overviewSiteClicks, overviewSnapshotCards } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
 import ProLiveJobProgress from '#layers/pro-gsc/app/components/overview/ProLiveJobProgress.vue'
 import ProOverviewOnboardingCard from '#layers/pro-gsc/app/components/overview/ProOverviewOnboardingCard.vue'
@@ -150,8 +151,8 @@ useJobListener('sites/sync-finished', async ({ siteId }) => {
             trigger-as="button"
           >
             <span class="flex min-h-11 min-w-0 items-center gap-1.5 sm:min-h-0">
-              <span class="size-1.5 shrink-0 rounded-full" :class="TONE_BAR[row.detail.tone]" aria-hidden="true" />
-              <span class="truncate text-xs" :class="row.detail.urgent ? TONE_TEXT[row.detail.tone] : 'text-dimmed'">{{ row.detail.label }}</span>
+              <span class="size-1.5 shrink-0 rounded-full" :class="PRO_SHELL_TONE_DOT[row.detail.tone]" aria-hidden="true" />
+              <span class="truncate text-xs" :class="row.detail.urgent ? PRO_SHELL_TONE_TEXT[row.detail.tone] : 'text-dimmed'">{{ row.detail.label }}</span>
             </span>
           </UiTooltip>
         </template>
