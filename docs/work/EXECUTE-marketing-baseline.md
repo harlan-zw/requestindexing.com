@@ -2,7 +2,7 @@
 
 Status: 2026-11-17, branch `docs-marketing-baseline`. Live copy fixes in [#405](https://github.com/harlan-zw/requestindexing.com/pull/405).
 
-**Next move:** Blocked. No production IndexNow Submission has been delivered; fix delivery in gscdump before #411 and the home page sub-headline ship.
+**Next move:** Harlan. Merge #405, #406 and #411; approve gscdump ADR-0030 and release contracts 7.16.0 for automatic IndexNow.
 
 Done means: the home page, onboarding emails, and listing text in production match `MARKETING.md`, and the metric has a measured baseline.
 
@@ -16,7 +16,7 @@ Done means: the home page, onboarding emails, and listing text in production mat
 - [ ] `apps/marketing/public/skills/google-indexing/SKILL.md` never names IndexNow
 - [x] H1 decided 2026-11-17: keep "Get your pages indexed." and say what each engine does under it
 - [x] Audience decided 2026-11-17: the long tail comes in free; multi-Site operators pay later
-- [ ] IndexNow delivery: every production attempt got HTTP 429 from `api.indexnow.org` (found 2026-11-18). Fix in gscdump first
+- [x] IndexNow delivery: every production attempt got HTTP 429 until gscdump.com#1222 moved delivery to a relay. The first Submission after it got HTTP 202 (2026-11-18)
 - [ ] Automatic IndexNow: harlan-zw/gscdump#297 (contracts) and the gscdump.com host PR, then a setting here
 - [ ] Contact the people who paid for the old Pro plan (deferred 2026-11-17)
 - [x] Read the admin funnel; set the metric baseline and the 60-day target
@@ -24,7 +24,7 @@ Done means: the home page, onboarding emails, and listing text in production mat
 - [ ] Find why about half of signups stop at the Google connect step
 - [ ] Send the flip-test question; record the counts in `docs/audits/`
 - [ ] Ship the home page plan behind the rank guard
-- [ ] Replace onboarding email 01 with the IndexNow setup email (#411, draft until delivery works)
+- [ ] Replace onboarding email 01 with the IndexNow setup email (#411)
 - [ ] Decide the footer "Set up an agent" link and the dashboard Setup offers that lead with agents
 - [ ] Write the reason guides, starting with `/why-is-my-page-not-indexed`
 - [ ] Move the listing text into `COPY.md`, then onto family sites and directories
