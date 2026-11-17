@@ -4,7 +4,7 @@ import { createGscdumpPublicV1Client } from '#layers/pro-gsc/server/utils/gscdum
 import { assertLocalRegisteredGscSiteScope } from '#layers/pro-gsc/server/utils/registered-site-scope'
 import { requireSiteAccess } from '#layers/pro-saas/server/utils/require-site-access'
 import { connectedSiteDomain } from '#layers/pro-saas/shared/site-url'
-import { readFirstReportCandidates } from './first-report'
+import { isNoSitemapGeneration, readFirstReportCandidates } from './first-report'
 
 export async function requireFirstReportSite(event: H3Event, write = false) {
   const access = await requireSiteAccess(event, write ? { ability: 'write-data' } : undefined)
@@ -33,7 +33,13 @@ export async function requireFirstReportSite(event: H3Event, write = false) {
     client,
     remoteSiteId,
     property,
-    readCandidates: (generationId?: string) => readFirstReportCandidates(host, property, query => client.listSitemapUrls({ params: { siteId: remoteSiteId }, query }).then(response => response.data), generationId),
+    // A new Site has no published Sitemap yet, so its preview is empty.
+    readCandidates: (generationId?: string) => readFirstReportCandidates(host, property, query => client.listSitemapUrls({ params: { siteId: remoteSiteId }, query }).then(response => response.data), generationId)
+      .catch((error: unknown) => {
+        if (isNoSitemapGeneration(error))
+          return { _tag: 'Empty' as const }
+        throw error
+      }),
   }
 }
 

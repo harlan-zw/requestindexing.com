@@ -1,5 +1,11 @@
+import { isGscdumpV1Error } from '@gscdump/sdk/v1'
 import { z } from 'zod'
 import { pagePropertyCoversUrl, savedPageMatchesHost } from '#layers/pro-saas/shared/page-task'
+
+/** gscdump refuses a Sitemap read until it publishes the first Sitemap generation for the Site. */
+export function isNoSitemapGeneration(error: unknown): boolean {
+  return isGscdumpV1Error(error) && error.code === 'invalid_request' && error.details.reason === 'no_generation'
+}
 
 interface SitemapPage {
   generation: { id: string, observedAt: number }
