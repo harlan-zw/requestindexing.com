@@ -11,7 +11,7 @@ The name is the search intent, verbatim. Nothing else in the family can use it: 
 ## What it does
 
 - **Indexing status per URL.** What Google has indexed, what it has not, and the stated reason.
-- **Submission.** Push new and updated URLs to every engine the protocol supports.
+- **Submission.** Send job posting and livestream URLs to Google's Indexing API, and any URL to IndexNow for Bing and other participating engines.
 - **Coverage over time.** Index percentage, transitions, and what changed since last week.
 - **Sitemaps.** What you declared, what was discovered, what drifted.
 - **The regular Search Console reads.** Queries, pages, countries, devices, with history kept past Google's 16-month window.
@@ -22,7 +22,7 @@ The non-goals are the point. This is a small product on purpose.
 
 - **Not a Search Console replacement.** It consumes GSC; it does not reimplement it.
 - **Not a guarantee.** Submission and observation are the product. Engines decide outcomes.
-- **Not an engine.** Sync, storage, retention, and the multi-engine submission surface belong to gscdump. IndexNow and Bing Webmaster Tools arrive through the protocol when gscdump ships them, and are not rebuilt here.
+- **Not an engine.** Sync, storage, retention, and the multi-engine submission surface belong to gscdump. IndexNow arrived through the protocol. Bing submission arrives the same way when gscdump ships it, and is not rebuilt here.
 - **Not an AI-visibility tool.** No crawler observability, no LLM citation tracking, no prerendering, no edge worker in the request path, and no injecting `llms.txt` into anyone else's site. That was the previous direction and it is dropped. Serving our own `llms.txt` through `nuxt-ai-ready` stays, because that is this site being readable, not a capability we sell.
 - **Not a generic SEO platform.** Matching Ahrefs feature lists is a treadmill.
 - **Not a black-hat tool.** Public APIs, published quotas, your own OAuth grants. No SERP scraping, no proxy rotation. One exception: the free `/tools` pages run a Google `site:` search through DataForSEO, so a visitor gets an answer before signup. Each answer says it is an estimate and offers Google's own URL Inspection verdict through a Search Console connect.
@@ -44,9 +44,9 @@ Paid usage past the Free allowance comes later. When it does, Request Indexing c
 
 ## Who it is for
 
-The person who published a page and wants it found. In practice: indie devs, small agencies, and operators running a handful of sites who do not want another dashboard with a query builder in it.
+The person who published a page and wants it found. In practice: site owners who asked Google to index a page, saw nothing happen, and now want the reason. They run one to ten Sites, often a blog, a small business, or a client's Site, and do not want another dashboard with a query builder in it. Most arrive from search, and most search clicks come from outside the US. `MARKETING.md` holds the evidence and the test that could change this.
 
-The agent operator is served by gscdump directly, through MCP. That is a feature of the split, not a gap here.
+The agent operator is served by gscdump directly, through MCP and the CLI. The boundary is the interface: a screen here, an agent there. That is a feature of the split, not a gap here.
 
 ## Stakes
 
