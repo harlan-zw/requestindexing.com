@@ -258,14 +258,14 @@ catalogs:
       specifier: ^6.0.1
       version: 6.0.1
     '@nuxtseo/design-system':
-      specifier: ^0.1.6
-      version: 0.1.6
+      specifier: ^0.1.7
+      version: 0.1.7
     '@nuxtseo/pro-indexing':
-      specifier: ^0.1.6
-      version: 0.1.6
+      specifier: ^0.1.7
+      version: 0.1.7
     '@nuxtseo/pro-shell':
-      specifier: ^0.1.6
-      version: 0.1.6
+      specifier: ^0.1.7
+      version: 0.1.7
     '@sentry/cloudflare':
       specifier: ^11.1.0
       version: 11.1.0
@@ -523,13 +523,13 @@ importers:
         version: 6.0.1(ac683c0f99e6edaf5feeccb47ef75f24)
       '@nuxtseo/design-system':
         specifier: 'catalog:'
-        version: 0.1.6(e762ccbead158b44a90f5677db052025)
+        version: 0.1.7(e762ccbead158b44a90f5677db052025)
       '@nuxtseo/pro-indexing':
         specifier: 'catalog:'
-        version: 0.1.6(ab2aa983e8de7065675603a8e1ef7cac)
+        version: 0.1.7(c0028eb9288f1c8e9e965478048f5002)
       '@nuxtseo/pro-shell':
         specifier: 'catalog:'
-        version: 0.1.6(140fb3224b529d2d28c2988d8f824f58)
+        version: 0.1.7(fbeec1bac40edf34c8cf87f2af7a29e4)
       '@takumi-rs/core':
         specifier: 'catalog:'
         version: 2.15.0(csstype@3.2.3)
@@ -2800,8 +2800,8 @@ packages:
       zod:
         optional: true
 
-  '@nuxtseo/design-system@0.1.6':
-    resolution: {integrity: sha512-knLuYAUFVx8nZyISPQaclWHJNxkznoSU2OUTV0aba/KYU9YIDs/jJtZkRdUgTKQRFzObX62YwtaatEVstdynhQ==}
+  '@nuxtseo/design-system@0.1.7':
+    resolution: {integrity: sha512-oB8NVdTlfwTe8O61W7NSbqTfKEQNTOGrWphyDrXe2gEc72Poj7wJmI096LD8OFWZF0qROyI/47pyF6+Q8FVPiw==}
     peerDependencies:
       '@nuxt/scripts': ^1.3.10 || ^2.0.0-beta.14
       '@nuxt/ui': ^4.11.1
@@ -2813,24 +2813,24 @@ packages:
       vue: 3.5.43
       zod: ^4.0.0
 
-  '@nuxtseo/pro-indexing@0.1.6':
-    resolution: {integrity: sha512-N1+nChLlYDQxVkmR/1QegKXWoB3aNxh6lQTxigyJLc3F5/Qn9VqQtUsutzscoT3hw3kxXwkq4V7ayl0YPbwMHw==}
+  '@nuxtseo/pro-indexing@0.1.7':
+    resolution: {integrity: sha512-p1q7K/imYYzNpxNQENGF6iSY4rC5d3Uul8zaXRqevzqjQVPR5d9mMzc5KGTCKaSTauLrgsvwITxUn1pmxNvHGA==}
     peerDependencies:
       '@gscdump/contracts': ^7.13.0
       '@gscdump/sdk': ^7.13.0
       '@nuxt/ui': ^4.11.1
-      '@nuxtseo/design-system': ^0.1.6
-      '@nuxtseo/pro-shell': ^0.1.6
+      '@nuxtseo/design-system': ^0.1.7
+      '@nuxtseo/pro-shell': ^0.1.7
       '@vueuse/core': ^14.0.0 || ^15.0.0
       nuxt: ^4.6.0
       typescript: '>=5.8.0 <7'
       vue: 3.5.43
 
-  '@nuxtseo/pro-shell@0.1.6':
-    resolution: {integrity: sha512-715m2tNvK4Bn6MhX0eF9mtKP3PuCr4AKsRfyuEJg5WxLXsZT3lEXLQScRzeak8ldWCKwA4uYEq1TLE/Gdh+LSQ==}
+  '@nuxtseo/pro-shell@0.1.7':
+    resolution: {integrity: sha512-9vGdOze2ay9BLGs1XRwBIrvzc6R/6Ng+X9AKkKpgL7SbZauLmME7A0sIF696gA06ZgEbua4HWqnZy8jnGAEGKQ==}
     peerDependencies:
       '@nuxt/ui': ^4.11.1
-      '@nuxtseo/design-system': ^0.1.6
+      '@nuxtseo/design-system': ^0.1.7
       '@vueuse/core': ^14.0.0 || ^15.0.0
       nuxt: ^4.6.0
       typescript: '>=5.8.0 <7'
@@ -13096,7 +13096,7 @@ snapshots:
       - unplugin
       - vue
 
-  '@nuxtseo/design-system@0.1.6(e762ccbead158b44a90f5677db052025)':
+  '@nuxtseo/design-system@0.1.7(e762ccbead158b44a90f5677db052025)':
     dependencies:
       '@comark/nuxt': 0.7.0(593f98cb6b3e6fc866f976daab251317)
       '@iconify-json/hugeicons': 1.2.35
@@ -13181,13 +13181,13 @@ snapshots:
       - vite
       - webpack
 
-  '@nuxtseo/pro-indexing@0.1.6(ab2aa983e8de7065675603a8e1ef7cac)':
+  '@nuxtseo/pro-indexing@0.1.7(c0028eb9288f1c8e9e965478048f5002)':
     dependencies:
       '@gscdump/contracts': 7.14.0
       '@gscdump/sdk': 7.14.0(@cloudflare/workers-types@5.20260929.1)(@opentelemetry/api@1.9.1)(valibot@1.4.2(typescript@6.0.3))
       '@nuxt/ui': 4.11.2(patch_hash=5a11ca11a1099df7ea632a9cc9a9b98403b32a0480cdc429df8796f2d6cf6d0b)(@internationalized/date@3.12.4)(@oxc-project/types@0.151.0)(@tiptap/extensions@3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3))(change-case@5.4.4)(db0@0.3.4(drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260929.1)(@opentelemetry/api@1.9.1)))(embla-carousel@8.6.0)(esbuild@0.28.1)(ioredis@5.11.1(supports-color@10.2.2))(lightningcss@1.33.0)(magicast@0.5.5)(oxc-parser@0.151.0)(rolldown@1.2.11)(rollup@4.62.4)(tailwindcss@4.3.3)(typescript@6.0.3)(valibot@1.4.2(typescript@6.0.3))(vite@8.3.2(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1))(vue-router@5.4.0(@vue/compiler-sfc@3.5.43)(esbuild@0.28.1)(rolldown@1.2.11)(rollup@4.62.4)(vite@8.3.2(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1))(vue@3.5.43(typescript@6.0.3)))(vue@3.5.43(typescript@6.0.3))(zod@4.6.6(patch_hash=c4ca1e62791f9b6c44833bf2eea69c99e08fd64437cc27226a4aa4ef1840e231))
-      '@nuxtseo/design-system': 0.1.6(e762ccbead158b44a90f5677db052025)
-      '@nuxtseo/pro-shell': 0.1.6(140fb3224b529d2d28c2988d8f824f58)
+      '@nuxtseo/design-system': 0.1.7(e762ccbead158b44a90f5677db052025)
+      '@nuxtseo/pro-shell': 0.1.7(fbeec1bac40edf34c8cf87f2af7a29e4)
       '@unovis/ts': 1.7.0(supports-color@10.2.2)
       '@unovis/vue': 1.7.0(@unovis/ts@1.7.0(supports-color@10.2.2))(vue@3.5.43(typescript@6.0.3))
       '@vueuse/core': 15.0.0(vue@3.5.43(typescript@6.0.3))
@@ -13197,10 +13197,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@nuxtseo/pro-shell@0.1.6(140fb3224b529d2d28c2988d8f824f58)':
+  '@nuxtseo/pro-shell@0.1.7(fbeec1bac40edf34c8cf87f2af7a29e4)':
     dependencies:
       '@nuxt/ui': 4.11.2(patch_hash=5a11ca11a1099df7ea632a9cc9a9b98403b32a0480cdc429df8796f2d6cf6d0b)(@internationalized/date@3.12.4)(@oxc-project/types@0.151.0)(@tiptap/extensions@3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3))(change-case@5.4.4)(db0@0.3.4(drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260929.1)(@opentelemetry/api@1.9.1)))(embla-carousel@8.6.0)(esbuild@0.28.1)(ioredis@5.11.1(supports-color@10.2.2))(lightningcss@1.33.0)(magicast@0.5.5)(oxc-parser@0.151.0)(rolldown@1.2.11)(rollup@4.62.4)(tailwindcss@4.3.3)(typescript@6.0.3)(valibot@1.4.2(typescript@6.0.3))(vite@8.3.2(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1))(vue-router@5.4.0(@vue/compiler-sfc@3.5.43)(esbuild@0.28.1)(rolldown@1.2.11)(rollup@4.62.4)(vite@8.3.2(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1))(vue@3.5.43(typescript@6.0.3)))(vue@3.5.43(typescript@6.0.3))(zod@4.6.6(patch_hash=c4ca1e62791f9b6c44833bf2eea69c99e08fd64437cc27226a4aa4ef1840e231))
-      '@nuxtseo/design-system': 0.1.6(e762ccbead158b44a90f5677db052025)
+      '@nuxtseo/design-system': 0.1.7(e762ccbead158b44a90f5677db052025)
       '@vueuse/core': 15.0.0(vue@3.5.43(typescript@6.0.3))
       nuxt: 4.6.1(@babel/plugin-syntax-jsx@7.28.6(@babel/core@7.29.0(supports-color@10.2.2)))(@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.0(supports-color@10.2.2)))(@oxc-project/types@0.151.0)(@parcel/watcher@2.5.6)(@types/node@26.6.3)(@vue/compiler-sfc@3.5.43)(acorn@8.18.0)(confbox@0.3.1)(db0@0.3.4(drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260929.1)(@opentelemetry/api@1.9.1)))(dotenv@17.4.2)(drizzle-orm@0.45.3(@cloudflare/workers-types@5.20260929.1)(@opentelemetry/api@1.9.1))(esbuild@0.28.1)(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(giget@3.3.1)(ioredis@5.11.1(supports-color@10.2.2))(lightningcss@1.33.0)(mlly@1.8.2)(optionator@0.9.4)(oxc-parser@0.151.0)(rolldown@1.2.11)(rollup-plugin-visualizer@7.0.1(rolldown@1.2.11)(rollup@4.62.4))(rollup@4.62.4)(srvx@0.12.5)(supports-color@10.2.2)(terser@5.50.0)(tsx@4.23.11)(typescript@6.0.3)(vite@8.3.2(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1))(vue-tsc@3.3.14(typescript@6.0.3))(yaml@2.9.1)
       typescript: 6.0.3
