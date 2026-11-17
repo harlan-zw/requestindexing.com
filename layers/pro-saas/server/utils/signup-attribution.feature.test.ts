@@ -47,6 +47,17 @@ it('keeps the first campaign through OAuth and persists it once without private 
   expect(getResponseHeader(callback, 'set-cookie')).toContain('Max-Age=0')
 })
 
+it.each([
+  ['/comparisons/vs-indexly', '/comparisons'],
+  ['/indexing-api-for-blog-posts', '/guides'],
+])('keeps a campaign from static %s on a native signup click as %s', (landing, landingPath) => {
+  const signup = event('/pro/onboarding', undefined, `https://requestindexing.com${landing}?utm_source=Docs&utm_medium=email`)
+  captureFirstSignupTouch(signup)
+  const cookie = responseCookie(getResponseHeader(signup, 'set-cookie'))
+  expect(readSignupAttribution(event('/auth/google', cookie))).toMatchObject({ attributionSource: 'utm:docs', landingPath, channelClass: 'owned' })
+  expect(cookie).not.toContain(landing.split('/').pop())
+})
+
 it.each(['/login', '/pro/onboarding', '/pro/dashboard'])('keeps a campaign on a native %s click before the static landing hydrates', (path) => {
   const signup = event(path, undefined, 'https://requestindexing.com/?utm_source=Docs&utm_medium=email&url=https://private.example/selected')
   captureFirstSignupTouch(signup)
