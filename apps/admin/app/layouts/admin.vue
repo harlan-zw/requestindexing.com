@@ -147,7 +147,7 @@ const secondaryLinks: NavigationMenuItem[] = [{
       </aside>
 
       <!-- Content -->
-      <div class="flex-1 lg:ml-64">
+      <div class="min-w-0 flex-1 lg:ml-64">
         <!-- Mobile nav toggle -->
         <div class="lg:hidden px-4 pt-4">
           <UButton variant="ghost" class="-ml-2" aria-label="Open navigation menu" @click="navOpen = true">
