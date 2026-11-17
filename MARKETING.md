@@ -33,10 +33,10 @@ From [the customer evidence](docs/audits/2026-11-17-customer-evidence.md):
 ## Who it is for
 
 **The smallest viable audience is the site owner who published pages and wants them found, and who wants the reason when a page is missing.**
-Most run one Site: a small SaaS, a local business, niche content, a blog. Many write English as a second language.
+Most run one Site: a blog or content site, a small business, or a small app. Many write English as a second language.
 
 **Two tiers, decided 2026-11-17.** The long tail comes in free. Multi-Site operators pay later.
-- **The door:** the one-Site owner. Hand review of the Sites connected since 2026-09-15 found small SaaS and startups, local businesses, niche and affiliate content, and blogs on free hosts, in that order.
+- **The door:** the one-Site owner. Hand review of the Sites connected since open signup found blogs and content Sites first, then small businesses, then developer projects and small SaaS.
 - **The payer:** the operator with several Sites who wants indexing to run without them. The old Pro plan sold more Sites, more indexing requests, and promised automatic indexing; over a quarter of the old waitlist paid for it, most with business email addresses.
 
 **Worldview.** Most arrive believing indexing is a button. The ones we serve hold, or are ready to hold:
