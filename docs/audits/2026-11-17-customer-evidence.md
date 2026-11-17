@@ -312,3 +312,42 @@ FROM users WHERE onboarding_answers_closed_at IS NOT NULL AND email NOT LIKE '%@
 The kind of Site table reads `group_concat(sites.domain)` per account on screen. Never paste that output.
 
 Search demand: `gscdump query -s requestindexing.com -d date --start 2026-08-19 --end 2026-11-15 -f json -q`, then the same with `-d query` and `-d page`.
+
+---
+
+## Addendum: demand, funnel shares, and agents (read 2026-11-17)
+
+Added by the marketing baseline work (#406). Shares only.
+
+### Keyword volume, USA
+
+DataForSEO through `nuxtseo research keywords`, November 2026. Monthly US searches. Public market data.
+
+| Keyword | Volume | Note |
+|---|---|---|
+| url inspection tool | 1,300 | |
+| index checker | 720 | spikes to 1,900 in some months |
+| google indexing api | 260 | |
+| request indexing | 140 | CPC about 63 USD |
+| crawled not indexed | 30 | 590 in early 2025 |
+| discovered not indexed | 20 | |
+| page not indexed | 10 | |
+
+US demand for the category is small. Most clicks come from elsewhere: India brings 21% of clicks in 90 days, the USA 16%, then Iran, the UK, Bangladesh, and Pakistan.
+
+### Funnel shares, `/admin/funnel`
+
+| Stage | Share of signups, 2026-08-19 to 2026-11-17 | Share of signups, 2026-10-19 to 2026-11-17 |
+|---|---|---|
+| Connected Google | 58% | 52% |
+| Connected a Site | 30% | 28% |
+
+About half of signups stop at the Google connect step.
+
+### Agents
+
+Per-account integration activity, read as an administrator: no gscdump-linked account in the 90-day cohort holds an active API key or reports a skill. gscdump does not report MCP or CLI success per partner account.
+
+### The old Pro plan
+
+From 2024 to 2025 the old app sold Pro at 12 USD a month: more Sites with Search Console backups, double the daily indexing requests, and "Automatic Indexing", marked coming soon. Over a quarter of the old waitlist paid for it, most with business email addresses. Billing was removed in 2026.

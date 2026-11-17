@@ -14,6 +14,7 @@ It is product surface over the hosted gscdump engine. Almost nothing here is a d
 - [`docs/work/`](docs/work/README.md) — open briefs, one `EXECUTE-*.md` per initiative. `ls docs/work/` shows everything unfinished. The contract is in its README.
 - `docs/audits/` — dated audit records. Method and findings as they stood on the date.
 - `docs/runbooks/` — operational procedures. Present tense, no status.
+- `docs/marketing/` — the materials `MARKETING.md` drives: the home page plan, the channel kit with drafts, and the graded research. Drafts signed Harlan ship only after he approves the exact text.
 
 New Markdown at the repository root is an error. Identity and filters only.
 

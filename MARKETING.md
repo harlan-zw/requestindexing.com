@@ -1,127 +1,209 @@
 ---
-scope: how Request Indexing earns attention and trust: who we seek, the change we make, positioning, permission, channels, and the review gate
+scope: how Request Indexing earns attention and trust: who arrives, who we serve, the change we make, positioning, entry points, permission, channels, the metric, and the review gate
 owns: the marketing strategy. VISION.md owns what may be claimed at all. COPY.md owns the words. GLOSSARY.md owns the names. DESIGN.md owns the look.
-method: Seth Godin, *This Is Marketing* (2018) and *This Is Strategy* (2024)
-hard-cap: ~150 lines. This file rejects marketing ideas; a section that rejects nothing gets cut.
+evidence: docs/audits/2026-11-17-customer-evidence.md
+materials: docs/marketing/ (home page plan, channel kit, graded research)
+method: Seth Godin, *This Is Marketing* and *This Is Strategy*, tested against marketing science. Grades: A peer-reviewed or large dataset, B practitioner data, C expert opinion. Sources in docs/marketing/research.md.
+hard-cap: ~230 lines. This file rejects marketing ideas; a section that rejects nothing gets cut.
 ---
 
 # Marketing
 
-Godin's definition: marketing is the generous act of helping someone make a change they already want. It starts with the person, never the product.
-This file answers his questions for Request Indexing, so any page, post, email, or channel can be checked against them.
+Godin: marketing is the generous act of helping someone make a change they already want.
+It starts with the person, never the product.
 
-## The change we seek to make
+**How this file uses evidence.** Narrow message, broad availability.
+The message speaks to one audience (Godin, C). Anyone with a matching need must still be able to find us (Ehrenberg-Bass, B).
+If a grade A finding's conditions hold, follow it. If they do not, treat the idea as a hypothesis and test it on our own data.
 
-Today, a person publishes a page, asks Google to index it, and waits. Nothing tells them whether it worked, or why not. After Request Indexing, they see whether Google indexed each page, the reason Google gives when it did not, and what changed since last week.
+## Who arrives today
 
-- **From** "I submitted it, so it is done" **to** "a Submission is a notification, and I can see what Google decided."
-- **From** guessing why a page is missing **to** reading the reason Google gives for that URL.
-- **From** learning another dashboard **to** one question answered: is this page indexed, and if not, why?
+From [the customer evidence](docs/audits/2026-11-17-customer-evidence.md):
 
-**Test:** does this piece move someone along one of these lines? If not, cut it.
+- **They search for an action.** "request indexing" and its variants bring at least 37% of all clicks. They want Google to index a page.
+- **Most are outside the US.** India brings 21% of clicks, the USA 16%, then Iran, the UK, Bangladesh, and Pakistan.
+- **They write about one problem.** Their pages are not indexed, a whole Site at times, and they do not know why.
+- **They are individual site owners.** 9 in 10 sign in with a consumer email address. Of the accounts with a Site, about 8 in 10 have exactly one.
+- **About half never connect Google.** Under a third connect a Site.
+- **Nobody uses it as an agent door.** No account in the last 90 days holds an active API key.
+- **Search is steady and flat** for 16 months.
+
+**Gap.** Return use is unmeasured, signup source covers about 5% of signups, and the first evidence view has recorded nobody since it began on 2026-11-07.
 
 ## Who it is for
 
-VISION names the person: someone who published a page and wants it found. In practice: indie devs, small agencies, and operators running a handful of Sites who do not want another dashboard with a query builder in it.
+**The smallest viable audience is the site owner who published pages and wants them found, and who wants the reason when a page is missing.**
+Most run one Site: a blog or content site, a small business, or a small app. Many write English as a second language.
 
-**The smallest viable audience is the indie developer whose new page is missing from Google.**
-They typed "request indexing" into Google. They want an answer and the next step, not a course in SEO.
+**Two tiers, decided 2026-11-17.** The long tail comes in free. Multi-Site operators pay later.
+- **The door:** the one-Site owner. Hand review of the Sites connected since open signup found blogs and content Sites first, then small businesses, then developer projects and small SaaS.
+- **The payer:** the operator with several Sites who wants indexing to run without them. The old Pro plan sold more Sites, more indexing requests, and promised automatic indexing; over a quarter of the old waitlist paid for it, most with business email addresses.
 
-**Worldview.** They believe:
+**Worldview.** Most arrive believing indexing is a button. The ones we serve hold, or are ready to hold:
 - Google decides what it indexes. A tool that promises otherwise is not telling the truth.
-- A status without its reason is not an answer.
+- A status without its reason is no answer.
 - Free and open source is a reason to try something.
-- Another dashboard is a cost.
 
-**People like us** ship the page, check that Google has it, and fix what stops it.
+The worldview is the destination, not the entry test (Godin vs. Sharp, reconciled in research.md).
+We meet the search where it is, then turn it.
 
-**Not for**, and marketing never chases them. Godin: saying so is a kindness, and a signal to the people it is for.
+**People like us** check what Google decided, fix the cause, and stop resubmitting and hoping.
+A freelancer or small agency can give a client the reason, with its date.
 
-- **The agent operator.** gscdump serves them directly, through MCP. Request Indexing never leads with agents. The Developers page and one onboarding email serve people who already use a coding agent.
-- **The growth team**, which nuxtseo Pro serves, and **the platform buyer** who wants AI visibility, rank tracking, or a generic SEO platform.
-- **The guarantee buyer** who wants guaranteed or instant indexing, or a black-hat shortcut. VISION rejects both.
+**This is a bet.** It rests on search data, the funnel, and about 20 messages. The funnel shows who signs up, not why. The flip test below checks why.
+
+**Not for.** Marketing never chases them. Saying so is a kindness, and a signal to the people it is for (Godin).
+
+- **The guarantee buyer** who wants instant or guaranteed indexing, or a black-hat shortcut. VISION rejects both.
+- **The agent operator.** gscdump serves them through MCP and the CLI. Request Indexing links there once and never leads with agents.
+- **The growth team**, which nuxtseo Pro serves, and **the platform buyer** who wants rank tracking or AI visibility.
+
+### Boundary with gscdump
+
+The boundary is the interface: a screen here, an agent there.
+Site count fails as a boundary. A one-Site owner may ask Claude; an agency may want a screen.
+Request Indexing is the largest source of gscdump accounts. A person who asks for an agent goes to gscdump.com.
+
+## The change we seek to make
+
+- **From** "indexing is something I do to Google" **to** "Google decides, and I can read its reason."
+- **From** "I pressed the button and nothing happened" **to** "I know why this URL is out, and what to fix."
+- **From** inspecting URLs one by one **to** one list of the URLs in your sitemaps, each with its verdict and what changed.
+
+**Test:** does this piece move someone along one of these lines? If not, cut it.
 
 ## The marketing promise
 
-> Request Indexing is for people who published a page and want to know whether Google indexed it.
-> It focuses on people who want the answer and its reason without learning a query language.
-> It promises the record: what you submitted, what Google decided, and what changed.
+> Request Indexing is for site owners who believe Google decides what it indexes, and that a status without a reason is no answer.
+> It focuses on people who want the truth about their own pages, not a shortcut.
+> It promises two things: every engine that takes a notice hears about your new pages, and you see what Google decided, with its reason.
 
-Every surface is a smaller version of this promise. It never promises indexing. Engines decide outcomes (VISION).
+Every surface is a smaller version of this promise.
 
-## Positioning: the empty corner
+**The H1 names the job: "Get your pages indexed."** Decided 2026-11-17. The copy under it says what each engine does: IndexNow notifies Bing and other participating engines; Google reads your sitemap on its own schedule, and Request Indexing shows its reason. No surface promises that Google indexes a page, and none gives a timeframe.
+
+## Positioning
+
+Dunford's order: alternatives, what only we have, the value, who cares most, the category (C).
+
+| Alternative | What it leaves the person with |
+|---|---|
+| Search Console's URL Inspection button | One URL at a time, a daily limit per property, no record of what changed |
+| Search Console's Page indexing report | Counts and samples, not every URL with its date |
+| A `site:` search | An estimate, no reason |
+| Paid submit-only indexers | A button, a promise nobody can keep, and nothing after the click |
+| Waiting | Nothing |
+
+- **Only here:** the URLs in your sitemaps inspected on a schedule, within your Free allowance, with each reason and change kept. IndexNow from the same dashboard. Watched URLs. Free and MIT.
+- **Next, and not claimed until it ships:** new and changed sitemap URLs sent to IndexNow automatically once the key is verified. This is the automatic indexing the old Pro plan promised.
+- **Delivery, fixed 2026-11-18:** every production IndexNow attempt got HTTP 429 until gscdump moved delivery to a relay. The first Submission after the fix got HTTP 202.
+- **Not unique, and we say so:** the reason itself. Search Console shows it one URL at a time.
+- **Value:** you learn which pages Google refused, and when that changed, without inspecting them one by one.
+- **Category:** a Google indexing checker that keeps the record. "Indexing tool" implies forcing; never use it.
 
 ```mermaid
 quadrantChart
-  title Getting a page indexed: what you see, and what you must learn
+  title A page is missing from Google: what you learn, and what it costs you
   x-axis Submit and hope --> See what Google decided
-  y-axis Learn a query builder --> One question answered
+  y-axis One URL at a time --> Your sitemap URLs, kept over time
   quadrant-1 Request Indexing
-  quadrant-2 Submit-only tools
-  quadrant-3 Learn it yourself
-  quadrant-4 Data platforms
-  Submit-only indexing tools: [0.15, 0.8]
-  Search Console UI: [0.6, 0.35]
-  Generic SEO suites: [0.65, 0.15]
-  gscdump for agents: [0.85, 0.1]
+  quadrant-2 Bulk submitters
+  quadrant-3 Do it by hand
+  quadrant-4 One-off checks
+  Paid submit-only indexers: [0.15, 0.75]
+  site search: [0.35, 0.2]
+  URL Inspection button: [0.75, 0.15]
+  Page indexing report: [0.6, 0.45]
   Request Indexing: [0.85, 0.85]
 ```
 
-- **Axis 1, after the submit button:** nothing, or the record of what Google decided.
-- **Axis 2, what the person must learn:** reports and a query builder, or one question with its answer.
+**Rejects:** "faster indexing" and "more data" campaigns. Each is a race on one axis. "More engines" is allowed only for engines the product notifies today.
 
-VISION describes the category: submission-only tools that ping engines from a landing page with no observability behind them. They show nothing after the click.
-Search Console, SEO suites, and gscdump hold the evidence behind reports or a query language. Request Indexing holds the corner where both are true.
+## The tension, used honestly
 
-**Rejects:**
-- **One-axis campaigns.** "Faster indexing" or "more engines" is the submit-only tools' race. "More data" is the SEO suites' race, and VISION calls matching Ahrefs a treadmill.
-- **Multi-engine claims** before the gscdump protocol ships them (COPY.md truth rules).
-
-## Tension, used honestly
-
-The tension is the search itself: a page you published is not in Google, and you do not know why. It is true for everyone who arrives. It releases when the person reads the reason Google gives.
+The name is the question. The product is the honest answer to it.
+The tension is true for every arrival: a page they published is not in Google, and nothing tells them why.
+It releases when they read the reason Google gives.
 
 **Rules:**
-- A Submission is a notification Google accepted, never proof of indexing. Copy that blurs the two invents both the tension and the release.
-- No indexing timeframe. The landing H1's 48 hours has no evidence row. COPY.md open question 1 owns that decision, and no other surface repeats the number.
-- The Google Indexing API covers job posting and livestream pages only. Never imply a wrapper extends it to ordinary pages (`apps/marketing/content/COPY.md`).
-- No countdowns or scarcity. The product is free, and that is the whole offer.
+- **Meet the search, then turn it.** Keep the words people type in titles and the H1. Under them, say what each engine does.
+- **Say the limit once per page, after the promise, as a fact about Google.** Follow it at once with what we do: "Nobody can force Google to index a page. Request Indexing shows what Google decided, and why." Two-sided messages raise trust when the limit is stated plainly and the positive follows (Eisend 2006, A).
+- **Show where Google's own button is.** URL Inspection in Search Console. Pointing to a free alternative is the generous act.
+- **A Submission is a notification Google accepted,** never proof of indexing.
+- **The Indexing API covers job posting and livestream pages only.** Never imply a wrapper extends it.
+- **No indexing timeframe, no countdown, no scarcity.**
 
-## Status and affiliation
+## Category entry points
 
-The audience seeks affiliation: being a developer who ships and does it properly, with tools they can check. Harlan maintains Nuxt SEO. The code is MIT and public. Both signal the group.
+The cues that bring someone to us, ranked by the evidence. Each needs a page that answers it honestly.
 
-**Rejects:** "beat your competitors", "rank #1", "instant indexing", and growth-hack copy. They sell dominance, and some sell a guarantee nobody can keep.
+| Cue | Evidence | Page that answers it | Served today |
+|---|---|---|---|
+| "Make Google index my page" | At least 37% of clicks | Home | Not honestly: the H1 promises the outcome |
+| "Where is Search Console's Request Indexing button?" | Position 7.4, under 1% CTR | `/request-indexing-google-search-console` | Published 2026-11-05; the home page ranks instead |
+| "Is this page indexed?" | "index checker" 720 US searches a month | Free Google Index Checker | Ranks poorly |
+| "Why is my page or Site not indexed?" | The clearest customer email | One guide per Google reason | No page yet |
+| "Can I use the Indexing API?" | 260 US searches a month | Indexing API guides | Yes |
+| "Submit to Bing", "IndexNow" | One GitHub issue; Bing and other engines take IndexNow | IndexNow page, a guide, the home page | The product ships IndexNow; no marketing page names it yet |
+
+## Forces and status
+
+- **Push:** the page is missing, the button did nothing, and no reason appeared. **Pull:** each sitemap URL's verdict and reason in one list.
+- **Anxiety:** Google access for a one-person tool, past connect failures, "will this project last?". About half of signups stop at the Google connect step. **Habit:** the Search Console button, `site:` searches, paid indexers.
+- **Reduce anxiety first; it costs least.** Name the access we ask for, show the source, and say who builds it.
+- **Status is affiliation, not dominance.** The person wants to be the one who knows what happened and was not fooled by a trick.
+
+**Rejects:** "beat your competitors", "rank #1", "instant indexing", and growth-hack copy.
 
 ## Permission and trust, earned in this order
 
-1. **Free tools first.** The `/tools` pages check index status with no signup. The first interaction is a gift.
-2. **Guides that tell the truth.** They say what the Indexing API covers and what an accepted notification proves. A reader leaves knowing more, even without signing up.
+1. **Free tools first.** A verdict with no signup. The first interaction is a gift.
+2. **Guides that tell the truth,** in plain words a second-language reader can follow.
 3. **The record keeps its promise.** A wrong or stale reason breaks trust faster than any page builds it.
-4. **Email with one useful step.** Account emails send when something changed, such as the Free allowance. The three onboarding emails each stand alone with one action, and one unsubscribe stops all of them. No email exists only to remind.
+4. **Email with one useful step.** Each onboarding email stands alone with one action. No email exists only to remind.
 
 **Trust comes from what a skeptic can check:** the MIT source, the truth rules in COPY.md, and claims that name their evidence.
 
 ## Pricing is a story
 
-- **Free, with a Free allowance** says: try it on your own Sites with no sales call (VISION).
-- **gscdump sets the allowance.** The app reads the numbers at runtime, so marketing never hardcodes them (COPY.md truth rules).
-- **Paid usage comes later**, under this brand (VISION). Marketing never quotes a price before one exists.
+- **Free, with a Free allowance** says: try it on your own Sites with no sales call.
+- **gscdump sets the allowance.** Marketing never hardcodes a number.
+- **Paid usage comes later,** under this brand. Marketing never quotes a price before one exists.
 
-## Channels, ranked by permission
+## Channels, ranked
 
-*This Is Strategy*: choose the game, then let the system work over time. Our game is to be the best answer to the search "request indexing", the name VISION took from that search.
+*This Is Strategy*: choose the game, then let the system work. Our game is to be the honest answer to the indexing question, wherever someone asks it.
 
-| Channel | Why it fits |
-|---|---|
-| Search for "request indexing" and its questions | The audience types the product name when they need it |
-| Free `/tools` pages | An answer before signup |
-| Guides and comparisons | Trust, earned by saying what the API cannot do |
-| Harlan's channels | A maintainer the audience already follows |
-| The open-source repository | The code is the evidence |
-| nuxtseo.com and gscdump.com | People already in the family, sent where their job fits |
+| Channel | Impact /100 | Grade | Status | Move |
+|---|---|---|---|---|
+| The "request indexing" search, home page | 70 | B | Proven, flat | Keep the words, change the promise |
+| How-to pages for queries at positions 7 to 12 | 65 | B | Pages exist, win few clicks | Rewrite the Search Console guide first |
+| One guide per Google reason | 60 | B/C | No pages | Write the whole-Site case first |
+| IndexNow on the home page and in a setup guide | 55 | C | Product ships it; delivery works since 2026-11-18 | Name it under the H1 and write the key file guide |
+| Free Google Index Checker | 50 | B | Ranks poorly | Improve rank on one tool |
+| Help communities where owners ask "why not indexed" | 45 | C | Unused | Answer generously, Harlan's name, disclosed |
+| nuxtseo.com, gscdump.com, Harlan's channels | 40 | C | Family links exist | Developers spread it; they are not the audience |
+| Agent directories and MCP | 0 | B | No account holds an API key | gscdump's shelf, not ours |
 
 **Rejects:** paid ads before people return, cold outreach, "instant indexing" listicles, link schemes, and any forum that sells indexing tricks.
+
+## The metric
+
+**The share of signups in a 30-day window that connect a Site.** Read it in `/admin/funnel` (`docs/runbooks/signup-funnel.md`).
+
+- Baseline: 28%, 2026-10-19 to 2026-11-17.
+- Target: 40% for the window ending 2027-01-16. Most of the loss is at the Google connect step, where anxiety is cheapest to move.
+- Next metric: the first view of Google's evidence for one of their own pages. It has recorded nobody since 2026-11-07. Confirm the event records, then switch.
+
+## Flip test
+
+Ask the accounts that connected Google in the last 90 days one question, except addresses that opted out of Product updates: "What did you come to Request Indexing to do?" Draft in `docs/marketing/channel-kit.md`.
+
+| Result | Move |
+|---|---|
+| Most want to force indexing and never open a reason | Move the door to diagnosis guides; stop investing in the home page promise |
+| Most write code or ask for agents | Fold the audience into gscdump's developer funnel |
+| Otherwise | This file stands |
 
 ## The review gate
 
@@ -129,7 +211,7 @@ Before any page, post, launch, or email ships, answer each question in one line:
 
 1. **Who is it for?** Name the audience from this file.
 2. **What change does it move?** Name the line from "The change we seek to make".
-3. **Does it fit the promise?** It never promises indexing.
+3. **Does it fit the promise?** It never promises that Google indexes a page, and gives no timeframe.
 4. **Is the tension true?** Point to VISION.md or the truth rules in COPY.md.
 5. **What is the one action?** Exactly one, and it happens inside Request Indexing.
 
@@ -137,14 +219,16 @@ If any answer is blank, it does not ship.
 
 ## Voice
 
-Founder-led. Harlan writes in first person on his own channels and in the onboarding emails: plain, specific, a little dry, with no marketing gloss.
+Founder-led. Harlan writes in first person on his own channels and in the onboarding emails: plain, specific, a little dry.
+Write for a reader with English as a second language: short sentences, common words, no idioms.
 Product surfaces follow the registers in COPY.md. Every claim names its number or its source.
 
 **Rejects:** a faceless brand voice, superlatives, and any claim without its evidence.
 
 ## Open questions
 
-Decisions this file cannot settle yet. Resolve one, fold it in above, then delete it here.
+Resolve one, fold it in above, then delete it here.
 
-1. **Submission for ordinary pages.** The landing meta description offers Indexing API requests for "your pages", and the API covers job posting and livestream pages only. Decide whether marketing leads with Submission, or with the record.
-2. **Founder rhythm.** Which of Harlan's channels carries Request Indexing, and how often.
+1. **The footer "Set up an agent" link.** No account holds an API key. Onboarding email 01 now sets up IndexNow instead of agents; the footer link and the dashboard Setup offers still lead with agents.
+2. **The Google connect step.** About half of signups stop there. Nothing records why.
+3. **The paid tier for operators.** What it costs, and when. Marketing quotes no price until one exists.
