@@ -96,6 +96,7 @@ Dunford's order: alternatives, what only we have, the value, who cares most, the
 
 - **Only here:** the URLs in your sitemaps inspected on a schedule, within your Free allowance, with each reason and change kept. IndexNow from the same dashboard. Watched URLs. Free and MIT.
 - **Next, and not claimed until it ships:** new and changed sitemap URLs sent to IndexNow automatically once the key is verified. This is the automatic indexing the old Pro plan promised.
+- **Blocker, found 2026-11-18:** no production IndexNow Submission has been delivered; every attempt got HTTP 429 from `api.indexnow.org`. No surface pushes IndexNow until one production Submission is delivered.
 - **Not unique, and we say so:** the reason itself. Search Console shows it one URL at a time.
 - **Value:** you learn which pages Google refused, and when that changed, without inspecting them one by one.
 - **Category:** a Google indexing checker that keeps the record. "Indexing tool" implies forcing; never use it.
@@ -178,7 +179,7 @@ The cues that bring someone to us, ranked by the evidence. Each needs a page tha
 | The "request indexing" search, home page | 70 | B | Proven, flat | Keep the words, change the promise |
 | How-to pages for queries at positions 7 to 12 | 65 | B | Pages exist, win few clicks | Rewrite the Search Console guide first |
 | One guide per Google reason | 60 | B/C | No pages | Write the whole-Site case first |
-| IndexNow on the home page and in a setup guide | 55 | C | Product ships it, marketing silent | Name it under the H1; write the key file guide for common platforms |
+| IndexNow on the home page and in a setup guide | 55 | C | Product ships it; production delivery fails | Fix delivery first, then name it under the H1 and write the key file guide |
 | Free Google Index Checker | 50 | B | Ranks poorly | Improve rank on one tool |
 | Help communities where owners ask "why not indexed" | 45 | C | Unused | Answer generously, Harlan's name, disclosed |
 | nuxtseo.com, gscdump.com, Harlan's channels | 40 | C | Family links exist | Developers spread it; they are not the audience |
