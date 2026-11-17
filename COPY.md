@@ -57,7 +57,7 @@ claims more than the marketing site does today. See Truth rules.
 | Button labels | Verb-object | "Get Started", "Submit URL", "View Code". Never "OK", "Submit", "Click here" |
 | Empty states | Acknowledge, explain the value, give the action | "Search Console keeps data for the last 16 months" then the quote then the CTA |
 | Errors | What broke, why it matters, how to fix. Never blame the reader | three parts, in that order |
-| Quota and limits | State the number and who tracks it | "Each Site can send 5 Submissions a day, and Request Indexing counts them for you." Render the number from `GOOGLE_SUBMISSION_SITE_DAILY_LIMIT` |
+| Quota and limits | State the number and who tracks it | "Each Site can send 5 Submissions a day, and Request Indexing counts them for you." |
 | Free allowance refusals and holds | State the number, what did not happen, and the next step inside this app | "You have connected all {limit} Sites in your Free allowance. Remove a Site to connect another." |
 | Onboarding emails from Harlan | First person, plain text, one next step per email, signed Harlan. Templates in `layers/pro-saas/server/emails/` | "If something is unclear or broken, reply to this email. It comes straight to me." |
 
@@ -83,7 +83,7 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | --- | --- |
 | Google keeps 16 months of Search Console data | Google's documented retention window |
 | Google's Indexing API publish quota is 200 per day | GOOGLE-03 in `apps/marketing/content/VERIFIED-CLAIMS.md`. It is the default for one Google Cloud project, never the reader's own limit. No page shows 200 as the reader's own limit |
-| Each Site can send 5 Submissions a day, and a URL can be submitted again 7 days after Google accepts it | PRODUCT-09 in `apps/marketing/content/VERIFIED-CLAIMS.md`. Render both numbers from `GOOGLE_SUBMISSION_SITE_DAILY_LIMIT` and `GOOGLE_SUBMISSION_URL_COOLDOWN_DAYS` in `@gscdump/contracts/v1` where the page can import them |
+| Each Site can send 5 Submissions a day, and a URL can be submitted again 7 days after Google accepts it | PRODUCT-09 in `apps/marketing/content/VERIFIED-CLAIMS.md`. Dashboard pages render both numbers from `GOOGLE_SUBMISSION_SITE_DAILY_LIMIT` and `GOOGLE_SUBMISSION_URL_COOLDOWN_DAYS` in `@gscdump/contracts/v1`. Marketing pages state them as literals with a PRODUCT-09 comment, because that module adds zod to the page chunk. Recheck the literals when the contracts pin moves |
 | Google documents the Indexing API for job posting and livestream pages only | GOOGLE-01 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
 | IndexNow notifies Bing and other participating search engines, and Google is not one of them | INDEXNOW-01 and INDEXNOW-02 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
 | IndexNow takes any page type on the host, and needs a key file on the site | INDEXNOW-03 in `apps/marketing/content/VERIFIED-CLAIMS.md` |

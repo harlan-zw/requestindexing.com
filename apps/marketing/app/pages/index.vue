@@ -1,6 +1,10 @@
 <script lang="ts" setup>
-import { GOOGLE_SUBMISSION_SITE_DAILY_LIMIT, GOOGLE_SUBMISSION_URL_COOLDOWN_DAYS } from '@gscdump/contracts/v1'
 import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
+
+// PRODUCT-09. Kept as literals: importing `@gscdump/contracts/v1` would pull
+// its top-level zod schemas into the home page chunk.
+const SUBMISSIONS_PER_SITE_DAILY = 5
+const RESUBMIT_WAIT_DAYS = 7
 
 const { loggedIn, user } = useUserSession()
 
@@ -52,7 +56,7 @@ const walkthroughSteps = [
     eyebrow: 'Connect',
     title: 'Sign in with your Google account',
     description: 'One OAuth sign-in. We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify.',
-    bullets: ['Reads Search Console. Writes only sitemaps and properties you verify', 'Revoke any time from your Google account', 'Tokens encrypted at rest'],
+    bullets: ['Search Console and Indexing API access', 'Revoke any time from your Google account', 'Tokens encrypted at rest'],
   },
   {
     num: '02',
@@ -65,8 +69,8 @@ const walkthroughSteps = [
     num: '03',
     eyebrow: 'Submit',
     title: 'Submit URLs to the Indexing API',
-    description: `Submit a job posting or livestream URL from your dashboard. Each Site can send ${GOOGLE_SUBMISSION_SITE_DAILY_LIMIT} Submissions a day, and Request Indexing counts them for you.`,
-    bullets: ['New and updated URLs', `Submit a URL again ${GOOGLE_SUBMISSION_URL_COOLDOWN_DAYS} days after Google accepts it`, 'Google supports the API for job posting and livestream pages'],
+    description: `Submit a job posting or livestream URL from your dashboard. Each Site can send ${SUBMISSIONS_PER_SITE_DAILY} Submissions a day, and Request Indexing counts them for you.`,
+    bullets: ['New and updated URLs', `Submit a URL again ${RESUBMIT_WAIT_DAYS} days after Google accepts it`, 'Google supports the API for job posting and livestream pages'],
   },
   {
     num: '04',
@@ -353,7 +357,7 @@ const marketingTools = [
                       </button>
                     </div>
                     <p class="text-xs text-muted">
-                      Reads Search Console. Writes only sitemaps and properties you verify
+                      Search Console and Indexing API access
                     </p>
                   </div>
                 </div>
