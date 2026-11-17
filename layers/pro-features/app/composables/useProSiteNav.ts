@@ -19,6 +19,7 @@ import type { ProNavGroupDef } from '../../shared/nav-groups'
 import { computed, toValue } from 'vue'
 import {
   expandProSiteRoute,
+  proSiteFeatureChildren,
   proSiteFeatureManifest,
   proSiteFeatureNavOrder,
 } from '../../shared/manifest'
@@ -81,10 +82,15 @@ const EXACT_MATCH_IDS = new Set<string>(
   )),
 )
 
-function matcher(id: ProSiteFeatureId, to: string) {
-  return EXACT_MATCH_IDS.has(id)
+function matcher(id: ProSiteFeatureId, to: string, siteId: string) {
+  const own = EXACT_MATCH_IDS.has(id)
     ? (path: string) => path === to
     : (path: string) => path === to || path.startsWith(`${to}/`)
+  // A deep-link-only surface lights the row it belongs to.
+  const children = proSiteFeatureChildren(id).map(child => expandProSiteRoute(proSiteFeatureManifest[child].route, siteId))
+  if (!children.length)
+    return own
+  return (path: string) => own(path) || children.some(child => path === child || path.startsWith(`${child}/`))
 }
 
 export function useProSiteNav(
@@ -120,7 +126,7 @@ export function useProSiteNav(
         label: entry.label,
         icon: entry.icon,
         to,
-        active: matcher(featureId, to),
+        active: matcher(featureId, to, id),
         pending: !!pendingState,
         pendingTooltip: pendingState ? pendingState.tooltip : undefined,
       }

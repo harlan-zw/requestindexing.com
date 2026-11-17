@@ -7,7 +7,7 @@
 import type { ProShellCommandGroup } from '@nuxtseo/pro-shell/shared/commands'
 import type { ProShellSitePage } from '@nuxtseo/pro-shell/shared/sites'
 import type { ProFeatureFlags } from '#layers/pro-features/shared/manifest'
-import { expandProSiteRoute, proSiteFeatureManifest, proSiteFeatureNavOrder } from '#layers/pro-features/shared/manifest'
+import { expandProSiteRoute, proSiteFeatureChildren, proSiteFeatureManifest, proSiteFeatureNavOrder } from '#layers/pro-features/shared/manifest'
 import { proNavGroups } from '#layers/pro-features/shared/nav-groups'
 
 /** The pages outside any one Site. The shell draws them after its Sites group. */
@@ -33,12 +33,13 @@ const groupLabels = new Map(proNavGroups.map(group => [group.id, group.label]))
 /**
  * The Site pages for `proShell.sitePages`: the Site overview, then every Site
  * nav row in sidebar order whose flag is on. A group's Overview row is the
- * group itself: "Indexing", not "Indexing: Overview".
+ * group itself: "Indexing", not "Indexing: Overview". A deep-link-only page
+ * follows the row it belongs to, so "IndexNow" still finds its page.
  */
 export function proSitePalettePages(flags: ProFeatureFlags): ProShellSitePage[] {
   const root = expandProSiteRoute('/pro/dashboard/sites/:id()', SITE_PLACEHOLDER)
   const pages: ProShellSitePage[] = [{ id: 'overview', label: 'Overview', path: '' }]
-  for (const featureId of proSiteFeatureNavOrder) {
+  for (const featureId of proSiteFeatureNavOrder.flatMap(id => [id, ...proSiteFeatureChildren(id)])) {
     const entry = proSiteFeatureManifest[featureId]
     if ('flag' in entry && entry.flag && !flags[entry.flag])
       continue

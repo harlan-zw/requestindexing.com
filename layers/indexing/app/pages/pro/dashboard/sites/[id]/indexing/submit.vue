@@ -14,6 +14,8 @@ import { UiStatusBadge, UiUrlLabel } from '#components'
 import IndexingChannelsCard from '#layers/indexing/app/internal/components/indexing/IndexingChannelsCard.vue'
 import { attemptAfterReceipt, describeReceipt, describeSubmissionRefusal, readIndexingGrantRefusal, readSubmissionRefusal, resolveSubmitAction, submissionAttemptFor } from '#layers/indexing/app/utils/indexing-grant'
 import { INDEXING_API_UNAVAILABLE } from '#layers/indexing/shared/indexing-copy'
+import { GOOGLE_RECEIPT_LABELS, SUBMISSIONS_COPY } from '#layers/indexing/shared/submissions-copy'
+import { expandProSiteRoute, proSiteFeatureManifest } from '#layers/pro-features/shared/manifest'
 import { useProGscdumpIndexingUrls } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
 import { savedPageMatchesHost } from '#layers/pro-saas/shared/page-task'
@@ -160,7 +162,7 @@ async function submitForIndexing() {
   void receipts.refresh()
 }
 
-const receiptLabels: Record<GoogleSubmissionReceiptV1['_tag'], string> = { accepted: 'Accepted', rejected: 'Refused', failed: 'No answer' }
+const receiptLabels = GOOGLE_RECEIPT_LABELS
 function receiptStatus(receipt: GoogleSubmissionReceiptV1) {
   return receipt._tag === 'accepted' ? 'success' as const : 'error' as const
 }
@@ -220,11 +222,15 @@ const tableData = computed(() => historyRows.value.map((row, index) => ({
 })))
 
 const urlsRoute = computed(() => `/pro/dashboard/sites/${siteId.value}/indexing/urls`)
+const submissionsRoute = computed(() => expandProSiteRoute(proSiteFeatureManifest['indexing.submissions'].route, siteId.value))
 </script>
 
 <template>
   <ProPageStates>
     <ProPageZone tier="primary" first>
+      <UiButton :to="submissionsRoute" purpose="link" icon="back" class="mb-2 min-h-11">
+        {{ SUBMISSIONS_COPY.backLink }}
+      </UiButton>
       <UiCard emphasis size="lg">
         <div class="min-w-0">
           <h2 class="text-2xl font-strong text-default">

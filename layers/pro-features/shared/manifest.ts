@@ -43,6 +43,12 @@ export interface ProSiteFeatureManifestEntry {
    */
   integration?: IntegrationReadiness
   flag?: ProFeatureFlag
+  /**
+   * The nav row a deep-link-only surface (`order: null`) belongs to. That row
+   * stays lit while the surface is open, and the command palette lists the
+   * surface under it. Never set on a row that has its own place in the nav.
+   */
+  parent?: string
 }
 
 const SITE_ROOT = '/pro/dashboard/sites/:id()'
@@ -100,6 +106,18 @@ export const proSiteFeatureManifest = {
     route: `${SITE_ROOT}/indexing`,
     integration: 'gsc-connected',
   },
+  // Every Submission on every channel, and the sitemap submission. Second in the
+  // group because it is what the reader came to do (design note
+  // submission-value-design-2026-11-18). The two channel pages below are its
+  // deep links: each is a whole flow (a grant, a key file), so they stay pages
+  // of their own instead of folding into this one (owner decision 10).
+  'indexing.submissions': {
+    label: 'Submissions',
+    icon: 'send',
+    group: 'indexing',
+    order: 31,
+    route: `${SITE_ROOT}/indexing/submissions`,
+  },
   'indexing.recovery': {
     label: 'Recovery',
     icon: 'refresh',
@@ -132,23 +150,25 @@ export const proSiteFeatureManifest = {
     route: `${SITE_ROOT}/indexing/watched`,
     integration: 'gsc-connected',
   },
-  // The namesake action. It runs on this account's pooled Google client, not on
-  // gscdump, so it carries no integration prerequisite of its own. The label
-  // names Google because the IndexNow row beside it also submits URLs, to
-  // other search engines (COPY.md, "Indexing channel assets").
+  // The namesake action, reached from Submissions. It runs on this account's
+  // pooled Google client, not on gscdump, so it carries no integration
+  // prerequisite of its own. The label names Google because IndexNow also
+  // submits URLs, to other search engines (COPY.md, "Indexing channel assets").
   'indexing.submit': {
     label: 'Submit to Google',
     icon: 'send',
     group: 'indexing',
-    order: 38,
+    order: null,
     route: `${SITE_ROOT}/indexing/submit`,
+    parent: 'indexing.submissions',
   },
   'indexing.indexnow': {
     label: 'IndexNow',
     icon: 'send',
     group: 'indexing',
-    order: 39,
+    order: null,
     route: `${SITE_ROOT}/indexing/indexnow`,
+    parent: 'indexing.submissions',
   },
   'indexing.bing': {
     label: 'Bing',
@@ -181,6 +201,11 @@ const proSiteFeatureIds = Object.keys(proSiteFeatureManifest) as ProSiteFeatureI
 export const proSiteFeatureNavOrder: readonly ProSiteFeatureId[] = proSiteFeatureIds
   .filter(id => proSiteFeatureManifest[id].order !== null)
   .sort((a, b) => proSiteFeatureManifest[a].order! - proSiteFeatureManifest[b].order!)
+
+/** The deep-link-only surfaces that belong to a nav row, in declaration order. */
+export function proSiteFeatureChildren(id: ProSiteFeatureId): ProSiteFeatureId[] {
+  return proSiteFeatureIds.filter(other => (proSiteFeatureManifest[other] as ProSiteFeatureManifestEntry).parent === id)
+}
 
 export function getProSiteFeatureDefinition<Id extends ProSiteFeatureId>(
   id: Id,

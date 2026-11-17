@@ -1,6 +1,6 @@
-import { indexNowKeyV1Schema } from '@gscdump/contracts/v1/http'
+import { indexNowConnectionV1Schemas, indexNowKeyV1Schema } from '@gscdump/contracts/v1/http'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp, createSSRApp, defineComponent, h, nextTick, ref } from 'vue'
+import { computed, createApp, createSSRApp, defineComponent, h, nextTick, ref } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 
 const fixture = vi.hoisted(() => ({
@@ -8,22 +8,39 @@ const fixture = vi.hoisted(() => ({
   configure: vi.fn(),
   verify: vi.fn(),
   submit: vi.fn(),
+  update: vi.fn(),
   refresh: vi.fn(),
   refreshConnection: vi.fn(),
+  // A 7.15 host payload: no `automaticSending`. The SDK's client schema adds it.
   connected: { _tag: 'connected', host: 'example.com', keyLocation: 'https://example.com/abc12345.txt', verifiedAt: '2026-09-30T00:00:00.000Z' },
 }))
 const connectionData = ref<Record<string, unknown>>(fixture.connected)
+// The SDK parses every response with the contract's client schema before the
+// page sees it. Reading the fixtures through the same parse keeps them honest.
+const parsedConnection = computed({
+  get: () => indexNowConnectionV1Schemas.client.parse(connectionData.value),
+  set: (value: Record<string, unknown>) => { connectionData.value = value },
+})
 const engineSiteId = ref('s_engine')
 const connectionError = ref<unknown>(null)
 const receiptError = ref<unknown>(null)
 const readStatus = ref('success')
 const receiptData = ref({ submissionReceipts: [] as Record<string, unknown>[], pagination: { hasMore: false } })
 vi.mock('#layers/pro-gsc/app/composables/useProGscdump/useProGscdump', () => ({
-  useProGscdump: () => ({ configureSiteIndexNowConnection: fixture.configure, verifySiteIndexNowConnection: fixture.verify, submitSiteIndexNow: fixture.submit }),
+  useProGscdump: () => {
+    // Each connection response passes the SDK's client parse, as in production.
+    const parsed = (call: (...args: unknown[]) => Promise<unknown>) => (...args: unknown[]) => call(...args).then(data => indexNowConnectionV1Schemas.client.parse(data))
+    return {
+      configureSiteIndexNowConnection: parsed(fixture.configure),
+      verifySiteIndexNowConnection: parsed(fixture.verify),
+      submitSiteIndexNow: fixture.submit,
+      updateSiteIndexNowAutomaticSending: parsed(fixture.update),
+    }
+  },
 }))
 vi.mock('#layers/pro-gsc/app/composables/useProGscdump/_internal', () => ({
   useGscdumpQuery: (key: () => string) => ({
-    data: key().includes('connection') ? connectionData : receiptData,
+    data: key().includes('connection') ? parsedConnection : receiptData,
     status: readStatus,
     error: key().includes('connection') ? connectionError : receiptError,
     refresh: key().includes('connection') ? fixture.refreshConnection : fixture.refresh,
@@ -61,6 +78,15 @@ function configure(app: ReturnType<typeof createApp>) {
       }),
     }))
   }
+  // Nuxt UI's switch is a controlled button: it shows `modelValue`, never its own state.
+  app.component('USwitch', defineComponent({
+    props: ['modelValue', 'label', 'disabled'],
+    emits: ['update:modelValue'],
+    setup: (props, { emit }) => () => h('div', [
+      h('button', { 'type': 'button', 'role': 'switch', 'aria-checked': String(!!props.modelValue), 'disabled': props.disabled, 'aria-label': props.label, 'onClick': () => emit('update:modelValue', !props.modelValue) }),
+      props.label,
+    ]),
+  }))
   app.component('UiButton', defineComponent({
     props: ['disabled', 'type', 'loading', 'to'],
     setup: (props, { slots }) => () => props.to
@@ -103,7 +129,23 @@ beforeEach(() => {
   fixture.configure.mockResolvedValue({ _tag: 'verification-required', host: 'example.com', keyLocation: 'https://example.com/newkey12.txt', reason: null })
   fixture.verify.mockResolvedValue(fixture.connected)
   fixture.submit.mockResolvedValue({ submissionReceipt: { _tag: 'queued' } })
+  fixture.update.mockImplementation(async ({ body }: { body: { automaticSending: 'on' | 'off' } }) => ({
+    ...fixture.connected,
+    automaticSending: body.automaticSending === 'on' ? { _tag: 'on', since: '2026-11-18T00:00:00.000Z', lastCheck: null } : { _tag: 'off' },
+  }))
 })
+function automaticSwitch(host: HTMLElement) {
+  const control = host.querySelector<HTMLButtonElement>('[role="switch"]')!
+  return {
+    get checked() {
+      return control.getAttribute('aria-checked') === 'true'
+    },
+    get disabled() {
+      return control.disabled
+    },
+    click: () => control.click(),
+  }
+}
 afterEach(() => {
   for (const app of apps.splice(0))
     app.unmount()
@@ -149,7 +191,7 @@ describe('indexNow page', () => {
     await nextTick()
     expect(errors).toEqual([])
     expect(host.textContent).toContain('No submission receipts yet')
-    expect(host.querySelector('a')?.getAttribute('href')).toBe('/pro/dashboard/sites/kv1109/indexing/submit')
+    expect([...host.querySelectorAll('a')].find(link => link.textContent?.includes('Submit to Google'))?.getAttribute('href')).toBe('/pro/dashboard/sites/kv1109/indexing/submit')
   })
 
   it('requires verification before submission', async () => {
@@ -259,10 +301,13 @@ describe('indexNow page', () => {
   })
 
   // A Site has two ids. The engine id addresses gscdump; only the app id builds a route.
-  it('links the channel comparison to Submit to Google by the app Site id', () => {
+  it('links back to Submissions and across to Submit to Google by the app Site id', () => {
     const host = mount()
     const links = [...host.querySelectorAll('a')].map(link => [link.textContent?.trim(), link.getAttribute('href')])
-    expect(links).toEqual([['Submit to Google', '/pro/dashboard/sites/kv1109/indexing/submit']])
+    expect(links).toEqual([
+      ['All Submissions', '/pro/dashboard/sites/kv1109/indexing/submissions'],
+      ['Submit to Google', '/pro/dashboard/sites/kv1109/indexing/submit'],
+    ])
   })
 
   it('shows a failed setup read and lets the reader retry it', () => {
@@ -319,5 +364,84 @@ describe('indexNow page', () => {
     expect(host.textContent).toContain('Notification accepted')
     expect(host.textContent).toContain('Search engines decide whether to index each URL.')
     expect(host.querySelector('details')?.textContent).toContain('https://example.com/new')
+    expect(host.querySelector('li')?.textContent).not.toContain('Automatic')
+  })
+
+  it('marks a receipt that automatic sending created', () => {
+    receiptData.value.submissionReceipts = [{ id: 'in_2', _tag: 'accepted', trigger: 'automatic', urls: ['https://example.com/changed'], createdAt: '2026-11-18T00:00:00.000Z', reason: null, retryAt: null }]
+    const host = mount()
+    const badges = [...host.querySelectorAll('li div')].map(node => node.textContent?.trim())
+    expect(badges).toContain('Notification acceptedAutomatic')
+  })
+
+  describe('automatic sending', () => {
+    it('reads a host without automatic sending as off', () => {
+      const host = mount()
+      expect(automaticSwitch(host).checked).toBe(false)
+      expect(host.textContent).toContain('Automatic sending is off.')
+    })
+
+    it('turns on when a key becomes verified', async () => {
+      connectionData.value = { _tag: 'verification-required', host: 'example.com', keyLocation: 'https://example.com/abc12345.txt', reason: null }
+      const host = mount()
+      button(host, 'Verify key').click()
+      await flush()
+      expect(fixture.update).toHaveBeenCalledWith({ params: { siteId: 's_engine' }, body: { automaticSending: 'on' } }, true)
+      expect(host.textContent).toContain('Key verified. Automatic sending is on.')
+      expect(automaticSwitch(host).checked).toBe(true)
+      expect(host.textContent).toContain('Automatic sending is on. No sitemap update has been checked yet.')
+    })
+
+    it('leaves the switch alone when it is already on', async () => {
+      connectionData.value = { _tag: 'verification-required', host: 'example.com', keyLocation: 'https://example.com/abc12345.txt', reason: null, automaticSending: { _tag: 'on', since: '2026-11-17T00:00:00.000Z', lastCheck: null } }
+      fixture.verify.mockResolvedValueOnce({ ...fixture.connected, automaticSending: { _tag: 'on', since: '2026-11-17T00:00:00.000Z', lastCheck: null } })
+      const host = mount()
+      button(host, 'Verify key').click()
+      await flush()
+      expect(fixture.update).not.toHaveBeenCalled()
+      expect(host.textContent).toContain('Key verified. You can submit URLs.')
+    })
+
+    it('keeps a reader\'s off switch when they verify a verified key again', async () => {
+      const host = mount()
+      button(host, 'Verify key').click()
+      await flush()
+      expect(fixture.update).not.toHaveBeenCalled()
+      expect(automaticSwitch(host).checked).toBe(false)
+    })
+
+    it('keeps the verification when the switch could not turn on', async () => {
+      connectionData.value = { _tag: 'verification-required', host: 'example.com', keyLocation: 'https://example.com/abc12345.txt', reason: null }
+      fixture.update.mockRejectedValueOnce(new Error('not deployed'))
+      const host = mount()
+      await fill(host.querySelector('textarea')!, 'https://example.com/new')
+      button(host, 'Verify key').click()
+      await flush()
+      expect(host.textContent).toContain('Key verified. Automatic sending did not turn on. Turn it on below.')
+      expect(automaticSwitch(host).checked).toBe(false)
+      expect(button(host, 'Submit URLs').disabled).toBe(false)
+    })
+
+    it('turns off from the switch and says so when the change fails', async () => {
+      connectionData.value = { ...fixture.connected, automaticSending: { _tag: 'on', since: '2026-11-17T00:00:00.000Z', lastCheck: { checkedAt: '2026-11-18T00:00:00.000Z', changedUrls: 12, sentUrls: 12, completeness: { _tag: 'complete' } } } }
+      const host = mount()
+      expect(host.textContent).toContain('Last check Nov 18, 2026: 12 changed URLs found, 12 sent.')
+      fixture.update.mockRejectedValueOnce(new Error('unavailable'))
+      automaticSwitch(host).click()
+      await flush()
+      expect(host.textContent).toContain('Automatic sending did not change. Try the switch again.')
+      expect(automaticSwitch(host).checked).toBe(true)
+      automaticSwitch(host).click()
+      await flush()
+      expect(fixture.update).toHaveBeenLastCalledWith({ params: { siteId: 's_engine' }, body: { automaticSending: 'off' } }, true)
+      expect(automaticSwitch(host).checked).toBe(false)
+      expect(host.textContent).toContain('Automatic sending is off.')
+    })
+
+    it('keeps the switch disabled for a read-only Team role', () => {
+      fixture.canWrite = false
+      const host = mount()
+      expect(automaticSwitch(host).disabled).toBe(true)
+    })
   })
 })
