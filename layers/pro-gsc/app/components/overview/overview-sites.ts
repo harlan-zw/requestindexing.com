@@ -17,6 +17,26 @@ export type OverviewSite = Pick<SiteFleetRow, 'siteId' | 'domain' | 'property' |
 
 export type Tone = ProShellTone
 
+// The status dot and label classes. They stay here, not in the shell's
+// `PRO_SHELL_TONE_*`: Tailwind scans each layer's `app/` only, so a class that
+// lives only in `@nuxtseo/pro-shell/shared` (the neutral dot's arbitrary
+// colour) is never generated and the dot draws nothing.
+export const TONE_TEXT: Record<Tone, string> = {
+  success: 'text-success',
+  info: 'text-info',
+  warning: 'text-warning',
+  error: 'text-error',
+  neutral: 'text-muted',
+}
+
+export const TONE_BAR: Record<Tone, string> = {
+  success: 'bg-success',
+  info: 'bg-info',
+  warning: 'bg-warning',
+  error: 'bg-error',
+  neutral: 'bg-[var(--ui-border-accented)]',
+}
+
 /**
  * The Search Console numbers a row carries beside its status.
  *
