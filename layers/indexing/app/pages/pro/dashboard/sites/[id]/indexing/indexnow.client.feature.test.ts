@@ -12,7 +12,7 @@ const fixture = vi.hoisted(() => ({
   refresh: vi.fn(),
   refreshConnection: vi.fn(),
   // A 7.15 host payload: no `automaticSending`. The SDK's client schema adds it.
-  connected: { _tag: 'connected', host: 'example.com', keyLocation: 'https://example.com/abc12345.txt', verifiedAt: '2026-09-30T00:00:00.000Z' },
+  connected: { _tag: 'connected', host: 'example.com', keyLocation: 'https://example.com/abc12345.txt', verifiedAt: '2026-09-30T12:00:00.000Z' },
 }))
 const connectionData = ref<Record<string, unknown>>(fixture.connected)
 // The SDK parses every response with the contract's client schema before the
@@ -131,7 +131,7 @@ beforeEach(() => {
   fixture.submit.mockResolvedValue({ submissionReceipt: { _tag: 'queued' } })
   fixture.update.mockImplementation(async ({ body }: { body: { automaticSending: 'on' | 'off' } }) => ({
     ...fixture.connected,
-    automaticSending: body.automaticSending === 'on' ? { _tag: 'on', since: '2026-11-18T00:00:00.000Z', lastCheck: null } : { _tag: 'off' },
+    automaticSending: body.automaticSending === 'on' ? { _tag: 'on', since: '2026-11-18T12:00:00.000Z', lastCheck: null } : { _tag: 'off' },
   }))
 })
 function automaticSwitch(host: HTMLElement) {
@@ -359,7 +359,7 @@ describe('indexNow page', () => {
   })
 
   it('shows accepted receipts as notifications with their URL list', () => {
-    receiptData.value.submissionReceipts = [{ id: 'in_1', _tag: 'accepted', urls: ['https://example.com/new'], createdAt: '2026-09-30T00:00:00.000Z', reason: null, retryAt: null }]
+    receiptData.value.submissionReceipts = [{ id: 'in_1', _tag: 'accepted', urls: ['https://example.com/new'], createdAt: '2026-09-30T12:00:00.000Z', reason: null, retryAt: null }]
     const host = mount()
     expect(host.textContent).toContain('Notification accepted')
     expect(host.textContent).toContain('Search engines decide whether to index each URL.')
@@ -368,7 +368,7 @@ describe('indexNow page', () => {
   })
 
   it('marks a receipt that automatic sending created', () => {
-    receiptData.value.submissionReceipts = [{ id: 'in_2', _tag: 'accepted', trigger: 'automatic', urls: ['https://example.com/changed'], createdAt: '2026-11-18T00:00:00.000Z', reason: null, retryAt: null }]
+    receiptData.value.submissionReceipts = [{ id: 'in_2', _tag: 'accepted', trigger: 'automatic', urls: ['https://example.com/changed'], createdAt: '2026-11-18T12:00:00.000Z', reason: null, retryAt: null }]
     const host = mount()
     const badges = [...host.querySelectorAll('li div')].map(node => node.textContent?.trim())
     expect(badges).toContain('Notification acceptedAutomatic')
@@ -393,8 +393,8 @@ describe('indexNow page', () => {
     })
 
     it('leaves the switch alone when it is already on', async () => {
-      connectionData.value = { _tag: 'verification-required', host: 'example.com', keyLocation: 'https://example.com/abc12345.txt', reason: null, automaticSending: { _tag: 'on', since: '2026-11-17T00:00:00.000Z', lastCheck: null } }
-      fixture.verify.mockResolvedValueOnce({ ...fixture.connected, automaticSending: { _tag: 'on', since: '2026-11-17T00:00:00.000Z', lastCheck: null } })
+      connectionData.value = { _tag: 'verification-required', host: 'example.com', keyLocation: 'https://example.com/abc12345.txt', reason: null, automaticSending: { _tag: 'on', since: '2026-11-17T12:00:00.000Z', lastCheck: null } }
+      fixture.verify.mockResolvedValueOnce({ ...fixture.connected, automaticSending: { _tag: 'on', since: '2026-11-17T12:00:00.000Z', lastCheck: null } })
       const host = mount()
       button(host, 'Verify key').click()
       await flush()
@@ -423,7 +423,7 @@ describe('indexNow page', () => {
     })
 
     it('turns off from the switch and says so when the change fails', async () => {
-      connectionData.value = { ...fixture.connected, automaticSending: { _tag: 'on', since: '2026-11-17T00:00:00.000Z', lastCheck: { checkedAt: '2026-11-18T00:00:00.000Z', changedUrls: 12, sentUrls: 12, completeness: { _tag: 'complete' } } } }
+      connectionData.value = { ...fixture.connected, automaticSending: { _tag: 'on', since: '2026-11-17T12:00:00.000Z', lastCheck: { checkedAt: '2026-11-18T12:00:00.000Z', changedUrls: 12, sentUrls: 12, completeness: { _tag: 'complete' } } } }
       const host = mount()
       expect(host.textContent).toContain('Last check Nov 18, 2026: 12 changed URLs found, 12 sent.')
       fixture.update.mockRejectedValueOnce(new Error('unavailable'))

@@ -24,17 +24,17 @@ describe('summarizeSubmissions', () => {
     const summary = summarizeSubmissions({
       indexnow: {
         receipts: [
-          indexNow('accepted', '2026-11-17T00:00:00.000Z', ['https://a.test/1', 'https://a.test/2'], 'automatic'),
-          indexNow('pending', '2026-11-16T00:00:00.000Z', ['https://a.test/3']),
-          indexNow('failed', '2026-11-15T00:00:00.000Z', ['https://a.test/4']),
-          indexNow('accepted', '2026-09-01T00:00:00.000Z', ['https://a.test/old']),
+          indexNow('accepted', '2026-11-17T12:00:00.000Z', ['https://a.test/1', 'https://a.test/2'], 'automatic'),
+          indexNow('pending', '2026-11-16T12:00:00.000Z', ['https://a.test/3']),
+          indexNow('failed', '2026-11-15T12:00:00.000Z', ['https://a.test/4']),
+          indexNow('accepted', '2026-09-01T12:00:00.000Z', ['https://a.test/old']),
         ],
         hasMore: false,
       },
       google: {
         receipts: [
-          google('accepted', '2026-11-14T00:00:00.000Z', 'https://a.test/job'),
-          google('rejected', '2026-11-13T00:00:00.000Z', 'https://a.test/job-2'),
+          google('accepted', '2026-11-14T12:00:00.000Z', 'https://a.test/job'),
+          google('rejected', '2026-11-13T12:00:00.000Z', 'https://a.test/job-2'),
         ],
         hasMore: false,
       },
@@ -55,12 +55,12 @@ describe('summarizeSubmissions', () => {
   })
 
   it('reports a capped read when the oldest receipt read is still inside the window', () => {
-    const page = { receipts: [google('accepted', '2026-11-10T00:00:00.000Z', 'https://a.test/x')], hasMore: true }
+    const page = { receipts: [google('accepted', '2026-11-10T12:00:00.000Z', 'https://a.test/x')], hasMore: true }
     expect(summarizeSubmissions({ indexnow: { receipts: [], hasMore: false }, google: page, now: NOW }).capped).toBe(true)
   })
 
   it('does not report a cap when the read already reached past the window', () => {
-    const page = { receipts: [google('accepted', '2026-10-01T00:00:00.000Z', 'https://a.test/x')], hasMore: true }
+    const page = { receipts: [google('accepted', '2026-10-01T12:00:00.000Z', 'https://a.test/x')], hasMore: true }
     expect(summarizeSubmissions({ indexnow: { receipts: [], hasMore: false }, google: page, now: NOW }).capped).toBe(false)
   })
 })
@@ -68,8 +68,8 @@ describe('summarizeSubmissions', () => {
 describe('latestSentUrls', () => {
   it('keeps the newest Submission of each URL and counts every distinct URL', () => {
     const { sent } = summarizeSubmissions({
-      indexnow: { receipts: [indexNow('accepted', '2026-11-17T00:00:00.000Z', ['https://a.test/1', 'https://a.test/2'])], hasMore: false },
-      google: { receipts: [google('rejected', '2026-11-10T00:00:00.000Z', 'https://a.test/1')], hasMore: false },
+      indexnow: { receipts: [indexNow('accepted', '2026-11-17T12:00:00.000Z', ['https://a.test/1', 'https://a.test/2'])], hasMore: false },
+      google: { receipts: [google('rejected', '2026-11-10T12:00:00.000Z', 'https://a.test/1')], hasMore: false },
       now: NOW,
     })
 
@@ -81,38 +81,48 @@ describe('latestSentUrls', () => {
 })
 
 describe('resolveSubmissionOutcome', () => {
-  const sent = { url: 'https://a.test/page', sentAt: '2026-11-10T00:00:00.000Z' }
+  const sent = { url: 'https://a.test/page', sentAt: '2026-11-10T12:00:00.000Z' }
   const row = (lastCheckedAt: string, verdict: string | null, coverageState: string | null = null) => ({ url: sent.url, verdict, coverageState, lastCheckedAt })
 
   it('reports indexed only for a PASS inspected after the Submission', () => {
-    expect(resolveSubmissionOutcome(sent, { rows: [row('2026-11-12T00:00:00.000Z', 'PASS')], complete: true }))
-      .toEqual({ _tag: 'indexed', inspectedAt: '2026-11-12T00:00:00.000Z' })
+    expect(resolveSubmissionOutcome(sent, { rows: [row('2026-11-12T12:00:00.000Z', 'PASS')], complete: true }))
+      .toEqual({ _tag: 'indexed', inspectedAt: '2026-11-12T12:00:00.000Z' })
   })
 
   it('carries Google\'s coverage state for a later verdict that is not indexed', () => {
-    expect(resolveSubmissionOutcome(sent, { rows: [row('2026-11-12T00:00:00.000Z', 'NEUTRAL', 'Crawled - currently not indexed')], complete: true }))
-      .toEqual({ _tag: 'not-indexed', inspectedAt: '2026-11-12T00:00:00.000Z', coverageState: 'Crawled - currently not indexed' })
+    expect(resolveSubmissionOutcome(sent, { rows: [row('2026-11-12T12:00:00.000Z', 'NEUTRAL', 'Crawled - currently not indexed')], complete: true }))
+      .toEqual({ _tag: 'not-indexed', inspectedAt: '2026-11-12T12:00:00.000Z', coverageState: 'Crawled - currently not indexed' })
   })
 
   it('does not use a verdict Google recorded before the Submission', () => {
-    expect(resolveSubmissionOutcome(sent, { rows: [row('2026-11-09T00:00:00.000Z', 'PASS')], complete: true }))
-      .toEqual({ _tag: 'not-inspected-since', inspectedAt: '2026-11-09T00:00:00.000Z' })
+    expect(resolveSubmissionOutcome(sent, { rows: [row('2026-11-09T12:00:00.000Z', 'PASS')], complete: true }))
+      .toEqual({ _tag: 'not-inspected-since', inspectedAt: '2026-11-09T12:00:00.000Z' })
   })
 
   it('matches the exact URL, never a longer URL that contains it', () => {
-    const longer = { url: `${sent.url}-2`, verdict: 'PASS', coverageState: null, lastCheckedAt: '2026-11-12T00:00:00.000Z' }
+    const longer = { url: `${sent.url}-2`, verdict: 'PASS', coverageState: null, lastCheckedAt: '2026-11-12T12:00:00.000Z' }
     expect(resolveSubmissionOutcome(sent, { rows: [longer], complete: true })).toEqual({ _tag: 'no-result' })
   })
 
   it('says the result was not read when the search returned only part of its matches', () => {
-    const longer = { url: `${sent.url}-2`, verdict: 'PASS', coverageState: null, lastCheckedAt: '2026-11-12T00:00:00.000Z' }
+    const longer = { url: `${sent.url}-2`, verdict: 'PASS', coverageState: null, lastCheckedAt: '2026-11-12T12:00:00.000Z' }
     expect(resolveSubmissionOutcome(sent, { rows: [longer], complete: false })).toEqual({ _tag: 'not-read' })
+  })
+
+  it('files PARTIAL as not indexed, the same as gscdump\'s status filter', () => {
+    expect(resolveSubmissionOutcome(sent, { rows: [row('2026-11-12T12:00:00.000Z', 'PARTIAL', 'Indexed, though blocked by robots.txt')], complete: true }))
+      .toMatchObject({ _tag: 'not-indexed' })
+  })
+
+  it('never calls an inspection without a verdict not indexed', () => {
+    expect(resolveSubmissionOutcome(sent, { rows: [row('2026-11-12T12:00:00.000Z', null, null)], complete: true }))
+      .toEqual({ _tag: 'no-verdict', inspectedAt: '2026-11-12T12:00:00.000Z' })
   })
 })
 
 describe('automatic sending', () => {
-  const on = { _tag: 'on', since: '2026-11-18T00:00:00.000Z', lastCheck: null } as const
-  const connected = (automaticSending: unknown) => ({ _tag: 'connected', host: 'a.test', keyLocation: 'https://a.test/k.txt', verifiedAt: '2026-11-18T00:00:00.000Z', automaticSending }) as IndexNowConnectionV1
+  const on = { _tag: 'on', since: '2026-11-18T12:00:00.000Z', lastCheck: null } as const
+  const connected = (automaticSending: unknown) => ({ _tag: 'connected', host: 'a.test', keyLocation: 'https://a.test/k.txt', verifiedAt: '2026-11-18T12:00:00.000Z', automaticSending }) as IndexNowConnectionV1
   const pending = (automaticSending: unknown) => ({ _tag: 'verification-required', host: 'a.test', keyLocation: 'https://a.test/k.txt', reason: null, automaticSending }) as IndexNowConnectionV1
 
   it('turns on when a key becomes verified with the switch off', () => {
@@ -131,7 +141,7 @@ describe('automatic sending', () => {
   it('describes the last check and why changed URLs were left unsent', () => {
     const view = viewAutomaticSending(connected({
       ...on,
-      lastCheck: { checkedAt: '2026-11-18T00:00:00.000Z', changedUrls: 620, sentUrls: 500, completeness: { _tag: 'truncated', reasons: ['daily-limit'] } },
+      lastCheck: { checkedAt: '2026-11-18T12:00:00.000Z', changedUrls: 620, sentUrls: 500, completeness: { _tag: 'truncated', reasons: ['daily-limit'] } },
     }))
     expect(describeAutomaticSending(view)).toEqual([
       'Last check Nov 18, 2026: 620 changed URLs found, 500 sent.',

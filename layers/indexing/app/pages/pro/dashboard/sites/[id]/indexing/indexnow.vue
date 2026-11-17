@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { IndexNowConnectionV1, IndexNowSubmissionReceiptV1 } from '@gscdump/contracts/v1/http'
+import type { IndexNowSubmissionReceiptV1 } from '@gscdump/contracts/v1/http'
 import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import { indexNowConfigureV1Schema, indexNowKeyV1Schema, indexNowSubmitV1Schema } from '@gscdump/contracts/v1/http'
 import { isGscdumpV1Error } from '@gscdump/sdk/v1'
 import { useMounted } from '@vueuse/core'
 import { customAlphabet, nanoid } from 'nanoid'
+import { useIndexNowConnection } from '#layers/indexing/app/composables/useSiteSubmissions'
 import IndexingChannelsCard from '#layers/indexing/app/internal/components/indexing/IndexingChannelsCard.vue'
 import IndexNowAutomaticSending from '#layers/indexing/app/internal/components/indexing/IndexNowAutomaticSending.vue'
 import { shouldTurnOnAutomaticSending } from '#layers/indexing/shared/submissions'
@@ -40,12 +41,7 @@ const urls = computed(() => [...new Set(urlInput.value.split(/\r?\n/).map(url =>
 const receiptOffset = ref(0)
 const mounted = useMounted()
 
-const connection = useGscdumpQuery<IndexNowConnectionV1>(
-  () => `indexnow:connection:${engineId.value ?? ''}`,
-  engineId,
-  (siteId, client) => client.getSiteIndexNowConnection({ params: { siteId } }, true),
-  [],
-)
+const connection = useIndexNowConnection(engineId)
 const receipts = useGscdumpQuery<GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.submissions.list'>['data']>(
   () => `indexnow:receipts:${engineId.value ?? ''}:${receiptOffset.value}`,
   engineId,

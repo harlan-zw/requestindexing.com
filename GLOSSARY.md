@@ -143,7 +143,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 **Is:** the open protocol that gscdump uses to notify participating search engines about new or changed URLs on one Site. Bing is one of them. Google is not. Borrowed from the gscdump protocol, which owns the term and its Submission Receipt.
 
-**Use for:** the IndexNow page, its nav row, and the comparison with the Google Indexing API.
+**Use for:** the IndexNow page, reached from Submissions, and the comparison with the Google Indexing API.
 
 **Never:** Bing submission, because IndexNow reaches more engines than Bing. Never imply that IndexNow reaches Google.
 

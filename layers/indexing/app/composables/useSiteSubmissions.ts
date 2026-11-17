@@ -41,6 +41,38 @@ function sentKey(sent: Pick<SentUrl, 'url' | 'sentAt'>): string {
   return `${sent.url}@${sent.sentAt}`
 }
 
+/** URL searches in flight at once for the Afterwards card. */
+const SUBMISSIONS_OUTCOME_CONCURRENCY = 3
+
+/** `map` with at most `limit` calls in flight; a rejected call becomes `onError(item)`. */
+async function mapSettled<T, R>(items: readonly T[], limit: number, run: (item: T) => Promise<R>, onError: (item: T, error: unknown) => R): Promise<R[]> {
+  const results: R[] = Array.from({ length: items.length })
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const index = next++
+      const item = items[index]!
+      results[index] = await run(item).catch((error: unknown) => onError(item, error))
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
+}
+
+/**
+ * The Site's IndexNow connection. The IndexNow page and Submissions share this
+ * one read and its cache key, so moving between them reuses the result.
+ */
+export function useIndexNowConnection(engineSiteId: MaybeRefOrGetter<string | undefined>) {
+  const siteId = computed(() => toValue(engineSiteId))
+  return useGscdumpQuery<IndexNowConnection>(
+    () => `indexnow:connection:${siteId.value ?? ''}`,
+    siteId,
+    (id, client) => client.getSiteIndexNowConnection({ params: { siteId: id } }, true),
+    [],
+  )
+}
+
 export function useSiteSubmissions(engineSiteId: MaybeRefOrGetter<string | undefined>) {
   const siteId = computed(() => toValue(engineSiteId))
 
@@ -56,13 +88,7 @@ export function useSiteSubmissions(engineSiteId: MaybeRefOrGetter<string | undef
     (id, client) => client.listSiteGoogleSubmissionReceipts({ params: { siteId: id }, query: { limit: SUBMISSIONS_RECEIPT_READ_LIMIT, offset: 0 } }, true),
     [],
   )
-  // Same key as the IndexNow page, so the two share one cached read.
-  const indexNowConnection = useGscdumpQuery<IndexNowConnection>(
-    () => `indexnow:connection:${siteId.value ?? ''}`,
-    siteId,
-    (id, client) => client.getSiteIndexNowConnection({ params: { siteId: id } }, true),
-    [],
-  )
+  const indexNowConnection = useIndexNowConnection(siteId)
 
   const receiptsError = computed(() => indexNowReceipts.error.value ?? googleReceipts.error.value ?? null)
 
@@ -84,21 +110,20 @@ export function useSiteSubmissions(engineSiteId: MaybeRefOrGetter<string | undef
   const outcomes = useGscdumpQuery<SubmissionOutcomeRow[]>(
     () => `submissions:outcomes:${siteId.value ?? ''}:${latestUrlsKey.value}`,
     siteId,
-    async (id, client) => {
-      const rows = latest.value.rows
-      const searches = await Promise.all(rows.map(row => client.listSiteIndexingUrls({
+    // A few searches at a time, each settled on its own: one failed read marks
+    // its row, never the whole card. gscdump admits 60 URL list reads a minute
+    // per Site, so one page view spends at most SUBMISSIONS_OUTCOME_URL_LIMIT.
+    (id, client) => mapSettled(latest.value.rows, SUBMISSIONS_OUTCOME_CONCURRENCY, async (sent): Promise<SubmissionOutcomeRow> => {
+      const page = await client.listSiteIndexingUrls({
         params: { siteId: id },
-        query: { search: row.url, limit: SUBMISSIONS_OUTCOME_SEARCH_LIMIT, count: 0 },
-      }, true)))
-      return rows.map((sent, index): SubmissionOutcomeRow => {
-        const urls = searches[index]?.urls ?? []
-        const search: InspectionSearch = {
-          rows: urls.map(url => ({ url: url.url, verdict: url.verdict, coverageState: url.coverageState, lastCheckedAt: url.lastCheckedAt })),
-          complete: urls.length < SUBMISSIONS_OUTCOME_SEARCH_LIMIT,
-        }
-        return { sent, outcome: resolveSubmissionOutcome(sent, search) }
-      })
-    },
+        query: { search: sent.url, limit: SUBMISSIONS_OUTCOME_SEARCH_LIMIT, count: 0 },
+      }, true)
+      const search: InspectionSearch = {
+        rows: page.urls.map(url => ({ url: url.url, verdict: url.verdict, coverageState: url.coverageState, lastCheckedAt: url.lastCheckedAt })),
+        complete: !page.pagination.hasMore,
+      }
+      return { sent, outcome: resolveSubmissionOutcome(sent, search) }
+    }, sent => ({ sent, outcome: { _tag: 'read-failed' } })),
     [latestUrlsKey],
   )
 

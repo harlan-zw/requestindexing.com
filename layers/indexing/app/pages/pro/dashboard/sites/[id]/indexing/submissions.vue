@@ -96,7 +96,15 @@ const sitemapState = computed(() => resolveSitemapEmptyState({
             <p class="text-muted">
               Bing and other participating search engines. Google is not one of them.
             </p>
-            <UiSkeleton v-if="engineId && !indexNowState && !indexNowConnection.error.value" :lines="2" :base="160" :range="60" />
+            <template v-if="engineId && indexNowConnection.error.value">
+              <p class="text-error">
+                {{ SUBMISSIONS_COPY.indexNowReadFailure }}
+              </p>
+              <UiButton purpose="secondary" class="min-h-11 self-start" @click="indexNowConnection.refresh()">
+                {{ SUBMISSIONS_COPY.retry }}
+              </UiButton>
+            </template>
+            <UiSkeleton v-else-if="engineId && !indexNowState" :lines="2" :base="160" :range="60" />
             <template v-else-if="indexNowState">
               <UBadge v-if="indexNowState.verified" color="success" variant="subtle" class="self-start">
                 {{ indexNowState.key }}

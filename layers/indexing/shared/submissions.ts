@@ -192,24 +192,37 @@ export interface InspectionRow {
   lastCheckedAt: string
 }
 
-/** One URL search result: its rows, and whether they are every match. */
+/**
+ * One URL search result: its rows, and whether they are every match. The
+ * engine proves `hasMore` with a lookahead row, so `complete` is `!hasMore`.
+ */
 export interface InspectionSearch {
   rows: readonly InspectionRow[]
   complete: boolean
 }
+
+/** The verdicts gscdump files under `status=not_indexed`. `PASS` is indexed; `null` is its `pending`. */
+const NOT_INDEXED_VERDICTS: ReadonlySet<string> = new Set(['FAIL', 'PARTIAL', 'NEUTRAL'])
 
 /**
  * Google's latest URL Inspection verdict for a URL, relative to one Submission.
  *
  * Order in time only: a verdict counts when Google inspected the URL after it
  * was sent, and says nothing about why.
+ *
+ * - `no-verdict`: inspected after it was sent, with no index verdict recorded.
+ * - `no-result`: the search returned every match, and none is this URL.
+ * - `not-read`: the search returned only part of its matches, without this URL.
+ * - `read-failed`: the search for this URL failed.
  */
 export type SubmissionOutcome
   = | { _tag: 'indexed', inspectedAt: string }
     | { _tag: 'not-indexed', inspectedAt: string, coverageState: string | null }
+    | { _tag: 'no-verdict', inspectedAt: string }
     | { _tag: 'not-inspected-since', inspectedAt: string }
     | { _tag: 'no-result' }
     | { _tag: 'not-read' }
+    | { _tag: 'read-failed' }
 
 export function resolveSubmissionOutcome(sent: Pick<SentUrl, 'url' | 'sentAt'>, search: InspectionSearch): SubmissionOutcome {
   const row = search.rows.find(candidate => candidate.url === sent.url)
@@ -217,9 +230,11 @@ export function resolveSubmissionOutcome(sent: Pick<SentUrl, 'url' | 'sentAt'>, 
     return search.complete ? { _tag: 'no-result' } : { _tag: 'not-read' }
   if (!(Date.parse(row.lastCheckedAt) > Date.parse(sent.sentAt)))
     return { _tag: 'not-inspected-since', inspectedAt: row.lastCheckedAt }
-  return row.verdict === 'PASS'
-    ? { _tag: 'indexed', inspectedAt: row.lastCheckedAt }
-    : { _tag: 'not-indexed', inspectedAt: row.lastCheckedAt, coverageState: row.coverageState }
+  if (row.verdict === 'PASS')
+    return { _tag: 'indexed', inspectedAt: row.lastCheckedAt }
+  if (row.verdict && NOT_INDEXED_VERDICTS.has(row.verdict))
+    return { _tag: 'not-indexed', inspectedAt: row.lastCheckedAt, coverageState: row.coverageState }
+  return { _tag: 'no-verdict', inspectedAt: row.lastCheckedAt }
 }
 
 /** The automatic sending state a reader sees, from the IndexNow connection. */

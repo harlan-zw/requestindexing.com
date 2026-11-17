@@ -218,11 +218,14 @@ reads, and says so when it read fewer than the window holds. The shared Submissi
 | Afterwards indexed | Indexed |
 | Afterwards not indexed | Not indexed |
 | Afterwards inspected | Inspected {date} |
+| Afterwards no index verdict | No index verdict |
 | Afterwards not inspected since | Not inspected since |
 | Afterwards not inspected since, detail | Last inspected {date}, before this Submission. |
 | Afterwards no result | No URL Inspection result |
+| Afterwards no result, detail | Request Indexing reads results for the URLs in your sitemaps. |
 | Afterwards not read | Not read |
 | Afterwards not read, detail | Many inspected URLs contain this address. Find it on the URLs page. |
+| Afterwards one result failed, detail | This result could not load. Retry to read it again. |
 | Afterwards read failure | Google's URL Inspection results could not load. Retry to read them again. |
 | Channel headings | Google Indexing API · IndexNow · Sitemap submission |
 | Google channel, last | Last Submission {date} |
@@ -230,11 +233,16 @@ reads, and says so when it read fewer than the window holds. The shared Submissi
 | IndexNow channel, no key | No IndexNow key yet. |
 | IndexNow channel, key not verified | Verify your key before submitting URLs. |
 | IndexNow channel, key verified | Key verified |
+| IndexNow channel, read failure | IndexNow setup could not load. Retry to read the engine state. (the IndexNow dashboard Read failure) |
 | Sitemap channel link | Open Sitemaps |
 | Channel links | Submit to Google · Submit with IndexNow (the Indexing channel assets) |
 
 The sitemap submission card reuses the titles and descriptions the Sitemaps page draws from
 `resolveSitemapEmptyState`. The IndexNow card reuses the automatic sending strings above.
+
+The Afterwards verdicts follow gscdump's own `status` filter: `PASS` is Indexed; `FAIL`, `PARTIAL`
+and `NEUTRAL` are Not indexed; no verdict is No index verdict. gscdump reads URL Inspection
+results only for URLs a live sitemap lists, which the no result detail says.
 
 ## Search Console status and reports
 

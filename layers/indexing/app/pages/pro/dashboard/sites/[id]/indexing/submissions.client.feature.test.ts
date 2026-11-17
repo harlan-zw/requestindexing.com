@@ -114,30 +114,30 @@ beforeEach(() => {
   vi.clearAllMocks()
   engine.indexNowReceipts.mockResolvedValue({
     submissionReceipts: [
-      { id: 'in_2', _tag: 'accepted', trigger: 'automatic', urls: [PAGE_A, PAGE_B], createdAt: '2026-11-15T00:00:00.000Z', reason: null, retryAt: null },
-      { id: 'in_1', _tag: 'failed', trigger: 'manual', urls: [PAGE_A], createdAt: '2026-11-01T00:00:00.000Z', reason: 'rate-limited', retryAt: null },
+      { id: 'in_2', _tag: 'accepted', trigger: 'automatic', urls: [PAGE_A, PAGE_B], createdAt: '2026-11-15T12:00:00.000Z', reason: null, retryAt: null },
+      { id: 'in_1', _tag: 'failed', trigger: 'manual', urls: [PAGE_A], createdAt: '2026-11-01T12:00:00.000Z', reason: 'rate-limited', retryAt: null },
     ],
     pagination: { hasMore: false },
   })
   engine.googleReceipts.mockResolvedValue({
-    submissionReceipts: [{ id: 'g_1', _tag: 'accepted', url: JOB, createdAt: '2026-11-10T00:00:00.000Z' }],
+    submissionReceipts: [{ id: 'g_1', _tag: 'accepted', url: JOB, createdAt: '2026-11-10T12:00:00.000Z' }],
     pagination: { hasMore: false },
   })
   engine.connection.mockResolvedValue({
     _tag: 'connected',
     host: 'example.com',
     keyLocation: 'https://example.com/k.txt',
-    verifiedAt: '2026-11-14T00:00:00.000Z',
-    automaticSending: { _tag: 'on', since: '2026-11-14T00:00:00.000Z', lastCheck: { checkedAt: '2026-11-15T00:00:00.000Z', changedUrls: 2, sentUrls: 2, completeness: { _tag: 'complete' } } },
+    verifiedAt: '2026-11-14T12:00:00.000Z',
+    automaticSending: { _tag: 'on', since: '2026-11-14T12:00:00.000Z', lastCheck: { checkedAt: '2026-11-15T12:00:00.000Z', changedUrls: 2, sentUrls: 2, completeness: { _tag: 'complete' } } },
   })
   // `search` matches by substring upstream; PAGE_A's search also returns a longer URL.
   engine.indexingUrls.mockImplementation(async ({ query }: { query: { search: string } }) => ({
     urls: {
       [PAGE_A]: [
-        { url: `${PAGE_A}-old`, verdict: 'PASS', coverageState: 'Submitted and indexed', lastCheckedAt: '2026-11-17T00:00:00.000Z' },
-        { url: PAGE_A, verdict: 'PASS', coverageState: 'Submitted and indexed', lastCheckedAt: '2026-11-16T00:00:00.000Z' },
+        { url: `${PAGE_A}-old`, verdict: 'PASS', coverageState: 'Submitted and indexed', lastCheckedAt: '2026-11-17T12:00:00.000Z' },
+        { url: PAGE_A, verdict: 'PASS', coverageState: 'Submitted and indexed', lastCheckedAt: '2026-11-16T12:00:00.000Z' },
       ],
-      [PAGE_B]: [{ url: PAGE_B, verdict: 'NEUTRAL', coverageState: 'Crawled - currently not indexed', lastCheckedAt: '2026-11-12T00:00:00.000Z' }],
+      [PAGE_B]: [{ url: PAGE_B, verdict: 'NEUTRAL', coverageState: 'Crawled - currently not indexed', lastCheckedAt: '2026-11-12T12:00:00.000Z' }],
       [JOB]: [],
     }[query.search] ?? [],
     pagination: { hasMore: false },
@@ -166,7 +166,7 @@ describe('submissions page', () => {
 
   it('says the counts are partial when a channel had more receipts inside the window', async () => {
     engine.googleReceipts.mockResolvedValue({
-      submissionReceipts: [{ id: 'g_1', _tag: 'accepted', url: JOB, createdAt: '2026-11-10T00:00:00.000Z' }],
+      submissionReceipts: [{ id: 'g_1', _tag: 'accepted', url: JOB, createdAt: '2026-11-10T12:00:00.000Z' }],
       pagination: { hasMore: true },
     })
     const host = mount()
@@ -212,6 +212,35 @@ describe('submissions page', () => {
       'Submit with IndexNow': '/pro/dashboard/sites/kv1109/indexing/indexnow',
       'Open Sitemaps': '/pro/dashboard/sites/kv1109/indexing/sitemaps',
     })
+  })
+
+  it('marks one failed URL search on its own row and keeps the others', async () => {
+    const answer = engine.indexingUrls.getMockImplementation()!
+    engine.indexingUrls.mockImplementation(async (input: { query: { search: string } }) => {
+      if (input.query.search === PAGE_B)
+        throw new Error('rate limited')
+      return answer(input)
+    })
+    const host = mount()
+    await settle()
+    expect(row(host, PAGE_B).textContent).toContain('This result could not load. Retry to read it again.')
+    expect(row(host, PAGE_A).textContent).toContain('Indexed')
+    engine.indexingUrls.mockImplementation(answer)
+    const retry = [...card(host, 'Afterwards in Google').querySelectorAll('button')].find(button => button.textContent === 'Retry loading')!
+    retry.click()
+    await settle()
+    expect(row(host, PAGE_B).textContent).toContain('Not inspected since')
+  })
+
+  it('shows a failed IndexNow read in its card and retries it', async () => {
+    engine.connection.mockRejectedValueOnce(new Error('engine unavailable'))
+    const host = mount()
+    await settle()
+    const indexNow = card(host, 'IndexNow')
+    expect(indexNow.textContent).toContain('IndexNow setup could not load.')
+    indexNow.querySelector('button')!.click()
+    await settle()
+    expect(card(host, 'IndexNow').textContent).toContain('Key verified')
   })
 
   it('shows a failed receipt read and retries it', async () => {

@@ -26,34 +26,42 @@ const { state, total, urlsRoute } = defineProps<{
 const emit = defineEmits<{ retry: [] }>()
 
 const rows = computed(() => state._tag === 'ready' ? state.data : null)
+const someReadFailed = computed(() => rows.value?.some(row => row.outcome._tag === 'read-failed') ?? false)
 
-function outcomeBadge(outcome: SubmissionOutcome): { status: 'success' | 'warning' | 'neutral', label: string } {
+function outcomeBadge(outcome: SubmissionOutcome): { status: 'success' | 'warning' | 'error' | 'neutral', label: string } {
   switch (outcome._tag) {
     case 'indexed':
       return { status: 'success', label: SUBMISSIONS_COPY.outcomes.indexed }
     case 'not-indexed':
       return { status: 'warning', label: SUBMISSIONS_COPY.outcomes.notIndexed }
+    case 'no-verdict':
+      return { status: 'neutral', label: SUBMISSIONS_COPY.outcomes.noVerdict }
     case 'not-inspected-since':
       return { status: 'neutral', label: SUBMISSIONS_COPY.outcomes.notInspectedSince }
     case 'no-result':
       return { status: 'neutral', label: SUBMISSIONS_COPY.outcomes.noResult }
     case 'not-read':
       return { status: 'neutral', label: SUBMISSIONS_COPY.outcomes.notRead }
+    case 'read-failed':
+      return { status: 'error', label: SUBMISSIONS_COPY.outcomes.notRead }
   }
 }
 
-function outcomeDetail(outcome: SubmissionOutcome): string | null {
+function outcomeDetail(outcome: SubmissionOutcome): string {
   switch (outcome._tag) {
     case 'indexed':
+    case 'no-verdict':
       return afterwardsInspected(outcome.inspectedAt)
     case 'not-indexed':
       return [outcome.coverageState, afterwardsInspected(outcome.inspectedAt)].filter(Boolean).join('. ')
     case 'not-inspected-since':
       return afterwardsNotInspectedSince(outcome.inspectedAt)
+    case 'no-result':
+      return SUBMISSIONS_COPY.outcomes.noResultDetail
     case 'not-read':
       return SUBMISSIONS_COPY.outcomes.notReadDetail
-    case 'no-result':
-      return null
+    case 'read-failed':
+      return SUBMISSIONS_COPY.outcomes.readFailedDetail
   }
 }
 </script>
@@ -93,14 +101,19 @@ function outcomeDetail(outcome: SubmissionOutcome): string | null {
             </div>
             <div class="flex flex-wrap items-center gap-2 text-sm">
               <UiStatusBadge v-bind="outcomeBadge(row.outcome)" size="sm" />
-              <span v-if="outcomeDetail(row.outcome)" class="text-muted">{{ outcomeDetail(row.outcome) }}</span>
+              <span class="text-muted">{{ outcomeDetail(row.outcome) }}</span>
             </div>
           </div>
         </li>
       </ul>
-      <UiButton :to="urlsRoute" purpose="link" trailing-icon="next" class="mt-2 min-h-11">
-        View every inspected URL
-      </UiButton>
+      <div class="mt-2 flex flex-wrap gap-3">
+        <UiButton v-if="someReadFailed" purpose="secondary" class="min-h-11" @click="emit('retry')">
+          {{ SUBMISSIONS_COPY.retry }}
+        </UiButton>
+        <UiButton :to="urlsRoute" purpose="link" trailing-icon="next" class="min-h-11">
+          View every inspected URL
+        </UiButton>
+      </div>
     </template>
   </UiCard>
 </template>
