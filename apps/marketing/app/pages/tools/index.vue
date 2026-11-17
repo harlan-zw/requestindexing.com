@@ -61,7 +61,7 @@ const tools = [
             <span class="block italic text-primary">without the signup.</span>
           </h1>
           <p class="text-toned text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-            Three single-purpose tools to check, audit, and diagnose your Google indexing. No account, no email, no tracking.
+            Three single-purpose tools to check, audit, and diagnose your Google indexing. No account and no email.
           </p>
         </section>
       </UContainer>

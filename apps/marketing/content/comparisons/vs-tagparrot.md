@@ -22,7 +22,7 @@ If you used an API tool to submit ordinary articles, read [what to use for blog 
 
 ## For eligible job or livestream pages
 
-Request Indexing's [notification endpoint](https://github.com/harlan-zw/requestindexing.com/blob/cf640ac56542cca8850b2ce3ab773f35c8910e21/apps/app/server/api/indexing/%5Burl%5D.post.ts) sends Google Indexing API notifications directly. Before it sends one, it checks recent notification metadata and applies its own app limit. The [quota guide](/google-indexing-api-quota) explains how a tool's limit differs from Google's.
+Request Indexing sends Google Indexing API notifications from its [Submit to Google page](https://github.com/harlan-zw/requestindexing.com/blob/35342bb3b7afdbac9ffb445e2a0a8d1bacfa36e1/layers/indexing/app/pages/pro/dashboard/sites/%5Bid%5D/indexing/submit.vue). Each Site can send 5 a day, and a URL can be submitted again 7 days after Google accepts it. The [quota guide](/google-indexing-api-quota) explains how a tool's limit differs from Google's.
 
 You can also build your own client. The [setup tutorial](/google-indexing-api-tutorial) covers Google's documented service-account prerequisites and approval requirements.
 

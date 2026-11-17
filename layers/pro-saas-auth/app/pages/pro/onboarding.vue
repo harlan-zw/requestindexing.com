@@ -106,7 +106,7 @@ if (import.meta.client) {
 useRobotsRule(false)
 useSeoMeta({
   title: 'Get started',
-  description: 'Connect Google Search Console and start submitting pages for indexing.',
+  description: 'Connect Google Search Console and see which of your pages Google has indexed, and why the rest are not.',
 })
 </script>
 
@@ -127,7 +127,7 @@ useSeoMeta({
       <UiAuthHeading
         v-else
         title="Get your pages indexed"
-        description="Connect Google Search Console, then submit the pages Google has missed. Free during the beta."
+        description="Connect Google Search Console, then see which pages Google has missed, and why. Free during the beta."
       />
 
       <ProAlert

@@ -83,7 +83,7 @@ export const PRO_SHELL_COPY_OVERRIDES = {
       'connect': {
         label: 'Connect Google',
         title: 'Connect Google Search Console',
-        description: 'Request Indexing reads your Search Console data to find pages Google has missed, then submits them for you.',
+        description: 'Request Indexing reads your Search Console data to find pages Google has missed, and the reason Google gives for each.',
       },
       'sites': {
         label: 'Connect Sites',

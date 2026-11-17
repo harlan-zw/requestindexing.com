@@ -156,7 +156,7 @@ function toaster() {
 
     <template #left>
       <p class="text-muted text-sm">
-        Copyright © {{ currentYear }}. All rights reserved.
+        Copyright © {{ currentYear }} Harlan Wilton. MIT licensed.
       </p>
     </template>
 

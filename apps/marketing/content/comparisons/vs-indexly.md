@@ -20,7 +20,7 @@ If you want content automation and AI visibility reporting in one place, that br
 
 ## What Request Indexing implements
 
-Before it sends anything, the [notification endpoint](https://github.com/harlan-zw/requestindexing.com/blob/cf640ac56542cca8850b2ce3ab773f35c8910e21/apps/app/server/api/indexing/%5Burl%5D.post.ts) reads the URL's notification metadata. If it finds an update notification from the last 48 hours, it skips the publish. That window is an application policy. It tells you nothing about whether Google indexed the URL.
+Each Site can send 5 Submissions a day, as the [Submit to Google page](https://github.com/harlan-zw/requestindexing.com/blob/35342bb3b7afdbac9ffb445e2a0a8d1bacfa36e1/layers/indexing/app/pages/pro/dashboard/sites/%5Bid%5D/indexing/submit.vue) shows. After Google accepts a URL, you can submit that URL again after 7 days. Those limits are application policy. They tell you nothing about whether Google indexed the URL.
 
 Request Indexing also reads stored indexing information through gscdump. Its [MIT licensed source](https://github.com/harlan-zw/requestindexing.com/blob/main/LICENSE) is open to inspect. Self-hosting takes your own infrastructure and configuration, and this comparison did not confirm a one-click setup.
 
@@ -33,7 +33,7 @@ Request Indexing also reads stored indexing information through gscdump. Its [MI
 | How many requests can I send? | Each tool's own limit, and Google's project quota |
 | Will a notification prove indexing? | No. Check index status separately, for example with the free [Google Index Checker](/tools/google-indexing-checker) |
 
-Request Indexing is a free beta in the inspected code. Its tool limit is shared across your calls and is separate from Google's quota; [the quota guide](/google-indexing-api-quota) explains which limit applies. For Indexly's billing options, see its [pricing page](https://indexly.ai/pricing), and check the billing interval and included features before you pick a plan.
+Request Indexing is free during beta. Its Submission limit applies to each Site and is separate from Google's quota; [the quota guide](/google-indexing-api-quota) explains which limit applies. For Indexly's billing options, see its [pricing page](https://indexly.ai/pricing), and check the billing interval and included features before you pick a plan.
 
 ## Check your content type first
 
