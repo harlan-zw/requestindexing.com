@@ -23,7 +23,7 @@ describe('signup attribution', () => {
     expect(touch).toEqual({ _tag: 'campaign', landingPath, utmSource: 'docs', capturedAt: new Date(now).toISOString() })
     expect(parseSignupTouchCookie(JSON.stringify(touch))).toEqual(touch)
   })
-  it.each(['/pro', '/pro/other', '/api/x', '/admin', '/account', '/kit', '/team-invitations', '/privacy', '/terms', '/robots.txt', '/_ipx/w_800/image.png', '/two/segments'])('keeps %s out of the landing groups', (path) => {
+  it.each(['/pro', '/pro/other', '/api/x', '/admin', '/account', '/kit', '/team-invitations', '/privacy', '/terms', '/get-started', '/robots.txt', '/_ipx/w_800/image.png', '/two/segments'])('keeps %s out of the landing groups', (path) => {
     expect(captureSignupTouch({ path, query: { utm_source: 'docs' }, hostname: 'requestindexing.com', now })).toBeNull()
   })
   it('still reads a touch stored before the comparison group existed', () => {

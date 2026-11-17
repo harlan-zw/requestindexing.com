@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { isRuntimeOnlyRoute } from '~~/shared/routes'
+import { isRuntimeOnlyRoute, PERMANENT_REDIRECTS } from '~~/shared/routes'
 
 export const SIGNUP_TOUCH_COOKIE = 'pro-first-touch'
 const landingPaths = ['/', '/tools', '/guides', '/comparisons', '/pro/onboarding', '/pro/dashboard', '/login', '/auth'] as const
@@ -28,8 +28,8 @@ export interface SignupAttribution {
   referrerDomain?: string
 }
 
-/** Root pages that are not guides. `isRuntimeOnlyRoute` covers the app routes. */
-const nonGuidePages = new Set(['/privacy', '/terms'])
+/** Root paths that are not guides. `isRuntimeOnlyRoute` covers the app routes. */
+const nonGuidePages = new Set<string>(['/privacy', '/terms', ...Object.keys(PERMANENT_REDIRECTS)])
 function routeGroup(path: string): typeof landingPaths[number] | null {
   if (path === '/')
     return '/'
