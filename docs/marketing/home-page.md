@@ -106,6 +106,8 @@ Then: How to request indexing in Search Console; Can you use the Indexing API fo
 
 ### 8. Trust
 
+About half of signups stop at the Google connect step. This section answers that anxiety, so repeat its access line beside the Connect Google action on `/pro/onboarding`.
+
 Heading: **Who builds it, and what it can touch.**
 
 - **Open source, MIT.** Read every line on GitHub.

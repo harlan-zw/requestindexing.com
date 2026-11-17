@@ -2,7 +2,7 @@
 
 Status: 2026-11-17, branch `docs-marketing-baseline`. Live copy fixes in [#405](https://github.com/harlan-zw/requestindexing.com/pull/405).
 
-**Next move:** Harlan. Pick the H1 in `docs/marketing/home-page.md`, and read `/admin/funnel` for the last 30 days.
+**Next move:** Harlan. Pick the H1 in `docs/marketing/home-page.md`, and approve the email 01 replacement.
 
 Done means: the home page, onboarding emails, and listing text in production match `MARKETING.md`, and the metric has a measured baseline.
 
@@ -15,7 +15,9 @@ Done means: the home page, onboarding emails, and listing text in production mat
 - [ ] History past 16 months: the home page still promises it, and PRODUCT-05 records no retention SLA. Qualify it with the Free allowance, or cut it
 - [ ] `apps/marketing/public/skills/google-indexing/SKILL.md` never names IndexNow
 - [ ] Harlan picks the H1; the tagline and `COPY.md` canonical assets follow it
-- [ ] Read the admin funnel; set the metric baseline and the 60-day target
+- [x] Read the admin funnel; set the metric baseline and the 60-day target
+- [ ] Confirm the "Viewed Google evidence" event records; it has counted nobody since 2026-11-07
+- [ ] Find why about half of signups stop at the Google connect step
 - [ ] Send the flip-test question; record the counts in `docs/audits/`
 - [ ] Ship the home page plan behind the rank guard
 - [ ] Replace onboarding email 01 with the Watched URLs draft; add `{WATCHED_URLS_URL}`
@@ -29,3 +31,4 @@ Done means: the home page, onboarding emails, and listing text in production mat
 ## Log
 
 - 2026-11-17: Baseline written. #405 fixes twelve live truth-rule breaks; the ledger lists the rest. Admin funnel unread: the session had no admin sign-in. Absolute figures stay in Harlan's private notes because this repository is public.
+- 2026-11-17: Admin funnel read. Connect a Site is the metric, baseline 28% over 30 days. No account holds an API key, so agent surfaces leave Request Indexing marketing.

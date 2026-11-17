@@ -28,9 +28,9 @@ No guide gives an indexing timeframe. Claims cite `apps/marketing/content/VERIFI
 
 ## 2. Onboarding emails
 
-The drip has three emails. Emails 00 and 02 fit MARKETING.md. Email 01 leads with agents. Almost none of gscdump's MCP accounts came through Request Indexing, and the API key path is unmeasured.
+The drip has three emails. Emails 00 and 02 fit MARKETING.md. Email 01 leads with agents. No account in the last 90 days holds an active API key, and almost none of gscdump's MCP accounts came through Request Indexing.
 
-**Proposal: replace `onboarded/01-agent-setup.md` with the draft below, if the admin agent view from #400 shows few Request Indexing accounts using an API key.** Keep the Developers page in the product; it stops being an email.
+**Proposal: replace `onboarded/01-agent-setup.md` with the draft below.** Keep the Developers page in the product; it stops being an email.
 The draft needs a `{WATCHED_URLS_URL}` token in `layers/pro-saas/server/utils/email-template.ts`.
 
 ```markdown

@@ -46,7 +46,7 @@ Request Indexing does not own the reason; Search Console shows it. It owns the r
 - Growth needs more cues: Search Console's button, the reason pages, and the index checker.
 
 **8. Agents are gscdump's shelf.** (P10; A benchmark, C field)
-Tool descriptions and directory text drive agent selection. Almost none of gscdump's MCP accounts came through Request Indexing. The API key path is unmeasured.
+Tool descriptions and directory text drive agent selection. No Request Indexing account in the last 90 days holds an active API key, and almost none of gscdump's MCP accounts came through it.
 Request Indexing links to gscdump once and spends no marketing effort on agent surfaces.
 
 ## Advisor reviews
@@ -59,12 +59,13 @@ Three independent Fable advisors read the same evidence brief on 2026-11-17. Con
 | Evidence and science | Owners of 1 to 10 Sites who already pressed Google's button, mostly outside the US (65) | Keep the action words; refuse the guarantee in the promise, never at the search door | The strongest cues are the ones the product cannot honestly serve |
 | Contrarian | The non-technical owner or freelancer with a new or small site (60) | "Request indexing. Then see what Google decided." | Agent surfaces contradict "Not for agent operators"; the boundary with gscdump is the interface, not Site count |
 
-**Where they agree:** the current "indie developer" audience is unsupported; the H1 breaks the file's own promise rule; agent surfaces do not belong in Request Indexing marketing; no funnel data was read.
+**Where they agree:** the current "indie developer" audience is unsupported; the H1 breaks the file's own promise rule; agent surfaces do not belong in Request Indexing marketing. The advisors had no funnel data. The funnel read afterwards supports them: 9 in 10 signups use a consumer email, most have one Site, and no account holds an API key.
 **Where they differ:** how much of the head term the H1 keeps. `docs/marketing/home-page.md` sets a rank guard for that risk.
 
 ## Gaps
 
-- No Request Indexing funnel data: connect rate, first evidence view, return use, signup source.
-- No role data. Country and query mix suggest site owners; nothing measures it.
+- Return use, and whether the first evidence view records.
+- Signup source covers about 5% of signups.
+- No role data. Consumer email addresses, single Sites, and the country mix suggest individual owners; nothing measures it.
 - About 20 customer messages across two years.
 - US-only keyword volumes.

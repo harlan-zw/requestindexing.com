@@ -44,7 +44,7 @@ Paid usage past the Free allowance comes later. When it does, Request Indexing c
 
 ## Who it is for
 
-The person who published a page and wants it found. In practice: site owners who asked Google to index a page, saw nothing happen, and now want the reason. They run one to ten Sites, often a blog, a small business, or a client's Site, and do not want another dashboard with a query builder in it. Most arrive from search, and most search clicks come from outside the US. `MARKETING.md` holds the evidence and the test that could change this.
+The person who published a page and wants it found. In practice: site owners who asked Google to index a page, saw nothing happen, and now want the reason. Most run one Site, often a blog, a small business, or a client's Site, and do not want another dashboard with a query builder in it. Most arrive from search, and most search clicks come from outside the US. `MARKETING.md` holds the evidence and the test that could change this.
 
 The agent operator is served by gscdump directly, through MCP and the CLI. The boundary is the interface: a screen here, an agent there. That is a feature of the split, not a gap here.
 

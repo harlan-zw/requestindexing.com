@@ -18,10 +18,12 @@ Absolute traffic, account counts, gscdump figures, and customer messages stay in
 3. **Arrivals want an action.** They search to request, submit, or "get indexed". The product answers whether a page is indexed and why.
 4. **Most clicks come from outside the US.** India brings 21% of clicks, the USA 16%, then Iran, the UK, Bangladesh, and Pakistan.
 5. **The category is small in US search.** "request indexing" has about 140 US searches a month. "url inspection tool" has about 1,300.
-6. **Request Indexing is the largest source of gscdump accounts,** and almost none of gscdump's MCP users came through it. Agent use through a Request Indexing API key is unmeasured.
+6. **Request Indexing is the largest source of gscdump accounts,** and nobody uses it as an agent door. No account in the 90-day cohort holds an active API key, and almost none of gscdump's MCP users came through it.
 7. **Customers write about one problem.** Their pages, sometimes a whole Site, are not indexed and they do not know why. Older messages report submissions or connections that failed.
+8. **About half of signups never connect Google.** Under a third connect a Site.
+9. **They are individual site owners.** 9 in 10 sign in with a consumer email address. Of the accounts with a Site, about 8 in 10 have exactly one.
 
-**Gap:** the admin funnel was not read. It needs the owner's admin sign-in. Signup source, connect rate, first evidence view, and return use are unmeasured here.
+**Gaps:** signup source is captured for about 5% of signups. The first evidence view has recorded no account since its instrumentation began on 2026-11-07. Return use is not measured.
 
 ---
 
@@ -92,6 +94,22 @@ Source: DataForSEO through `nuxtseo research keywords`, November 2026. Monthly U
 
 **Limit:** US only. Most clicks come from elsewhere, so global demand is higher.
 
+## Funnel
+
+Source: `/admin/funnel` and per-account integration activity, read as an administrator on 2026-11-17. Window: 2026-08-19 to 2026-11-17.
+
+| Stage | Share of signups, 90 days | Share of signups, 30 days |
+|---|---|---|
+| Connected Google | 58% | 52% |
+| Connected a Site | 30% | 28% |
+
+- **Who signs up:** 91% use a consumer email address, and 87% of the accounts that connect a Site do.
+- **How many Sites:** of the accounts with a Site, 83% have one. The rest have two or three.
+- **Agents:** no gscdump-linked account in the cohort holds an active API key or reports a skill. gscdump does not report MCP or CLI success per partner account.
+- **First evidence view:** no account recorded since the event began on 2026-11-07. Either no new Site had URL Inspection evidence yet, or the event does not record. Check it before using it as the metric.
+- **Source:** captured for about 5% of signups. The home page is the most common landing. ChatGPT, Google, Bing, and DuckDuckGo each referred a few.
+- **About you:** no signup in 30 days answered the optional questions.
+
 ## Voice of the customer
 
 About 20 support emails and GitHub issues, 2024 to 2026. A small sample. Paraphrased.
@@ -110,10 +128,10 @@ Nobody wrote about history past 16 months, comparisons across Sites, or agents.
 
 ## What this snapshot cannot tell
 
-- The connect rate, first evidence view, and return use since the onboarding wizard shipped on 2026-09-15.
-- Where signups came from. Signup attribution exists and was not read.
-- Agent use through a Request Indexing API key. The admin view from #400 measures it and was not read.
-- The role of each arrival: developer, site owner, freelancer, or agency.
+- Return use, and whether the first evidence view records.
+- Where most signups came from. Attribution covers about 5%.
+- Why half of signups stop before connecting Google.
+- The role of each arrival. Consumer email addresses suggest individual owners; nothing measures it.
 - Whether the free tools lead to signups.
 
 ## Method

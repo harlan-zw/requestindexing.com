@@ -23,15 +23,17 @@ From [the customer evidence](docs/audits/2026-11-17-customer-evidence.md):
 - **They search for an action.** "request indexing" and its variants bring at least 37% of all clicks. They want Google to index a page.
 - **Most are outside the US.** India brings 21% of clicks, the USA 16%, then Iran, the UK, Bangladesh, and Pakistan.
 - **They write about one problem.** Their pages are not indexed, a whole Site at times, and they do not know why.
-- **Almost none use gscdump's MCP.** Agent use through a Request Indexing API key is unmeasured.
+- **They are individual site owners.** 9 in 10 sign in with a consumer email address. Of the accounts with a Site, about 8 in 10 have exactly one.
+- **About half never connect Google.** Under a third connect a Site.
+- **Nobody uses it as an agent door.** No account in the last 90 days holds an active API key.
 - **Search is steady and flat** for 16 months.
 
-**Gap.** Connect rate, first evidence view, return use, and agent use are unmeasured. The admin funnel holds them. Read it before you trust the audience below.
+**Gap.** Return use is unmeasured, signup source covers about 5% of signups, and the first evidence view has recorded nobody since it began on 2026-11-07.
 
 ## Who it is for
 
 **The smallest viable audience is the site owner who asked Google to index a page, saw nothing happen, and now wants the reason.**
-They run one to ten Sites: a blog, a small business, a store, a client's Site. Many write English as a second language.
+Most run one Site: a blog, a small business, a store, a client's Site. Many write English as a second language.
 
 **Worldview.** Most arrive believing indexing is a button. The ones we serve hold, or are ready to hold:
 - Google decides what it indexes. A tool that promises otherwise is not telling the truth.
@@ -44,7 +46,7 @@ We meet the search where it is, then turn it.
 **People like us** check what Google decided, fix the cause, and stop resubmitting and hoping.
 A freelancer or small agency can give a client the reason, with its date.
 
-**This is a bet.** It rests on search data and about 20 messages, not on funnel data. The flip test below checks it.
+**This is a bet.** It rests on search data, the funnel, and about 20 messages. The funnel shows who signs up, not why. The flip test below checks why.
 
 **Not for.** Marketing never chases them. Saying so is a kindness, and a signal to the people it is for (Godin).
 
@@ -139,7 +141,7 @@ The cues that bring someone to us, ranked by the evidence. Each needs a page tha
 ## Forces and status
 
 - **Push:** the page is missing, the button did nothing, and no reason appeared. **Pull:** each sitemap URL's verdict and reason in one list.
-- **Anxiety:** Google access for a one-person tool, past connect failures, "will this project last?". **Habit:** the Search Console button, `site:` searches, paid indexers.
+- **Anxiety:** Google access for a one-person tool, past connect failures, "will this project last?". About half of signups stop at the Google connect step. **Habit:** the Search Console button, `site:` searches, paid indexers.
 - **Reduce anxiety first; it costs least.** Name the access we ask for, show the source, and say who builds it.
 - **Status is affiliation, not dominance.** The person wants to be the one who knows what happened and was not fooled by a trick.
 
@@ -172,17 +174,17 @@ The cues that bring someone to us, ranked by the evidence. Each needs a page tha
 | Free Google Index Checker | 50 | B | Ranks poorly | Improve rank on one tool |
 | Help communities where owners ask "why not indexed" | 45 | C | Unused | Answer generously, Harlan's name, disclosed |
 | nuxtseo.com, gscdump.com, Harlan's channels | 40 | C | Family links exist | Developers spread it; they are not the audience |
-| Agent directories and MCP | Unscored | C | Unmeasured | gscdump's shelf until the admin agent view says otherwise |
+| Agent directories and MCP | 0 | B | No account holds an API key | gscdump's shelf, not ours |
 
 **Rejects:** paid ads before people return, cold outreach, "instant indexing" listicles, link schemes, and any forum that sells indexing tricks.
 
 ## The metric
 
-**New accounts that view Google's evidence for one of their own pages within 7 days of signup.**
-The admin funnel records it as "Viewed Google evidence" (`docs/runbooks/signup-funnel.md`).
+**The share of signups in a 30-day window that connect a Site.** Read it in `/admin/funnel` (`docs/runbooks/signup-funnel.md`).
 
-- Baseline: unread. Read `/admin/funnel` for the last 30 days, then set the 60-day target.
-- Proxy until then: gscdump accounts per month with Request Indexing as their token source. The October 2026 count is in the private evidence note.
+- Baseline: 28%, 2026-10-19 to 2026-11-17.
+- Target: 40% for the window ending 2027-01-16. Most of the loss is at the Google connect step, where anxiety is cheapest to move.
+- Next metric: the first view of Google's evidence for one of their own pages. It has recorded nobody since 2026-11-07. Confirm the event records, then switch.
 
 ## Flip test
 
@@ -219,5 +221,5 @@ Product surfaces follow the registers in COPY.md. Every claim names its number o
 Resolve one, fold it in above, then delete it here.
 
 1. **The H1.** "Get your pages indexed." promises the outcome this file forbids. `docs/marketing/home-page.md` proposes three replacements.
-2. **Agent surfaces.** The second onboarding email and the footer "Set up an agent" lead with agents. This file says never lead with agents. Read the admin agent view from #400 first: if Request Indexing accounts use the API key path, keep them.
-3. **The funnel read.** Who connects, who returns, and where they came from. Until then the audience is a bet.
+2. **Agent surfaces.** The second onboarding email and the footer "Set up an agent" lead with agents, and no account holds an API key. `docs/marketing/channel-kit.md` drafts the replacement email.
+3. **The Google connect step.** About half of signups stop there. Nothing records why.
