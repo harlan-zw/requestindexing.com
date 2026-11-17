@@ -51,7 +51,7 @@ Use the approval form linked from [Google's quota page](https://developers.googl
 
 ## A tool can impose another limit
 
-Request Indexing's inspected implementation sets a limit of 100 requests per day per authenticated user, shared across that user's tool calls and reset at midnight UTC. It also applies a per-minute limiter. That app policy is separate from Google's project quota, and it does not promise a customer 200 successful submissions daily. [Inspect the policy at the reviewed revision](https://github.com/harlan-zw/requestindexing.com/blob/cf640ac56542cca8850b2ce3ab773f35c8910e21/layers/pro-saas/server/utils/rate-limit.ts).
+Request Indexing lets each Site send 5 Submissions a day. After Google accepts a URL, you can submit that URL again after 7 days. That app policy is separate from Google's project quota, and it does not promise that Google accepts every Submission. [Inspect the policy at the reviewed revision](https://github.com/harlan-zw/requestindexing.com/blob/35342bb3b7afdbac9ffb445e2a0a8d1bacfa36e1/layers/indexing/app/pages/pro/dashboard/sites/%5Bid%5D/indexing/submit.vue).
 
 Any other tool can add a limit of its own. When you [compare Request Indexing with Indexly](/comparisons/vs-indexly), check each tool's limit and Google's project quota together.
 

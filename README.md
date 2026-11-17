@@ -27,11 +27,11 @@ Connect Search Console, see which pages are indexed and which are not, and submi
 ## What it does
 
 - 🔍 **Indexing status per URL**: what Google has indexed, what it has not, and the stated reason
-- 📤 **Submission**: push new and updated URLs to every engine the protocol supports
+- 📤 **Submission**: send job posting and livestream URLs to Google's Indexing API, and any URL to IndexNow for Bing and other participating engines
 - 📈 **Coverage over time**: index percentage, transitions, and what changed since last week
 - 🗺️ **Sitemaps**: what you declared, what was discovered, what drifted
 - 📊 **The regular Search Console reads**: queries, pages, countries, devices, kept past Google's 16-month window
-- 🔓 **MIT + self-host**: same app, your Cloudflare account, your keys
+- 🔓 **MIT**: read it, fork it, or run your own copy on Cloudflare. A copy still uses the hosted gscdump engine
 
 ## What it is not
 
@@ -44,7 +44,7 @@ This is a small product on purpose. It does not do AI crawler observability, LLM
 - Cloudflare Workers, D1, R2, Queues
 - DataForSEO for keyword data
 
-Engine features land here by upgrading the gscdump protocol, not by rebuilding them. IndexNow and Bing Webmaster Tools arrive that way when gscdump ships them.
+Engine features land here by upgrading the gscdump protocol, not by rebuilding them. IndexNow arrived that way. Bing submission arrives the same way when gscdump ships it.
 
 ## Run locally
 

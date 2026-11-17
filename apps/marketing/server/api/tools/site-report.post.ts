@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
     recommendations.push({
       type: 'warning',
       title: 'Low index coverage',
-      description: `Only ${overview.estimatedIndexedPages} pages found in Google's index. Consider adding more quality content and submitting URLs via the Indexing API.`,
+      description: `A Google site: search estimates ${overview.estimatedIndexedPages} indexed pages. Check that your sitemap lists every page, and link new pages from pages Google already indexed.`,
     })
   }
 
@@ -78,8 +78,8 @@ export default defineEventHandler(async (event) => {
   if (overview.estimatedIndexedPages > 0) {
     recommendations.push({
       type: 'info',
-      title: 'Submit unindexed pages via Indexing API',
-      description: 'Use Request Indexing to submit your unindexed pages directly to Google for faster crawling and indexing.',
+      title: 'See why pages are not indexed',
+      description: 'Connect Search Console to see the reason Google gives for each URL. Google documents its Indexing API for job posting and livestream pages only.',
     })
   }
 

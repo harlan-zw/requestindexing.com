@@ -375,7 +375,7 @@ function exportCsv() {
               {{ result.summary.notIndexed }} pages not indexed
             </h3>
             <p class="text-sm text-[var(--ui-text-muted)] mb-3">
-              Job posting or livestream pages? Request Indexing can send Google Indexing API notifications for them, up to Google's default 200 publish requests a day. For other pages, submit a sitemap in Search Console.
+              Job posting or livestream pages? Request Indexing can send Google Indexing API notifications for them. For other pages, submit a sitemap in Search Console.
             </p>
             <UButton to="/pro/onboarding" color="primary" trailing-icon="i-heroicons-arrow-right">
               Get Started Free
