@@ -2,7 +2,7 @@
 
 Status: 2026-11-17, branch `docs-marketing-baseline`. Live copy fixes in [#405](https://github.com/harlan-zw/requestindexing.com/pull/405).
 
-**Next move:** Harlan. Pick the H1 in `docs/marketing/home-page.md`, and approve the email 01 replacement.
+**Next move:** Ready. Build automatic IndexNow in gscdump, then ship the home page sub-headline.
 
 Done means: the home page, onboarding emails, and listing text in production match `MARKETING.md`, and the metric has a measured baseline.
 
@@ -14,13 +14,16 @@ Done means: the home page, onboarding emails, and listing text in production mat
 - [x] Twelve live truth-rule breaks fixed (#405)
 - [ ] History past 16 months: the home page still promises it, and PRODUCT-05 records no retention SLA. Qualify it with the Free allowance, or cut it
 - [ ] `apps/marketing/public/skills/google-indexing/SKILL.md` never names IndexNow
-- [ ] Harlan picks the H1; the tagline and `COPY.md` canonical assets follow it
+- [x] H1 decided 2026-11-17: keep "Get your pages indexed." and say what each engine does under it
+- [x] Audience decided 2026-11-17: the long tail comes in free; multi-Site operators pay later
+- [ ] Automatic IndexNow: send new and changed sitemap URLs once the key is verified (gscdump engine work, then a setting here)
+- [ ] Contact the people who paid for the old Pro plan (deferred 2026-11-17)
 - [x] Read the admin funnel; set the metric baseline and the 60-day target
 - [ ] Confirm the "Viewed Google evidence" event records; it has counted nobody since 2026-11-07
 - [ ] Find why about half of signups stop at the Google connect step
 - [ ] Send the flip-test question; record the counts in `docs/audits/`
 - [ ] Ship the home page plan behind the rank guard
-- [ ] Replace onboarding email 01 with the Watched URLs draft; add `{WATCHED_URLS_URL}`
+- [ ] Replace onboarding email 01 with the IndexNow setup email (approved 2026-11-17)
 - [ ] Decide the footer "Set up an agent" link and the dashboard Setup offers that lead with agents
 - [ ] Write the reason guides, starting with `/why-is-my-page-not-indexed`
 - [ ] Move the listing text into `COPY.md`, then onto family sites and directories

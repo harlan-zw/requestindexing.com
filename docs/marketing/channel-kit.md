@@ -22,39 +22,41 @@ No guide gives an indexing timeframe. Claims cite `apps/marketing/content/VERIFI
 | 3 | New: `/why-is-my-site-not-indexed` | My whole Site is missing | A customer email about a Site with no indexed URLs | The new-Site case: sitemap, internal links, Search Console property, robots.txt, noindex |
 | 4 | New: one page per reason, starting with `crawled-currently-not-indexed` and `discovered-currently-not-indexed` | Why is this URL out? | 30 and 20 US searches a month; global volume higher. GOOGLE-19 already holds Google's statement on the first | Two pages first. Add a reason only when Search Console shows impressions for it |
 | 5 | `/tools/google-indexing-checker` | Is this page indexed? | "index checker": 720 US searches a month. The tools have about 10 clicks in 90 days | Put "Google index checker" in the title and H1. Keep the estimate label |
-| 6 | New: `/indexnow` guide | Submit to Bing | One GitHub issue. The product ships IndexNow (PRODUCT-10) | Last. Write it when the first five are live |
+| 2b | New: `/indexnow` guide | Submit to Bing; IndexNow | The H1 now leans on IndexNow (decided 2026-11-17). The product ships it (PRODUCT-10) | Write with item 2. Cover the key file on WordPress, Cloudflare (Crawler Hints), Nuxt, and static hosts. Name any platform that cannot host the file |
 
 **Cut nothing that exists.** The six Indexing API guides earn most clicks outside the home page and answer a real cue. They move below the diagnosis guides on the home page and in the header.
 
 ## 2. Onboarding emails
 
-The drip has three emails. Emails 00 and 02 fit MARKETING.md. Email 01 leads with agents. No account in the last 90 days holds an active API key, and almost none of gscdump's MCP accounts came through Request Indexing.
+The drip has three emails. Emails 00 and 02 fit MARKETING.md. Email 01 led with agents. No account in the last 90 days holds an active API key, and almost none of gscdump's MCP accounts came through Request Indexing.
 
-**Proposal: replace `onboarded/01-agent-setup.md` with the draft below.** Keep the Developers page in the product; it stops being an email.
-The draft needs a `{WATCHED_URLS_URL}` token in `layers/pro-saas/server/utils/email-template.ts`.
+**Decided 2026-11-17: email 01 sets up IndexNow.** Keep the Developers page in the product; it stops being an email.
+Harlan approved the draft below. Its line about automatic sending stays out until automatic IndexNow ships; until then the email says the reader sends pages from the IndexNow page.
 
 ```markdown
 ---
-subject: "What Google's Request Indexing button does"
+subject: "Send your pages to Bing"
 delayHours: 72
 ---
 
 Hi {firstName},
 
-Many people find Request Indexing after they press Google's own button. It is in Search Console, under URL Inspection.
+Google reads your sitemap on its own schedule. Bing and several other search engines take a direct notice through IndexNow.
 
-That button asks Google to crawl one URL. It does not make Google index the page. Google still decides, and it does not say when.
+It needs one step on your side: a small text file on your site, so the engines know the notice came from you.
 
-So the useful step is to watch what happens next. Add the pages you asked Google about to Watched URLs. Request Indexing inspects them on a schedule and keeps each result, with the reason Google gives.
+Open Indexing, choose your Site, then select IndexNow:
 
-{WATCHED_URLS_URL}
+{INDEXING_URL}
 
-If a page stays out, the reason tells you what to fix. My next email shows the fix I try first for each reason.
+After that, you can send your new and changed pages from that page. Each engine still decides what it indexes.
 
-If something is unclear, reply to this email. It comes straight to me.
+If the key file step is unclear, reply with your Site's platform. I'll tell you where the file goes.
 
 Harlan
 ```
+
+When automatic IndexNow ships, replace the "After that" line with the approved one: "After that, Request Indexing sends your new and changed pages for you. Each engine still decides what it indexes."
 
 ## 3. The flip-test question
 

@@ -1,20 +1,20 @@
 ---
 scope: the proposed home page, section by section, written from MARKETING.md
-status: proposal. Nothing here ships until Harlan picks the H1. Canonical strings move to COPY.md first.
+status: proposal. The H1 stays, decided 2026-11-17. Canonical strings move to COPY.md first.
 current: apps/marketing/app/pages/index.vue
 ---
 
 # Home page
 
 The home page takes about 90% of search clicks. Most arrivals typed "request indexing".
-It meets that search, then turns it: you asked Google, here is what Google decided.
+It keeps the job in the H1, then says what each engine does: IndexNow tells Bing and others now, and Google's reason shows when it says no.
 
 ## What changes, and why
 
 | Section today | Move | Why |
 |---|---|---|
-| H1 "Get your pages indexed." | Replace | It promises the outcome. MARKETING.md and VISION say the product never promises indexing |
-| Sub-H1 about the Indexing API and 16-month history | Replace | Two features before the answer. The arrival wants the reason |
+| H1 "Get your pages indexed." | Keep | It names the job. The copy under it says what each engine does (decided 2026-11-17) |
+| Sub-H1 about the Indexing API and 16-month history | Replace | Two features before the job. Lead with IndexNow and Google's reason |
 | Bento led by "Notify Google directly" | Demote to one card | The API covers job posting and livestream pages only, a small share of arrivals |
 | "How it works", four steps | Keep, rewrite step 3 | Submission is one channel among three, and the record is the point |
 | Free tools | Keep | Permission order: a gift before signup |
@@ -27,16 +27,15 @@ It meets that search, then turns it: you asked Google, here is what Google decid
 
 ### 1. Hero
 
-**H1, pick one** (Harlan decides; recommendation first):
-
-1. **Requested indexing? See what Google decided.** Keeps the search words. Names the audience: people who already pressed the button. Confidence 60.
-2. **Request indexing. Then see what Google decided.** Keeps the exact head term. Reads as an instruction to use us for the request, which we only partly serve. Confidence 50.
-3. **Why Google has not indexed your page.** Clearest promise. Drops the head term from the H1. Confidence 45.
+**H1:** Get your pages indexed. (unchanged)
 
 The meta title stays: "Request Google Indexing and See Why Pages Are Not Indexed". It carries the search words and ranks about 3.
 
-**Sub-headline:**
-> Request Indexing checks the URLs in your sitemaps with Google's URL Inspection. See which pages Google indexed, the reason it gives for the rest, and what changed since last week.
+**Sub-headline, today:**
+> Send new pages to Bing and other search engines with IndexNow. See which pages Google indexed, and the reason it gives for the rest.
+
+**Sub-headline, once automatic IndexNow ships:**
+> Request Indexing sends your new and changed pages to Bing and other search engines with IndexNow. For Google, see which pages it indexed, and the reason it gives for the rest.
 
 **Two-sided line, once, after the promise:**
 > Nobody can force Google to index a page. Request Indexing shows what Google decided, and why.
@@ -76,13 +75,13 @@ Action: **See this for your Site** → `/pro/onboarding`
 
 ### 4. What you get
 
-Five cards, equal weight:
+Five cards, equal weight. Put the IndexNow card first:
 
 - **Your sitemap URLs, with their reasons.** URL Inspection results on a schedule, within your Free allowance.
 - **What changed.** Coverage over time, and the URLs that moved since last week.
 - **Watched URLs.** Pages you choose, inspected on a schedule, with a record of each result.
 - **Sitemaps.** What you declared, what Google discovered, and what drifted.
-- **Submit where it is supported.** IndexNow for Bing and other participating engines. Google's Indexing API for job posting and livestream pages.
+- **Submit where it is supported.** IndexNow for Bing and other participating engines, any page type. Google's Indexing API for job posting and livestream pages.
 
 One line under the cards: "Request Indexing also keeps your Search Console history past Google's 16-month window."
 
@@ -138,4 +137,4 @@ Run for two weeks after the change. Compare with the two weeks before.
 - New accounts that view Google's evidence within 7 days (admin funnel).
 - Clicks and position for "request indexing" (Search Console).
 
-If the position for "request indexing" drops below 5, restore the head term to the H1.
+If the position for "request indexing" drops below 5, revert the sub-headline first; the H1 is unchanged.

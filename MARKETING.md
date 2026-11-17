@@ -32,8 +32,12 @@ From [the customer evidence](docs/audits/2026-11-17-customer-evidence.md):
 
 ## Who it is for
 
-**The smallest viable audience is the site owner who asked Google to index a page, saw nothing happen, and now wants the reason.**
-Most run one Site: a blog, a small business, a store, a client's Site. Many write English as a second language.
+**The smallest viable audience is the site owner who published pages and wants them found, and who wants the reason when a page is missing.**
+Most run one Site: a small SaaS, a local business, niche content, a blog. Many write English as a second language.
+
+**Two tiers, decided 2026-11-17.** The long tail comes in free. Multi-Site operators pay later.
+- **The door:** the one-Site owner. Hand review of the Sites connected since 2026-09-15 found small SaaS and startups, local businesses, niche and affiliate content, and blogs on free hosts, in that order.
+- **The payer:** the operator with several Sites who wants indexing to run without them. The old Pro plan sold more Sites, more indexing requests, and promised automatic indexing; over a quarter of the old waitlist paid for it, most with business email addresses.
 
 **Worldview.** Most arrive believing indexing is a button. The ones we serve hold, or are ready to hold:
 - Google decides what it indexes. A tool that promises otherwise is not telling the truth.
@@ -72,9 +76,11 @@ Request Indexing is the largest source of gscdump accounts. A person who asks fo
 
 > Request Indexing is for site owners who believe Google decides what it indexes, and that a status without a reason is no answer.
 > It focuses on people who want the truth about their own pages, not a shortcut.
-> It promises the record: which pages Google indexed, the reason it gives for the rest, and what changed.
+> It promises two things: every engine that takes a notice hears about your new pages, and you see what Google decided, with its reason.
 
-Every surface is a smaller version of this promise. It never promises indexing.
+Every surface is a smaller version of this promise.
+
+**The H1 names the job: "Get your pages indexed."** Decided 2026-11-17. The copy under it says what each engine does: IndexNow notifies Bing and other participating engines; Google reads your sitemap on its own schedule, and Request Indexing shows its reason. No surface promises that Google indexes a page, and none gives a timeframe.
 
 ## Positioning
 
@@ -88,7 +94,8 @@ Dunford's order: alternatives, what only we have, the value, who cares most, the
 | Paid submit-only indexers | A button, a promise nobody can keep, and nothing after the click |
 | Waiting | Nothing |
 
-- **Only here:** the URLs in your sitemaps inspected on a schedule, within your Free allowance, with each reason and change kept. Watched URLs. Free and MIT.
+- **Only here:** the URLs in your sitemaps inspected on a schedule, within your Free allowance, with each reason and change kept. IndexNow from the same dashboard. Watched URLs. Free and MIT.
+- **Next, and not claimed until it ships:** new and changed sitemap URLs sent to IndexNow automatically once the key is verified. This is the automatic indexing the old Pro plan promised.
 - **Not unique, and we say so:** the reason itself. Search Console shows it one URL at a time.
 - **Value:** you learn which pages Google refused, and when that changed, without inspecting them one by one.
 - **Category:** a Google indexing checker that keeps the record. "Indexing tool" implies forcing; never use it.
@@ -109,7 +116,7 @@ quadrantChart
   Request Indexing: [0.85, 0.85]
 ```
 
-**Rejects:** "faster indexing", "more engines", and "more data" campaigns. Each is a race on one axis.
+**Rejects:** "faster indexing" and "more data" campaigns. Each is a race on one axis. "More engines" is allowed only for engines the product notifies today.
 
 ## The tension, used honestly
 
@@ -118,7 +125,7 @@ The tension is true for every arrival: a page they published is not in Google, a
 It releases when they read the reason Google gives.
 
 **Rules:**
-- **Meet the search, then turn it.** Keep the words people type in titles. Promise the answer, never the outcome.
+- **Meet the search, then turn it.** Keep the words people type in titles and the H1. Under them, say what each engine does.
 - **Say the limit once per page, after the promise, as a fact about Google.** Follow it at once with what we do: "Nobody can force Google to index a page. Request Indexing shows what Google decided, and why." Two-sided messages raise trust when the limit is stated plainly and the positive follows (Eisend 2006, A).
 - **Show where Google's own button is.** URL Inspection in Search Console. Pointing to a free alternative is the generous act.
 - **A Submission is a notification Google accepted,** never proof of indexing.
@@ -136,7 +143,7 @@ The cues that bring someone to us, ranked by the evidence. Each needs a page tha
 | "Is this page indexed?" | "index checker" 720 US searches a month | Free Google Index Checker | Ranks poorly |
 | "Why is my page or Site not indexed?" | The clearest customer email | One guide per Google reason | No page yet |
 | "Can I use the Indexing API?" | 260 US searches a month | Indexing API guides | Yes |
-| "Submit to Bing" | One GitHub issue | IndexNow page, in the dashboard | The product ships IndexNow; no marketing page names it |
+| "Submit to Bing", "IndexNow" | One GitHub issue; Bing and other engines take IndexNow | IndexNow page, a guide, the home page | The product ships IndexNow; no marketing page names it yet |
 
 ## Forces and status
 
@@ -171,6 +178,7 @@ The cues that bring someone to us, ranked by the evidence. Each needs a page tha
 | The "request indexing" search, home page | 70 | B | Proven, flat | Keep the words, change the promise |
 | How-to pages for queries at positions 7 to 12 | 65 | B | Pages exist, win few clicks | Rewrite the Search Console guide first |
 | One guide per Google reason | 60 | B/C | No pages | Write the whole-Site case first |
+| IndexNow on the home page and in a setup guide | 55 | C | Product ships it, marketing silent | Name it under the H1; write the key file guide for common platforms |
 | Free Google Index Checker | 50 | B | Ranks poorly | Improve rank on one tool |
 | Help communities where owners ask "why not indexed" | 45 | C | Unused | Answer generously, Harlan's name, disclosed |
 | nuxtseo.com, gscdump.com, Harlan's channels | 40 | C | Family links exist | Developers spread it; they are not the audience |
@@ -202,7 +210,7 @@ Before any page, post, launch, or email ships, answer each question in one line:
 
 1. **Who is it for?** Name the audience from this file.
 2. **What change does it move?** Name the line from "The change we seek to make".
-3. **Does it fit the promise?** It never promises indexing.
+3. **Does it fit the promise?** It never promises that Google indexes a page, and gives no timeframe.
 4. **Is the tension true?** Point to VISION.md or the truth rules in COPY.md.
 5. **What is the one action?** Exactly one, and it happens inside Request Indexing.
 
@@ -220,6 +228,6 @@ Product surfaces follow the registers in COPY.md. Every claim names its number o
 
 Resolve one, fold it in above, then delete it here.
 
-1. **The H1.** "Get your pages indexed." promises the outcome this file forbids. `docs/marketing/home-page.md` proposes three replacements.
-2. **Agent surfaces.** The second onboarding email and the footer "Set up an agent" lead with agents, and no account holds an API key. `docs/marketing/channel-kit.md` drafts the replacement email.
-3. **The Google connect step.** About half of signups stop there. Nothing records why.
+1. **The footer "Set up an agent" link.** No account holds an API key. Onboarding email 01 now sets up IndexNow instead of agents; the footer link and the dashboard Setup offers still lead with agents.
+2. **The Google connect step.** About half of signups stop there. Nothing records why.
+3. **The paid tier for operators.** What it costs, and when. Marketing quotes no price until one exists.
