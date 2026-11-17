@@ -1,7 +1,7 @@
 import type { DripSequence, DripSequenceId } from './drip-step'
 import { eq } from 'drizzle-orm'
 import onboardedWhy from '#emails/onboarded/00-why-i-built-it'
-import onboardedAgents from '#emails/onboarded/01-agent-setup'
+import onboardedIndexNow from '#emails/onboarded/01-indexnow-setup'
 import onboardedRecord from '#emails/onboarded/02-indexing-record'
 import { dripEmails, users } from '../database'
 import { stepSendAt } from './drip-step'
@@ -16,7 +16,7 @@ export const dripSequences: Record<DripSequenceId, DripSequence> = {
   onboarded: {
     id: 'onboarded',
     category: 'lifecycle',
-    steps: [onboardedWhy, onboardedAgents, onboardedRecord].map(parseEmailTemplate),
+    steps: [onboardedWhy, onboardedIndexNow, onboardedRecord].map(parseEmailTemplate),
   },
 }
 

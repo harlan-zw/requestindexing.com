@@ -18,7 +18,7 @@ const T0 = new Date('2026-10-01T00:00:00.000Z')
 const HOUR_MS = 60 * 60 * 1000
 const SUBJECTS = [
   'Why I built Request Indexing',
-  'If you use a coding agent',
+  'Send your pages to Bing',
   'Why a page is not indexed, and what to do',
 ]
 
