@@ -202,6 +202,15 @@ export function useProGscdump() {
     )
   }
 
+  // Automatic sending (gscdump.com ADR-0031): gscdump sends new and changed
+  // sitemap URLs to IndexNow after each sitemap update while it is on.
+  function updateSiteIndexNowAutomaticSending(input: GscdumpV1OperationInput<'partner.sites.indexing.indexnow.automatic_sending.update'>, silent = false) {
+    return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.automatic_sending.update'>['data']>(
+      () => createV1Client().updateSiteIndexNowAutomaticSending(input),
+      silent,
+    )
+  }
+
   // Google Submissions are created server side with the partner key. The
   // browser only reads their receipts.
   function listSiteGoogleSubmissionReceipts(input: GscdumpV1OperationInput<'partner.sites.indexing.google.submissions.list'>, silent = false) {
@@ -222,6 +231,7 @@ export function useProGscdump() {
     verifySiteIndexNowConnection,
     submitSiteIndexNow,
     listSiteIndexNowSubmissionReceipts,
+    updateSiteIndexNowAutomaticSending,
     listSiteGoogleSubmissionReceipts,
     createSitemapAction,
     getCanonicalMismatches,

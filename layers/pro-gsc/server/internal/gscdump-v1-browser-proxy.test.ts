@@ -83,10 +83,11 @@ describe('resolveGscdumpV1ProxyOperation', () => {
     ['POST', 'connection/verify', 'partner.sites.indexing.indexnow.connection.verify'],
     ['POST', 'submissions', 'partner.sites.indexing.indexnow.submissions.create'],
     ['GET', 'submissions', 'partner.sites.indexing.indexnow.submissions.list'],
+    ['PATCH', 'automatic-sending', 'partner.sites.indexing.indexnow.automatic_sending.update'],
   ])('routes IndexNow %s %s through site ownership checks', (method, path, id) => {
     const operation = resolveGscdumpV1ProxyOperation(method, 'partner', `sites/s_site-1/indexing/indexnow/${path}`)
     expect(operation?.operation.id).toBe(id)
-    expect(operation && selectGscdumpV1ProxyTarget(operation, 'u_me')).toMatchObject({ _tag: 'site', siteId: 's_site-1' })
+    expect(operation && selectGscdumpV1ProxyTarget(operation, 'u_me')).toMatchObject({ _tag: 'site', siteId: 's_site-1', requiresWrite: method !== 'GET' })
   })
 
   it('reads Google Submission receipts through site ownership checks', () => {
