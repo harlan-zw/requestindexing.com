@@ -74,6 +74,13 @@ it('previews a Site with no published Sitemap as empty', async () => {
   expect(await previewRoute(event('GET'))).toEqual({ _tag: 'Empty' })
 })
 
+it('refuses Inspect as changed when the Sitemap is no longer published', async () => {
+  const plan = await preview()
+  h.client.listSitemapUrls.mockRejectedValue(new GscdumpV1Error({ code: 'invalid_request', message: 'No published sitemap generation', status: 400, retryable: false, details: { reason: 'no_generation' } }))
+  await expect(inspectRoute(event('POST', { token: plan.token }))).rejects.toMatchObject({ statusCode: 409 })
+  expect(h.client.inspectSiteUrls).not.toHaveBeenCalled()
+})
+
 it('keeps other Sitemap refusals as failed loads', async () => {
   const refusal = new GscdumpV1Error({ code: 'invalid_request', message: 'Invalid sitemap URL page: cursor', status: 400, retryable: false, details: {} })
   h.client.listSitemapUrls.mockRejectedValue(refusal)
