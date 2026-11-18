@@ -73,7 +73,7 @@ function outcomeDetail(outcome: SubmissionOutcome): string {
     </p>
     <div v-if="state._tag === 'failed'" class="mt-4 space-y-3">
       <p class="text-base text-error">
-        {{ SUBMISSIONS_COPY.afterwardsReadFailure }}
+        {{ state.cause === 'receipts' ? SUBMISSIONS_COPY.receiptReadFailure : SUBMISSIONS_COPY.afterwardsReadFailure }}
       </p>
       <UiButton purpose="secondary" class="min-h-11" @click="emit('retry')">
         {{ SUBMISSIONS_COPY.retry }}
@@ -111,7 +111,7 @@ function outcomeDetail(outcome: SubmissionOutcome): string {
           {{ SUBMISSIONS_COPY.retry }}
         </UiButton>
         <UiButton :to="urlsRoute" purpose="link" trailing-icon="next" class="min-h-11">
-          View every inspected URL
+          {{ SUBMISSIONS_COPY.urlsLink }}
         </UiButton>
       </div>
     </template>

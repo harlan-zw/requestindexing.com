@@ -31,10 +31,13 @@ export interface SubmissionOutcomeRow {
   outcome: SubmissionOutcome
 }
 
-/** What a Submissions card renders. One state at a time. */
+/**
+ * What a Submissions card renders. One state at a time. `cause` names the read
+ * that failed, so a card never blames URL Inspection for a receipt read.
+ */
 export type SubmissionsCardState<T>
   = | { _tag: 'pending' }
-    | { _tag: 'failed' }
+    | { _tag: 'failed', cause: 'receipts' | 'inspections' }
     | { _tag: 'ready', data: T }
 
 function sentKey(sent: Pick<SentUrl, 'url' | 'sentAt'>): string {
@@ -128,21 +131,27 @@ export function useSiteSubmissions(engineSiteId: MaybeRefOrGetter<string | undef
   )
 
   async function refresh() {
+    const urlsBefore = latestUrlsKey.value
     await Promise.all([indexNowReceipts.refresh(), googleReceipts.refresh(), indexNowConnection.refresh()])
-    await outcomes.refresh()
+    // A changed URL list already started its own searches through the key
+    // watch. A second run here would spend the same URL list reads twice.
+    if (latestUrlsKey.value === urlsBefore)
+      await outcomes.refresh()
   }
 
   const sent = computed<SubmissionsCardState<NonNullable<typeof summary.value>>>(() => {
     if (receiptsError.value)
-      return { _tag: 'failed' }
+      return { _tag: 'failed', cause: 'receipts' }
     return summary.value ? { _tag: 'ready', data: summary.value } : { _tag: 'pending' }
   })
 
   // Outcome rows count only when they answer the URLs the receipts list now.
   // A refresh that changed the list shows pending until its own read lands.
   const afterwards = computed<SubmissionsCardState<SubmissionOutcomeRow[]>>(() => {
-    if (receiptsError.value || outcomes.error.value)
-      return { _tag: 'failed' }
+    if (receiptsError.value)
+      return { _tag: 'failed', cause: 'receipts' }
+    if (outcomes.error.value)
+      return { _tag: 'failed', cause: 'inspections' }
     if (!summary.value)
       return { _tag: 'pending' }
     if (!latest.value.rows.length)

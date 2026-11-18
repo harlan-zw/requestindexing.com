@@ -248,11 +248,16 @@ describe('submissions page', () => {
     const host = mount()
     await settle()
     expect(card(host, 'Sent to search engines').textContent).toContain('Submission receipts could not load.')
+    // The Afterwards card names the receipt read, never URL Inspection.
+    expect(card(host, 'Afterwards in Google').textContent).toContain('Submission receipts could not load.')
+    expect(card(host, 'Afterwards in Google').textContent).not.toContain('URL Inspection results could not load')
     const retry = [...card(host, 'Sent to search engines').querySelectorAll('button')].find(button => button.textContent === 'Retry loading')!
     retry.click()
     await settle()
     expect(card(host, 'Sent to search engines').textContent).not.toContain('could not load')
     expect(row(host, JOB).textContent).toContain('No URL Inspection result')
+    // One search per URL: the new URL list starts its own read, and Retry adds none.
+    expect(engine.indexingUrls).toHaveBeenCalledTimes(3)
   })
 
   it('says nothing was sent when the window is empty', async () => {
