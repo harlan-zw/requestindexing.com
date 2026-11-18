@@ -4,6 +4,7 @@ description: "Notify Bing and other participating search engines with IndexNow. 
 navigation:
   order: 7
   icon: i-heroicons-paper-airplane
+  breadcrumb: Set Up IndexNow
 icon: i-heroicons-paper-airplane
 publishedAt: "2026-11-18"
 readTime: "5 min"
@@ -90,7 +91,7 @@ These hosts publish one folder of finished files. If a framework builds your sit
 
 A GitHub Pages project site is in a folder of its host, at `https://<owner>.github.io/<repositoryname>/`. Its key file is in that folder too. In Request Indexing, type the full address of the file as the key location. The key then covers the URLs of your project site.
 
-### Platforms that cannot hold the key file
+### Platforms where you cannot choose a file's address
 
 On Squarespace, you cannot choose the address of an uploaded file. [Squarespace assigns the address](https://support.squarespace.com/hc/en-us/articles/205813928-Uploading-and-managing-files), and you cannot change it. So you cannot put a key file at the root of your site with a file upload.
 
@@ -109,7 +110,7 @@ If verification fails, the page tells you what to fix. For example: "The key fil
 
 ### Automatic sending
 
-When your key is verified for the first time, Request Indexing turns on **Automatic sending**. It sends new and changed sitemap URLs to IndexNow after each sitemap update. Only changes found after it turns on are sent.
+When your key becomes verified, Request Indexing turns on **Automatic sending** if it is off. It sends new and changed sitemap URLs to IndexNow after each sitemap update. Only changes found after it turns on are sent.
 
 If automatic sending does not turn on, the page says so. Use the **Automatic sending** switch on the same page to turn it on. You can also turn it off there.
 

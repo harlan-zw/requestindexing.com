@@ -16,11 +16,31 @@ function navigationOrder(value: unknown): number {
   return Number.POSITIVE_INFINITY
 }
 
+function navigationBreadcrumb(value: unknown): string | undefined {
+  if (value && typeof value === 'object' && 'breadcrumb' in value && typeof value.breadcrumb === 'string')
+    return value.breadcrumb
+  return undefined
+}
+
 function isActive(path: string) {
   return route.path === path
 }
 
-const breadcrumbs = useBreadcrumbItems()
+// The breadcrumb title-cases the slug, which miscases a product term such as
+// IndexNow. A guide names its own crumb in `navigation.breadcrumb` when that
+// happens; every other guide keeps the slug label.
+const currentBreadcrumb = computed(() => navigationBreadcrumb(navItems.value.find(item => item.path === route.path)?.navigation))
+const breadcrumbs = useBreadcrumbItems({
+  overrides: computed(() => {
+    const label = currentBreadcrumb.value
+    if (!label)
+      return []
+    // Index 0 is the root crumb, so each path segment shifts the current crumb by one.
+    const overrides: ({ label: string } | undefined)[] = route.path.split('/').filter(Boolean).map(() => undefined)
+    overrides.push({ label })
+    return overrides
+  }),
+})
 </script>
 
 <template>
