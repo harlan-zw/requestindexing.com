@@ -66,6 +66,7 @@ export const SUBMISSIONS_COPY = {
   indexNowVerified: 'Key verified',
   indexNowReadFailure: 'IndexNow setup could not load. Retry to read the engine state.',
   sitemapLink: 'Open Sitemaps',
+  urlsLink: 'View every inspected URL',
   googleLink: 'Submit to Google',
   indexNowLink: 'Submit with IndexNow',
   automaticBadge: 'Automatic',

@@ -226,7 +226,8 @@ reads, and says so when it read fewer than the window holds. The shared Submissi
 | Afterwards not read | Not read |
 | Afterwards not read, detail | Many inspected URLs contain this address. Find it on the URLs page. |
 | Afterwards one result failed, detail | This result could not load. Retry to read it again. |
-| Afterwards read failure | Google's URL Inspection results could not load. Retry to read them again. |
+| Afterwards read failure | Google's URL Inspection results could not load. Retry to read them again. When the receipts failed instead, the card shows the receipt read failure. |
+| Afterwards link to URLs | View every inspected URL (the Submit to Google page uses the same label) |
 | Channel headings | Google Indexing API · IndexNow · Sitemap submission |
 | Google channel, last | Last Submission {date} |
 | Google channel, none | No Submissions yet. |
