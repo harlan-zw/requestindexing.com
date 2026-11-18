@@ -17,7 +17,6 @@ const engine = vi.hoisted(() => ({
   indexingUrls: vi.fn(),
   grant: vi.fn(),
   update: vi.fn(),
-  refreshNuxtData: vi.fn(),
   entries: new Map<string, { data: { value: unknown } }>(),
 }))
 
@@ -86,7 +85,6 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscdump', () => ({
   }),
 }))
 vi.mock('#layers/pro-saas/app/composables/useProFetch', () => ({ useProFetch: () => engine.grant }))
-vi.mock('#imports', () => ({ refreshNuxtData: engine.refreshNuxtData }))
 vi.mock('nuxt/app', async () => {
   const { PRO_INDEXING_COPY_OVERRIDES } = await import('#layers/indexing/app/pro-indexing')
   return { tryUseNuxtApp: () => ({}), useAppConfig: () => ({ proIndexing: { copy: PRO_INDEXING_COPY_OVERRIDES } }) }
@@ -226,7 +224,29 @@ describe('submissions page', () => {
     toggle.click()
     await settle()
     expect(engine.update).toHaveBeenCalledWith({ params: { siteId: 's_engine' }, body: { automaticSending: 'off' } }, true)
-    expect(engine.refreshNuxtData).toHaveBeenCalledWith('submissions:window:s_engine')
+    expect(engine.indexNowReceipts).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows a failed IndexNow read in its card and retries it', async () => {
+    engine.connection.mockRejectedValueOnce(new Error('engine unavailable'))
+    const host = mountWith(SubmissionsPage)
+    await settle()
+    const indexNow = () => host.querySelector<HTMLElement>('[data-card="IndexNow"]')!
+    expect(indexNow().textContent).toContain('IndexNow setup could not load.')
+    indexNow().querySelector('button')!.click()
+    await settle()
+    expect(indexNow().textContent).toContain('Key verified')
+  })
+
+  it('links each channel by the app Site id', async () => {
+    const host = mountWith(SubmissionsPage)
+    await settle()
+    const links = Object.fromEntries([...host.querySelectorAll('a')].map(link => [link.textContent?.trim(), link.getAttribute('href')]))
+    expect(links).toMatchObject({
+      'Submit to Google': '/pro/dashboard/sites/kv1109/indexing/submit',
+      'Submit with IndexNow': '/pro/dashboard/sites/kv1109/indexing/indexnow',
+      'Open Sitemaps': '/pro/dashboard/sites/kv1109/indexing/sitemaps',
+    })
   })
 
   it('reads the receipt window once for the summary and the outcomes', async () => {

@@ -317,10 +317,20 @@ export function googleAfterwards(receivedAt: string, lookup: UrlLookup): Indexin
   return null
 }
 
-/** The received URLs a `submissionOutcomes` read covers, and the ones it looks up. */
+/**
+ * The received URLs a `submissionOutcomes` read covers, and the ones it looks
+ * up. A `{ url }` read takes the exact URL; its other trailing slash form
+ * counts only when an engine received no exact one.
+ */
 export function outcomeCandidates(window: SubmissionWindow, params: IndexingSubmissionOutcomesParams): { matching: ReceivedUrl[], looked: ReceivedUrl[] } {
-  const wanted = params.url === undefined ? null : urlMatchKey(params.url)
-  const matching = receivedUrls(window).filter(entry => wanted === null || urlMatchKey(entry.url) === wanted)
+  const received = receivedUrls(window)
+  let matching = received
+  if (params.url !== undefined) {
+    const exact = urlKey(params.url)
+    const folded = urlMatchKey(params.url)
+    const exactEntries = received.filter(entry => urlKey(entry.url) === exact)
+    matching = exactEntries.length ? exactEntries : received.filter(entry => urlMatchKey(entry.url) === folded)
+  }
   return { matching, looked: matching.slice(0, OUTCOME_LOOKUP_LIMIT) }
 }
 

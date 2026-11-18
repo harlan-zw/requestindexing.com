@@ -2,8 +2,7 @@
 import type { IndexNowConnectionV1 } from '@gscdump/contracts/v1'
 import type { IndexingSite } from '@nuxtseo/pro-indexing/shared/source'
 import IndexingSubmissionsCard from '@nuxtseo/pro-indexing/app/components/IndexingSubmissionsCard.vue'
-import { refreshNuxtData } from '#imports'
-import { submissionWindowKey, useIndexNowConnection } from '#layers/indexing/app/composables/useSiteSubmissions'
+import { useIndexNowConnection, useSubmissionWindowRefresh } from '#layers/indexing/app/composables/useSiteSubmissions'
 import IndexNowAutomaticSending from '#layers/indexing/app/internal/components/indexing/IndexNowAutomaticSending.vue'
 import { resolveSitemapEmptyState } from '#layers/indexing/app/utils/sitemap-empty-state'
 import { SUBMISSIONS_COPY } from '#layers/indexing/shared/submissions-copy'
@@ -31,6 +30,7 @@ const indexingSite = computed<IndexingSite | null>(() => siteId.value
   : null)
 
 const indexNowConnection = useIndexNowConnection(engineId)
+const refreshSubmissionWindow = useSubmissionWindowRefresh(indexingSite)
 const sitemapSubmission = useProGscdumpSitemapSubmission(engineId)
 
 const route = (id: keyof typeof proSiteFeatureManifest) => computed(() => expandProSiteRoute(proSiteFeatureManifest[id].route, siteId.value))
@@ -53,8 +53,7 @@ const indexNowKey = computed(() => {
 // Site's receipt window, so that read refreshes too.
 async function onAutomaticChanged(connection: IndexNowConnectionV1) {
   indexNowConnection.data.value = connection
-  if (engineId.value)
-    await refreshNuxtData(submissionWindowKey(engineId.value))
+  await refreshSubmissionWindow()
 }
 
 const sitemapState = computed(() => resolveSitemapEmptyState({
