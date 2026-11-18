@@ -382,6 +382,8 @@ export default defineNuxtConfig({
         },
       ],
       meta: [
+        // The only theme-color metas. A keyed `useHead` theme-color has no
+        // server tag the client can match, so hydration appends a duplicate.
         { name: 'theme-color', content: '#18181b', media: '(prefers-color-scheme: dark)' },
         { name: 'theme-color', content: 'white', media: '(prefers-color-scheme: light)' },
         // `seo.automaticTwitterTags: false` drops every inferred `twitter:*`
