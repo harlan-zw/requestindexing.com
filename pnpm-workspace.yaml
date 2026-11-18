@@ -135,6 +135,11 @@ patchedDependencies:
   '@nuxt/ui@4.11.2': patches/@nuxt__ui@4.11.2.patch
   nitropack@2.13.4: patches/nitropack@2.13.4.patch
   nuxt-auth-utils@0.5.30: patches/nuxt-auth-utils@0.5.30.patch
+  # After a layout change, Nuxt 4.6.1 starts a page transition that never ends,
+  # so the previous page's head tags stay until a same-layout navigation.
+  # Backport of https://github.com/nuxt/nuxt/pull/36535.
+  # Remove when Nuxt is 4.6.2 or later.
+  nuxt@4.6.1: patches/nuxt@4.6.1.patch
   zod@4.6.6: patches/zod@4.6.6.patch
 
 allowBuilds:
