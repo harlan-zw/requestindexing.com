@@ -703,6 +703,13 @@ Onboarding Step words, under `proShell.copy.onboarding.steps`:
 
 **Claim an invitation email only when Postmark accepted it.** The server returns the delivery with the invitation. The toast stays neutral, and the Pending invitations row says which one happened.
 
+## IndexNow setup email assets
+
+| Asset | String |
+| --- | --- |
+| Navigation | Open Indexing and choose your Site. Select Submissions, then Submit with IndexNow: |
+| After setup | After that, Request Indexing sends your new and changed pages for you. Each engine still decides what it indexes. |
+
 ## Team invitation email assets
 
 The invitation email and the Members page words about it. `layers/pro-saas/shared/team-invite-email.ts` holds them. Change them here first.
