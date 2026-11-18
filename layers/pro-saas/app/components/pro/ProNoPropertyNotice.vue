@@ -7,7 +7,7 @@ import ProNoPropertyActions from './ProNoPropertyActions.vue'
 // and each page that offers Connect a Site with no Site connected render this
 // one block, so every surface says the same thing (2026-10-01 replay, N6).
 // The caller places the frame.
-const { email, gscReturnTo, inList = false, headingTag = 'p', readAccess = false } = defineProps<{
+const { email, gscReturnTo, inList = false, headingTag = 'p' } = defineProps<{
   /** The Google account of the Search Console grant. */
   email: string | null
   /** The page the Google grant returns to. */
@@ -15,7 +15,6 @@ const { email, gscReturnTo, inList = false, headingTag = 'p', readAccess = false
   /** Under the property list, where Refresh list reads the properties again. */
   inList?: boolean
   headingTag?: 'p' | 'h2' | 'h3'
-  readAccess?: boolean
 }>()
 </script>
 
@@ -29,6 +28,6 @@ const { email, gscReturnTo, inList = false, headingTag = 'p', readAccess = false
         {{ inList ? NO_PROPERTY_DETAIL : NO_PROPERTY_DETAIL_OUTSIDE_LIST }}
       </p>
     </div>
-    <ProNoPropertyActions :gsc-return-to="gscReturnTo" :read-access="readAccess" />
+    <ProNoPropertyActions :gsc-return-to="gscReturnTo" />
   </div>
 </template>

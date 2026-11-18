@@ -306,7 +306,7 @@ async function connect(value: string, source: 'field' | 'list') {
       <ProAlert v-else-if="picker._tag === 'Failed'" color="warning" title="Your Search Console properties could not load" :description="picker.message" />
 
       <div v-else-if="picker._tag === 'NoProperties'" class="rounded-lg border border-dashed border-default p-4" data-testid="gsc-empty-state">
-        <ProNoPropertyNotice :email="session?.gscEmail ?? null" :gsc-return-to="gscReturnTo" :read-access="!!targetUrl" in-list />
+        <ProNoPropertyNotice :email="session?.gscEmail ?? null" :gsc-return-to="gscReturnTo" in-list />
       </div>
 
       <p v-else-if="picker._tag === 'AllConnected' && !targetUrl" class="text-sm text-muted">

@@ -160,7 +160,7 @@ describe('developers page', () => {
     const links = [...host.querySelectorAll('a')]
     expect(links.find(link => link.textContent?.includes('Connect a Site'))).toBeUndefined()
     expect(links.find(link => link.textContent === 'Connect another Google account')?.getAttribute('href'))
-      .toBe('/auth/integrations/gsc/connect?returnTo=%2Fpro%2Fdashboard%2Fdevelopers')
+      .toBe('/auth/integrations/gsc/connect?scope=read&returnTo=%2Fpro%2Fdashboard%2Fdevelopers')
     expect(links.map(link => link.textContent?.trim())).toEqual(expect.arrayContaining(['Open Search Console', 'How to verify a site']))
   })
 
