@@ -150,8 +150,13 @@ describe('lookupFromSearch', () => {
     expect(lookupFromSearch('https://a.test/docs/', rows, true)).toEqual({ _tag: 'found', row: rows[1] })
   })
 
-  it('falls back across a trailing slash only without an exact row, and never takes a longer URL', () => {
-    expect(lookupFromSearch('https://a.test/docs/', [row('https://a.test/docs', 'x', 'PASS')], true)).toMatchObject({ _tag: 'found' })
+  it('matches both forms of the Site root', () => {
+    const root = row('https://a.test', 'x', 'PASS')
+    expect(lookupFromSearch('https://a.test/', [root], true)).toEqual({ _tag: 'found', row: root })
+  })
+
+  it('keeps non-root slash forms separate and ignores longer URLs', () => {
+    expect(lookupFromSearch('https://a.test/docs/', [row('https://a.test/docs', 'x', 'PASS')], true)).toEqual({ _tag: 'absent' })
     expect(lookupFromSearch('https://a.test/docs', [row('https://a.test/docs-2', 'x', 'PASS')], true)).toEqual({ _tag: 'absent' })
     expect(lookupFromSearch('https://a.test/docs', [row('https://a.test/docs-2', 'x', 'PASS')], false)).toEqual({ _tag: 'unknown' })
   })
