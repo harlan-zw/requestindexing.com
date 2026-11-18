@@ -12,8 +12,9 @@ const links = [
         to: '/pro/onboarding',
       },
       {
-        label: 'Set up an agent',
-        to: '/pro/dashboard/developers',
+        label: 'Use an AI agent: gscdump',
+        to: 'https://gscdump.com/mcp',
+        target: '_blank',
       },
     ],
   },

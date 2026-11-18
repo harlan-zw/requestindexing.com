@@ -25,7 +25,8 @@ Done means: the home page, onboarding emails, and listing text in production mat
 - [ ] Send the flip-test question; record the counts in `docs/audits/`
 - [ ] Ship the home page plan behind the rank guard
 - [ ] Replace onboarding email 01 with the IndexNow setup email (#411)
-- [ ] Decide the footer "Set up an agent" link and the dashboard Setup offers that lead with agents
+- [x] Footer agent link points to gscdump.com/mcp (2026-11-18)
+- [ ] Dashboard Setup offers: three of five lead with agents
 - [ ] Write the reason guides, starting with `/why-is-my-page-not-indexed`
 - [ ] Move the listing text into `COPY.md`, then onto family sites and directories
 - [ ] Tone fixes the audit found: "Google is deleting your data.", "No dark arts.", the "Instant" tag, "The complete Google Indexing API guide", "low domain authority" folklore on the tool pages

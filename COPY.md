@@ -25,7 +25,7 @@ These exact strings. Do not paraphrase them per page.
 | Site description | Monitor and request Google indexing for your pages | `nuxt.config.ts` site description, which feeds every page's meta description |
 | Landing meta title | Request Google Indexing and See Why Pages Are Not Indexed | `apps/marketing/app/pages/index.vue`; `app.vue` appends ` · Request Indexing` |
 | Landing meta description | Request Google indexing for your pages, then see which URLs Google has indexed, which it has not, and the reason it gives. Free and open source. | the landing page only |
-| Agent setup link | Set up an agent | public footer, links to Developers |
+| Agent link | Use an AI agent: gscdump | public footer, links to gscdump.com/mcp. Agent users go to gscdump (MARKETING.md boundary). The Developers page stays inside the dashboard |
 
 **The short pitch adds a second half in long form.** `README.md` and `VISION.md` both follow the
 tagline with "Search Console data and multi-engine submission, in one small app." That sentence
