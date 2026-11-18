@@ -126,6 +126,36 @@ it('re-reads the window after a write while an older read is still in flight', a
   expect(reads.summary!.data.value?.engines.map(engine => [engine.engine, engine.urls])).toEqual([['indexnow', 2]])
 })
 
+it('updates an open timeline when another send fails', async () => {
+  const first = await state.indexNowReceipts()
+  let read!: ReturnType<typeof useSubmissionOutcomes>
+  let refresh!: ReturnType<typeof useSubmissionWindowRefresh>
+  const app = createApp(defineComponent({
+    setup() {
+      read = useSubmissionOutcomes(site, { url: 'https://example.com/a' })
+      refresh = useSubmissionWindowRefresh(site)
+      return () => h('div')
+    },
+  }))
+  state.app.vueApp = app
+  app.mount(document.createElement('div'))
+  mounted.push(app)
+  await settle()
+  expect(read.data.value?.outcomes[0]?.sends.map(send => send.state)).toEqual(['accepted'])
+
+  const failedAt = new Date().toISOString()
+  state.indexNowReceipts.mockResolvedValue({
+    ...first,
+    submissionReceipts: [
+      { ...first.submissionReceipts[0], _tag: 'failed', id: 'in_failed', createdAt: failedAt, updatedAt: failedAt },
+      ...first.submissionReceipts,
+    ],
+  })
+  await refresh()
+  await settle()
+  expect(read.data.value?.outcomes[0]?.sends.map(send => send.state)).toEqual(['accepted', 'failed'])
+})
+
 it('pages through the substring search until a homepage finds its own row', async () => {
   const receivedAt = new Date(Date.now() - 86_000_000).toISOString()
   state.indexNowReceipts.mockResolvedValue({ submissionReceipts: [

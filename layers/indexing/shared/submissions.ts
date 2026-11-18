@@ -238,14 +238,13 @@ export function receivedUrls(window: SubmissionWindow): ReceivedUrl[] {
 }
 
 /**
- * A short stable digest of the received URLs and their times. The outcome
- * reads key on it, so a refreshed window with the same Submissions reuses
- * their searches.
+ * A short digest of the outcome anchors and their timeline events. An
+ * unchanged window reuses its searches. A new or changed send refreshes it.
  */
 export function receivedFingerprint(window: SubmissionWindow): string {
   let hash = 0x811C9DC5
   for (const entry of receivedUrls(window)) {
-    for (const char of `${entry.url}@${entry.receivedAt}|`) {
+    for (const char of JSON.stringify([entry.url, entry.receivedAt, entry.sends])) {
       hash ^= char.charCodeAt(0)
       hash = Math.imul(hash, 0x01000193) >>> 0
     }
