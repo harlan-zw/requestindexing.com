@@ -113,7 +113,7 @@ The scope warning informs that choice and never blocks a Submission.
 
 | Asset | String |
 | --- | --- |
-| Google page heading and nav row | Submit to Google |
+| Google page heading | Submit to Google. The page has no nav row; Submissions links to it. |
 | Google page intro | This sends one URL to Google's Indexing API. Google decides whether to crawl it, and when. |
 | Google page scope warning | Google documents the Indexing API for job posting and livestream pages only. Check your page type before you submit. |
 | Comparison heading | Google Indexing API or IndexNow |
@@ -135,7 +135,7 @@ Engine contracts own IndexNow and Submission Receipt terms.
 
 | Asset | String |
 | --- | --- |
-| Page heading | IndexNow |
+| Page heading | IndexNow. The page has no nav row; Submissions links to it. |
 | Page intro | IndexNow notifies Bing and other participating search engines about new or changed URLs. Google is not one of them. |
 | Setup heading | Verify your IndexNow key |
 | Setup instruction | Publish a UTF-8 text file containing only your key at the key location. |
@@ -161,9 +161,89 @@ Engine contracts own IndexNow and Submission Receipt terms.
 | Read-only role | Your Team role allows viewing only. |
 | Accepted outcome | IndexNow accepted the notification. Search engines decide whether to index each URL. |
 | Retries exhausted | IndexNow could not accept the notification after several attempts. Automatic retries have ended. Try again later. |
+| Verified | Key verified. You can submit URLs. |
+| Automatic sending label | Automatic sending |
+| Automatic sending description | Send new and changed sitemap URLs to IndexNow after each sitemap update. Only changes found after it turns on are sent. |
+| Automatic sending off | Automatic sending is off. |
+| Automatic sending, waiting for the key | Automatic sending is on. It starts after your key is verified. |
+| Automatic sending, no check yet | Automatic sending is on. No sitemap update has been checked yet. |
+| Automatic sending, last check | Last check {date}: {changed} changed URLs found, {sent} sent. |
+| Automatic sending, daily limit | Some changed URLs were not sent, because this Site reached its daily limit for automatic sending. They do not wait for the next check. |
+| Automatic sending, scan limit | Some changed URLs were not sent, because the check reached its scan limit. They do not wait for the next check. |
+| Verified, automatic sending turned on | Key verified. Automatic sending is on. |
+| Verified, automatic sending failed | Key verified. Automatic sending did not turn on. Turn it on below. |
+| Automatic sending change failed | Automatic sending did not change. Try the switch again. |
+| Automatic sending needs a key | Save your IndexNow key before you turn on automatic sending. |
+| Automatic receipt badge | Automatic |
+
+Automatic sending is gscdump.com ADR-0031. The verify action turns it on when a key becomes
+verified and the switch is off; nothing else changes the switch for the reader. gscdump caps it at
+500 URLs a day per Site, but no contract constant exports that number, so no string states it.
+Never say that an engine indexed or crawled a URL that automatic sending sent.
 
 IndexNow reason codes use the corrective-action strings in the IndexNow page.
 Each string names the failed step and the next action.
+
+## Submissions assets
+
+These assets apply to the Submissions page: one Site's Submissions on every channel, and its
+sitemap submission. `layers/indexing/shared/submissions-copy.ts` holds them. Change them here first.
+`{date}` renders as a medium date, for example Nov 18, 2026.
+
+A receipt proves receipt only. "Afterwards" shows order in time, never cause, and never a
+timeframe. gscdump has no summary or outcome operation yet, so the page counts only the receipts it
+reads, and says so when it read fewer than the window holds. The shared Submissions section in
+`@nuxtseo/pro-indexing` replaces the Sent and Afterwards cards when it ships.
+
+| Asset | String |
+| --- | --- |
+| Page heading and nav row | Submissions |
+| Page intro | A Submission notifies a search engine that a page is new or changed. Each search engine decides whether to index it. |
+| Back link on the channel pages | All Submissions |
+| Missing site | Connect this Site to see its Submissions. |
+| Sent heading | Sent to search engines |
+| Sent window | Last 30 days |
+| Sent channel names | IndexNow · Google Indexing API |
+| Sent columns | URLs sent · Accepted · Waiting · Not accepted |
+| Sent by automatic sending | Automatic sending sent {count} of them. |
+| Sent scope, capped | Counted from the latest {limit} receipts of each channel. Older Submissions in this window are not counted. |
+| Sent empty | No Submissions in the last 30 days. |
+| Receipt explanation | A receipt records the notification outcome. Search engines decide whether to index each URL. |
+| Receipt read failure | Submission receipts could not load. Retry to read the latest outcomes. |
+| Retry action | Retry loading |
+| Afterwards heading | Afterwards in Google |
+| Afterwards explanation | Google's latest URL Inspection result for each URL sent in the last 30 days. A result counts only when Google inspected the URL after it was sent. It shows order in time, not cause. IndexNow does not notify Google. |
+| Afterwards scope | The latest {count} URLs sent. |
+| Afterwards sent | Sent {date} |
+| Afterwards indexed | Indexed |
+| Afterwards not indexed | Not indexed |
+| Afterwards inspected | Inspected {date} |
+| Afterwards no index verdict | No index verdict |
+| Afterwards not inspected since | Not inspected since |
+| Afterwards not inspected since, detail | Last inspected {date}, before this Submission. |
+| Afterwards no result | No URL Inspection result |
+| Afterwards no result, detail | Request Indexing reads results for the URLs in your sitemaps. |
+| Afterwards not read | Not read |
+| Afterwards not read, detail | Many inspected URLs contain this address. Find it on the URLs page. |
+| Afterwards one result failed, detail | This result could not load. Retry to read it again. |
+| Afterwards read failure | Google's URL Inspection results could not load. Retry to read them again. When the receipts failed instead, the card shows the receipt read failure. |
+| Afterwards link to URLs | View every inspected URL (the Submit to Google page uses the same label) |
+| Channel headings | Google Indexing API · IndexNow · Sitemap submission |
+| Google channel, last | Last Submission {date} |
+| Google channel, none | No Submissions yet. |
+| IndexNow channel, no key | No IndexNow key yet. |
+| IndexNow channel, key not verified | Verify your key before submitting URLs. |
+| IndexNow channel, key verified | Key verified |
+| IndexNow channel, read failure | IndexNow setup could not load. Retry to read the engine state. (the IndexNow dashboard Read failure) |
+| Sitemap channel link | Open Sitemaps |
+| Channel links | Submit to Google · Submit with IndexNow (the Indexing channel assets) |
+
+The sitemap submission card reuses the titles and descriptions the Sitemaps page draws from
+`resolveSitemapEmptyState`. The IndexNow card reuses the automatic sending strings above.
+
+The Afterwards verdicts follow gscdump's own `status` filter: `PASS` is Indexed; `FAIL`, `PARTIAL`
+and `NEUTRAL` are Not indexed; no verdict is No index verdict. gscdump reads URL Inspection
+results only for URLs a live sitemap lists, which the no result detail says.
 
 ## Search Console status and reports
 

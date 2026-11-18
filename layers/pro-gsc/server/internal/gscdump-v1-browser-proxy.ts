@@ -50,6 +50,8 @@ const baseOperationEntries = [
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.verifySiteIndexNowConnection },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.submitSiteIndexNow },
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteIndexNowSubmissionReceipts },
+  // Automatic sending (gscdump.com ADR-0031). The verify flow turns it on; the IndexNow page holds the switch.
+  { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.updateSiteIndexNowAutomaticSending },
   // Google Submissions are created server side with the partner key; the browser only reads receipts.
   { surface: protocol.surfaces.partner, operation: protocol.surfaces.partner.operations.listSiteGoogleSubmissionReceipts },
   { surface: protocol.surfaces.realtime, operation: protocol.surfaces.realtime.operations.createTicket },

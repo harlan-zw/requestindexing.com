@@ -28,7 +28,7 @@ describe('useProSiteNav', () => {
 
     expect(sections.value.map(section => section.label)).toEqual(['Search Performance', 'Indexing'])
     expect(labelsOf(sections.value[0]!)).toEqual(['Overview', 'Queries', 'Pages', 'Countries'])
-    expect(labelsOf(sections.value[1]!)).toEqual(['Overview', 'Recovery', 'Sitemaps', 'URLs', 'Watched URLs', 'Submit to Google', 'IndexNow'])
+    expect(labelsOf(sections.value[1]!)).toEqual(['Overview', 'Submissions', 'Recovery', 'Sitemaps', 'URLs', 'Watched URLs'])
     expect(footerLinks.value.map(link => link.label)).toEqual(['Site settings'])
   })
 
@@ -54,11 +54,16 @@ describe('useProSiteNav', () => {
     expect(overview!.active!(`/pro/dashboard/sites/${SITE}/search-console`)).toBe(true)
   })
 
-  it('routes IndexNow at the app Site id and activates its own navigation row', () => {
-    const row = nav().sections.value[1]!.links.find(link => link.label === 'IndexNow')!
-    expect(row.to).toBe(`/pro/dashboard/sites/${SITE}/indexing/indexnow`)
-    expect(row.active!(`/pro/dashboard/sites/${SITE}/indexing/indexnow`)).toBe(true)
-    expect(row.active!(`/pro/dashboard/sites/${SITE}/indexing/submit`)).toBe(false)
+  it('keeps Submissions lit on its two channel pages, which have no row of their own', () => {
+    const links = nav().sections.value[1]!.links
+    const submissions = links.find(link => link.label === 'Submissions')!
+    const sitemaps = links.find(link => link.label === 'Sitemaps')!
+
+    expect(submissions.to).toBe(`/pro/dashboard/sites/${SITE}/indexing/submissions`)
+    for (const path of ['submissions', 'submit', 'indexnow'])
+      expect(submissions.active!(`/pro/dashboard/sites/${SITE}/indexing/${path}`)).toBe(true)
+    expect(submissions.active!(`/pro/dashboard/sites/${SITE}/indexing/sitemaps`)).toBe(false)
+    expect(sitemaps.active!(`/pro/dashboard/sites/${SITE}/indexing/indexnow`)).toBe(false)
   })
 
   it('still matches deeper paths under a leaf row', () => {
@@ -82,14 +87,14 @@ describe('useProSiteNav', () => {
       pending: integration => integration === 'gsc-connected' ? { tooltip: 'Waiting for Google Search Console' } : null,
     })
     const [overview] = sections.value[0]!.links
-    const submit = sections.value[1]!.links.find(link => link.label === 'Submit to Google')!
+    const submissions = sections.value[1]!.links.find(link => link.label === 'Submissions')!
 
     expect(overview!.pending).toBe(true)
     expect(overview!.pendingTooltip).toBe('Waiting for Google Search Console')
     expect(overview!.to).toBe(`/pro/dashboard/sites/${SITE}/search-console`)
-    // Submitting a URL runs on the pooled Google client, not on the Search
-    // Console integration, so it never waits on it.
-    expect(submit.pending).toBe(false)
+    // Submitting a URL runs on the pooled Google client or on IndexNow, not on
+    // the Search Console integration, so the row never waits on it.
+    expect(submissions.pending).toBe(false)
   })
 
   it('synthesises an Overview pin unless the caller renders its own site header', () => {

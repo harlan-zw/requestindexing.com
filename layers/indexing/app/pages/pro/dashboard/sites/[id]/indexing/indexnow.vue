@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import type { IndexNowConnectionV1, IndexNowSubmissionReceiptV1 } from '@gscdump/contracts/v1/http'
+import type { IndexNowSubmissionReceiptV1 } from '@gscdump/contracts/v1/http'
 import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import { indexNowConfigureV1Schema, indexNowKeyV1Schema, indexNowSubmitV1Schema } from '@gscdump/contracts/v1/http'
 import { isGscdumpV1Error } from '@gscdump/sdk/v1'
 import { useMounted } from '@vueuse/core'
 import { customAlphabet, nanoid } from 'nanoid'
+import { useIndexNowConnection } from '#layers/indexing/app/composables/useSiteSubmissions'
 import IndexingChannelsCard from '#layers/indexing/app/internal/components/indexing/IndexingChannelsCard.vue'
+import IndexNowAutomaticSending from '#layers/indexing/app/internal/components/indexing/IndexNowAutomaticSending.vue'
+import { shouldTurnOnAutomaticSending } from '#layers/indexing/shared/submissions'
+import { AUTOMATIC_SENDING_COPY, INDEXNOW_RECEIPT_LABELS, SUBMISSIONS_COPY } from '#layers/indexing/shared/submissions-copy'
+import { expandProSiteRoute, proSiteFeatureManifest } from '#layers/pro-features/shared/manifest'
 import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
 import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump/useProGscdump'
 
@@ -36,12 +41,7 @@ const urls = computed(() => [...new Set(urlInput.value.split(/\r?\n/).map(url =>
 const receiptOffset = ref(0)
 const mounted = useMounted()
 
-const connection = useGscdumpQuery<IndexNowConnectionV1>(
-  () => `indexnow:connection:${engineId.value ?? ''}`,
-  engineId,
-  (siteId, client) => client.getSiteIndexNowConnection({ params: { siteId } }, true),
-  [],
-)
+const connection = useIndexNowConnection(engineId)
 const receipts = useGscdumpQuery<GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.submissions.list'>['data']>(
   () => `indexnow:receipts:${engineId.value ?? ''}:${receiptOffset.value}`,
   engineId,
@@ -102,14 +102,7 @@ function errorMessage(error: unknown): string {
   return isGscdumpV1Error(error) ? (reasonMessages[error.message] ?? error.message) : 'IndexNow could not respond. Retry the action.'
 }
 
-const receiptLabels: Record<IndexNowSubmissionReceiptV1['_tag'], string> = {
-  queued: 'Queued',
-  accepted: 'Notification accepted',
-  pending: 'Key validation pending',
-  rejected: 'Rejected',
-  retrying: 'Retry scheduled',
-  failed: 'Failed',
-}
+const receiptLabels = INDEXNOW_RECEIPT_LABELS
 
 async function saveKey() {
   const siteId = engineId.value
@@ -148,6 +141,7 @@ async function verifyKey() {
   if (!siteId || !canWrite.value || busy.value || !publishedKeyLocation.value || setupChanged.value)
     return
   action.value = { _tag: 'busy', action: 'verify' }
+  const before = connection.data.value
   const result = await gscdump.verifySiteIndexNowConnection({ params: { siteId } }, true)
     .then(data => ({ _tag: 'ok' as const, data }))
     .catch((error: unknown) => ({ _tag: 'error' as const, error }))
@@ -158,10 +152,31 @@ async function verifyKey() {
     return
   }
   connection.data.value = result.data
-  action.value = result.data._tag === 'connected'
-    ? { _tag: 'message', message: 'Key verified. You can submit URLs.' }
-    : { _tag: 'error', message: result.data._tag === 'verification-required' && result.data.reason ? reasonMessage(result.data.reason) : 'Key verification failed. Check the published file, then verify it again.' }
+  if (result.data._tag !== 'connected') {
+    action.value = { _tag: 'error', message: result.data._tag === 'verification-required' && result.data.reason ? reasonMessage(result.data.reason) : 'Key verification failed. Check the published file, then verify it again.' }
+    return
+  }
+  if (!shouldTurnOnAutomaticSending(before, result.data)) {
+    action.value = { _tag: 'message', message: AUTOMATIC_SENDING_COPY.verified }
+    return
+  }
+  // gscdump leaves automatic sending off; Request Indexing turns it on once a
+  // key verifies (gscdump.com ADR-0031, section 2.3). A failure here never
+  // undoes the verification: the switch below stays off and says so.
+  const turnedOn = await gscdump.updateSiteIndexNowAutomaticSending({ params: { siteId }, body: { automaticSending: 'on' } }, true)
+    .then(data => ({ _tag: 'ok' as const, data }))
+    .catch((error: unknown) => ({ _tag: 'error' as const, error }))
+  if (engineId.value !== siteId)
+    return
+  if (turnedOn._tag === 'error') {
+    action.value = { _tag: 'message', message: AUTOMATIC_SENDING_COPY.verifiedTurnOnFailed }
+    return
+  }
+  connection.data.value = turnedOn.data
+  action.value = { _tag: 'message', message: turnedOn.data._tag !== 'disconnected' && turnedOn.data.automaticSending._tag === 'on' ? AUTOMATIC_SENDING_COPY.verifiedTurnedOn : AUTOMATIC_SENDING_COPY.verified }
 }
+
+const submissionsRoute = computed(() => expandProSiteRoute(proSiteFeatureManifest['indexing.submissions'].route, siteId.value))
 
 async function submitUrls() {
   const siteId = engineId.value
@@ -223,6 +238,9 @@ function formatDate(value: string) {
 <template>
   <ProPageStates>
     <ProPageZone tier="primary" first>
+      <UiButton :to="submissionsRoute" purpose="link" icon="back" class="mb-2 min-h-11">
+        {{ SUBMISSIONS_COPY.backLink }}
+      </UiButton>
       <!-- Evidence: INDEXNOW-01 and INDEXNOW-02 in VERIFIED-CLAIMS.md. -->
       <p class="mb-4 max-w-2xl text-base text-muted">
         IndexNow notifies Bing and other participating search engines about new or changed URLs. Google is not one of them.
@@ -291,6 +309,9 @@ function formatDate(value: string) {
       <p v-if="action._tag === 'error' || action._tag === 'message'" role="status" class="mt-3 text-base" :class="action._tag === 'error' ? 'text-error' : 'text-muted'">
         {{ action.message }}
       </p>
+      <UiCard v-if="engineId && setup && setup._tag !== 'disconnected' && !connection.error.value" size="lg" class="mt-4">
+        <IndexNowAutomaticSending :connection="setup" :engine-site-id="engineId" :can-write="canWrite" @updated="connection.data.value = $event" />
+      </UiCard>
     </ProPageZone>
 
     <ProPageZone v-if="engineId && setup" tier="secondary">
@@ -335,9 +356,14 @@ function formatDate(value: string) {
         <ul v-else class="divide-y divide-default">
           <li v-for="receipt in receipts.data.value.submissionReceipts" :key="receipt.id" class="py-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
-              <UBadge :color="receiptColor(receipt)" variant="subtle">
-                {{ receiptLabels[receipt._tag] }}
-              </UBadge>
+              <div class="flex flex-wrap items-center gap-2">
+                <UBadge :color="receiptColor(receipt)" variant="subtle">
+                  {{ receiptLabels[receipt._tag] }}
+                </UBadge>
+                <UBadge v-if="receipt.trigger === 'automatic'" color="neutral" variant="subtle">
+                  {{ SUBMISSIONS_COPY.automaticBadge }}
+                </UBadge>
+              </div>
               <time :datetime="receipt.createdAt" class="text-sm tabular-nums text-muted">{{ formatDate(receipt.createdAt) }}</time>
             </div>
             <p v-if="receipt.reason" class="mt-2 text-base text-muted">
