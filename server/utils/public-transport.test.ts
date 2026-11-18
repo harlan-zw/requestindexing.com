@@ -20,13 +20,14 @@ beforeEach(() => {
 })
 afterEach(() => vi.resetAllMocks())
 
-it('fetches the original host through public addresses after Workers CNAME answers', async () => {
+it('fetches a sitemap on a public WordPress address after Workers CNAME answers', async () => {
+  dns.resolve4.mockResolvedValue(['alias.example.', '192.0.78.230'])
   expect(await (await read()).text()).toBe('<urlset/>')
-  expect(fetchDestination).toHaveBeenCalledWith(new URL('https://public.example/sitemap.xml'), expect.anything(), { address: '142.250.66.65', family: 4 })
-  expect(await resolvePublicHostname('public.example')).toEqual(['142.250.66.65', '2404:6800:4006:81d::2001'])
+  expect(fetchDestination).toHaveBeenCalledWith(new URL('https://public.example/sitemap.xml'), expect.anything(), { address: '192.0.78.230', family: 4 })
+  expect(await resolvePublicHostname('public.example')).toEqual(['192.0.78.230', '2404:6800:4006:81d::2001'])
 })
 
-it.each(['127.0.0.1', '10.0.0.1', '::1'])('rejects every private address alongside public answers and aliases: %s', async (address) => {
+it.each(['127.0.0.1', '10.0.0.1', '192.0.0.1', '192.0.2.1', '::1'])('rejects every private address alongside public answers and aliases: %s', async (address) => {
   // Even an unexpected-family IP must reach publicFetch's network policy.
   dns.resolve4.mockResolvedValue(['ghs.google.com.', '142.250.66.65', address])
   await expect(read()).rejects.toThrow(/Blocked private IPv[46]/)
