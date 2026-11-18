@@ -791,7 +791,7 @@ The fleet Indexing tabs (Overview, Issues, Changes) and the per-Site indexing se
 | Copy export | Copy as Markdown | Fleet Overview toolbar |
 | Download export | Download Markdown | Fleet Overview toolbar |
 | Export title | Indexing coverage: All Sites | The SDK writes the heading; All Sites is the scope |
-| Submissions, Afterwards tooltip | Google's latest URL Inspection result for each URL a search engine received, from a check made after it received the URL. It shows what happened next. It does not show that sending caused it. | Outcomes cover received URLs only (gscdump#304) |
+| Submissions, Afterwards tooltip | Google's latest URL Inspection result for each URL a search engine received, from a check made after it received the URL. It shows what happened next. It does not show that sending caused it. IndexNow does not notify Google. | Outcomes cover received URLs only (gscdump#304). A URL only IndexNow received still counts, so the tooltip says IndexNow does not reach Google (GLOSSARY: IndexNow) |
 | Submissions, Afterwards scope | Of {count} received URLs · Of 1 received URL | The totals cover received URLs, not every URL sent |
 | Submissions, Afterwards partial | Google results cover {checked} of the {count} received URLs. | Same scope as the line above |
 | Changes, source note | Counts come from Google URL Inspection checks, one URL per change. Each Site counts at most 500 changes. | Changes come from each Site's URL Inspection transitions, at most 500 per read |
