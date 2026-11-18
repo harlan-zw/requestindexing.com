@@ -95,7 +95,7 @@ Dunford's order: alternatives, what only we have, the value, who cares most, the
 | Waiting | Nothing |
 
 - **Only here:** the URLs in your sitemaps inspected on a schedule, within your Free allowance, with each reason and change kept. IndexNow from the same dashboard. Watched URLs. Free and MIT.
-- **Next, and not claimed until it ships:** new and changed sitemap URLs sent to IndexNow automatically once the key is verified. This is the automatic indexing the old Pro plan promised.
+- **Automatic sending, shipped in #414:** once a Site's key is verified, new and changed sitemap URLs go to IndexNow. Request Indexing turns it on at key verification. It sends the notices the old Pro plan promised as "automatic indexing". Engines still decide.
 - **Delivery, fixed 2026-11-18:** every production IndexNow attempt got HTTP 429 until gscdump moved delivery to a relay. The first Submission after the fix got HTTP 202.
 - **Not unique, and we say so:** the reason itself. Search Console shows it one URL at a time.
 - **Value:** you learn which pages Google refused, and when that changed, without inspecting them one by one.
@@ -144,7 +144,7 @@ The cues that bring someone to us, ranked by the evidence. Each needs a page tha
 | "Is this page indexed?" | "index checker" 720 US searches a month | Free Google Index Checker | Ranks poorly |
 | "Why is my page or Site not indexed?" | The clearest customer email | One guide per Google reason | No page yet |
 | "Can I use the Indexing API?" | 260 US searches a month | Indexing API guides | Yes |
-| "Submit to Bing", "IndexNow" | One GitHub issue; Bing and other engines take IndexNow | IndexNow page, a guide, the home page | The product ships IndexNow; no marketing page names it yet |
+| "Submit to Bing", "IndexNow" | One GitHub issue; Bing and other engines take IndexNow | IndexNow page, a guide, the home page | The home page names it under the H1; no setup guide yet |
 
 ## Forces and status
 
