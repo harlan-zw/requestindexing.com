@@ -71,11 +71,11 @@ plan's words. No other string repeats it.
 | What you get heading | IndexNow for Bing and others. Google's reason for each sitemap URL. |
 | IndexNow card | Send pages with IndexNow · IndexNow notifies Bing and other participating search engines about any page type. Google is not one of them. Once your key is verified, Request Indexing sends new and changed sitemap URLs for you. |
 | Sitemap URLs card | Every sitemap URL, with its reason · Request Indexing inspects the URLs in your sitemaps with URL Inspection, within your Free allowance. Each URL shows Google's verdict and reason. |
-| Changes card | What changed · Coverage over time, and the URLs whose verdict changed since last week. |
-| Watched URLs card | Watched URLs · Keep scheduled URL Inspection evidence for pages you choose. (the Watched URLs intro) |
+| Changes card | What changed · Coverage over time, and the URLs whose verdict changed in the last 28 days. (`INDEXING_CHANGES_WINDOW_DAYS`) |
+| Watched URLs card | Watched URLs · Keep scheduled URL Inspection evidence for pages you choose. This does not request indexing. (the Watched URLs intro, verbatim) |
 | Sitemaps card | Sitemaps · What you declared, what Google discovered, and what drifted between the two. |
 | History line | Request Indexing also keeps your Search Console history past Google's 16-month window, within your Free allowance. |
-| How it works description | Connect Google once. Request Indexing sends your new pages with IndexNow and shows what Google reports for each URL. |
+| How it works description | Connect Google once. After your IndexNow key is verified, Request Indexing sends new and changed sitemap URLs with IndexNow. It shows what Google reports for each URL. |
 | Step 3 | Send · Send new and changed pages with IndexNow · Publish your IndexNow key file and verify the key. Automatic sending then sends new and changed sitemap URLs after each sitemap update. |
 | Step 3 bullets | Bing and other participating search engines. Google is not one of them. · Any page type on your site. · A receipt records the notification outcome. · For job posting and livestream pages only, you can also submit to Google's Indexing API. |
 | Step 3 example | The IndexNow request. Request Indexing sends it for you. |

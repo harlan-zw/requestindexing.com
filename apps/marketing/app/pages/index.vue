@@ -52,7 +52,7 @@ const mockUrls = [
 ]
 
 const mockSites = [
-  { domain: 'nuxtseo.com', indexed: 91, total: 119 },
+  { domain: 'nuxtseo.com', indexed: 108, total: 119 },
   { domain: 'harlanzw.com', indexed: 78, total: 112 },
   { domain: 'mdream.dev', indexed: 54, total: 204 },
 ]
@@ -87,12 +87,12 @@ const features = [
   },
   {
     title: 'What changed',
-    description: 'Coverage over time, and the URLs whose verdict changed since last week.',
+    description: 'Coverage over time, and the URLs whose verdict changed in the last 28 days.',
     icon: 'i-heroicons-arrows-right-left',
   },
   {
     title: 'Watched URLs',
-    description: 'Keep scheduled URL Inspection evidence for pages you choose.',
+    description: 'Keep scheduled URL Inspection evidence for pages you choose. This does not request indexing.',
     icon: 'i-heroicons-eye',
   },
   {
@@ -427,7 +427,7 @@ const linkClass = 'underline decoration-primary/30 underline-offset-4 hover:deco
       <UPageSection
         headline="How it works"
         title="From Search Console to Google's answer in four steps"
-        description="Connect Google once. Request Indexing sends your new pages with IndexNow and shows what Google reports for each URL."
+        description="Connect Google once. After your IndexNow key is verified, Request Indexing sends new and changed sitemap URLs with IndexNow. It shows what Google reports for each URL."
         :ui="{ container: 'max-w-7xl', title: 'font-title' }"
       >
         <div class="mt-12 lg:mt-16 grid gap-14 lg:gap-24">
@@ -734,7 +734,7 @@ const linkClass = 'underline decoration-primary/30 underline-offset-4 hover:deco
                 Delete any time
               </div>
               <p class="text-muted text-sm leading-relaxed">
-                Deleting your account removes every Team you own and all Sites and data in them. Google can keep the access you gave Request Indexing. Remove it in your <NuxtLink to="https://myaccount.google.com/connections" target="_blank" :class="linkClass">
+                Deleting your account removes every Team you own and all Sites and data in them. You also lose access to Teams you joined. Google can keep the access you gave Request Indexing. Remove it in your <NuxtLink to="https://myaccount.google.com/connections" target="_blank" :class="linkClass">
                   {{ 'Google Account' }}
                 </NuxtLink>.
               </p>
