@@ -67,6 +67,7 @@ export const PRERENDERED_PAGE_PATHS = [
   '/google-indexing-api-tutorial',
   '/guides',
   '/indexing-api-for-blog-posts',
+  '/indexnow-setup',
   '/privacy',
   '/request-indexing-google-search-console',
   '/terms',

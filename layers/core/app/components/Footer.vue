@@ -25,6 +25,10 @@ const links = [
         to: '/request-indexing-google-search-console',
       },
       {
+        label: 'Set Up IndexNow',
+        to: '/indexnow-setup',
+      },
+      {
         label: 'Google Indexing API',
         to: '/google-indexing-api',
       },
