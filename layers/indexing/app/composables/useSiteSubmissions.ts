@@ -1,52 +1,43 @@
-// The Submissions page's reads, over gscdump operations that exist today.
+// Request Indexing's `submissions` and `submissionOutcomes` Indexing
+// capabilities, for the shared Submissions section of `@nuxtseo/pro-indexing`.
 //
-// Each read has the `IndexingRead` shape `@nuxtseo/pro-indexing` takes (`data`,
-// `status`, `error`, `refresh`), so when the shared Submissions section ships,
-// `useRequestIndexingSource` can hand these to it as a capability, or drop them
-// for the engine's summary and outcome operations. See
-// `layers/indexing/shared/submissions.ts` for what each one may claim.
+// Built from what gscdump.com serves today (see
+// `layers/indexing/shared/submissions.ts`): one receipt window read per Site,
+// shared by the summary and every outcome read, plus saved URL Inspection
+// results searched one URL at a time. No read here inspects a URL:
+// `inspectSiteUrls` spends the Free allowance.
 //
-// No read here inspects a URL. `inspectSiteUrls` spends the Free allowance;
-// the outcomes only search URL Inspection results gscdump already holds.
+// When gscdump.com serves `getSiteSubmissionSummary` and
+// `listSiteSubmissionOutcomes` (gscdump.com#1233), these map those instead.
 
 import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
+import type { IndexingRead, IndexingReadStatus, IndexingSite } from '@nuxtseo/pro-indexing/shared/source'
+import type { IndexingSubmissionOutcomes, IndexingSubmissionOutcomesParams, IndexingSubmissionSummary } from '@nuxtseo/pro-indexing/shared/submissions'
 import type { MaybeRefOrGetter } from 'vue'
-import type { InspectionSearch, SentUrl, SubmissionOutcome } from '#layers/indexing/shared/submissions'
+import type { SiteIndexingGrant } from '#layers/indexing/shared/contracts/indexing-grant'
+import type { SubmissionWindow, UrlLookup } from '#layers/indexing/shared/submissions'
 import { computed, toValue } from 'vue'
 import { mapSettled } from '#layers/indexing/shared/map-settled'
 import {
-  latestSentUrls,
-  resolveSubmissionOutcome,
-  SUBMISSIONS_OUTCOME_SEARCH_LIMIT,
-  SUBMISSIONS_RECEIPT_READ_LIMIT,
-  summarizeSubmissions,
+  automaticSendingOf,
+  buildSubmissionOutcomes,
+  lookupFromSearch,
+  outcomeCandidates,
+  readReceiptWindow,
+  submissionWindowStart,
+  summarizeSubmissionWindow,
+  URL_SEARCH_LIMIT,
+  urlMatchKey,
+  windowCompleteness,
 } from '#layers/indexing/shared/submissions'
 import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
+import { useProFetch } from '#layers/pro-saas/app/composables/useProFetch'
 
-type IndexNowReceipts = GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.submissions.list'>['data']
-type GoogleReceipts = GscdumpV1OperationResponse<'partner.sites.indexing.google.submissions.list'>['data']
+type SiteInput = MaybeRefOrGetter<IndexingSite | null | undefined>
 type IndexNowConnection = GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.connection.get'>['data']
 
-export interface SubmissionOutcomeRow {
-  sent: SentUrl
-  outcome: SubmissionOutcome
-}
-
-/**
- * What a Submissions card renders. One state at a time. `cause` names the read
- * that failed, so a card never blames URL Inspection for a receipt read.
- */
-export type SubmissionsCardState<T>
-  = | { _tag: 'pending' }
-    | { _tag: 'failed', cause: 'receipts' | 'inspections' }
-    | { _tag: 'ready', data: T }
-
-function sentKey(sent: Pick<SentUrl, 'url' | 'sentAt'>): string {
-  return `${sent.url}@${sent.sentAt}`
-}
-
-/** URL searches in flight at once for the Afterwards card. */
-const SUBMISSIONS_OUTCOME_CONCURRENCY = 3
+/** URL searches in flight at once. gscdump admits 60 URL list reads a minute per Site. */
+const OUTCOME_SEARCH_CONCURRENCY = 3
 
 /**
  * The Site's IndexNow connection. The IndexNow page and Submissions share this
@@ -62,102 +53,105 @@ export function useIndexNowConnection(engineSiteId: MaybeRefOrGetter<string | un
   )
 }
 
-export function useSiteSubmissions(engineSiteId: MaybeRefOrGetter<string | undefined>) {
-  const siteId = computed(() => toValue(engineSiteId))
+/** The Nuxt data key of a Site's receipt window. Refresh it after a send or a switch change. */
+export function submissionWindowKey(engineSiteId: string): string {
+  return `submissions:window:${engineSiteId}`
+}
 
-  const indexNowReceipts = useGscdumpQuery<IndexNowReceipts>(
-    () => `submissions:indexnow:${siteId.value ?? ''}`,
-    siteId,
-    (id, client) => client.listSiteIndexNowSubmissionReceipts({ params: { siteId: id }, query: { limit: SUBMISSIONS_RECEIPT_READ_LIMIT, offset: 0 } }, true),
-    [],
-  )
-  const googleReceipts = useGscdumpQuery<GoogleReceipts>(
-    () => `submissions:google:${siteId.value ?? ''}`,
-    siteId,
-    (id, client) => client.listSiteGoogleSubmissionReceipts({ params: { siteId: id }, query: { limit: SUBMISSIONS_RECEIPT_READ_LIMIT, offset: 0 } }, true),
-    [],
-  )
-  const indexNowConnection = useIndexNowConnection(siteId)
-
-  const receiptsError = computed(() => indexNowReceipts.error.value ?? googleReceipts.error.value ?? null)
-
-  const summary = computed(() => {
-    const indexnow = indexNowReceipts.data.value
-    const google = googleReceipts.data.value
-    if (!indexnow || !google)
-      return null
-    return summarizeSubmissions({
-      indexnow: { receipts: indexnow.submissionReceipts, hasMore: indexnow.pagination.hasMore },
-      google: { receipts: google.submissionReceipts, hasMore: google.pagination.hasMore },
-      now: new Date(),
-    })
-  })
-
-  const latest = computed(() => latestSentUrls(summary.value?.sent ?? []))
-  const latestUrlsKey = computed(() => latest.value.rows.map(sentKey).join('|'))
-
-  const outcomes = useGscdumpQuery<SubmissionOutcomeRow[]>(
-    () => `submissions:outcomes:${siteId.value ?? ''}:${latestUrlsKey.value}`,
-    siteId,
-    // A few searches at a time, each settled on its own: one failed read marks
-    // its row, never the whole card. gscdump admits 60 URL list reads a minute
-    // per Site. A cancelled run, such as the one a changed URL list replaces,
-    // starts no further search and aborts the ones in flight.
-    (id, client, signal) => mapSettled(latest.value.rows, { limit: SUBMISSIONS_OUTCOME_CONCURRENCY, signal }, async (sent): Promise<SubmissionOutcomeRow> => {
-      const page = await client.listSiteIndexingUrls({
-        params: { siteId: id },
-        query: { search: sent.url, limit: SUBMISSIONS_OUTCOME_SEARCH_LIMIT, count: 0 },
-      }, true, { signal })
-      const search: InspectionSearch = {
-        rows: page.urls.map(url => ({ url: url.url, verdict: url.verdict, coverageState: url.coverageState, lastCheckedAt: url.lastCheckedAt })),
-        complete: !page.pagination.hasMore,
+/**
+ * One Site's receipts for the window, both channels, with its IndexNow
+ * connection and whether it can send to Google. Every Submissions read of the
+ * Site shares this one read by its key.
+ */
+function useSubmissionWindow(site: SiteInput) {
+  const proFetch = useProFetch()
+  const engineId = computed(() => toValue(site)?.dataId ?? undefined)
+  return useGscdumpQuery<SubmissionWindow>(
+    () => submissionWindowKey(engineId.value ?? ''),
+    engineId,
+    async (id, client, signal) => {
+      const since = submissionWindowStart(Date.now())
+      const appId = toValue(site)?.id
+      const [indexNow, google, connection, grant] = await Promise.all([
+        readReceiptWindow(async (offset, limit) => {
+          const page = await client.listSiteIndexNowSubmissionReceipts({ params: { siteId: id }, query: { limit, offset } }, true)
+          return { receipts: page.submissionReceipts, hasMore: page.pagination.hasMore }
+        }, since),
+        readReceiptWindow(async (offset, limit) => {
+          const page = await client.listSiteGoogleSubmissionReceipts({ params: { siteId: id }, query: { limit, offset } }, true)
+          return { receipts: page.submissionReceipts, hasMore: page.pagination.hasMore }
+        }, since),
+        client.getSiteIndexNowConnection({ params: { siteId: id } }, true),
+        // The grant says whether Request Indexing can send this Site's URLs to
+        // Google at all. A failed read cannot rule Google out, so it counts as able.
+        appId
+          ? proFetch<SiteIndexingGrant>(`/api/sites/${appId}/indexing/google-grant`, { signal }).catch(() => null)
+          : Promise.resolve(null),
+      ])
+      return {
+        since,
+        indexNow: indexNow.receipts,
+        google: google.receipts,
+        completeness: windowCompleteness(indexNow, google),
+        googleAvailable: grant?._tag !== 'unavailable',
+        automaticSending: automaticSendingOf(connection),
       }
-      return { sent, outcome: resolveSubmissionOutcome(sent, search) }
-    }, sent => ({ sent, outcome: { _tag: 'read-failed' } })),
-    [latestUrlsKey],
+    },
+    [],
   )
+}
 
-  async function refresh() {
-    const urlsBefore = latestUrlsKey.value
-    await Promise.all([indexNowReceipts.refresh(), googleReceipts.refresh(), indexNowConnection.refresh()])
-    // A changed URL list already started its own searches through the key
-    // watch. A second run here would spend the same URL list reads twice.
-    if (latestUrlsKey.value === urlsBefore)
-      await outcomes.refresh()
-  }
-
-  const sent = computed<SubmissionsCardState<NonNullable<typeof summary.value>>>(() => {
-    if (receiptsError.value)
-      return { _tag: 'failed', cause: 'receipts' }
-    return summary.value ? { _tag: 'ready', data: summary.value } : { _tag: 'pending' }
-  })
-
-  // Outcome rows count only when they answer the URLs the receipts list now.
-  // A refresh that changed the list shows pending until its own read lands.
-  const afterwards = computed<SubmissionsCardState<SubmissionOutcomeRow[]>>(() => {
-    if (receiptsError.value)
-      return { _tag: 'failed', cause: 'receipts' }
-    if (outcomes.error.value)
-      return { _tag: 'failed', cause: 'inspections' }
-    if (!summary.value)
-      return { _tag: 'pending' }
-    if (!latest.value.rows.length)
-      return { _tag: 'ready', data: [] }
-    const rows = outcomes.data.value
-    if (!rows || rows.map(row => sentKey(row.sent)).join('|') !== latestUrlsKey.value)
-      return { _tag: 'pending' }
-    return { _tag: 'ready', data: rows }
-  })
-
+/** The `submissions` capability. */
+export function useSubmissionSummary(site: SiteInput): IndexingRead<IndexingSubmissionSummary> {
+  const window = useSubmissionWindow(site)
   return {
-    indexNowReceipts,
-    googleReceipts,
-    indexNowConnection,
-    summary,
-    latest,
-    outcomes,
-    sent,
-    afterwards,
-    refresh,
+    data: computed(() => window.data.value ? summarizeSubmissionWindow(window.data.value) : null),
+    status: computed(() => window.status.value),
+    error: computed(() => window.error.value),
+    refresh: () => window.refresh(),
+  }
+}
+
+/** The `submissionOutcomes` capability. A URL with no accepted Submission makes no search. */
+export function useSubmissionOutcomes(site: SiteInput, params: MaybeRefOrGetter<IndexingSubmissionOutcomesParams>): IndexingRead<IndexingSubmissionOutcomes> {
+  const window = useSubmissionWindow(site)
+  const engineId = computed(() => toValue(site)?.dataId ?? undefined)
+  const filter = computed(() => toValue(params))
+  // A new window read starts a new outcome read: `since` moves with each one.
+  const outcomes = useGscdumpQuery<IndexingSubmissionOutcomes | null>(
+    () => `submissions:outcomes:${engineId.value ?? ''}:${window.data.value?.since ?? ''}:${JSON.stringify(filter.value)}`,
+    engineId,
+    async (id, client, signal) => {
+      const current = window.data.value
+      if (!current)
+        return null
+      const { matching, looked } = outcomeCandidates(current, filter.value)
+      const lookups = await mapSettled(looked, { limit: OUTCOME_SEARCH_CONCURRENCY, signal }, async (entry): Promise<UrlLookup> => {
+        // The search drops a trailing slash, so `/docs` and `/docs/` find each other.
+        const term = urlMatchKey(entry.url).replace(/\/$/, '')
+        const page = await client.listSiteIndexingUrls({ params: { siteId: id }, query: { search: term, limit: URL_SEARCH_LIMIT, count: 0 } }, true, { signal })
+        return lookupFromSearch(entry.url, page.urls, page.pagination.hasMore)
+      }, (): UrlLookup => ({ _tag: 'unknown' }))
+      return buildSubmissionOutcomes(current, filter.value, matching, looked, lookups)
+    },
+    [],
+  )
+  const status = computed<IndexingReadStatus>(() => {
+    if (window.status.value === 'error' || outcomes.status.value === 'error')
+      return 'error'
+    if (!window.data.value || !outcomes.data.value)
+      return window.status.value === 'idle' && outcomes.status.value === 'idle' ? 'idle' : 'pending'
+    return outcomes.status.value
+  })
+  return {
+    data: computed(() => window.data.value ? outcomes.data.value : null),
+    status,
+    error: computed(() => window.error.value ?? outcomes.error.value),
+    refresh: async () => {
+      if (window.error.value)
+        await window.refresh()
+      else
+        await outcomes.refresh()
+    },
   }
 }

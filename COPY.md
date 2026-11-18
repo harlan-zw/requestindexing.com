@@ -188,12 +188,15 @@ Each string names the failed step and the next action.
 
 These assets apply to the Submissions page: one Site's Submissions on every channel, and its
 sitemap submission. `layers/indexing/shared/submissions-copy.ts` holds them. Change them here first.
-`{date}` renders as a medium date, for example Nov 18, 2026.
+
+The "Sent to search engines" card, its "Afterwards in Google" block, and each URL's Submission
+timeline on the URLs page come from `@nuxtseo/pro-indexing`. Their strings are the layer's
+defaults, canonical in nuxtseo.com's COPY.md, except the rows in "Dashboard indexing section assets".
 
 A receipt proves receipt only. "Afterwards" shows order in time, never cause, and never a
-timeframe. gscdump has no summary or outcome operation yet, so the page counts only the receipts it
-reads, and says so when it read fewer than the window holds. The shared Submissions section in
-`@nuxtseo/pro-indexing` replaces the Sent and Afterwards cards when it ships.
+timeframe. The Afterwards block counts accepted Submissions only (gscdump#304): each URL by its
+newest accepted Submission, and Google's saved result only from a check after that. A URL with no
+index verdict, or one its search could not find for certain, is left out of the totals.
 
 | Asset | String |
 | --- | --- |
@@ -201,36 +204,8 @@ reads, and says so when it read fewer than the window holds. The shared Submissi
 | Page intro | A Submission notifies a search engine that a page is new or changed. Each search engine decides whether to index it. |
 | Back link on the channel pages | All Submissions |
 | Missing site | Connect this Site to see its Submissions. |
-| Sent heading | Sent to search engines |
-| Sent window | Last 30 days |
-| Sent channel names | IndexNow · Google Indexing API |
-| Sent columns | URLs sent · Accepted · Waiting · Not accepted |
-| Sent by automatic sending | Automatic sending sent {count} of them. |
-| Sent scope, capped | Counted from the latest {limit} receipts of each channel. Older Submissions in this window are not counted. |
-| Sent empty | No Submissions in the last 30 days. |
-| Receipt explanation | A receipt records the notification outcome. Search engines decide whether to index each URL. |
-| Receipt read failure | Submission receipts could not load. Retry to read the latest outcomes. |
 | Retry action | Retry loading |
-| Afterwards heading | Afterwards in Google |
-| Afterwards explanation | Google's latest URL Inspection result for each URL sent in the last 30 days. A result counts only when Google inspected the URL after it was sent. It shows order in time, not cause. IndexNow does not notify Google. |
-| Afterwards scope | The latest {count} URLs sent. |
-| Afterwards sent | Sent {date} |
-| Afterwards indexed | Indexed |
-| Afterwards not indexed | Not indexed |
-| Afterwards inspected | Inspected {date} |
-| Afterwards no index verdict | No index verdict |
-| Afterwards not inspected since | Not inspected since |
-| Afterwards not inspected since, detail | Last inspected {date}, before this Submission. |
-| Afterwards no result | No URL Inspection result |
-| Afterwards no result, detail | Request Indexing reads results for the URLs in your sitemaps. |
-| Afterwards not read | Not read |
-| Afterwards not read, detail | Many inspected URLs contain this address. Find it on the URLs page. |
-| Afterwards one result failed, detail | This result could not load. Retry to read it again. |
-| Afterwards read failure | Google's URL Inspection results could not load. Retry to read them again. When the receipts failed instead, the card shows the receipt read failure. |
-| Afterwards link to URLs | View every inspected URL (the Submit to Google page uses the same label) |
 | Channel headings | Google Indexing API · IndexNow · Sitemap submission |
-| Google channel, last | Last Submission {date} |
-| Google channel, none | No Submissions yet. |
 | IndexNow channel, no key | No IndexNow key yet. |
 | IndexNow channel, key not verified | Verify your key before submitting URLs. |
 | IndexNow channel, key verified | Key verified |
@@ -239,11 +214,7 @@ reads, and says so when it read fewer than the window holds. The shared Submissi
 | Channel links | Submit to Google · Submit with IndexNow (the Indexing channel assets) |
 
 The sitemap submission card reuses the titles and descriptions the Sitemaps page draws from
-`resolveSitemapEmptyState`. The IndexNow card reuses the automatic sending strings above.
-
-The Afterwards verdicts follow gscdump's own `status` filter: `PASS` is Indexed; `FAIL`, `PARTIAL`
-and `NEUTRAL` are Not indexed; no verdict is No index verdict. gscdump reads URL Inspection
-results only for URLs a live sitemap lists, which the no result detail says.
+`resolveSitemapEmptyState`. The automatic sending switch sits in the card's Automatic sending row.
 
 ## Search Console status and reports
 
@@ -743,13 +714,16 @@ The fleet Indexing tabs (Overview, Issues, Changes) and the per-Site indexing se
 | Not indexed tile tooltip | Inspected URLs that Google does not report as indexed. | The counts are URL Inspection results, not submitted URLs |
 | Site breakdown, no coverage yet | Google has not reported coverage for this Site yet. The breakdown appears after the first Search Console sync. | Site is capitalised (GLOSSARY.md) |
 | Site breakdown, all indexed | Every inspected URL is indexed, so there is nothing to break down. | The counts are URL Inspection results |
-| Changes count note | Counts at most 500 URL Inspection changes per Site, so a large Site can show fewer than the real total. | Changes come from each Site's URL Inspection transitions, at most 500 per read |
 | Diagnosis site-wide line | {indexed} URLs indexed site-wide. | The section default draws no scope line. The headline names one part of the Site, so this line gives the whole |
 | URL row, Search Console link | Inspect in Search Console | The product names the tool in full |
 | Fleet tabs | Overview, Issues, Changes | Fleet page tab strip |
 | Copy export | Copy as Markdown | Fleet Overview toolbar |
 | Download export | Download Markdown | Fleet Overview toolbar |
 | Export title | Indexing coverage: All Sites | The SDK writes the heading; All Sites is the scope |
+| Submissions, Afterwards tooltip | Google's latest URL Inspection result for each URL an engine accepted, from a check made after it accepted the URL. It shows what happened next. It does not show that sending caused it. | Outcomes count accepted Submissions only (gscdump#304) |
+| Submissions, Afterwards scope | Of {count} accepted URLs · Of 1 accepted URL | The totals cover accepted URLs, not every URL sent |
+| Submissions, Afterwards partial | Google results cover {checked} of the {count} accepted URLs. | Same scope as the line above |
+| Submissions, not inspected | Not inspected since it was sent | The default "Not inspected yet" implies a check will come |
 
 The Markdown body is `buildIndexingPortfolioMarkdown` from `@gscdump/sdk/indexing`. Its words are gscdump's.
 

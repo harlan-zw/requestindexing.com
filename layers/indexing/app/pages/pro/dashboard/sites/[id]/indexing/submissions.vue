@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { useSiteSubmissions } from '#layers/indexing/app/composables/useSiteSubmissions'
-import SubmissionsAfterwardsCard from '#layers/indexing/app/internal/components/submissions/SubmissionsAfterwardsCard.vue'
-import SubmissionsSentCard from '#layers/indexing/app/internal/components/submissions/SubmissionsSentCard.vue'
+import type { IndexNowConnectionV1 } from '@gscdump/contracts/v1'
+import type { IndexingSite } from '@nuxtseo/pro-indexing/shared/source'
+import IndexingSubmissionsCard from '@nuxtseo/pro-indexing/app/components/IndexingSubmissionsCard.vue'
+import { refreshNuxtData } from '#imports'
+import { submissionWindowKey, useIndexNowConnection } from '#layers/indexing/app/composables/useSiteSubmissions'
+import IndexNowAutomaticSending from '#layers/indexing/app/internal/components/indexing/IndexNowAutomaticSending.vue'
 import { resolveSitemapEmptyState } from '#layers/indexing/app/utils/sitemap-empty-state'
-import { viewAutomaticSending } from '#layers/indexing/shared/submissions'
-import { describeAutomaticSending, googleLastSubmission, SUBMISSIONS_COPY } from '#layers/indexing/shared/submissions-copy'
+import { SUBMISSIONS_COPY } from '#layers/indexing/shared/submissions-copy'
 import { expandProSiteRoute, proSiteFeatureManifest } from '#layers/pro-features/shared/manifest'
 import { useProGscdumpSitemapSubmission } from '#layers/pro-gsc/app/composables/useProGscdump'
 
@@ -14,38 +16,46 @@ definePageMeta({
 })
 
 // Every Submission of one Site, on every channel, and its sitemap submission.
-// It leads with the value: what was sent, what each search engine answered,
-// and what Google reported afterwards. The two channel pages hold the actions.
-const { siteId, gscdumpSiteId, site } = useSite('Submissions')
+// The shared Submissions card (`@nuxtseo/pro-indexing`) leads: what was sent,
+// what each engine's receipt says, and what Google reported afterwards. The
+// two channel pages below hold the actions. Each URL's own timeline is on the
+// URLs page, in the URL's detail.
+const { siteId, siteName, gscdumpSiteId, site } = useSite('Submissions')
 const engineId = computed(() => gscdumpSiteId.value ?? undefined)
 const { isAdmin } = useCaller()
 const teamPolicy = useTeamPolicy(() => site.value?.teamId)
 const canWrite = computed(() => isAdmin.value || teamPolicy.can('write-data'))
 
-const submissions = useSiteSubmissions(engineId)
-const { sent, afterwards, latest, indexNowConnection, googleReceipts } = submissions
+const indexingSite = computed<IndexingSite | null>(() => siteId.value
+  ? { id: siteId.value, ref: siteId.value, label: siteName.value, url: site.value?.url ?? null, dataId: gscdumpSiteId.value ?? null }
+  : null)
+
+const indexNowConnection = useIndexNowConnection(engineId)
 const sitemapSubmission = useProGscdumpSitemapSubmission(engineId)
 
 const route = (id: keyof typeof proSiteFeatureManifest) => computed(() => expandProSiteRoute(proSiteFeatureManifest[id].route, siteId.value))
 const googleRoute = route('indexing.submit')
 const indexNowRoute = route('indexing.indexnow')
 const sitemapsRoute = route('indexing.sitemaps')
-const urlsRoute = route('indexing.urls')
 
-const lastGoogleSubmission = computed(() => googleReceipts.data.value?.submissionReceipts[0]?.createdAt ?? null)
-
-const indexNowState = computed(() => {
+const indexNowKey = computed(() => {
   const connection = indexNowConnection.data.value
   if (!connection)
     return null
   if (connection._tag === 'disconnected')
-    return { key: SUBMISSIONS_COPY.indexNowNoKey, verified: false, automatic: [] as string[] }
-  return {
-    key: connection._tag === 'connected' ? SUBMISSIONS_COPY.indexNowVerified : SUBMISSIONS_COPY.indexNowVerify,
-    verified: connection._tag === 'connected',
-    automatic: describeAutomaticSending(viewAutomaticSending(connection)),
-  }
+    return { label: SUBMISSIONS_COPY.indexNowNoKey, verified: false }
+  return connection._tag === 'connected'
+    ? { label: SUBMISSIONS_COPY.indexNowVerified, verified: true }
+    : { label: SUBMISSIONS_COPY.indexNowVerify, verified: false }
 })
+
+// The switch writes the connection; the card's summary reads it through the
+// Site's receipt window, so that read refreshes too.
+async function onAutomaticChanged(connection: IndexNowConnectionV1) {
+  indexNowConnection.data.value = connection
+  if (engineId.value)
+    await refreshNuxtData(submissionWindowKey(engineId.value))
+}
 
 const sitemapState = computed(() => resolveSitemapEmptyState({
   submission: sitemapSubmission.data.value ?? null,
@@ -68,11 +78,18 @@ const sitemapState = computed(() => resolveSitemapEmptyState({
           {{ SUBMISSIONS_COPY.missingSite }}
         </p>
       </UiCard>
-      <SubmissionsSentCard v-else :state="sent" @retry="submissions.refresh()" />
-    </ProPageZone>
-
-    <ProPageZone v-if="engineId" tier="secondary">
-      <SubmissionsAfterwardsCard :state="afterwards" :total="latest.total" :urls-route="urlsRoute" @retry="submissions.refresh()" />
+      <IndexingSubmissionsCard v-else :site="indexingSite">
+        <template #automatic>
+          <IndexNowAutomaticSending
+            v-if="indexNowConnection.data.value && indexNowConnection.data.value._tag !== 'disconnected'"
+            bare
+            :connection="indexNowConnection.data.value"
+            :engine-site-id="engineId"
+            :can-write="canWrite"
+            @updated="onAutomaticChanged"
+          />
+        </template>
+      </IndexingSubmissionsCard>
     </ProPageZone>
 
     <ProPageZone tier="secondary">
@@ -81,9 +98,6 @@ const sitemapState = computed(() => resolveSitemapEmptyState({
           <div class="flex h-full flex-col gap-2 text-sm">
             <p class="text-muted">
               Google documents it for job posting and livestream pages only.
-            </p>
-            <p v-if="engineId && googleReceipts.data.value" class="text-default">
-              {{ lastGoogleSubmission ? googleLastSubmission(lastGoogleSubmission) : SUBMISSIONS_COPY.googleNone }}
             </p>
             <UiButton :to="googleRoute" purpose="link" trailing-icon="next" class="mt-auto min-h-11 self-start">
               {{ SUBMISSIONS_COPY.googleLink }}
@@ -104,16 +118,13 @@ const sitemapState = computed(() => resolveSitemapEmptyState({
                 {{ SUBMISSIONS_COPY.retry }}
               </UiButton>
             </template>
-            <UiSkeleton v-else-if="engineId && !indexNowState" :lines="2" :base="160" :range="60" />
-            <template v-else-if="indexNowState">
-              <UBadge v-if="indexNowState.verified" color="success" variant="subtle" class="self-start">
-                {{ indexNowState.key }}
+            <UiSkeleton v-else-if="engineId && !indexNowKey" :lines="1" :base="160" :range="60" />
+            <template v-else-if="indexNowKey">
+              <UBadge v-if="indexNowKey.verified" color="success" variant="subtle" class="self-start">
+                {{ indexNowKey.label }}
               </UBadge>
               <p v-else class="text-default">
-                {{ indexNowState.key }}
-              </p>
-              <p v-for="line in indexNowState.automatic" :key="line" class="text-muted">
-                {{ line }}
+                {{ indexNowKey.label }}
               </p>
             </template>
             <UiButton :to="indexNowRoute" purpose="link" trailing-icon="next" class="mt-auto min-h-11 self-start">

@@ -103,14 +103,14 @@ export function windowStart(through: string, windowDays: number): string {
 
 /**
  * The Portfolio Changes roll-up from each Site's URL Inspection transitions.
- * A URL whose verdict left PASS opened an issue; one that reached PASS cleared
- * one. The day is the inspection that saw the change (`changedBefore`). Only
- * `indexStatus` transitions count, so one URL change is one row, never one per
- * changed field.
+ * A URL whose verdict left PASS was dropped from the index; one that reached
+ * PASS was newly indexed. The day is the inspection that saw the change
+ * (`changedBefore`). Only `indexStatus` transitions count, so one URL change
+ * is one row, never one per changed field.
  */
 export function changesRollupFromTransitions(reads: readonly SiteTransitionsRead[], through: string, windowDays = INDEXING_CHANGES_WINDOW_DAYS): IndexingChangesRollup {
   const from = windowStart(through, windowDays)
-  const byKey = new Map<string, { siteId: string, day: string, opened: number, cleared: number }>()
+  const byKey = new Map<string, { siteId: string, day: string, dropped: number, indexed: number }>()
   for (const read of reads) {
     for (const transition of read.transitions) {
       if (transition.field !== 'indexStatus')
@@ -123,11 +123,11 @@ export function changesRollupFromTransitions(reads: readonly SiteTransitionsRead
       if (day < from || day > through)
         continue
       const key = `${read.siteId}\u0000${day}`
-      const row = byKey.get(key) ?? { siteId: read.siteId, day, opened: 0, cleared: 0 }
+      const row = byKey.get(key) ?? { siteId: read.siteId, day, dropped: 0, indexed: 0 }
       if (isIndexed)
-        row.cleared += 1
+        row.indexed += 1
       else
-        row.opened += 1
+        row.dropped += 1
       byKey.set(key, row)
     }
   }

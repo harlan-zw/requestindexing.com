@@ -118,10 +118,11 @@ describe('the shared sections read Request Indexing data', () => {
 })
 
 describe('indexing capabilities', () => {
-  it('has Watched URLs, and the Portfolio capabilities only with a Portfolio', () => {
-    expect(indexingCapabilities(useRequestIndexingSource())).toEqual(['diagnose', 'inspect', 'canonicalMismatches', 'cohorts', 'watchedUrls', 'cohortFilter'])
+  it('has Submissions and Watched URLs, and the Portfolio capabilities only with a Portfolio', () => {
+    // No `submissionsRollup`: no single read covers every Site's Submissions yet.
+    expect(indexingCapabilities(useRequestIndexingSource())).toEqual(['diagnose', 'inspect', 'canonicalMismatches', 'cohorts', 'submissions', 'submissionOutcomes', 'watchedUrls', 'cohortFilter'])
     expect(indexingCapabilities(useRequestIndexingSource({ portfolio: () => rows.map(toIndexingSite) })))
-      .toEqual(['diagnose', 'inspect', 'canonicalMismatches', 'cohorts', 'sitemapProblems', 'changesRollup', 'watchedUrls', 'cohortFilter'])
+      .toEqual(['diagnose', 'inspect', 'canonicalMismatches', 'cohorts', 'sitemapProblems', 'changesRollup', 'submissions', 'submissionOutcomes', 'watchedUrls', 'cohortFilter'])
     expect(hasIndexingCapability(useRequestIndexingSource({ canInspect: false }), 'inspect')).toBe(false)
   })
 

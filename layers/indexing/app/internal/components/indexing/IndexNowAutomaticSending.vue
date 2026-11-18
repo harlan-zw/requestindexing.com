@@ -9,11 +9,16 @@ import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump/use
 // this reads it from the connection and writes it with one PATCH. The verify
 // action on the IndexNow page turns it on, so a reader only uses this switch
 // to turn it off, or back on.
-const { connection, engineSiteId, canWrite } = defineProps<{
+const { connection, engineSiteId, canWrite, bare = false } = defineProps<{
   connection: IndexNowConnectionV1
   /** `sites.gscdumpSiteId`: this calls the engine. */
   engineSiteId: string
   canWrite: boolean
+  /**
+   * The switch alone, named for assistive technology only. The shared
+   * Submissions card draws the label and the state beside it.
+   */
+  bare?: boolean
 }>()
 
 const emit = defineEmits<{ updated: [connection: IndexNowConnectionV1] }>()
@@ -47,7 +52,19 @@ async function change(value: boolean) {
 </script>
 
 <template>
-  <div class="space-y-3">
+  <div v-if="bare" class="flex flex-col items-start gap-1 sm:items-end">
+    <USwitch
+      :model-value="isOn"
+      :aria-label="AUTOMATIC_SENDING_COPY.label"
+      :disabled="!canWrite || busy"
+      :loading="busy"
+      @update:model-value="change($event === true)"
+    />
+    <p v-if="failed" role="status" class="text-sm text-error">
+      {{ AUTOMATIC_SENDING_COPY.changeFailed }}
+    </p>
+  </div>
+  <div v-else class="space-y-3">
     <USwitch
       :model-value="isOn"
       :label="AUTOMATIC_SENDING_COPY.label"
