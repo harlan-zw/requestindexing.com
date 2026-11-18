@@ -1,6 +1,6 @@
 import type { FunnelUser } from './funnel'
 import { describe, expect, it } from 'vitest'
-import { buildFunnelReport, defaultFunnelDates, funnelTimestamp, parseFunnelQuery } from './funnel'
+import { buildFunnelReport, defaultFunnelDates, funnelTimestamp, parseFunnelQuery, resolveGoogleConnectStop } from './funnel'
 
 const now = Date.parse('2026-10-18T12:00:00Z')
 const query = parseFunnelQuery({ from: '2026-10-01', to: '2026-10-07' }, now)
@@ -90,4 +90,34 @@ describe('funnel dates', () => {
     { search: ['one', 'two'] },
     { source: ['Direct'] },
   ])('rejects invalid query %j', input => expect(() => parseFunnelQuery(input, now)).toThrow())
+})
+
+describe('where signups stop before Google', () => {
+  it('reads the latest connect record for each signup', () => {
+    expect(resolveGoogleConnectStop([])).toBe('noRecord')
+    expect(resolveGoogleConnectStop([{ type: 'signed_up', time: 1 }])).toBe('noRecord')
+    expect(resolveGoogleConnectStop([{ type: 'gsc_connect_started', time: 2 }])).toBe('leftGoogle')
+    expect(resolveGoogleConnectStop([{ type: 'gsc_connect_started', time: 2 }, { type: 'gsc_connect_cancelled', time: 3 }])).toBe('cancelled')
+    expect(resolveGoogleConnectStop([{ type: 'gsc_connect_cancelled', time: 3 }, { type: 'gsc_connect_skipped', time: 4 }])).toBe('skipped')
+    expect(resolveGoogleConnectStop([{ type: 'gsc_connect_started', time: 2 }, { type: 'gsc_scope_missing', time: 3 }])).toBe('scopeMissing')
+    expect(resolveGoogleConnectStop([{ type: 'gsc_connect_failed', time: 5 }, { type: 'gsc_connect_started', time: 2 }])).toBe('failed')
+  })
+
+  it('counts only signups without Google, and an unknown stop as no record', () => {
+    const report = buildFunnelReport([
+      user(1, { googleConnectStop: 'cancelled' }),
+      user(2, { googleConnectStop: 'cancelled' }),
+      user(3, { googleConnectStop: 'skipped' }),
+      user(4),
+      user(5, { googleConnected: true }),
+    ], query, now)
+    expect(Object.fromEntries(report.googleConnectStops.map(stop => [stop.key, stop.users]))).toEqual({
+      noRecord: 1,
+      skipped: 1,
+      leftGoogle: 0,
+      cancelled: 2,
+      scopeMissing: 0,
+      failed: 0,
+    })
+  })
 })

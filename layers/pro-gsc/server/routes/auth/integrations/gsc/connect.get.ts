@@ -1,12 +1,20 @@
-import { GSC_INDEXING_SCOPE, GSC_READ_SCOPE, GSC_SITE_VERIFICATION_SCOPE, GSC_WRITE_SCOPE } from 'gscdump'
+import { GSC_READ_SCOPE, GSC_SITE_VERIFICATION_SCOPE, GSC_WRITE_SCOPE } from 'gscdump'
 import { withQuery } from 'ufo'
 import { randomUUID } from 'uncrypto'
 import { safeAuthRedirect } from '#layers/pro-saas-auth/shared/utils/auth-redirect'
 
 // GSC OAuth — INTEGRATION grant, not sign-in identity. Issues Google's
-// webmasters / indexing scopes with offline access + refresh tokens. The
-// sign-in identity flow at /auth/google is intentionally separate (see
-// google-signin-plan.md Round 6 — identity vs integration).
+// webmasters scopes with offline access + refresh tokens. The sign-in identity
+// flow at /auth/google is intentionally separate (see google-signin-plan.md
+// Round 6 — identity vs integration).
+//
+// Ask only for what a shipped feature uses, as nuxtseo.com does. Setup asks
+// for `read`: every setup step, URL Inspection included, works read-only.
+// Sitemap submission steps up to `write` on the Sitemaps tab, and Add and
+// verify steps up to `verify`. The Indexing API grant has its own client
+// (`/auth/google-indexing`, gscdump.com ADR-0016), so no request here names
+// `auth/indexing`: it led Google's consent screen with "Submit data to Google
+// for indexing" and nothing read it.
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
   if (!session.user?.id) {
@@ -16,13 +24,7 @@ export default defineEventHandler(async (event) => {
   const { scope: requestedScope = 'full', returnTo } = getQuery(event)
 
   const scopes = ['email']
-  if (requestedScope === 'full') {
-    scopes.push(
-      GSC_WRITE_SCOPE,
-      GSC_INDEXING_SCOPE,
-    )
-  }
-  else if (requestedScope === 'verify') {
+  if (requestedScope === 'verify') {
     // Step up to add and verify a property on the user's behalf: `webmasters`
     // to add it, `siteverification` to prove ownership. Asked for only by that
     // flow, never at sign-up, so the consent screen a new user sees stays
@@ -33,12 +35,20 @@ export default defineEventHandler(async (event) => {
       GSC_SITE_VERIFICATION_SCOPE,
     )
   }
-  else if (requestedScope === 'write') {
-    scopes.push(GSC_WRITE_SCOPE)
-  }
   else if (requestedScope === 'read') {
     scopes.push(GSC_READ_SCOPE)
   }
+  else {
+    // `full`, the default, and `write`: sitemap submission needs `webmasters`.
+    scopes.push(GSC_WRITE_SCOPE)
+  }
+
+  // The funnel's first sign that the reader pressed Connect. Without it a
+  // signup who never reached Google and one who left on Google's screen read
+  // the same. First attempt only; no email.
+  event.waitUntil(emitFirstProEvent(useDrizzle(event), session.user.id, 'gsc_connect_started', {
+    scope: ['verify', 'read', 'write'].includes(String(requestedScope)) ? String(requestedScope) : 'full',
+  }))
 
   const state = randomUUID()
   await setUserSession(event, {

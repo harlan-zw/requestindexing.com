@@ -6,6 +6,9 @@ type ProDB = ReturnType<typeof useDrizzle>
 
 // The signup funnel reads in this order: signed_up, gsc_connected, site_added,
 // onboarding_completed. Each type records one first-time milestone per user.
+// The `gsc_connect_*` and `gsc_scope_missing` types say where a signup stopped
+// before `gsc_connected`: never pressed Connect, skipped it, or came back from
+// Google with no grant.
 export type ProEventType
   = | 'signed_up'
     | 'page_task_started'
@@ -14,6 +17,11 @@ export type ProEventType
     | 'first_report_started'
     | 'first_report_evidence_viewed'
     | 'setup_example_viewed'
+    | 'gsc_connect_started'
+    | 'gsc_connect_skipped'
+    | 'gsc_connect_cancelled'
+    | 'gsc_connect_failed'
+    | 'gsc_scope_missing'
     | 'gsc_connected'
     | 'site_added'
     | 'onboarding_completed'

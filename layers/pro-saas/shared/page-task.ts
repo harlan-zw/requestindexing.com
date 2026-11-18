@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { GSC_CONNECT_COPY } from './gsc-connect-copy'
 
 export const PAGE_TASK_ROUTE = '/pro/dashboard/url-inspection'
 export const PAGE_TASK_TTL = 7 * 24 * 60 * 60 * 1000
@@ -33,7 +34,7 @@ export const PAGE_SETUP_COPY = {
   coverage: 'Google coverage state',
   details: 'View inspection details',
   pending: 'This Site is being connected to Search Console. Refresh its status in a moment.',
-  readAccess: 'This step asks for read-only Search Console access. Extra permissions appear with the actions that need them.',
+  readAccess: GSC_CONNECT_COPY.readAccess,
   retry: 'Retry',
   propertyLimit: 'This Site\'s connected property does not cover your selected page.',
   connectedProperty: 'Connected property',

@@ -26,6 +26,7 @@ import ProShellUserMenu from '@nuxtseo/pro-shell/app/components/ProShellUserMenu
 import { useProShellCopy } from '@nuxtseo/pro-shell/app/composables/useProShellCopy'
 import { useProShellRoute } from '@nuxtseo/pro-shell/app/composables/useProShellRoute'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
+import { parseGscConnectReturn } from '#layers/pro-gsc/shared/gsc-grant'
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 import { MISSING_SITE_PATH, readSiteLookup, siteLookupKey } from '#layers/pro-saas/shared/site-lookup'
 import { useProFeedback } from '../composables/useProFeedback'
@@ -52,11 +53,15 @@ useHead({ htmlAttrs: { class: 'dashboard-theme' } })
 // session, says it for them. The retry returns to the same page without the
 // marker.
 const { session } = useUserSession()
-const gscScopeMissing = computed(() => resolveGscConnection({
+const gscConnection = computed(() => resolveGscConnection({
   gscdumpConnected: !!session.value?.gscdumpConnected,
   accountStatus: session.value?.gscdumpAccountStatus ?? null,
   error: route.query.error,
-})._tag === 'ScopeMissing')
+}))
+const gscScopeMissing = computed(() => gscConnection.value._tag === 'ScopeMissing')
+// A first grant that came back cancelled or failed. A connected account that
+// cancels a later step-up keeps its grant, so it sees no alert.
+const gscConnectReturn = computed(() => gscConnection.value._tag === 'NotConnected' ? parseGscConnectReturn(route.query.error) : null)
 const gscRetryTo = computed(() => {
   const { error: _error, ...query } = route.query
   return router.resolve({ path: route.path, query, hash: route.hash }).fullPath
@@ -242,6 +247,7 @@ function onPageError(error: unknown) {
       <ProShellMobileNavTrigger v-if="!headerTitle" class="mb-4" />
 
       <ProGscScopeMissingAlert v-if="gscScopeMissing" :retry-to="gscRetryTo" class="mb-6" />
+      <ProGscConnectReturnAlert v-else-if="gscConnectReturn" :result="gscConnectReturn" :retry-to="gscRetryTo" class="mb-6" />
 
       <UiEmptyState
         v-if="siteStatus === 'error'"

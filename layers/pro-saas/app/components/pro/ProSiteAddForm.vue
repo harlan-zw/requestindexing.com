@@ -144,7 +144,9 @@ watch(connectedSites, sites => emit('changed', sites.length), { immediate: true 
 // account with no property, it invites an address the server must refuse.
 const showAddressField = computed(() => picker.value._tag === 'Properties' || picker.value._tag === 'AllConnected')
 
-const gscConnectUrl = computed(() => `/auth/integrations/gsc/connect?${targetUrl ? 'scope=read&' : ''}returnTo=${encodeURIComponent(gscReturnTo)}`)
+// Read-only, as nuxtseo.com's Site add form asks: listing and connecting a
+// property needs no write access.
+const gscConnectUrl = computed(() => `/auth/integrations/gsc/connect?scope=read&returnTo=${encodeURIComponent(gscReturnTo)}`)
 const target = computed(() => targetUrl ? parseSiteUrlInput(targetUrl) : null)
 const matchingProperties = computed(() => target.value?._tag === 'Ok'
   ? (gsc.value?.properties ?? []).filter(property => pagePropertyCoversUrl(targetUrl!, property.siteUrl) && isVerifiedGscPermission(property.permissionLevel))

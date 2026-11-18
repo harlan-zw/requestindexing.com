@@ -233,7 +233,7 @@ describe('connect a Site', () => {
     await flush()
 
     expect([...host.querySelectorAll('a')].find(a => a.textContent === 'Connect Google')?.getAttribute('href'))
-      .toBe('/auth/integrations/gsc/connect?returnTo=%2Fpro%2Fdashboard%2Fonboarding%3Fstep%3Dsites')
+      .toBe('/auth/integrations/gsc/connect?scope=read&returnTo=%2Fpro%2Fdashboard%2Fonboarding%3Fstep%3Dsites')
     expect(host.querySelector('input')).toBeNull()
   })
 })

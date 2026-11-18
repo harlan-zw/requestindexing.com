@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AuthProviderId } from '#layers/pro-saas-auth/shared/types/auth'
+import { GSC_CONNECT_COPY } from '#layers/pro-saas/shared/gsc-connect-copy'
 import { ONBOARDING_ROUTE, resolveGscConnection, resolveOnboardingResumeStep } from '#layers/pro-saas/shared/onboarding'
 import { PAGE_SETUP_COPY, PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 
@@ -157,7 +158,7 @@ useSeoMeta({
       </ul>
 
       <p class="mt-4 text-xs text-muted">
-        In setup, Google asks you for two permissions: view and manage Search Console data, and submit pages for indexing. We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify.
+        {{ GSC_CONNECT_COPY.readAccess }} {{ GSC_CONNECT_COPY.changes }}
       </p>
 
       <p class="mt-7 text-xs text-muted">

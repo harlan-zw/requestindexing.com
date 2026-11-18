@@ -1,4 +1,5 @@
 import type { GscdumpKeyProbe } from '#layers/pro-gsc/server/utils/gscdump-key-repair'
+import type { GscCallbackError } from '#layers/pro-gsc/shared/gsc-grant'
 import { eq } from 'drizzle-orm'
 import { exchangeAuthCodeResult, introspectAccessTokenResult } from 'gscdump'
 import { logger } from '~~/shared/server/logger'
@@ -7,10 +8,10 @@ import { probeGscdumpUserKey, shouldRepairGscdumpKey } from '#layers/pro-gsc/ser
 import { scheduleGscdumpOnboardingReconcile } from '#layers/pro-gsc/server/utils/reconcile-gscdump-onboarding'
 import { recoverMissingGscdumpUser } from '#layers/pro-gsc/server/utils/recover-missing-gscdump-user'
 import { releaseRefusedSites } from '#layers/pro-gsc/server/utils/site-registration-refusal'
-import { resolveGscGrant } from '#layers/pro-gsc/shared/gsc-grant'
+import { GSC_CONNECT_CANCELLED_ERROR, GSC_CONNECT_FAILED_ERROR, GSC_SCOPE_MISSING_ERROR, resolveGoogleOAuthError, resolveGscGrant } from '#layers/pro-gsc/shared/gsc-grant'
 import { safeAuthRedirect } from '#layers/pro-saas-auth/shared/utils/auth-redirect'
 import { readCurrentTeam } from '#layers/pro-saas/server/utils/current-team'
-import { gscScopeMissingRedirect } from '#layers/pro-saas/shared/onboarding'
+import { gscCallbackErrorRedirect } from '#layers/pro-saas/shared/onboarding'
 
 function errorDetails(error: unknown) {
   const record = typeof error === 'object' && error !== null ? error as Record<string, unknown> : {}
@@ -24,23 +25,45 @@ function errorDetails(error: unknown) {
 
 export default defineEventHandler(async (event) => {
   const { state, code, error } = getQuery(event)
-
-  if (error) {
-    logger.error('[google auth] OAuth error:', error)
-    return sendRedirect(event, '/pro/dashboard?error=google_auth_failed')
-  }
-
-  if (!code || !state) {
-    throw createError({ statusCode: 422, statusMessage: 'Missing authorization code' })
-  }
-
   const session = await getUserSession(event)
-  if (state !== session.secure?.googleOauthState) {
-    throw createError({ statusCode: 422, statusMessage: 'Invalid state' })
-  }
 
   if (!session.user?.id) {
     throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
+  }
+  const userId = session.user.id
+
+  // Every way back from Google without a grant returns the reader to the page
+  // that asked, marked, so that page says what happened and offers the retry.
+  // These used to end on `/pro/dashboard?error=google_auth_failed`, which
+  // nothing read, or on a 422 page whose Try again repeated the failure. Each
+  // stop is recorded once per account, so the funnel can tell them apart.
+  // The connect route already parsed `returnTo`; the session is still
+  // untrusted storage.
+  const returnTo = safeAuthRedirect(session.secure?.googleOauthReturnTo)
+  async function stop(marker: GscCallbackError, type: 'gsc_connect_cancelled' | 'gsc_connect_failed' | 'gsc_scope_missing', payload?: Record<string, unknown>) {
+    event.waitUntil(emitFirstProEvent(useDrizzle(event), userId, type, payload))
+    await setUserSession(event, {
+      secure: {
+        googleOauthState: undefined,
+        googleOauthReturnTo: undefined,
+      },
+    })
+    return sendRedirect(event, gscCallbackErrorRedirect(returnTo, marker))
+  }
+
+  if (error) {
+    const googleError = resolveGoogleOAuthError(error)
+    logger.warn('[google auth] Google returned without a grant:', googleError._tag === 'Failed' ? googleError.reason : 'access_denied')
+    return googleError._tag === 'Cancelled'
+      ? stop(GSC_CONNECT_CANCELLED_ERROR, 'gsc_connect_cancelled')
+      : stop(GSC_CONNECT_FAILED_ERROR, 'gsc_connect_failed', { reason: googleError.reason })
+  }
+
+  // A missing code or a state that does not match this session: a second
+  // Connect tab, the back button, or a forged request. No token is exchanged.
+  if (!code || !state || state !== session.secure?.googleOauthState) {
+    logger.warn('[google auth] callback state did not match the session for user:', userId)
+    return stop(GSC_CONNECT_FAILED_ERROR, 'gsc_connect_failed', { reason: 'state' })
   }
 
   const config = useRuntimeConfig(event)
@@ -56,7 +79,7 @@ export default defineEventHandler(async (event) => {
   )
   if (!tokenResult.ok) {
     logger.error('[google auth] token exchange failed:', tokenResult.error)
-    throw createError({ statusCode: 422, statusMessage: 'Failed to exchange authorization code' })
+    return stop(GSC_CONNECT_FAILED_ERROR, 'gsc_connect_failed', { reason: 'token_exchange' })
   }
   const tokenRes = tokenResult.value
 
@@ -73,16 +96,8 @@ export default defineEventHandler(async (event) => {
   })
   const grant = resolveGscGrant(grantedScope)
   if (grant._tag === 'ScopeMissing') {
-    logger.warn('[google auth] Search Console scope not granted for user:', session.user.id, 'granted:', grantedScope)
-    // The connect route already parsed this; the session is still untrusted storage.
-    const returnTo = safeAuthRedirect(session.secure?.googleOauthReturnTo)
-    await setUserSession(event, {
-      secure: {
-        googleOauthState: undefined,
-        googleOauthReturnTo: undefined,
-      },
-    })
-    return sendRedirect(event, gscScopeMissingRedirect(returnTo))
+    logger.warn('[google auth] Search Console scope not granted for user:', userId, 'granted:', grantedScope)
+    return stop(GSC_SCOPE_MISSING_ERROR, 'gsc_scope_missing')
   }
 
   // Get user info (id, email, name)
@@ -325,9 +340,6 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get return URL before clearing it
-  const returnTo = session.secure?.googleOauthReturnTo
-
   // Identity hints only; teams/currentTeam come from /api/pro/caller on
   // first paint after the redirect (ADR-0001/0002).
   await setUserSession(event, {
@@ -344,7 +356,7 @@ export default defineEventHandler(async (event) => {
   })
 
   // Redirect back to original page or dashboard
-  const redirectUrl = (typeof returnTo === 'string' && returnTo) ? returnTo : '/pro/dashboard'
+  const redirectUrl = returnTo || '/pro/dashboard'
   const separator = redirectUrl.includes('?') ? '&' : '?'
   if (gscdumpSyncFailed) {
     const params = new URLSearchParams({ gsc_sync_warning: '1' })

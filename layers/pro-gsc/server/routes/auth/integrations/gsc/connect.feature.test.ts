@@ -9,12 +9,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const EMAIL = 'email'
 const WEBMASTERS = 'https://www.googleapis.com/auth/webmasters'
-const INDEXING = 'https://www.googleapis.com/auth/indexing'
+const WEBMASTERS_READ = 'https://www.googleapis.com/auth/webmasters.readonly'
 const SITE_VERIFICATION = 'https://www.googleapis.com/auth/siteverification'
 
 const h = vi.hoisted(() => ({
   session: { user: { id: 1 } } as Record<string, unknown>,
   setUserSession: vi.fn(async () => undefined),
+  emit: vi.fn(async () => true),
 }))
 
 vi.stubGlobal('defineEventHandler', (handler: unknown) => handler)
@@ -25,10 +26,12 @@ vi.stubGlobal('getQuery', (event: { query: Record<string, string> }) => event.qu
 vi.stubGlobal('getRequestHeader', () => 'requestindexing.com')
 vi.stubGlobal('useRuntimeConfig', () => ({ oauth: { google: { clientId: 'client-1', clientSecret: 'secret-1' } } }))
 vi.stubGlobal('sendRedirect', (_event: unknown, location: string) => location)
+vi.stubGlobal('useDrizzle', () => ({}))
+vi.stubGlobal('emitFirstProEvent', h.emit)
 
 async function connect(query: Record<string, string>): Promise<URL> {
   const { default: handler } = await import('./connect.get')
-  const location = await (handler as unknown as (event: { query: Record<string, string> }) => Promise<string>)({ query })
+  const location = await (handler as unknown as (event: { query: Record<string, string>, waitUntil: (work: Promise<unknown>) => void }) => Promise<string>)({ query, waitUntil: () => {} })
   return new URL(location)
 }
 
@@ -38,15 +41,25 @@ async function requestedScopes(query: Record<string, string>): Promise<string[]>
 
 beforeEach(() => {
   h.setUserSession.mockClear()
+  h.emit.mockClear()
 })
 
 describe('the Search Console grant', () => {
   it.each([
-    [{}, [EMAIL, WEBMASTERS, INDEXING]],
-    [{ scope: 'full' }, [EMAIL, WEBMASTERS, INDEXING]],
+    // The Indexing API grant has its own client (gscdump.com ADR-0016), so no
+    // Search Console grant asks for `auth/indexing`.
+    [{}, [EMAIL, WEBMASTERS]],
+    [{ scope: 'full' }, [EMAIL, WEBMASTERS]],
+    [{ scope: 'write' }, [EMAIL, WEBMASTERS]],
+    [{ scope: 'read' }, [EMAIL, WEBMASTERS_READ]],
     [{ scope: 'verify' }, [EMAIL, WEBMASTERS, SITE_VERIFICATION]],
   ])('connect %o asks Google for exactly its scopes', async (query, expected) => {
     expect(await requestedScopes(query)).toEqual([...expected].sort())
+  })
+
+  it('records the first connect attempt with the scope it asked for, and no email', async () => {
+    await connect({ scope: 'read', returnTo: '/pro/dashboard/onboarding?step=sites' })
+    expect(h.emit).toHaveBeenCalledWith(expect.anything(), 1, 'gsc_connect_started', { scope: 'read' })
   })
 
   it('merges the verify step-up with the grant the reader already gave', async () => {
