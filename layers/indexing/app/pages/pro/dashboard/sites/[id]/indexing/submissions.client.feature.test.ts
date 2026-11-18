@@ -16,8 +16,9 @@ const engine = vi.hoisted(() => ({
 }))
 
 vi.mock('#layers/pro-gsc/app/composables/useProGscdump/_internal', () => ({
-  // Runs each read for real against the fake client below, and again when its key changes.
-  useGscdumpQuery: (key: () => string, siteId: unknown, fn: (id: string, client: unknown) => Promise<unknown>) => {
+  // Runs each read for real against the fake client below, and again when its
+  // key changes. Like Nuxt's default dedupe, a new run cancels the one before.
+  useGscdumpQuery: (key: () => string, siteId: unknown, fn: (id: string, client: unknown, signal: AbortSignal) => Promise<unknown>) => {
     const data = ref<unknown>(null)
     const error = ref<unknown>(null)
     const status = ref('idle')
@@ -27,15 +28,23 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscdump/_internal', () => ({
       getSiteIndexNowConnection: engine.connection,
       listSiteIndexingUrls: engine.indexingUrls,
     }
+    let current: AbortController | undefined
     async function run() {
+      current?.abort(new Error('cancelled'))
+      const controller = new AbortController()
+      current = controller
       status.value = 'pending'
       error.value = null
-      await fn(toValue(siteId as string), client)
+      await fn(toValue(siteId as string), client, controller.signal)
         .then((value) => {
+          if (controller.signal.aborted)
+            return
           data.value = value
           status.value = 'success'
         })
         .catch((cause: unknown) => {
+          if (controller.signal.aborted)
+            return
           error.value = cause
           status.value = 'error'
         })
@@ -195,6 +204,8 @@ describe('submissions page', () => {
       { search: PAGE_B, limit: 50, count: 0 },
       { search: JOB, limit: 50, count: 0 },
     ])
+    // Each search carries the run's signal, so a cancelled run stops spending reads.
+    expect(engine.indexingUrls.mock.calls.every(([, silent, execute]) => silent === true && execute?.signal instanceof AbortSignal)).toBe(true)
   })
 
   it('shows the IndexNow key and automatic sending state, and links each channel by the app Site id', async () => {

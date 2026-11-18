@@ -13,6 +13,7 @@ import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import type { MaybeRefOrGetter } from 'vue'
 import type { InspectionSearch, SentUrl, SubmissionOutcome } from '#layers/indexing/shared/submissions'
 import { computed, toValue } from 'vue'
+import { mapSettled } from '#layers/indexing/shared/map-settled'
 import {
   latestSentUrls,
   resolveSubmissionOutcome,
@@ -46,21 +47,6 @@ function sentKey(sent: Pick<SentUrl, 'url' | 'sentAt'>): string {
 
 /** URL searches in flight at once for the Afterwards card. */
 const SUBMISSIONS_OUTCOME_CONCURRENCY = 3
-
-/** `map` with at most `limit` calls in flight; a rejected call becomes `onError(item)`. */
-async function mapSettled<T, R>(items: readonly T[], limit: number, run: (item: T) => Promise<R>, onError: (item: T, error: unknown) => R): Promise<R[]> {
-  const results: R[] = Array.from({ length: items.length })
-  let next = 0
-  async function worker() {
-    while (next < items.length) {
-      const index = next++
-      const item = items[index]!
-      results[index] = await run(item).catch((error: unknown) => onError(item, error))
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
-  return results
-}
 
 /**
  * The Site's IndexNow connection. The IndexNow page and Submissions share this
@@ -115,12 +101,13 @@ export function useSiteSubmissions(engineSiteId: MaybeRefOrGetter<string | undef
     siteId,
     // A few searches at a time, each settled on its own: one failed read marks
     // its row, never the whole card. gscdump admits 60 URL list reads a minute
-    // per Site, so one page view spends at most SUBMISSIONS_OUTCOME_URL_LIMIT.
-    (id, client) => mapSettled(latest.value.rows, SUBMISSIONS_OUTCOME_CONCURRENCY, async (sent): Promise<SubmissionOutcomeRow> => {
+    // per Site. A cancelled run, such as the one a changed URL list replaces,
+    // starts no further search and aborts the ones in flight.
+    (id, client, signal) => mapSettled(latest.value.rows, { limit: SUBMISSIONS_OUTCOME_CONCURRENCY, signal }, async (sent): Promise<SubmissionOutcomeRow> => {
       const page = await client.listSiteIndexingUrls({
         params: { siteId: id },
         query: { search: sent.url, limit: SUBMISSIONS_OUTCOME_SEARCH_LIMIT, count: 0 },
-      }, true)
+      }, true, { signal })
       const search: InspectionSearch = {
         rows: page.urls.map(url => ({ url: url.url, verdict: url.verdict, coverageState: url.coverageState, lastCheckedAt: url.lastCheckedAt })),
         complete: !page.pagination.hasMore,
