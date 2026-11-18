@@ -58,7 +58,7 @@ const breadcrumbs = useBreadcrumbItems({
                 <!-- Header -->
                 <div class="flex items-center gap-2 mb-4 px-1">
                   <UIcon name="i-heroicons-book-open" class="size-4 text-green-500" />
-                  <span class="text-sm font-semibold text-[var(--ui-text-highlighted)]">Google Indexing Guides</span>
+                  <span class="text-sm font-semibold text-[var(--ui-text-highlighted)]">Indexing Guides</span>
                 </div>
 
                 <!-- Navigation -->

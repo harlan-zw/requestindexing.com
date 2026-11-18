@@ -16,7 +16,7 @@ Read [COPY](../../COPY.md), [SOURCES](../../SOURCES.md), [VERIFIED-CLAIMS](../..
 - Related articles: request-indexing-google-search-console, indexing-api-for-blog-posts.
 - Visual plan: one example table for the key file. No screenshot; an authenticated capture of the IndexNow page is a follow-up.
 - Route choice: `docs/marketing/channel-kit.md` row 2b proposed `/indexnow`. This guide uses `/indexnow-setup`, so `/indexnow` stays free for the IndexNow page that `MARKETING.md` lists beside the guide.
-- Title: the meta title and H1 say "Submit URLs to Bing" to echo the search, as the GLOSSARY Submission exception allows for meta titles. The first lines name every participating engine and exclude Google with the canonical IndexNow page intro.
+- Title: "How to Set Up IndexNow for Bing and Other Search Engines". The title is also the H1, and the GLOSSARY Submission exception covers a meta title only, so the title names IndexNow and Bing without "submit". The first lines name every participating engine and exclude Google with the canonical IndexNow page intro.
 - Delivery: a Markdown answer for this path needs the zone URL Rewrite Rule from `docs/arch/README.md`.
 
 ## Review gate

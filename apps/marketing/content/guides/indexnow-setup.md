@@ -1,5 +1,5 @@
 ---
-title: "How to Set Up IndexNow and Submit URLs to Bing"
+title: "How to Set Up IndexNow for Bing and Other Search Engines"
 description: "Notify Bing and other participating search engines with IndexNow. Put the key file on your platform, verify it, and learn what a receipt proves."
 navigation:
   order: 7
@@ -37,7 +37,7 @@ For Google, submit a sitemap, or [request indexing in Search Console](/request-i
 
 The key file proves to the search engines that you own the site. It follows these rules from the [IndexNow documentation](https://www.indexnow.org/documentation):
 
-- The key has 8 to 128 characters: letters, numbers, and dashes.
+- The key has 8 to 128 characters: letters, numbers, and hyphens.
 - The file name is the key, followed by `.txt`.
 - The file is a UTF-8 text file. It contains only the key.
 - The file is at the root of your site.
@@ -126,6 +126,7 @@ Each Submission gets a receipt on the IndexNow page. A receipt records the notif
 
 | Receipt | What it means |
 | --- | --- |
+| Queued | Request Indexing has not sent the notification yet. |
 | Notification accepted | IndexNow received the URLs. |
 | Key validation pending | IndexNow received the URLs, and it is still checking your key. |
 | Retry scheduled | The notification did not go through yet. The receipt shows the time of the next attempt. |
