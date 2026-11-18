@@ -20,7 +20,7 @@ export const FUNNEL_STEPS = [
 export const GOOGLE_CONNECT_STOPS = [
   { key: 'noRecord', label: 'No connect attempt recorded' },
   { key: 'skipped', label: 'Skipped Connect Google' },
-  { key: 'leftGoogle', label: 'Left on Google\'s consent screen' },
+  { key: 'noReturn', label: 'No return from Google recorded' },
   { key: 'cancelled', label: 'Cancelled on Google\'s consent screen' },
   { key: 'scopeMissing', label: 'Search Console box unticked' },
   { key: 'failed', label: 'Google connection failed' },
@@ -29,7 +29,7 @@ export const GOOGLE_CONNECT_STOPS = [
 export type GoogleConnectStop = typeof GOOGLE_CONNECT_STOPS[number]['key']
 
 const STOP_BY_EVENT: Record<string, GoogleConnectStop> = {
-  gsc_connect_started: 'leftGoogle',
+  gsc_connect_started: 'noReturn',
   gsc_connect_skipped: 'skipped',
   gsc_connect_cancelled: 'cancelled',
   gsc_scope_missing: 'scopeMissing',
@@ -40,9 +40,9 @@ const STOP_BY_EVENT: Record<string, GoogleConnectStop> = {
 export const GOOGLE_CONNECT_EVENT_TYPES = Object.keys(STOP_BY_EVENT)
 
 /**
- * The latest connect record decides. A Connect press with nothing after it
- * means Google never sent the reader back: they closed the tab or the window
- * on Google's screen.
+ * The latest connect record decides. A Connect press with nothing after it is
+ * only that: the app sent the reader to Google and saw no return. They may
+ * have closed Google's screen, or they may still be on it.
  */
 export function resolveGoogleConnectStop(events: readonly { type: string, time: number }[]): GoogleConnectStop {
   const latest = events

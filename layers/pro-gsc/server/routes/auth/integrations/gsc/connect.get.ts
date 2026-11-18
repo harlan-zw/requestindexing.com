@@ -2,6 +2,20 @@ import { GSC_READ_SCOPE, GSC_SITE_VERIFICATION_SCOPE, GSC_WRITE_SCOPE } from 'gs
 import { withQuery } from 'ufo'
 import { randomUUID } from 'uncrypto'
 import { safeAuthRedirect } from '#layers/pro-saas-auth/shared/utils/auth-redirect'
+import { recordGoogleConnectEvent } from '#layers/pro-saas/server/utils/pro-events'
+
+type GrantScope = 'full' | 'write' | 'read' | 'verify'
+const GRANT_SCOPES: readonly unknown[] = ['full', 'write', 'read', 'verify'] satisfies GrantScope[]
+
+/**
+ * Parse `?scope=` once. Omitted means `full`. Anything else that is not one
+ * supported value, a typo or a repeated parameter, gets the least access.
+ */
+function parseGrantScope(value: unknown): GrantScope {
+  if (value === undefined)
+    return 'full'
+  return GRANT_SCOPES.includes(value) ? value as GrantScope : 'read'
+}
 
 // GSC OAuth — INTEGRATION grant, not sign-in identity. Issues Google's
 // webmasters scopes with offline access + refresh tokens. The sign-in identity
@@ -21,7 +35,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
   }
 
-  const { scope: requestedScope = 'full', returnTo } = getQuery(event)
+  const query = getQuery(event)
+  const requestedScope = parseGrantScope(query.scope)
+  const { returnTo } = query
 
   const scopes = ['email']
   if (requestedScope === 'verify') {
@@ -43,17 +59,18 @@ export default defineEventHandler(async (event) => {
     scopes.push(GSC_WRITE_SCOPE)
   }
 
-  // The funnel's first sign that the reader pressed Connect. Without it a
-  // signup who never reached Google and one who left on Google's screen read
-  // the same. First attempt only; no email.
-  event.waitUntil(emitFirstProEvent(useDrizzle(event), session.user.id, 'gsc_connect_started', {
-    scope: ['verify', 'read', 'write'].includes(String(requestedScope)) ? String(requestedScope) : 'full',
-  }))
+  // The funnel's sign that the reader pressed Connect. Without it a signup who
+  // never reached Google and one who left on Google's screen read the same.
+  // Every attempt records, and the callback's outcome names the same attempt.
+  // No email.
+  const attempt = randomUUID()
+  event.waitUntil(recordGoogleConnectEvent(useDrizzle(event), session.user.id, 'gsc_connect_started', attempt, { scope: requestedScope }))
 
   const state = randomUUID()
   await setUserSession(event, {
     secure: {
       googleOauthState: state,
+      googleOauthAttempt: attempt,
       // Parsed once here: the callback redirects to whatever this holds, so an
       // unchecked value is an open redirect off the back of a Google round trip.
       googleOauthReturnTo: safeAuthRedirect(returnTo) ?? undefined,

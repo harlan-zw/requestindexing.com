@@ -11,6 +11,7 @@ import { releaseRefusedSites } from '#layers/pro-gsc/server/utils/site-registrat
 import { GSC_CONNECT_CANCELLED_ERROR, GSC_CONNECT_FAILED_ERROR, GSC_SCOPE_MISSING_ERROR, resolveGoogleOAuthError, resolveGscGrant } from '#layers/pro-gsc/shared/gsc-grant'
 import { safeAuthRedirect } from '#layers/pro-saas-auth/shared/utils/auth-redirect'
 import { readCurrentTeam } from '#layers/pro-saas/server/utils/current-team'
+import { recordGoogleConnectEvent } from '#layers/pro-saas/server/utils/pro-events'
 import { gscCallbackErrorRedirect } from '#layers/pro-saas/shared/onboarding'
 
 function errorDetails(error: unknown) {
@@ -35,20 +36,35 @@ export default defineEventHandler(async (event) => {
   // Every way back from Google without a grant returns the reader to the page
   // that asked, marked, so that page says what happened and offers the retry.
   // These used to end on `/pro/dashboard?error=google_auth_failed`, which
-  // nothing read, or on a 422 page whose Try again repeated the failure. Each
-  // stop is recorded once per account, so the funnel can tell them apart.
+  // nothing read, or on a 422 page whose Try again repeated the failure.
   // The connect route already parsed `returnTo`; the session is still
   // untrusted storage.
   const returnTo = safeAuthRedirect(session.secure?.googleOauthReturnTo)
+  const stateMatches = typeof state === 'string' && !!state && state === session.secure?.googleOauthState
+  const attempt = session.secure?.googleOauthAttempt
+
+  // Only a callback whose state matches this session's attempt may record an
+  // outcome and end the attempt. Each outcome names the attempt, so a retry
+  // records again and the funnel reads the latest.
   async function stop(marker: GscCallbackError, type: 'gsc_connect_cancelled' | 'gsc_connect_failed' | 'gsc_scope_missing', payload?: Record<string, unknown>) {
-    event.waitUntil(emitFirstProEvent(useDrizzle(event), userId, type, payload))
+    if (attempt)
+      event.waitUntil(recordGoogleConnectEvent(useDrizzle(event), userId, type, attempt, payload))
     await setUserSession(event, {
       secure: {
         googleOauthState: undefined,
         googleOauthReturnTo: undefined,
+        googleOauthAttempt: undefined,
       },
     })
     return sendRedirect(event, gscCallbackErrorRedirect(returnTo, marker))
+  }
+
+  // A state that does not match this session: a second Connect tab, the back
+  // button, or a forged request. No token is exchanged and nothing records.
+  // The session keeps its pending attempt, so the newer tab can still finish.
+  if (!stateMatches) {
+    logger.warn('[google auth] callback state did not match the session for user:', userId)
+    return sendRedirect(event, gscCallbackErrorRedirect(returnTo, GSC_CONNECT_FAILED_ERROR))
   }
 
   if (error) {
@@ -59,12 +75,8 @@ export default defineEventHandler(async (event) => {
       : stop(GSC_CONNECT_FAILED_ERROR, 'gsc_connect_failed', { reason: googleError.reason })
   }
 
-  // A missing code or a state that does not match this session: a second
-  // Connect tab, the back button, or a forged request. No token is exchanged.
-  if (!code || !state || state !== session.secure?.googleOauthState) {
-    logger.warn('[google auth] callback state did not match the session for user:', userId)
-    return stop(GSC_CONNECT_FAILED_ERROR, 'gsc_connect_failed', { reason: 'state' })
-  }
+  if (!code)
+    return stop(GSC_CONNECT_FAILED_ERROR, 'gsc_connect_failed', { reason: 'missing_code' })
 
   const config = useRuntimeConfig(event)
   const host = getRequestHeader(event, 'host')
@@ -352,6 +364,7 @@ export default defineEventHandler(async (event) => {
     secure: {
       googleOauthState: undefined,
       googleOauthReturnTo: undefined,
+      googleOauthAttempt: undefined,
     },
   })
 

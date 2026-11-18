@@ -459,7 +459,7 @@ Retained observations do not establish lifetime first use.
 | Acquisition channel | Acquisition channel |
 | Google stops heading | Where signups stop before Connected Google |
 | Google stops explanation | Each signup without Google counts once, at its latest connect record. A signup from before connect attempts were recorded shows No connect attempt recorded. |
-| Google stop labels | No connect attempt recorded · Skipped Connect Google · Left on Google's consent screen · Cancelled on Google's consent screen · Search Console box unticked · Google connection failed |
+| Google stop labels | No connect attempt recorded · Skipped Connect Google · No return from Google recorded · Cancelled on Google's consent screen · Search Console box unticked · Google connection failed |
 
 ## Admin feedback reports
 

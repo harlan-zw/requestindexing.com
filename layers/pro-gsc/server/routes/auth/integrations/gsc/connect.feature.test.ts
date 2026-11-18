@@ -15,8 +15,10 @@ const SITE_VERIFICATION = 'https://www.googleapis.com/auth/siteverification'
 const h = vi.hoisted(() => ({
   session: { user: { id: 1 } } as Record<string, unknown>,
   setUserSession: vi.fn(async () => undefined),
-  emit: vi.fn(async () => true),
+  record: vi.fn(async () => undefined),
 }))
+
+vi.mock('#layers/pro-saas/server/utils/pro-events', () => ({ recordGoogleConnectEvent: h.record }))
 
 vi.stubGlobal('defineEventHandler', (handler: unknown) => handler)
 vi.stubGlobal('createError', createError)
@@ -27,21 +29,20 @@ vi.stubGlobal('getRequestHeader', () => 'requestindexing.com')
 vi.stubGlobal('useRuntimeConfig', () => ({ oauth: { google: { clientId: 'client-1', clientSecret: 'secret-1' } } }))
 vi.stubGlobal('sendRedirect', (_event: unknown, location: string) => location)
 vi.stubGlobal('useDrizzle', () => ({}))
-vi.stubGlobal('emitFirstProEvent', h.emit)
 
-async function connect(query: Record<string, string>): Promise<URL> {
+async function connect(query: Record<string, unknown>): Promise<URL> {
   const { default: handler } = await import('./connect.get')
-  const location = await (handler as unknown as (event: { query: Record<string, string>, waitUntil: (work: Promise<unknown>) => void }) => Promise<string>)({ query, waitUntil: () => {} })
+  const location = await (handler as unknown as (event: { query: Record<string, unknown>, waitUntil: (work: Promise<unknown>) => void }) => Promise<string>)({ query, waitUntil: () => {} })
   return new URL(location)
 }
 
-async function requestedScopes(query: Record<string, string>): Promise<string[]> {
+async function requestedScopes(query: Record<string, unknown>): Promise<string[]> {
   return ((await connect(query)).searchParams.get('scope') ?? '').split(' ').sort()
 }
 
 beforeEach(() => {
   h.setUserSession.mockClear()
-  h.emit.mockClear()
+  h.record.mockClear()
 })
 
 describe('the Search Console grant', () => {
@@ -53,13 +54,18 @@ describe('the Search Console grant', () => {
     [{ scope: 'write' }, [EMAIL, WEBMASTERS]],
     [{ scope: 'read' }, [EMAIL, WEBMASTERS_READ]],
     [{ scope: 'verify' }, [EMAIL, WEBMASTERS, SITE_VERIFICATION]],
+    // A typo or a repeated parameter gets the least access, never write.
+    [{ scope: 'reed' }, [EMAIL, WEBMASTERS_READ]],
+    [{ scope: ['read', 'read'] }, [EMAIL, WEBMASTERS_READ]],
   ])('connect %o asks Google for exactly its scopes', async (query, expected) => {
     expect(await requestedScopes(query)).toEqual([...expected].sort())
   })
 
-  it('records the first connect attempt with the scope it asked for, and no email', async () => {
+  it('records each connect attempt with the scope it asked for, no email, and keeps the attempt for the callback', async () => {
     await connect({ scope: 'read', returnTo: '/pro/dashboard/onboarding?step=sites' })
-    expect(h.emit).toHaveBeenCalledWith(expect.anything(), 1, 'gsc_connect_started', { scope: 'read' })
+    const [, userId, type, attempt, payload] = h.record.mock.calls[0] as unknown as [unknown, number, string, string, unknown]
+    expect([userId, type, payload]).toEqual([1, 'gsc_connect_started', { scope: 'read' }])
+    expect(h.setUserSession).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ secure: expect.objectContaining({ googleOauthAttempt: attempt }) }))
   })
 
   it('merges the verify step-up with the grant the reader already gave', async () => {
@@ -80,7 +86,7 @@ describe('the Search Console grant', () => {
   it('keeps the OAuth state in the server-only part of the cookie', async () => {
     const location = await connect({ returnTo: '/pro/dashboard/account' })
     expect(h.setUserSession).toHaveBeenCalledWith(expect.anything(), {
-      secure: { googleOauthState: location.searchParams.get('state'), googleOauthReturnTo: '/pro/dashboard/account' },
+      secure: { googleOauthState: location.searchParams.get('state'), googleOauthReturnTo: '/pro/dashboard/account', googleOauthAttempt: expect.any(String) },
     })
   })
 })

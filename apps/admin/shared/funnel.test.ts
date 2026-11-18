@@ -96,7 +96,7 @@ describe('where signups stop before Google', () => {
   it('reads the latest connect record for each signup', () => {
     expect(resolveGoogleConnectStop([])).toBe('noRecord')
     expect(resolveGoogleConnectStop([{ type: 'signed_up', time: 1 }])).toBe('noRecord')
-    expect(resolveGoogleConnectStop([{ type: 'gsc_connect_started', time: 2 }])).toBe('leftGoogle')
+    expect(resolveGoogleConnectStop([{ type: 'gsc_connect_started', time: 2 }])).toBe('noReturn')
     expect(resolveGoogleConnectStop([{ type: 'gsc_connect_started', time: 2 }, { type: 'gsc_connect_cancelled', time: 3 }])).toBe('cancelled')
     expect(resolveGoogleConnectStop([{ type: 'gsc_connect_cancelled', time: 3 }, { type: 'gsc_connect_skipped', time: 4 }])).toBe('skipped')
     expect(resolveGoogleConnectStop([{ type: 'gsc_connect_started', time: 2 }, { type: 'gsc_scope_missing', time: 3 }])).toBe('scopeMissing')
@@ -114,7 +114,7 @@ describe('where signups stop before Google', () => {
     expect(Object.fromEntries(report.googleConnectStops.map(stop => [stop.key, stop.users]))).toEqual({
       noRecord: 1,
       skipped: 1,
-      leftGoogle: 0,
+      noReturn: 0,
       cancelled: 2,
       scopeMissing: 0,
       failed: 0,
