@@ -284,17 +284,13 @@ export function exactRows(url: string, rows: readonly InspectionRow[]): Inspecti
 }
 
 /**
- * The row for `url` among the rows a search returned. The exact URL wins; its
- * other trailing slash form counts only without one. With several, the newest
- * check wins.
+ * Use the newest saved inspection for the same URL. URL identity normalizes
+ * the Site root slash and preserves trailing slashes on other paths.
  */
 export function lookupFromSearch(url: string, rows: readonly InspectionRow[], complete: boolean): UrlLookup {
   const exact = exactRows(url, rows)
   if (exact.length)
     return { _tag: 'found', row: newest(exact) }
-  const folded = rows.filter(row => urlMatchKey(row.url) === urlMatchKey(url))
-  if (folded.length)
-    return { _tag: 'found', row: newest(folded) }
   return complete ? { _tag: 'absent' } : { _tag: 'unknown' }
 }
 
