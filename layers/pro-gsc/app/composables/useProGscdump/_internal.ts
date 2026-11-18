@@ -36,21 +36,25 @@ export function ssrPayloadSeed<T>(key: string, nuxtApp: NuxtApp, ctx: { cause: s
  *
  * Indexing and sitemap callers receive the typed client so public operations
  * cannot fall back to legacy path strings.
+ *
+ * `signal` aborts when Nuxt cancels the run: a refresh, a key change, or an
+ * unmount. A caller that makes several requests should stop on it, because a
+ * cancelled run's result is discarded but its requests still spend quota.
  */
 export function useGscdumpQuery<T>(
   key: MaybeRefOrGetter<string>,
   siteId: MaybeRefOrGetter<string | undefined>,
-  fn: (siteId: string, gscdump: ReturnType<typeof useProGscdump>) => Promise<T>,
+  fn: (siteId: string, gscdump: ReturnType<typeof useProGscdump>, signal: AbortSignal) => Promise<T>,
   watchSources: WatchSource[],
   options?: GscdumpQueryOptions,
 ) {
   const _siteId = computed(() => toValue(siteId))
   const gscdump = useProGscdump()
   const shouldWatch = options?.watch ?? true
-  return useAsyncData<T>(key, async () => {
+  return useAsyncData<T>(key, async (_nuxtApp, { signal }) => {
     if (!_siteId.value)
       return null as unknown as T
-    return fn(_siteId.value, gscdump)
+    return fn(_siteId.value, gscdump, signal)
   }, {
     server: false,
     immediate: options?.immediate ?? true,

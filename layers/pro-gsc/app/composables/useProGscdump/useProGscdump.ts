@@ -8,7 +8,7 @@
 // Every operation this consumer needs is a typed method below, routed
 // through the proxy's closed allowlist. There is no generic path escape
 // hatch: one was removed with the credential (see `gscdump-v1-browser-proxy.ts`).
-import type { GscdumpV1OperationInput, GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
+import type { GscdumpV1ExecuteOptions, GscdumpV1OperationInput, GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import type { DetailReportRequest, ListReportRequest, RowsRequest } from '../../../shared/analytics-requests'
 import type {
   GscdumpDataDetailResponse,
@@ -85,8 +85,8 @@ export function useProGscdump() {
     return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.watched.remove'>['data']>(() => createV1Client().removeSiteWatchedUrls(input), silent)
   }
 
-  function listSiteIndexingUrls(input: GscdumpV1OperationInput<'partner.sites.indexing.urls.list'>, silent = false) {
-    return runV1<GscdumpIndexingUrlsResponse>(() => createV1Client().listSiteIndexingUrls(input), silent)
+  function listSiteIndexingUrls(input: GscdumpV1OperationInput<'partner.sites.indexing.urls.list'>, silent = false, execute?: GscdumpV1ExecuteOptions) {
+    return runV1<GscdumpIndexingUrlsResponse>(() => createV1Client().listSiteIndexingUrls(input, execute), silent)
   }
 
   function getSiteIndexingDiagnostics(input: GscdumpV1OperationInput<'partner.sites.indexing.diagnostics.get'>, silent = false) {
