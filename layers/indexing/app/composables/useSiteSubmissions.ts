@@ -98,6 +98,9 @@ function useSubmissionWindow(site: SiteInput) {
       }
     },
     [],
+    // The card's summary and its outcome reads each ask for this window. They
+    // share the one read in flight instead of restarting it.
+    { dedupe: 'defer' },
   )
 }
 

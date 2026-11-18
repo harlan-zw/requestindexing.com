@@ -16,6 +16,12 @@ export interface GscdumpQueryOptions {
    * render on the server, so the hydration pass is the whole window.
    */
   seedFromSsrPayload?: boolean
+  /**
+   * `defer` lets several callers share one read by key: a second caller while
+   * the read is in flight waits for it. Nuxt's default, `cancel`, restarts it,
+   * so each caller would read again.
+   */
+  dedupe?: 'cancel' | 'defer'
 }
 
 /**
@@ -58,6 +64,7 @@ export function useGscdumpQuery<T>(
   }, {
     server: false,
     immediate: options?.immediate ?? true,
+    ...(options?.dedupe ? { dedupe: options.dedupe } : {}),
     ...(options?.seedFromSsrPayload ? { getCachedData: ssrPayloadSeed<T> } : {}),
     ...(shouldWatch ? { watch: [_siteId, ...watchSources] } : {}),
   })
