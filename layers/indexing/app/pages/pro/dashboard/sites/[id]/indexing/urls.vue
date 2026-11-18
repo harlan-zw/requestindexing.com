@@ -44,6 +44,12 @@ const source: IndexingSource = {
 }
 provideIndexingSource(source)
 
+// Each opened row's Submission timeline reads the Site's receipt window. The
+// table keeps one row open at a time, so without a reader that lives as long
+// as the page, Nuxt drops the window when a row closes and the next row reads
+// every receipt list again. This read is that page-long reader.
+source.submissions?.(indexingSite)
+
 // The clean first page renders on the server with its rows. Filtered deep
 // links and client navigations fetch in the browser.
 const seedFirstPage = useIndexingUrlsFirstPageSeed()

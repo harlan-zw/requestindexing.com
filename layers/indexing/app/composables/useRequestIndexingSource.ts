@@ -16,6 +16,7 @@ import { buildIndexCohortsFromIndexingUrls, indexCohortFilterValue, parseIndexCo
 import { withQuery } from 'ufo'
 import { computed, toValue } from 'vue'
 import { useAsyncData } from '#imports'
+import { useSubmissionOutcomes, useSubmissionSummary } from '#layers/indexing/app/composables/useSiteSubmissions'
 import {
   changesRollupFromTransitions,
   INDEXING_CHANGES_PAGE_LIMIT,
@@ -215,6 +216,12 @@ export function useRequestIndexingSource(options: RequestIndexingSourceOptions =
       { immediate: !!dataId(site) && toValue(enabled) },
     ),
     cohorts: site => useCohorts(site),
+    // Built from the receipt lists until gscdump.com serves the Submission
+    // summary and outcome operations. No `submissionsRollup`: no single read
+    // covers every Site yet, and the layer asks for none rather than one read
+    // per Site row.
+    submissions: site => useSubmissionSummary(site),
+    submissionOutcomes: (site, params) => useSubmissionOutcomes(site, params),
     ...(portfolio
       ? {
           sitemapProblems: () => useSitemapProblems(portfolio),

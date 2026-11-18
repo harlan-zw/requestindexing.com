@@ -167,9 +167,9 @@ export function useProGscdump() {
     return runV1<T>(() => createV1Client().submitSiteBingSitemap(input), silent)
   }
 
-  function getSiteIndexNowConnection(input: GscdumpV1OperationInput<'partner.sites.indexing.indexnow.connection.get'>, silent = false) {
+  function getSiteIndexNowConnection(input: GscdumpV1OperationInput<'partner.sites.indexing.indexnow.connection.get'>, silent = false, execute?: GscdumpV1ExecuteOptions) {
     return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.connection.get'>['data']>(
-      () => createV1Client().getSiteIndexNowConnection(input),
+      () => createV1Client().getSiteIndexNowConnection(input, execute),
       silent,
     )
   }
@@ -195,9 +195,9 @@ export function useProGscdump() {
     )
   }
 
-  function listSiteIndexNowSubmissionReceipts(input: GscdumpV1OperationInput<'partner.sites.indexing.indexnow.submissions.list'>, silent = false) {
+  function listSiteIndexNowSubmissionReceipts(input: GscdumpV1OperationInput<'partner.sites.indexing.indexnow.submissions.list'>, silent = false, execute?: GscdumpV1ExecuteOptions) {
     return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.submissions.list'>['data']>(
-      () => createV1Client().listSiteIndexNowSubmissionReceipts(input),
+      () => createV1Client().listSiteIndexNowSubmissionReceipts(input, execute),
       silent,
     )
   }
@@ -213,9 +213,9 @@ export function useProGscdump() {
 
   // Google Submissions are created server side with the partner key. The
   // browser only reads their receipts.
-  function listSiteGoogleSubmissionReceipts(input: GscdumpV1OperationInput<'partner.sites.indexing.google.submissions.list'>, silent = false) {
+  function listSiteGoogleSubmissionReceipts(input: GscdumpV1OperationInput<'partner.sites.indexing.google.submissions.list'>, silent = false, execute?: GscdumpV1ExecuteOptions) {
     return runV1<GscdumpV1OperationResponse<'partner.sites.indexing.google.submissions.list'>['data']>(
-      () => createV1Client().listSiteGoogleSubmissionReceipts(input),
+      () => createV1Client().listSiteGoogleSubmissionReceipts(input, execute),
       silent,
     )
   }

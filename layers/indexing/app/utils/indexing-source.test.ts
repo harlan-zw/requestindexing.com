@@ -42,7 +42,17 @@ describe('toIndexingInspectResult', () => {
 describe('changesRollupFromTransitions', () => {
   const at = (day: string) => `${day}T04:00:00.000Z`
 
-  it('counts a verdict leaving PASS as opened and reaching PASS as cleared, by the day it was seen', () => {
+  it('never counts a change from or to no verdict', () => {
+    const rollup = changesRollupFromTransitions([
+      { siteId: 's_one', transitions: [
+        { field: 'indexStatus', fromValue: null, toValue: 'PASS', changedBefore: at('2026-11-10') },
+        { field: 'indexStatus', fromValue: 'PASS', toValue: null, changedBefore: at('2026-11-11') },
+      ] },
+    ] as Parameters<typeof changesRollupFromTransitions>[0], '2026-11-13')
+    expect(rollup.rows).toEqual([])
+  })
+
+  it('counts a verdict leaving PASS as dropped and reaching PASS as indexed, by the day it was seen', () => {
     const rollup = changesRollupFromTransitions([
       { siteId: 's_one', transitions: [
         { field: 'indexStatus', fromValue: 'PASS', toValue: 'NEUTRAL', changedBefore: at('2026-11-10') },
@@ -55,9 +65,9 @@ describe('changesRollupFromTransitions', () => {
       windowDays: 28,
       through: '2026-11-13',
       rows: [
-        { siteId: 's_one', day: '2026-11-10', opened: 2, cleared: 0 },
-        { siteId: 's_two', day: '2026-11-10', opened: 0, cleared: 1 },
-        { siteId: 's_one', day: '2026-11-12', opened: 0, cleared: 1 },
+        { siteId: 's_one', day: '2026-11-10', dropped: 2, indexed: 0 },
+        { siteId: 's_two', day: '2026-11-10', dropped: 0, indexed: 1 },
+        { siteId: 's_one', day: '2026-11-12', dropped: 0, indexed: 1 },
       ],
     })
   })

@@ -1,10 +1,12 @@
 /**
- * The Submissions page, from receipts to what a reader sees.
+ * The Submissions page with the shared `@nuxtseo/pro-indexing` card.
  *
- * Seams crossed: the page → `useSiteSubmissions` → the typed engine client
- * (faked here at its operation boundary) → `summarizeSubmissions` and
- * `resolveSubmissionOutcome`. The asserted outcome is the rendered page.
+ * Seams crossed: the page → the real `IndexingSubmissionsCard` → this app's
+ * `submissions` and `submissionOutcomes` capabilities → the typed engine
+ * client, faked at its operation boundary. The asserted outcome is the
+ * rendered page and the engine calls it makes.
  */
+import type { IndexingSource } from '@nuxtseo/pro-indexing/shared/source'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, ref, toValue, watch } from 'vue'
 
@@ -13,29 +15,37 @@ const engine = vi.hoisted(() => ({
   googleReceipts: vi.fn(),
   connection: vi.fn(),
   indexingUrls: vi.fn(),
+  grant: vi.fn(),
+  update: vi.fn(),
+  refreshNuxtData: vi.fn(),
+  entries: new Map<string, { data: { value: unknown } }>(),
 }))
 
 vi.mock('#layers/pro-gsc/app/composables/useProGscdump/_internal', () => ({
-  // Runs each read for real against the fake client below, and again when its
-  // key changes. Like Nuxt's default dedupe, a new run cancels the one before.
+  // Runs each read for real against the fake client, and again when its key
+  // changes. Like Nuxt, a key already read shares its data instead of reading
+  // again, and a new run cancels the one before.
   useGscdumpQuery: (key: () => string, siteId: unknown, fn: (id: string, client: unknown, signal: AbortSignal) => Promise<unknown>) => {
-    const data = ref<unknown>(null)
-    const error = ref<unknown>(null)
-    const status = ref('idle')
     const client = {
       listSiteIndexNowSubmissionReceipts: engine.indexNowReceipts,
       listSiteGoogleSubmissionReceipts: engine.googleReceipts,
       getSiteIndexNowConnection: engine.connection,
       listSiteIndexingUrls: engine.indexingUrls,
     }
+    const data = ref<unknown>(null)
+    const error = ref<unknown>(null)
+    const status = ref('idle')
     let current: AbortController | undefined
     async function run() {
+      const id = toValue(siteId as string)
+      if (!id)
+        return
       current?.abort(new Error('cancelled'))
       const controller = new AbortController()
       current = controller
       status.value = 'pending'
       error.value = null
-      await fn(toValue(siteId as string), client, controller.signal)
+      await fn(id, client, controller.signal)
         .then((value) => {
           if (controller.signal.aborted)
             return
@@ -49,9 +59,23 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscdump/_internal', () => ({
           status.value = 'error'
         })
     }
-    watch(() => toValue(key), run, { immediate: true })
+    watch(() => toValue(key), (value) => {
+      const existing = engine.entries.get(value)
+      if (existing) {
+        watch(() => existing.data.value, (shared) => {
+          data.value = shared
+          status.value = shared ? 'success' : 'pending'
+        }, { immediate: true })
+        return
+      }
+      engine.entries.set(value, { data })
+      void run()
+    }, { immediate: true })
     return { data, error, status, refresh: run }
   },
+}))
+vi.mock('#layers/pro-gsc/app/composables/useProGscdump/useProGscdump', () => ({
+  useProGscdump: () => ({ updateSiteIndexNowAutomaticSending: engine.update }),
 }))
 vi.mock('#layers/pro-gsc/app/composables/useProGscdump', () => ({
   useProGscdumpSitemapSubmission: () => ({
@@ -61,93 +85,102 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscdump', () => ({
     refresh: vi.fn(),
   }),
 }))
+vi.mock('#layers/pro-saas/app/composables/useProFetch', () => ({ useProFetch: () => engine.grant }))
+vi.mock('#imports', () => ({ refreshNuxtData: engine.refreshNuxtData }))
+vi.mock('nuxt/app', async () => {
+  const { PRO_INDEXING_COPY_OVERRIDES } = await import('#layers/indexing/app/pro-indexing')
+  return { tryUseNuxtApp: () => ({}), useAppConfig: () => ({ proIndexing: { copy: PRO_INDEXING_COPY_OVERRIDES } }) }
+})
+vi.mock('#components', () => ({
+  UiHelpLabel: defineComponent({ props: ['text'], setup: props => () => h('span', props.text) }),
+  UiWidgetState: defineComponent({ props: ['status'], setup: (props, { slots }) => () => h('div', { 'data-status': props.status }, slots.default?.()) }),
+}))
 
 Object.assign(globalThis, {
   definePageMeta: () => {},
-  useSite: () => ({ siteId: ref('kv1109'), gscdumpSiteId: ref('s_engine'), site: ref({ teamId: 1 }) }),
+  useSite: () => ({ siteId: ref('kv1109'), siteName: ref('example.com'), gscdumpSiteId: ref('s_engine'), site: ref({ teamId: 1, url: 'https://example.com/' }) }),
   useTeamPolicy: () => ({ can: () => true }),
   useCaller: () => ({ isAdmin: ref(false) }),
 })
+
+const { PRO_INDEXING_SOURCE_KEY } = await import('@nuxtseo/pro-indexing/app/composables/useIndexingSource')
+const { useSubmissionOutcomes, useSubmissionSummary } = await import('#layers/indexing/app/composables/useSiteSubmissions')
 const { default: SubmissionsPage } = await import('./submissions.vue')
 
 const apps: ReturnType<typeof createApp>[] = []
-function mount() {
+function mountWith(component: Parameters<typeof createApp>[0]) {
   const host = document.createElement('div')
   document.body.appendChild(host)
-  const app = createApp(SubmissionsPage)
+  const app = createApp(component)
+  // Only the two capabilities the page reads; the card never calls the rest.
+  app.provide(PRO_INDEXING_SOURCE_KEY, {
+    submissions: site => useSubmissionSummary(site),
+    submissionOutcomes: (site, params) => useSubmissionOutcomes(site, params),
+  } as Pick<IndexingSource, 'submissions' | 'submissionOutcomes'> as IndexingSource)
   for (const name of ['ProPageStates', 'ProPageZone', 'UiSkeleton']) {
-    app.component(name, defineComponent({ setup: (_, { slots }) => () => h('div', name === 'UiSkeleton' ? 'Loading' : slots.default?.()) }))
+    app.component(name, defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) }))
   }
   app.component('UiCard', defineComponent({
-    props: ['title', 'description'],
-    setup: (props, { slots }) => () => h('section', { 'data-card': props.title }, [h('h2', props.title), props.description, slots.default?.()]),
+    props: ['title'],
+    setup: (props, { slots }) => () => h('section', { 'data-card': props.title }, [h('h2', props.title), slots.default?.()]),
   }))
-  for (const name of ['UBadge', 'UiStatusBadge']) {
-    app.component(name, defineComponent({
-      props: ['label'],
-      setup: (props, { slots }) => () => h('span', { 'data-badge': '' }, props.label ?? slots.default?.()),
-    }))
-  }
-  app.component('UiUrlLabel', defineComponent({ props: ['url'], setup: props => () => h('span', { 'data-url': props.url }, props.url) }))
+  app.component('UBadge', defineComponent({ setup: (_, { slots }) => () => h('span', slots.default?.()) }))
+  app.component('USwitch', defineComponent({
+    inheritAttrs: false,
+    props: ['modelValue', 'disabled'],
+    emits: ['update:modelValue'],
+    setup: (props, { emit, attrs }) => () => h('button', { 'type': 'button', 'role': 'switch', 'aria-checked': String(!!props.modelValue), 'aria-label': attrs['aria-label'], 'disabled': props.disabled, 'onClick': () => emit('update:modelValue', !props.modelValue) }),
+  }))
   app.component('UiButton', defineComponent({
     props: ['to'],
     emits: ['click'],
-    setup: (props, { slots, emit }) => () => props.to
-      ? h('a', { href: props.to }, slots.default?.())
-      : h('button', { type: 'button', onClick: () => emit('click') }, slots.default?.()),
+    setup: (props, { slots, emit }) => () => props.to ? h('a', { href: props.to }, slots.default?.()) : h('button', { type: 'button', onClick: () => emit('click') }, slots.default?.()),
   }))
   app.mount(host)
   apps.push(app)
   return host
 }
 async function settle() {
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 10; i++) {
     await new Promise(resolve => setTimeout(resolve, 0))
     await nextTick()
   }
 }
-function card(host: HTMLElement, title: string) {
-  return host.querySelector<HTMLElement>(`[data-card="${title}"]`)!
-}
-function row(host: HTMLElement, url: string) {
-  return host.querySelector(`[data-url="${url}"]`)!.closest('li')!
-}
+const card = (host: HTMLElement) => host.querySelector<HTMLElement>('[data-pro-indexing-section="submissions"]')!
 
 const PAGE_A = 'https://example.com/a'
 const PAGE_B = 'https://example.com/b'
 const JOB = 'https://example.com/jobs/1'
+const page = (receipts: unknown[]) => ({ submissionReceipts: receipts, pagination: { hasMore: false } })
+const connected = {
+  _tag: 'connected',
+  host: 'example.com',
+  keyLocation: 'https://example.com/k.txt',
+  verifiedAt: '2026-11-14T12:00:00.000Z',
+  automaticSending: { _tag: 'on', since: '2026-11-14T12:00:00.000Z', lastCheck: { checkedAt: '2026-11-15T12:00:00.000Z', changedUrls: 2, sentUrls: 2, completeness: { _tag: 'complete' } } },
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-11-18T12:00:00.000Z'))
   vi.clearAllMocks()
-  engine.indexNowReceipts.mockResolvedValue({
-    submissionReceipts: [
-      { id: 'in_2', _tag: 'accepted', trigger: 'automatic', urls: [PAGE_A, PAGE_B], createdAt: '2026-11-15T12:00:00.000Z', reason: null, retryAt: null },
-      { id: 'in_1', _tag: 'failed', trigger: 'manual', urls: [PAGE_A], createdAt: '2026-11-01T12:00:00.000Z', reason: 'rate-limited', retryAt: null },
-    ],
-    pagination: { hasMore: false },
-  })
-  engine.googleReceipts.mockResolvedValue({
-    submissionReceipts: [{ id: 'g_1', _tag: 'accepted', url: JOB, createdAt: '2026-11-10T12:00:00.000Z' }],
-    pagination: { hasMore: false },
-  })
-  engine.connection.mockResolvedValue({
-    _tag: 'connected',
-    host: 'example.com',
-    keyLocation: 'https://example.com/k.txt',
-    verifiedAt: '2026-11-14T12:00:00.000Z',
-    automaticSending: { _tag: 'on', since: '2026-11-14T12:00:00.000Z', lastCheck: { checkedAt: '2026-11-15T12:00:00.000Z', changedUrls: 2, sentUrls: 2, completeness: { _tag: 'complete' } } },
-  })
-  // `search` matches by substring upstream; PAGE_A's search also returns a longer URL.
+  engine.entries.clear()
+  engine.indexNowReceipts.mockResolvedValue(page([
+    { _tag: 'accepted', id: 'in_2', trigger: 'automatic', urls: [PAGE_A, PAGE_B], createdAt: '2026-11-15T12:00:00.000Z', updatedAt: '2026-11-15T12:05:00.000Z', reason: null, retryAt: null },
+    { _tag: 'failed', id: 'in_1', trigger: 'manual', urls: [PAGE_A], createdAt: '2026-11-01T12:00:00.000Z', updatedAt: '2026-11-01T12:00:00.000Z', reason: 'rate-limited', retryAt: null },
+  ]))
+  engine.googleReceipts.mockResolvedValue(page([
+    { _tag: 'accepted', id: 'g_1', url: JOB, createdAt: '2026-11-10T12:00:00.000Z', updatedAt: '2026-11-10T12:01:00.000Z' },
+    { _tag: 'rejected', id: 'g_0', url: 'https://example.com/jobs/2', createdAt: '2026-11-05T12:00:00.000Z', updatedAt: '2026-11-05T12:00:00.000Z' },
+  ]))
+  engine.connection.mockResolvedValue(connected)
+  engine.grant.mockResolvedValue({ _tag: 'active' })
+  engine.update.mockImplementation(async ({ body }: { body: { automaticSending: 'on' | 'off' } }) => ({ ...connected, automaticSending: body.automaticSending === 'on' ? connected.automaticSending : { _tag: 'off' } }))
   engine.indexingUrls.mockImplementation(async ({ query }: { query: { search: string } }) => ({
     urls: {
-      [PAGE_A]: [
-        { url: `${PAGE_A}-old`, verdict: 'PASS', coverageState: 'Submitted and indexed', lastCheckedAt: '2026-11-17T12:00:00.000Z' },
-        { url: PAGE_A, verdict: 'PASS', coverageState: 'Submitted and indexed', lastCheckedAt: '2026-11-16T12:00:00.000Z' },
-      ],
-      [PAGE_B]: [{ url: PAGE_B, verdict: 'NEUTRAL', coverageState: 'Crawled - currently not indexed', lastCheckedAt: '2026-11-12T12:00:00.000Z' }],
-      [JOB]: [],
+      [PAGE_A]: [{ url: PAGE_A, verdict: 'PASS', coverageState: 'Submitted and indexed', lastCrawlTime: null, lastCheckedAt: '2026-11-16T12:00:00.000Z' }],
+      // Inspected before the engine accepted it, so it does not count.
+      [PAGE_B]: [{ url: PAGE_B, verdict: 'NEUTRAL', coverageState: 'Crawled - currently not indexed', lastCrawlTime: null, lastCheckedAt: '2026-11-12T12:00:00.000Z' }],
     }[query.search] ?? [],
     pagination: { hasMore: false },
   }))
@@ -160,124 +193,67 @@ afterEach(() => {
 })
 
 describe('submissions page', () => {
-  it('counts what each channel sent in the last 30 days and what each engine answered', async () => {
-    const host = mount()
+  it('shows what each engine received, each URL once by its latest receipt', async () => {
+    const host = mountWith(SubmissionsPage)
     await settle()
-    const sent = card(host, 'Sent to search engines')
-    const channel = (name: string) => [...sent.querySelectorAll('section')].find(section => section.querySelector('h3')?.textContent === name)!
-    const values = (name: string) => [...channel(name).querySelectorAll('dd')].map(cell => cell.textContent?.trim())
-
-    expect(values('IndexNow')).toEqual(['3', '2', '0', '1'])
-    expect(values('Google Indexing API')).toEqual(['1', '1', '0', '0'])
-    expect(channel('IndexNow').textContent).toContain('Automatic sending sent 2 of them.')
-    expect(sent.textContent).not.toContain('Counted from the latest')
-  })
-
-  it('says the counts are partial when a channel had more receipts inside the window', async () => {
-    engine.googleReceipts.mockResolvedValue({
-      submissionReceipts: [{ id: 'g_1', _tag: 'accepted', url: JOB, createdAt: '2026-11-10T12:00:00.000Z' }],
-      pagination: { hasMore: true },
-    })
-    const host = mount()
-    await settle()
-    expect(card(host, 'Sent to search engines').textContent).toContain('Counted from the latest 100 receipts of each channel.')
-  })
-
-  it('shows Google\'s verdict only when Google inspected the URL after it was sent', async () => {
-    const host = mount()
-    await settle()
-
-    expect(row(host, PAGE_A).textContent).toContain('Indexed')
-    expect(row(host, PAGE_A).textContent).toContain('Inspected Nov 16, 2026')
-    expect(row(host, PAGE_A).textContent).toContain('Automatic')
-    expect(row(host, PAGE_B).textContent).toContain('Not inspected since')
-    expect(row(host, PAGE_B).textContent).toContain('Last inspected Nov 12, 2026, before this Submission.')
-    expect(row(host, JOB).textContent).toContain('No URL Inspection result')
-    expect(row(host, JOB).textContent).toContain('Google Indexing API')
-  })
-
-  it('reads saved URL Inspection results and never inspects a URL', async () => {
-    mount()
-    await settle()
-    expect(engine.indexingUrls.mock.calls.map(([input]) => input.query)).toEqual([
-      { search: PAGE_A, limit: 50, count: 0 },
-      { search: PAGE_B, limit: 50, count: 0 },
-      { search: JOB, limit: 50, count: 0 },
+    const engines = [...card(host).querySelectorAll('[data-engine]')].map(row => [row.getAttribute('data-engine'), row.querySelector('dd')?.textContent?.trim()])
+    expect(engines).toEqual([
+      ['indexnow', '2 URLs2 accepted2 automatic'],
+      ['google', '2 URLs1 accepted1 failed'],
     ])
-    // Each search carries the run's signal, so a cancelled run stops spending reads.
-    expect(engine.indexingUrls.mock.calls.every(([, silent, execute]) => silent === true && execute?.signal instanceof AbortSignal)).toBe(true)
   })
 
-  it('shows the IndexNow key and automatic sending state, and links each channel by the app Site id', async () => {
-    const host = mount()
+  it('totals Google\'s results for received URLs only, from checks after each was received', async () => {
+    const host = mountWith(SubmissionsPage)
     await settle()
-    const indexNow = card(host, 'IndexNow')
-    expect(indexNow.textContent).toContain('Key verified')
-    expect(indexNow.textContent).toContain('Last check Nov 15, 2026: 2 changed URLs found, 2 sent.')
-    expect(card(host, 'Google Indexing API').textContent).toContain('Last Submission Nov 10, 2026')
-    expect(card(host, 'Sitemap submission').textContent).toContain('Sitemap listed in Search Console')
+    const afterwards = card(host).querySelector<HTMLElement>('[data-submissions="afterwards"]')!
+    expect(afterwards.textContent).toContain('Of 3 received URLs')
+    const facts = Object.fromEntries([...afterwards.querySelectorAll('[data-afterwards]')].map(fact => [fact.getAttribute('data-afterwards'), fact.querySelector('dd')?.textContent?.trim()]))
+    expect(facts).toEqual({ 'indexed': '1', 'not-indexed': '0', 'not-inspected': '2' })
+    expect(afterwards.textContent).toContain('Not inspected since it was sent')
+    // One search per received URL; the rejected Google URL is never looked up.
+    expect(engine.indexingUrls.mock.calls.map(([input]) => input.query.search).sort()).toEqual([PAGE_A, PAGE_B, JOB].sort())
+  })
 
-    const links = Object.fromEntries([...host.querySelectorAll('a')].map(link => [link.textContent?.trim(), link.getAttribute('href')]))
-    expect(links).toMatchObject({
-      'Submit to Google': '/pro/dashboard/sites/kv1109/indexing/submit',
-      'Submit with IndexNow': '/pro/dashboard/sites/kv1109/indexing/indexnow',
-      'Open Sitemaps': '/pro/dashboard/sites/kv1109/indexing/sitemaps',
+  it('puts the automatic sending switch in the card and refreshes the receipt window after a change', async () => {
+    const host = mountWith(SubmissionsPage)
+    await settle()
+    const automatic = card(host).querySelector<HTMLElement>('[data-submissions="automatic"]')!
+    expect(automatic.textContent).toContain('Last check Nov 15, 2026: 2 changed URLs found, 2 sent.')
+    const toggle = automatic.querySelector<HTMLButtonElement>('[role="switch"]')!
+    expect(toggle.getAttribute('aria-label')).toBe('Automatic sending')
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    toggle.click()
+    await settle()
+    expect(engine.update).toHaveBeenCalledWith({ params: { siteId: 's_engine' }, body: { automaticSending: 'off' } }, true)
+    expect(engine.refreshNuxtData).toHaveBeenCalledWith('submissions:window:s_engine')
+  })
+
+  it('reads the receipt window once for the summary and the outcomes', async () => {
+    mountWith(SubmissionsPage)
+    await settle()
+    expect(engine.indexNowReceipts).toHaveBeenCalledTimes(1)
+    expect(engine.googleReceipts).toHaveBeenCalledTimes(1)
+  })
+
+  it('lists only IndexNow when Request Indexing cannot send to Google and the Site never did', async () => {
+    engine.grant.mockResolvedValue({ _tag: 'unavailable' })
+    engine.googleReceipts.mockResolvedValue(page([]))
+    const host = mountWith(SubmissionsPage)
+    await settle()
+    expect([...card(host).querySelectorAll('[data-engine]')].map(row => row.getAttribute('data-engine'))).toEqual(['indexnow'])
+  })
+
+  it('searches nothing for a URL no engine received', async () => {
+    const Probe = defineComponent({
+      setup() {
+        const read = useSubmissionOutcomes({ id: 'kv1109', ref: 'kv1109', label: 'example.com', url: null, dataId: 's_engine' }, { url: 'https://example.com/never' })
+        return () => h('p', { 'data-sent': String(read.data.value?.sent ?? 'pending') })
+      },
     })
-  })
-
-  it('marks one failed URL search on its own row and keeps the others', async () => {
-    const answer = engine.indexingUrls.getMockImplementation()!
-    engine.indexingUrls.mockImplementation(async (input: { query: { search: string } }) => {
-      if (input.query.search === PAGE_B)
-        throw new Error('rate limited')
-      return answer(input)
-    })
-    const host = mount()
+    const host = mountWith(Probe)
     await settle()
-    expect(row(host, PAGE_B).textContent).toContain('This result could not load. Retry to read it again.')
-    expect(row(host, PAGE_A).textContent).toContain('Indexed')
-    engine.indexingUrls.mockImplementation(answer)
-    const retry = [...card(host, 'Afterwards in Google').querySelectorAll('button')].find(button => button.textContent === 'Retry loading')!
-    retry.click()
-    await settle()
-    expect(row(host, PAGE_B).textContent).toContain('Not inspected since')
-  })
-
-  it('shows a failed IndexNow read in its card and retries it', async () => {
-    engine.connection.mockRejectedValueOnce(new Error('engine unavailable'))
-    const host = mount()
-    await settle()
-    const indexNow = card(host, 'IndexNow')
-    expect(indexNow.textContent).toContain('IndexNow setup could not load.')
-    indexNow.querySelector('button')!.click()
-    await settle()
-    expect(card(host, 'IndexNow').textContent).toContain('Key verified')
-  })
-
-  it('shows a failed receipt read and retries it', async () => {
-    engine.googleReceipts.mockRejectedValueOnce(new Error('engine unavailable'))
-    const host = mount()
-    await settle()
-    expect(card(host, 'Sent to search engines').textContent).toContain('Submission receipts could not load.')
-    // The Afterwards card names the receipt read, never URL Inspection.
-    expect(card(host, 'Afterwards in Google').textContent).toContain('Submission receipts could not load.')
-    expect(card(host, 'Afterwards in Google').textContent).not.toContain('URL Inspection results could not load')
-    const retry = [...card(host, 'Sent to search engines').querySelectorAll('button')].find(button => button.textContent === 'Retry loading')!
-    retry.click()
-    await settle()
-    expect(card(host, 'Sent to search engines').textContent).not.toContain('could not load')
-    expect(row(host, JOB).textContent).toContain('No URL Inspection result')
-    // One search per URL: the new URL list starts its own read, and Retry adds none.
-    expect(engine.indexingUrls).toHaveBeenCalledTimes(3)
-  })
-
-  it('says nothing was sent when the window is empty', async () => {
-    engine.indexNowReceipts.mockResolvedValue({ submissionReceipts: [], pagination: { hasMore: false } })
-    engine.googleReceipts.mockResolvedValue({ submissionReceipts: [], pagination: { hasMore: false } })
-    const host = mount()
-    await settle()
-    expect(card(host, 'Sent to search engines').textContent).toContain('No Submissions in the last 30 days.')
-    expect(card(host, 'Google Indexing API').textContent).toContain('No Submissions yet.')
+    expect(host.querySelector('p')?.getAttribute('data-sent')).toBe('0')
     expect(engine.indexingUrls).not.toHaveBeenCalled()
   })
 })
