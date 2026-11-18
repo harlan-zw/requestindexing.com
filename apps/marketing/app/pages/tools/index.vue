@@ -26,7 +26,7 @@ const tools = [
     description: 'Check whether Google has indexed one URL. The checker looks for the page in Google search results.',
     icon: 'i-heroicons-magnifying-glass',
     to: '/tools/google-indexing-checker',
-    tags: ['Single URL', 'Instant', 'No signup'],
+    tags: ['Single URL', 'No signup'],
     featured: true,
   },
   {

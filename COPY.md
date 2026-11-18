@@ -31,6 +31,74 @@ These exact strings. Do not paraphrase them per page.
 tagline with "Search Console data and multi-engine submission, in one small app." That sentence
 claims more than the marketing site does today. See Truth rules.
 
+## Landing page assets
+
+These strings apply to the home page, `apps/marketing/app/pages/index.vue`. The H1, meta title,
+and meta description are the canonical assets above. `docs/marketing/home-page.md` holds the plan.
+Change a row here first, then the page.
+
+Say the limit once. The hero limit line states it. FAQ 1 answers the direct question in the
+plan's words. No other string repeats it.
+
+| Asset | String |
+| --- | --- |
+| Hero badge | Free during beta · Open source |
+| Hero sub-headline | Send new and changed pages to Bing and other search engines with IndexNow, automatically once your key is verified. For Google, see which pages it indexed, and the reason it gives for the rest. |
+| Hero limit line | Nobody can force Google to index a page. Request Indexing shows what Google decided, and why. |
+| Primary action, signed out | Get started free. Links to `/pro/onboarding`. A phone shows "Get started". The closing action uses the same label |
+| Primary action, signed in | Dashboard |
+| Secondary action | Check one URL free. Links to `/tools/google-indexing-checker` |
+| Example card label | Example |
+| Example card rows | A URL and Google's coverage state, verbatim, such as "Crawled - currently not indexed" |
+| Example card footer | 5 of 119 sitemap URLs · Reason from URL Inspection |
+| Google's button eyebrow | Where Google's own button is |
+| Google's button heading | Google's Request indexing button is in Search Console. |
+| Google's button body | Open URL Inspection in Search Console, paste the full URL, and select Request indexing. A request asks Google to crawl the URL. Google sets a daily limit on these requests. |
+| Google's button link | How to Request Indexing in Google Search Console, the guide's exact title, linking `/request-indexing-google-search-console` |
+| Google's button follow-up | Request Indexing reads Google's verdict for the URLs in your sitemaps, so you do not inspect them one by one. |
+| Why pages stop eyebrow | Why pages stop |
+| Why pages stop heading | Find the stage where your pages stop. |
+| Why pages stop intro | The Why pages stop card follows your inspected URLs through four stages. Start at the biggest drop. |
+| Why pages stop stages | Inspected · Crawled · Indexable · Indexed |
+| Why pages stop columns | Reason · First fix |
+| Reason 1 | Google does not know the URL. · Add it to your sitemap. Link to it from a page Google already indexed. |
+| Reason 2 | Google knows the URL but has not crawled it. · Link to it from your indexed pages. Cut thin URLs, such as empty tag pages. |
+| Reason 3 | Google could not fetch the URL. · Check robots.txt, server errors, logins, and redirects. |
+| Reason 4 | A signal tells Google to skip the URL. · Look for a noindex tag. Make sure the canonical points to the page itself. |
+| Reason 5 | Google crawled the page and chose not to index it. · Compare it with similar pages on your Site. Improve it, or merge it into the stronger page. |
+| Why pages stop action | See this for your Site. Links to `/pro/onboarding` |
+| What you get eyebrow | What you get |
+| What you get heading | IndexNow for Bing and others. Google's reason for each sitemap URL. |
+| IndexNow card | Send pages with IndexNow · IndexNow notifies Bing and other participating search engines about any page type. Google is not one of them. Once your key is verified, Request Indexing sends new and changed sitemap URLs for you. |
+| Sitemap URLs card | Every sitemap URL, with its reason · Request Indexing inspects the URLs in your sitemaps with URL Inspection, within your Free allowance. Each URL shows Google's verdict and reason. |
+| Changes card | What changed · Coverage over time, and the URLs whose verdict changed since last week. |
+| Watched URLs card | Watched URLs · Keep scheduled URL Inspection evidence for pages you choose. (the Watched URLs intro) |
+| Sitemaps card | Sitemaps · What you declared, what Google discovered, and what drifted between the two. |
+| History line | Request Indexing also keeps your Search Console history past Google's 16-month window, within your Free allowance. |
+| How it works description | Connect Google once. Request Indexing sends your new pages with IndexNow and shows what Google reports for each URL. |
+| Step 3 | Send · Send new and changed pages with IndexNow · Publish your IndexNow key file and verify the key. Automatic sending then sends new and changed sitemap URLs after each sitemap update. |
+| Step 3 bullets | Bing and other participating search engines. Google is not one of them. · Any page type on your site. · A receipt records the notification outcome. · For job posting and livestream pages only, you can also submit to Google's Indexing API. |
+| Step 3 example | The IndexNow request. Request Indexing sends it for you. |
+| Step 4 heading | See what Google decided |
+| Step 4 example | What changed · Illustrative example. Each row is a change in Google's URL Inspection result. |
+| Learn heading | Learn how to ask Google, and how to read its answer. |
+| Learn, featured guide | How to Request Indexing in Google Search Console · the guide's own description · Read the guide |
+| Learn, blog posts guide | Indexing API for blog posts · Ordinary blog posts are outside Google's supported Indexing API use. Learn what to use instead, and what an accepted request proves. · Read the answer |
+| Learn, Indexing API guide | How the Indexing API works. Replaces "The complete Google Indexing API guide" |
+| Trust heading | Who builds it, and what it can touch. |
+| Trust, source | Open source, MIT · Read every line on GitHub. |
+| Trust, builder | Built by Harlan Wilton · Maintainer of Nuxt SEO. Building Request Indexing since 2024. |
+| Trust, access | What it changes in Search Console · the Search Console access sentence in Truth rules, verbatim |
+| Trust, delete | Delete any time · the Account deletion Blast radius and Google access strings, verbatim |
+| FAQ 1 | Can you force Google to index my page? · No. Nobody can. Google decides. Request Indexing shows the reason Google gives, so you can fix the cause. |
+| FAQ 2 | Why is my whole Site not indexed? · Start with the stage where most URLs stop. The Why pages stop card on your Indexing page names it. If Google does not know the URLs, add a sitemap and link to them from your home page. |
+| FAQ 3 | Is it safe for my Google account? · Request Indexing uses Google's public APIs, your own Google sign-in, and Google's published limits. |
+| FAQ 4 | Does the Indexing API work for blog posts? · Google documents it for job posting and livestream pages only. Use URL Inspection or a sitemap for other pages. IndexNow takes any page type, for Bing and other participating search engines. |
+| FAQ 5 | What does it cost? · Free, with a Free allowance. No card needed. |
+| FAQ 6 | Can I see the code? · Yes. The whole project is on GitHub under the MIT license. Read it, fork it, or build your own version. |
+| Closing action | Find out which of your pages Google has indexed · Free and open source. · Get started free · View on GitHub |
+| Guides menu, Indexing API guide | API Overview. The header guides menu, linking `/google-indexing-api` |
+
 ## Watched URLs assets
 
 | Asset | String |
@@ -87,6 +155,7 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | Google documents the Indexing API for job posting and livestream pages only | GOOGLE-01 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
 | IndexNow notifies Bing and other participating search engines, and Google is not one of them | INDEXNOW-01 and INDEXNOW-02 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
 | IndexNow takes any page type on the host, and needs a key file on the site | INDEXNOW-03 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
+| Once a Site's IndexNow key is verified, Request Indexing sends its new and changed sitemap URLs to IndexNow | Automatic sending, gscdump.com ADR-0031, shipped in #414. The verify action on the IndexNow page turns it on. Only changes found after it turns on are sent. Never say that an engine indexed a URL it sent |
 | Free and open source, MIT | `LICENSE`, and the repository is public |
 | We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify | the connect flow asks for `webmasters` (read and write) and `indexing`. A sitemap submission comes from Submit sitemap on the Sitemaps tab, or from gscdump's daily sync when it finds a live sitemap. A property is added only when the reader selects Verify ownership in Add and verify, after a separate grant of `siteverification` |
 | The Free allowance numbers | gscdump returns them from `partner.users.entitlements.get`; copy reads them at runtime and never hardcodes one |
@@ -308,6 +377,7 @@ A `site:` search is public search output. URL Inspection is Google's own report 
 | Verdict offer | Search Console's URL Inspection says whether Google indexed a page, and if not, why. Request Indexing shows that answer for the Sites you connect. | below each tool result |
 | Verdict offer action, signed out | Connect Google | links to `/pro/onboarding`, whose first step has the same label |
 | Verdict offer action, signed in | Open Indexing | links to `/pro/dashboard/indexing`, the sidebar item of the same name |
+| Google Index Checker tags | Single URL · No signup | the `/tools` card. Never "Instant": a speed claim with no evidence |
 
 ## Free allowance assets
 

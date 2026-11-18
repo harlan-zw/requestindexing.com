@@ -4,7 +4,7 @@ const categories = [
     label: 'Fundamentals',
     description: 'Learn the API basics',
     items: [
-      { label: 'Complete Guide', icon: 'i-heroicons-book-open', to: '/google-indexing-api' },
+      { label: 'API Overview', icon: 'i-heroicons-book-open', to: '/google-indexing-api' },
       { label: 'Setup Tutorial', icon: 'i-heroicons-academic-cap', to: '/google-indexing-api-tutorial' },
       { label: 'Quota & Limits', icon: 'i-heroicons-chart-bar', to: '/google-indexing-api-quota' },
     ],

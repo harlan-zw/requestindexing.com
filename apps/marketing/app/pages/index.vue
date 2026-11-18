@@ -1,11 +1,7 @@
 <script lang="ts" setup>
 import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
 
-// PRODUCT-09. Kept as literals: importing `@gscdump/contracts/v1` would pull
-// its top-level zod schemas into the home page chunk.
-const SUBMISSIONS_PER_SITE_DAILY = 5
-const RESUBMIT_WAIT_DAYS = 7
-
+// COPY.md "Landing page assets" owns every string on this page.
 const { loggedIn, user } = useUserSession()
 
 useSeoMeta({
@@ -15,19 +11,29 @@ useSeoMeta({
 
 const faqItems = [
   {
-    label: 'How long will Google take?',
-    icon: 'i-heroicons-clock',
-    content: 'Google decides when to crawl and whether to index a page. Its stages depend on earlier work. An accepted notification does not set an indexing deadline. Check dated URL Inspection evidence to see what Google reports.',
+    label: 'Can you force Google to index my page?',
+    icon: 'i-heroicons-hand-raised',
+    content: 'No. Nobody can. Google decides. Request Indexing shows the reason Google gives, so you can fix the cause.',
   },
   {
-    label: 'Does it actually work?',
-    icon: 'i-heroicons-bolt',
-    content: 'It sends the notification and shows you what Google reports afterwards. A successful Indexing API notification means Google may recrawl the URL soon. Google still decides whether and when to crawl and index the page.',
+    label: 'Why is my whole Site not indexed?',
+    icon: 'i-heroicons-globe-alt',
+    content: 'Start with the stage where most URLs stop. The Why pages stop card on your Indexing page names it. If Google does not know the URLs, add a sitemap and link to them from your home page.',
   },
   {
-    label: 'Will I be penalized for using this?',
+    label: 'Is it safe for my Google account?',
     icon: 'i-heroicons-shield-check',
-    content: 'Request Indexing calls Google\'s public APIs with your own OAuth grant and stays inside Google\'s published quotas. Google supports the Indexing API for job posting and livestream pages, so check your content type before you submit.',
+    content: 'Request Indexing uses Google\'s public APIs, your own Google sign-in, and Google\'s published limits.',
+  },
+  {
+    label: 'Does the Indexing API work for blog posts?',
+    icon: 'i-heroicons-document-text',
+    content: 'Google documents it for job posting and livestream pages only. Use URL Inspection or a sitemap for other pages. IndexNow takes any page type, for Bing and other participating search engines.',
+  },
+  {
+    label: 'What does it cost?',
+    icon: 'i-heroicons-banknotes',
+    content: 'Free, with a Free allowance. No card needed.',
   },
   {
     label: 'Can I see the code?',
@@ -36,18 +42,64 @@ const faqItems = [
   },
 ]
 
+// Google's coverage states, verbatim, as the dashboard shows them.
 const mockUrls = [
-  { url: '/jobs/frontend-developer', status: 'Indexed, URL Inspection', verdict: 'pass', ago: '2 min ago' },
-  { url: '/docs/configuration', status: 'Discovered - currently not indexed', verdict: 'neutral', ago: '5 min ago' },
-  { url: '/guides/seo-best-practices', status: 'Indexed, URL Inspection', verdict: 'pass', ago: '12 min ago' },
-  { url: '/blog/hello-world', status: 'Crawled - currently not indexed', verdict: 'neutral', ago: '1 hr ago' },
-  { url: '/changelog/v2', status: 'Indexed, URL Inspection', verdict: 'pass', ago: '3 hrs ago' },
+  { url: '/blog/hello-world', status: 'Crawled - currently not indexed', verdict: 'neutral' },
+  { url: '/guides/seo-best-practices', status: 'Submitted and indexed', verdict: 'pass' },
+  { url: '/docs/configuration', status: 'Discovered - currently not indexed', verdict: 'neutral' },
+  { url: '/tags/nuxt', status: 'Excluded by \'noindex\' tag', verdict: 'neutral' },
+  { url: '/changelog/v2', status: 'Submitted and indexed', verdict: 'pass' },
 ]
 
 const mockSites = [
   { domain: 'nuxtseo.com', indexed: 91, total: 119 },
   { domain: 'harlanzw.com', indexed: 78, total: 112 },
   { domain: 'mdream.dev', indexed: 54, total: 204 },
+]
+
+const mockChanges = [
+  { url: '/blog/hello-world', from: 'Crawled - currently not indexed', to: 'Submitted and indexed', indexed: true },
+  { url: '/docs/old-setup', from: 'Submitted and indexed', to: 'Excluded by \'noindex\' tag', indexed: false },
+  { url: '/guides/sitemaps', from: 'Discovered - currently not indexed', to: 'Crawled - currently not indexed', indexed: false },
+]
+
+const stopStages = ['Inspected', 'Crawled', 'Indexable', 'Indexed']
+
+// The five reasons and first fixes from onboarding email 02.
+const stopReasons = [
+  { reason: 'Google does not know the URL.', fix: 'Add it to your sitemap. Link to it from a page Google already indexed.' },
+  { reason: 'Google knows the URL but has not crawled it.', fix: 'Link to it from your indexed pages. Cut thin URLs, such as empty tag pages.' },
+  { reason: 'Google could not fetch the URL.', fix: 'Check robots.txt, server errors, logins, and redirects.' },
+  { reason: 'A signal tells Google to skip the URL.', fix: 'Look for a noindex tag. Make sure the canonical points to the page itself.' },
+  { reason: 'Google crawled the page and chose not to index it.', fix: 'Compare it with similar pages on your Site. Improve it, or merge it into the stronger page.' },
+]
+
+const features = [
+  {
+    title: 'Send pages with IndexNow',
+    description: 'IndexNow notifies Bing and other participating search engines about any page type. Google is not one of them. Once your key is verified, Request Indexing sends new and changed sitemap URLs for you.',
+    icon: 'i-heroicons-paper-airplane',
+  },
+  {
+    title: 'Every sitemap URL, with its reason',
+    description: 'Request Indexing inspects the URLs in your sitemaps with URL Inspection, within your Free allowance. Each URL shows Google\'s verdict and reason.',
+    icon: 'i-heroicons-document-magnifying-glass',
+  },
+  {
+    title: 'What changed',
+    description: 'Coverage over time, and the URLs whose verdict changed since last week.',
+    icon: 'i-heroicons-arrows-right-left',
+  },
+  {
+    title: 'Watched URLs',
+    description: 'Keep scheduled URL Inspection evidence for pages you choose.',
+    icon: 'i-heroicons-eye',
+  },
+  {
+    title: 'Sitemaps',
+    description: 'What you declared, what Google discovered, and what drifted between the two.',
+    icon: 'i-heroicons-map',
+  },
 ]
 
 const walkthroughSteps = [
@@ -63,19 +115,24 @@ const walkthroughSteps = [
     eyebrow: 'Sync',
     title: 'See every site in one place',
     description: 'Every verified property in one list, with its indexing rate and Search Console metrics. No more switching tabs.',
-    bullets: ['Totals across every property you own', 'Filter by domain, path, or status', 'History kept past Google\'s 16 months'],
+    bullets: ['Totals across every property you own', 'Filter by domain, path, or status'],
   },
   {
     num: '03',
-    eyebrow: 'Submit',
-    title: 'Submit URLs to the Indexing API',
-    description: `Submit a job posting or livestream URL from your dashboard. Each Site can send ${SUBMISSIONS_PER_SITE_DAILY} Submissions a day, and Request Indexing counts them for you.`,
-    bullets: ['New and updated URLs', `Submit a URL again ${RESUBMIT_WAIT_DAYS} days after Google accepts it`, 'Google supports the API for job posting and livestream pages'],
+    eyebrow: 'Send',
+    title: 'Send new and changed pages with IndexNow',
+    description: 'Publish your IndexNow key file and verify the key. Automatic sending then sends new and changed sitemap URLs after each sitemap update.',
+    bullets: [
+      'Bing and other participating search engines. Google is not one of them.',
+      'Any page type on your site.',
+      'A receipt records the notification outcome.',
+      'For job posting and livestream pages only, you can also submit to Google\'s Indexing API.',
+    ],
   },
   {
     num: '04',
     eyebrow: 'Track',
-    title: 'See what Google does next',
+    title: 'See what Google decided',
     description: 'Your dashboard shows the index status Google reports for each URL, read through gscdump. No more refreshing Search Console.',
     bullets: ['Status per URL', 'Coverage over time', 'Indexed, not indexed, and the reason Google gives'],
   },
@@ -101,6 +158,55 @@ const marketingTools = [
     to: '/tools/site-indexing-report',
   },
 ]
+
+const learnGuides = [
+  {
+    title: 'Indexing API for blog posts',
+    description: 'Ordinary blog posts are outside Google\'s supported Indexing API use. Learn what to use instead, and what an accepted request proves.',
+    icon: 'i-heroicons-document-text',
+    to: '/indexing-api-for-blog-posts',
+    action: 'Read the answer',
+  },
+  {
+    title: 'How the Indexing API works',
+    description: 'What the API supports, what a notification response means, when Google requires approval, and how it differs from URL Inspection.',
+    icon: 'i-heroicons-book-open',
+    to: '/google-indexing-api',
+    action: 'Read the guide',
+  },
+  {
+    title: 'Step-by-step tutorial',
+    description: 'Create a Google Cloud project and service account, give it Search Console ownership, and send your first eligible notification.',
+    icon: 'i-heroicons-academic-cap',
+    to: '/google-indexing-api-tutorial',
+    action: 'Follow tutorial',
+  },
+  {
+    title: 'Node.js implementation',
+    description: 'Send one URL_UPDATED notification with googleapis, read the failures, and tell notification metadata apart from index status.',
+    icon: 'i-simple-icons-nodedotjs',
+    to: '/google-indexing-api-node-js',
+    action: 'See the code',
+  },
+  {
+    title: 'Bulk URL submission',
+    description: 'Send eligible URLs one request at a time, see how multipart batches differ, and keep a result for every URL.',
+    icon: 'i-heroicons-queue-list',
+    to: '/bulk-submit-urls-google-indexing-api',
+    action: 'Read pattern',
+  },
+  {
+    title: 'Quota & rate limits',
+    description: '200 publish requests a day, 180 metadata reads a minute, the Pacific Time reset, and how a tool\'s own limit differs.',
+    icon: 'i-lucide-gauge',
+    to: '/google-indexing-api-quota',
+    action: 'Read limits',
+  },
+]
+
+// A link before punctuation holds its text in `{{ }}`. Plain text on its own
+// line keeps a trailing space inside the link, which renders "GitHub ."
+const linkClass = 'underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors'
 </script>
 
 <template>
@@ -121,15 +227,14 @@ const marketingTools = [
                 Get your pages <span class="italic text-primary">indexed</span>.
                 <HeroSvg />
               </h1>
-              <p class="text-toned max-w-2xl text-center text-lg sm:text-xl lg:text-left mb-10 leading-relaxed">
-                Check Google's indexing status across your Search Console properties. For ordinary pages, use <NuxtLink to="/indexing-api-for-blog-posts" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-default rounded">
-                  URL Inspection or a sitemap
-                </NuxtLink>. For job posting and livestream pages, submit URLs through Google's <NuxtLink to="https://developers.google.com/search/apis/indexing-api/v3/quickstart" target="_blank" class="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-default rounded">
-                  Indexing API
-                </NuxtLink>. Keep your history past Google's 16-month window.
+              <p class="text-toned max-w-2xl text-center text-lg sm:text-xl lg:text-left mb-4 leading-relaxed">
+                Send new and changed pages to Bing and other search engines with IndexNow, automatically once your key is verified. For Google, see which pages it indexed, and the reason it gives for the rest.
+              </p>
+              <p class="text-default max-w-2xl text-center text-base sm:text-lg lg:text-left mb-10 leading-relaxed font-medium">
+                Nobody can force Google to index a page. Request Indexing shows what Google decided, and why.
               </p>
 
-              <div class="flex items-center justify-center gap-3 flex-row sm:gap-4 lg:justify-start">
+              <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4 lg:justify-start">
                 <template v-if="!loggedIn">
                   <UButton to="/pro/onboarding" external rel="noopener" size="xl" color="primary" trailing-icon="i-heroicons-arrow-right">
                     <span>Get started<span class="hidden sm:inline"> free</span></span>
@@ -141,8 +246,8 @@ const marketingTools = [
                     Dashboard
                   </UButton>
                 </template>
-                <UButton size="xl" variant="ghost" color="neutral" icon="i-simple-icons-github" target="_blank" to="https://github.com/harlan-zw/requestindexing.com">
-                  View source
+                <UButton size="xl" variant="ghost" color="neutral" icon="i-heroicons-magnifying-glass" to="/tools/google-indexing-checker">
+                  Check one URL free
                 </UButton>
               </div>
             </div>
@@ -160,33 +265,37 @@ const marketingTools = [
                       </UBadge>
                     </div>
                     <div class="flex items-center gap-1.5">
-                      <span class="size-2 rounded-full bg-primary-400 animate-pulse" />
+                      <span class="size-2 rounded-full bg-primary-400" />
                       <span class="text-xs text-muted">Example</span>
                     </div>
                   </div>
-                  <!-- Mock URL rows -->
+                  <!-- Mock URL rows: each shows Google's reason -->
                   <div class="divide-y divide-default bg-elevated">
                     <div
                       v-for="(item, i) in mockUrls"
                       :key="i"
-                      class="px-5 py-3 flex items-center justify-between gap-4 text-sm group hover:bg-muted transition-colors animate-fade-in"
+                      class="px-5 py-3 flex items-start gap-2.5 text-sm group hover:bg-muted transition-colors animate-fade-in"
                       :style="{ '--stagger-index': i }"
                     >
-                      <div class="flex items-center gap-2.5 min-w-0">
-                        <UIcon
-                          :name="item.verdict === 'pass' ? 'i-heroicons-check-circle' : 'i-heroicons-clock'"
-                          class="size-4 shrink-0"
-                          :class="item.verdict === 'pass' ? 'text-primary' : 'text-amber-400'"
-                        />
-                        <span class="truncate text-toned font-mono text-xs">{{ item.url }}</span>
+                      <UIcon
+                        :name="item.verdict === 'pass' ? 'i-heroicons-check-circle' : 'i-heroicons-exclamation-circle'"
+                        class="size-4 shrink-0 mt-0.5"
+                        :class="item.verdict === 'pass' ? 'text-primary' : 'text-amber-400'"
+                      />
+                      <div class="min-w-0 flex-1">
+                        <div class="truncate text-toned font-mono text-xs">
+                          {{ item.url }}
+                        </div>
+                        <div class="truncate text-xs mt-0.5" :class="item.verdict === 'pass' ? 'text-muted' : 'text-default font-medium'">
+                          {{ item.status }}
+                        </div>
                       </div>
-                      <span class="text-muted text-xs whitespace-nowrap hidden sm:block">{{ item.ago }}</span>
                     </div>
                   </div>
                   <!-- Card footer -->
-                  <div class="px-5 py-3 bg-muted border-t border-default flex items-center justify-between">
-                    <span class="text-xs text-muted">5 of 119 pages</span>
-                    <span class="text-xs text-primary font-medium">3 indexed today</span>
+                  <div class="px-5 py-3 bg-muted border-t border-default flex items-center justify-between gap-4">
+                    <span class="text-xs text-muted">5 of 119 sitemap URLs</span>
+                    <span class="text-xs text-muted">Reason from URL Inspection</span>
                   </div>
                 </div>
               </div>
@@ -197,107 +306,128 @@ const marketingTools = [
     </div>
 
     <div class="bg-default pt-20">
-      <!-- Features: editorial bento -->
+      <!-- Where Google's own button is -->
       <section class="max-w-7xl mx-auto px-6 lg:px-8 py-16 sm:py-24">
-        <div class="max-w-3xl mb-12 lg:mb-16">
+        <div class="grid lg:grid-cols-12 gap-8 lg:gap-16 items-start">
+          <div class="lg:col-span-5">
+            <span class="text-xs text-primary font-semibold uppercase tracking-[0.2em] mb-5 block">
+              Where Google's own button is
+            </span>
+            <h2 class="font-title text-3xl sm:text-4xl lg:text-5xl font-semibold text-default tracking-[-0.035em] leading-[1.05]">
+              Google's Request indexing button is in Search Console.
+            </h2>
+          </div>
+          <div class="lg:col-span-7 space-y-6">
+            <p class="text-toned text-lg leading-relaxed">
+              Open URL Inspection in Search Console, paste the full URL, and select Request indexing. A request asks Google to crawl the URL. Google sets a daily limit on these requests.
+            </p>
+            <NuxtLink to="/request-indexing-google-search-console" class="group inline-flex items-center gap-2 font-medium text-primary">
+              How to Request Indexing in Google Search Console
+              <UIcon name="i-heroicons-arrow-right" class="size-4 shrink-0 group-hover:translate-x-1 transition-transform" />
+            </NuxtLink>
+            <p class="text-toned leading-relaxed border-l-2 border-primary/40 pl-4">
+              Request Indexing reads Google's verdict for the URLs in your sitemaps, so you do not inspect them one by one.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Why pages stop -->
+      <section class="max-w-7xl mx-auto px-6 lg:px-8 py-16 sm:py-24 border-t border-default">
+        <div class="max-w-3xl mb-10">
           <span class="text-xs text-primary font-semibold uppercase tracking-[0.2em] mb-5 block">
-            What it does
+            Why pages stop
           </span>
-          <h2 class="font-title text-4xl sm:text-5xl lg:text-6xl font-semibold text-default tracking-[-0.035em] leading-[1.02]">
-            Indexing shouldn't be <span class="italic text-primary">luck</span>.
+          <h2 class="font-title text-4xl sm:text-5xl font-semibold text-default tracking-[-0.035em] leading-[1.05]">
+            Find the stage where your pages stop.
           </h2>
-          <p class="text-toned text-lg sm:text-xl mt-6 max-w-2xl leading-relaxed">
-            Submit to the Indexing API from your dashboard, see every Search Console property side by side, and keep your history after Google drops it at 16 months.
+          <p class="text-toned text-lg mt-6 leading-relaxed">
+            The Why pages stop card follows your inspected URLs through four stages. Start at the biggest drop.
           </p>
         </div>
 
-        <div class="grid lg:grid-cols-6 gap-4 lg:gap-5">
-          <!-- Dominant feature: Request Indexing -->
-          <div class="lg:col-span-4 rounded-2xl border border-default bg-elevated p-8 sm:p-10 relative overflow-hidden group">
-            <div class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
-            <div class="relative">
-              <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] mb-6">
-                <UIcon name="i-heroicons-bolt-solid" class="size-3.5" />
-                Indexing API
-              </div>
-              <h3 class="font-title text-2xl sm:text-3xl font-semibold text-default tracking-[-0.02em] mb-3 leading-[1.1]">
-                Notify Google directly.
-              </h3>
-              <p class="text-toned leading-relaxed max-w-xl mb-8">
-                A successful Indexing API notification tells Google it may recrawl the URL soon. Google supports the API for job posting and livestream pages. Publishing an ordinary blog post? <NuxtLink to="/indexing-api-for-blog-posts" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
-                  Request indexing with URL Inspection or a sitemap
-                </NuxtLink> instead.
-              </p>
-              <div class="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
-                <span class="inline-flex items-center gap-2 text-default">
-                  <UIcon name="i-heroicons-check-circle" class="size-4 text-primary" />
-                  <span class="font-medium">Job posting and livestream pages</span>
-                </span>
-                <span class="inline-flex items-center gap-2 text-default">
-                  <UIcon name="i-heroicons-check-circle" class="size-4 text-primary" />
-                  <span class="font-medium">Per-page status</span>
-                </span>
-                <span class="inline-flex items-center gap-2 text-default">
-                  <UIcon name="i-heroicons-check-circle" class="size-4 text-primary" />
-                  <span class="font-medium">One click from your dashboard</span>
-                </span>
-              </div>
-            </div>
-          </div>
+        <ol class="flex flex-wrap items-center gap-2 mb-10" aria-label="Indexing stages">
+          <li v-for="(stage, i) in stopStages" :key="stage" class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-2 rounded-full border border-default bg-elevated px-3 py-1.5 text-sm font-medium text-default">
+              <span class="font-mono text-xs text-muted">{{ i + 1 }}</span>
+              {{ stage }}
+            </span>
+            <UIcon v-if="i < stopStages.length - 1" name="i-heroicons-arrow-right" class="size-4 text-muted shrink-0" />
+          </li>
+        </ol>
 
-          <!-- Supporting: Unified Dashboard -->
-          <div class="lg:col-span-2 rounded-2xl border border-default bg-elevated p-8 relative overflow-hidden">
-            <UIcon name="i-heroicons-chart-bar-square" class="size-7 text-primary mb-5" />
-            <h3 class="font-title text-xl font-semibold text-default tracking-[-0.015em] mb-2">
-              Every site, one tab
+        <div class="rounded-2xl border border-default bg-elevated overflow-hidden">
+          <table class="w-full text-left">
+            <thead class="hidden sm:table-header-group bg-muted/60 border-b border-default">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-xs font-semibold uppercase tracking-[0.15em] text-muted w-2/5">
+                  Reason
+                </th>
+                <th scope="col" class="px-6 py-3 text-xs font-semibold uppercase tracking-[0.15em] text-muted">
+                  First fix
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-default">
+              <tr v-for="row in stopReasons" :key="row.reason" class="block sm:table-row">
+                <th scope="row" class="block sm:table-cell px-5 sm:px-6 pt-4 sm:py-4 text-default font-semibold align-top">
+                  {{ row.reason }}
+                </th>
+                <td class="block sm:table-cell px-5 sm:px-6 pt-1 pb-4 sm:py-4 text-toned align-top">
+                  <span class="sm:hidden text-xs font-semibold uppercase tracking-[0.15em] text-muted block mb-1">First fix</span>
+                  {{ row.fix }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-8">
+          <UButton to="/pro/onboarding" external rel="noopener" size="lg" color="primary" variant="soft" trailing-icon="i-heroicons-arrow-right">
+            See this for your Site
+          </UButton>
+        </div>
+      </section>
+
+      <!-- What you get -->
+      <section class="max-w-7xl mx-auto px-6 lg:px-8 py-16 sm:py-24 border-t border-default">
+        <div class="max-w-3xl mb-12">
+          <span class="text-xs text-primary font-semibold uppercase tracking-[0.2em] mb-5 block">
+            What you get
+          </span>
+          <h2 class="font-title text-4xl sm:text-5xl font-semibold text-default tracking-[-0.035em] leading-[1.05]">
+            IndexNow for Bing and others. Google's reason for each sitemap URL.
+          </h2>
+        </div>
+
+        <div class="grid sm:grid-cols-2 xl:grid-cols-5 gap-4 lg:gap-5">
+          <div
+            v-for="feature in features"
+            :key="feature.title"
+            class="rounded-2xl border border-default bg-elevated p-6 sm:last:col-span-2 xl:last:col-span-1"
+          >
+            <UIcon :name="feature.icon" class="size-7 text-primary mb-5" />
+            <h3 class="font-title text-lg font-semibold text-default tracking-[-0.015em] mb-2 leading-snug">
+              {{ feature.title }}
             </h3>
             <p class="text-toned text-sm leading-relaxed">
-              Verified Search Console properties, indexing rate, and impressions in a single dashboard. No more switching accounts to compare.
-            </p>
-          </div>
-
-          <!-- Supporting: Data Retention (spans 2) -->
-          <div class="lg:col-span-2 rounded-2xl border border-default bg-elevated p-8">
-            <UIcon name="i-heroicons-archive-box" class="size-7 text-primary mb-5" />
-            <h3 class="font-title text-xl font-semibold text-default tracking-[-0.015em] mb-2">
-              History beyond 16 months
-            </h3>
-            <p class="text-toned text-sm leading-relaxed">
-              Search Console only shows the last <NuxtLink to="https://gscdump.com/learn-google-search-console/limits/16-month-data-retention" target="_blank" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
-                16 months
-              </NuxtLink> of data, and older days age out every day. Request Indexing keeps your history past that window.
-            </p>
-          </div>
-
-          <!-- Supporting: Open Source -->
-          <div class="lg:col-span-2 rounded-2xl border border-default bg-elevated p-8">
-            <UIcon name="i-simple-icons-github" class="size-7 text-primary mb-5" />
-            <h3 class="font-title text-xl font-semibold text-default tracking-[-0.015em] mb-2">
-              Open, portable, yours
-            </h3>
-            <p class="text-toned text-sm leading-relaxed">
-              MIT on GitHub. Read the code, fork it, or run your own copy of the app on Cloudflare. A copy still uses the hosted gscdump engine.
-            </p>
-          </div>
-
-          <!-- Supporting: Sitemaps -->
-          <div class="lg:col-span-2 rounded-2xl border border-default bg-elevated p-8">
-            <UIcon name="i-heroicons-map" class="size-7 text-primary mb-5" />
-            <h3 class="font-title text-xl font-semibold text-default tracking-[-0.015em] mb-2">
-              Sitemaps, tracked
-            </h3>
-            <p class="text-toned text-sm leading-relaxed">
-              What you declared, what Google discovered, and what drifted between the two: one view instead of Search Console's own report.
+              {{ feature.description }}
             </p>
           </div>
         </div>
+
+        <p class="text-toned text-sm mt-8 max-w-3xl">
+          Request Indexing also keeps your Search Console history past Google's <NuxtLink to="https://gscdump.com/learn-google-search-console/limits/16-month-data-retention" target="_blank" :class="linkClass">
+            {{ '16-month window' }}
+          </NuxtLink>, within your Free allowance.
+        </p>
       </section>
 
       <!-- How It Works -->
       <UPageSection
         headline="How it works"
         title="From Search Console to Google's answer in four steps"
-        description="Connect your Google account once, submit URLs to the Indexing API, and see what Google reports for each one. No dark arts."
+        description="Connect Google once. Request Indexing sends your new pages with IndexNow and shows what Google reports for each URL."
         :ui="{ container: 'max-w-7xl', title: 'font-title' }"
       >
         <div class="mt-12 lg:mt-16 grid gap-14 lg:gap-24">
@@ -392,63 +522,60 @@ const marketingTools = [
                     </div>
                   </div>
                 </div>
-                <!-- Step 3: Code block -->
+                <!-- Step 3: the IndexNow protocol request -->
                 <div v-else-if="i === 2" class="rounded-xl border border-default bg-elevated shadow-lg overflow-hidden">
                   <div class="flex items-center gap-2 px-5 py-3 border-b border-default bg-muted/60">
                     <UIcon name="i-heroicons-command-line" class="size-4 text-muted" />
-                    <span class="text-xs font-mono text-muted truncate">POST /v3/urlNotifications:publish</span>
-                    <UBadge color="primary" variant="subtle" size="xs" class="ml-auto">
-                      200 OK
+                    <span class="text-xs font-mono text-muted truncate">POST api.indexnow.org/indexnow</span>
+                    <UBadge color="neutral" variant="subtle" size="xs" class="ml-auto">
+                      Example
                     </UBadge>
                   </div>
-                  <pre class="px-5 py-5 text-xs sm:text-sm font-mono text-toned overflow-x-auto leading-relaxed min-w-0"><code><span class="text-muted"># Submit a URL to the Indexing API</span>
-<span class="text-primary">curl</span> <span class="text-default">-X POST</span> \
-  <span class="text-default">-H</span> <span class="text-toned">"Content-Type: application/json"</span> \
-  <span class="text-default">-H</span> <span class="text-toned">"Authorization: Bearer $TOKEN"</span> \
+                  <pre class="px-5 py-5 text-xs sm:text-sm font-mono text-toned overflow-x-auto leading-relaxed min-w-0"><code><span class="text-muted"># The IndexNow request. Request Indexing sends it for you.</span>
+<span class="text-primary">curl</span> <span class="text-default">-X POST</span> <span class="text-primary">https://api.indexnow.org/indexnow</span> \
+  <span class="text-default">-H</span> <span class="text-toned">"Content-Type: application/json; charset=utf-8"</span> \
   <span class="text-default">--data</span> <span class="text-toned">'{
-    "url": "https://example.com/jobs/frontend-developer",
-    "type": "URL_UPDATED"
-  }'</span> \
-  <span class="text-primary">indexing.googleapis.com/v3/urlNotifications:publish</span></code></pre>
+    "host": "www.example.com",
+    "key": "8d7a3c1e6f2b4a90",
+    "urlList": [
+      "https://www.example.com/blog/new-post",
+      "https://www.example.com/pricing"
+    ]
+  }'</span></code></pre>
                 </div>
-                <!-- Step 4: Status flip -->
+                <!-- Step 4: URL Inspection changes -->
                 <div v-else class="rounded-xl border border-default bg-elevated shadow-lg overflow-hidden">
                   <div class="px-5 py-3.5 border-b border-default flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                      <UIcon name="i-heroicons-clock" class="size-4 text-muted" />
-                      <span class="text-sm font-semibold text-default">Indexing timeline</span>
+                      <UIcon name="i-heroicons-arrows-right-left" class="size-4 text-muted" />
+                      <span class="text-sm font-semibold text-default">What changed</span>
                     </div>
-                    <span class="text-xs text-muted font-mono">today</span>
+                    <span class="text-xs text-muted">Example</span>
                   </div>
                   <div class="divide-y divide-default">
-                    <div class="px-5 py-3.5 flex items-center gap-3 text-sm">
-                      <UIcon name="i-heroicons-arrow-up-tray" class="size-4 text-muted shrink-0" />
-                      <span class="flex-1 text-toned font-mono text-xs truncate">/jobs/frontend-developer</span>
-                      <UBadge color="neutral" variant="subtle" size="xs">
-                        Submitted
+                    <div v-for="change in mockChanges" :key="change.url" class="px-5 py-3.5 flex items-start gap-3 text-sm" :class="change.indexed ? 'bg-primary/5' : ''">
+                      <UIcon
+                        :name="change.indexed ? 'i-heroicons-check-circle' : 'i-heroicons-exclamation-circle'"
+                        class="size-4 shrink-0 mt-0.5"
+                        :class="change.indexed ? 'text-primary' : 'text-amber-400'"
+                      />
+                      <div class="flex-1 min-w-0">
+                        <div class="text-default font-mono text-xs truncate font-medium">
+                          {{ change.url }}
+                        </div>
+                        <div class="text-xs text-muted mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                          <span>{{ change.from }}</span>
+                          <UIcon name="i-heroicons-arrow-right" class="size-3 shrink-0" />
+                          <span class="text-toned">{{ change.to }}</span>
+                        </div>
+                      </div>
+                      <UBadge :color="change.indexed ? 'primary' : 'neutral'" variant="subtle" size="xs" class="shrink-0">
+                        {{ change.indexed ? 'Indexed' : 'Not indexed' }}
                       </UBadge>
-                      <span class="text-xs text-muted font-mono hidden sm:inline">09:14</span>
-                    </div>
-                    <div class="px-5 py-3.5 flex items-center gap-3 text-sm">
-                      <UIcon name="i-heroicons-magnifying-glass" class="size-4 text-muted shrink-0" />
-                      <span class="flex-1 text-toned font-mono text-xs truncate">/jobs/frontend-developer</span>
-                      <UBadge color="neutral" variant="subtle" size="xs">
-                        Crawled
-                      </UBadge>
-                      <span class="text-xs text-muted font-mono hidden sm:inline">10:42</span>
-                    </div>
-                    <div class="px-5 py-3.5 flex items-center gap-3 text-sm bg-primary/5">
-                      <UIcon name="i-heroicons-check-circle" class="size-4 text-primary shrink-0" />
-                      <span class="flex-1 text-default font-mono text-xs truncate font-medium">/jobs/frontend-developer</span>
-                      <UBadge color="primary" variant="subtle" size="xs">
-                        Indexed
-                      </UBadge>
-                      <span class="text-xs text-muted font-mono hidden sm:inline">14:28</span>
                     </div>
                   </div>
-                  <div class="px-5 py-3 bg-muted/60 border-t border-default flex items-center justify-between">
-                    <span class="text-xs text-muted">Illustrative activity. Notification receipt and index status are separate.</span>
-                    <UIcon name="i-heroicons-bolt-solid" class="size-3.5 text-primary" />
+                  <div class="px-5 py-3 bg-muted/60 border-t border-default">
+                    <span class="text-xs text-muted">Illustrative example. Each row is a change in Google's URL Inspection result.</span>
                   </div>
                 </div>
               </div>
@@ -492,7 +619,7 @@ const marketingTools = [
               Learn
             </span>
             <h2 class="font-title text-4xl sm:text-5xl font-semibold text-default tracking-[-0.035em] leading-[1.05]">
-              Understand the API, then automate it.
+              Learn how to ask Google, and how to read its answer.
             </h2>
           </div>
           <UButton
@@ -509,8 +636,8 @@ const marketingTools = [
         <div class="grid lg:grid-cols-3 gap-4 lg:gap-5">
           <!-- Featured -->
           <NuxtLink
-            to="/google-indexing-api"
-            class="lg:row-span-2 rounded-2xl border border-default bg-elevated p-8 sm:p-10 group relative overflow-hidden flex flex-col justify-between min-h-[320px]"
+            to="/request-indexing-google-search-console"
+            class="lg:row-span-3 rounded-2xl border border-default bg-elevated p-8 sm:p-10 group relative overflow-hidden flex flex-col justify-between min-h-[320px]"
           >
             <div class="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-transparent pointer-events-none" />
             <div class="relative">
@@ -518,10 +645,10 @@ const marketingTools = [
                 Start here
               </UBadge>
               <h3 class="font-title text-2xl sm:text-3xl font-semibold text-default tracking-[-0.02em] mb-3 leading-[1.1]">
-                The complete Google Indexing API guide
+                How to Request Indexing in Google Search Console
               </h3>
               <p class="text-toned leading-relaxed max-w-md">
-                What the API supports, what a notification response means, when Google requires approval, and how it differs from URL Inspection.
+                Request indexing for one URL with Search Console's URL Inspection tool: the steps, who can do it, the daily limit, and what a request does not prove.
               </p>
             </div>
             <div class="relative flex items-center gap-2 mt-8 text-primary font-medium">
@@ -530,185 +657,86 @@ const marketingTools = [
             </div>
           </NuxtLink>
 
-          <!-- Supporting 1 -->
+          <!-- Supporting -->
           <NuxtLink
-            to="/google-indexing-api-tutorial"
+            v-for="guide in learnGuides"
+            :key="guide.to"
+            :to="guide.to"
             class="rounded-2xl border border-default bg-elevated p-6 sm:p-7 group"
           >
-            <UIcon name="i-heroicons-academic-cap" class="size-7 text-primary mb-5" />
+            <UIcon :name="guide.icon" class="size-7 text-primary mb-5" />
             <h3 class="font-title text-lg font-semibold text-default tracking-[-0.015em] mb-1.5">
-              Step-by-step tutorial
+              {{ guide.title }}
             </h3>
             <p class="text-toned text-sm leading-relaxed mb-4">
-              Create a Google Cloud project and service account, give it Search Console ownership, and send your first eligible notification.
+              {{ guide.description }}
             </p>
             <div class="flex items-center gap-1.5 text-sm text-primary font-medium">
-              Follow tutorial
-              <UIcon name="i-heroicons-arrow-right" class="size-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </NuxtLink>
-
-          <!-- Supporting 2 -->
-          <NuxtLink
-            to="/google-indexing-api-node-js"
-            class="rounded-2xl border border-default bg-elevated p-6 sm:p-7 group"
-          >
-            <UIcon name="i-simple-icons-nodedotjs" class="size-7 text-primary mb-5" />
-            <h3 class="font-title text-lg font-semibold text-default tracking-[-0.015em] mb-1.5">
-              Node.js implementation
-            </h3>
-            <p class="text-toned text-sm leading-relaxed mb-4">
-              Send one URL_UPDATED notification with googleapis, read the failures, and tell notification metadata apart from index status.
-            </p>
-            <div class="flex items-center gap-1.5 text-sm text-primary font-medium">
-              See the code
-              <UIcon name="i-heroicons-arrow-right" class="size-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </NuxtLink>
-
-          <!-- Supporting 3 -->
-          <NuxtLink
-            to="/bulk-submit-urls-google-indexing-api"
-            class="rounded-2xl border border-default bg-elevated p-6 sm:p-7 group"
-          >
-            <UIcon name="i-heroicons-queue-list" class="size-7 text-primary mb-5" />
-            <h3 class="font-title text-lg font-semibold text-default tracking-[-0.015em] mb-1.5">
-              Bulk URL submission
-            </h3>
-            <p class="text-toned text-sm leading-relaxed mb-4">
-              Send eligible URLs one request at a time, see how multipart batches differ, and keep a result for every URL.
-            </p>
-            <div class="flex items-center gap-1.5 text-sm text-primary font-medium">
-              Read pattern
-              <UIcon name="i-heroicons-arrow-right" class="size-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </NuxtLink>
-
-          <!-- Supporting 4 -->
-          <NuxtLink
-            to="/google-indexing-api-quota"
-            class="rounded-2xl border border-default bg-elevated p-6 sm:p-7 group"
-          >
-            <UIcon name="i-lucide-gauge" class="size-7 text-primary mb-5" />
-            <h3 class="font-title text-lg font-semibold text-default tracking-[-0.015em] mb-1.5">
-              Quota & rate limits
-            </h3>
-            <p class="text-toned text-sm leading-relaxed mb-4">
-              200 publish requests a day, 180 metadata reads a minute, the Pacific Time reset, and how a tool's own limit differs.
-            </p>
-            <div class="flex items-center gap-1.5 text-sm text-primary font-medium">
-              Read limits
+              {{ guide.action }}
               <UIcon name="i-heroicons-arrow-right" class="size-3.5 group-hover:translate-x-0.5 transition-transform" />
             </div>
           </NuxtLink>
         </div>
 
         <p class="text-toned mt-8 max-w-2xl">
-          Weighing another tool? Read <NuxtLink to="/comparisons" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+          Weighing another tool? Read <NuxtLink to="/comparisons" :class="linkClass">
             how Request Indexing compares with Indexly and SEO Gets
           </NuxtLink> or what replaces the closed Tag Parrot.
         </p>
       </section>
 
-      <!-- Data retention: pull quote dominant -->
-      <section class="relative py-16 sm:py-24">
-        <div class="max-w-7xl mx-auto px-6 lg:px-8 grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
-          <div class="lg:col-span-5">
-            <span class="text-xs text-primary font-semibold uppercase tracking-[0.2em] mb-5 block">
-              Data preservation
-            </span>
-            <h2 class="font-title text-4xl sm:text-5xl font-semibold text-default tracking-[-0.035em] leading-[1.05] mb-6">
-              Google is deleting<br>your data.
-            </h2>
-            <p class="text-toned text-lg leading-relaxed mb-8 max-w-md">
-              After 16 months, your Search Console history is gone: seasonal patterns, year-over-year comparisons, all of it.
-            </p>
-            <div class="space-y-4">
-              <div class="flex items-start gap-3">
-                <UIcon name="i-heroicons-archive-box" class="size-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <div class="text-default font-semibold mb-0.5">
-                    Keep it past 16 months
-                  </div>
-                  <div class="text-muted text-sm">
-                    Request Indexing keeps your history after Google drops it.
-                  </div>
-                </div>
-              </div>
-              <div class="flex items-start gap-3">
-                <UIcon name="i-heroicons-finger-print" class="size-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <div class="text-default font-semibold mb-0.5">
-                    Own your data
-                  </div>
-                  <div class="text-muted text-sm">
-                    Delete it any time. It's yours.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <figure class="lg:col-span-7 relative">
-            <div class="absolute -top-6 -left-2 text-primary/20 font-title text-[10rem] leading-none select-none pointer-events-none" aria-hidden="true">
-              &ldquo;
-            </div>
-            <blockquote class="relative pl-12 lg:pl-16">
-              <p class="font-title text-2xl sm:text-3xl lg:text-4xl text-default tracking-[-0.02em] leading-[1.2] font-medium">
-                Search Console keeps data for the last 16 months. As a result, SEO reports in Analytics also include a maximum of 16 months of data.
-              </p>
-              <footer class="mt-6 flex items-center gap-3">
-                <UIcon name="i-simple-icons-google" class="size-5 text-blue-500" />
-                <NuxtLink
-                  to="https://support.google.com/analytics/answer/1308621"
-                  target="_blank"
-                  class="text-sm text-muted hover:text-default transition-colors"
-                >
-                  Google Analytics Documentation &rarr;
-                </NuxtLink>
-              </footer>
-            </blockquote>
-          </figure>
-        </div>
-      </section>
-
-      <!-- Trust Strip -->
+      <!-- Trust -->
       <section class="max-w-7xl mx-auto px-6 lg:px-8 py-16 sm:py-20 border-y border-default">
-        <div class="grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+        <div class="grid lg:grid-cols-12 gap-10 lg:gap-16 items-start">
           <div class="lg:col-span-5">
             <span class="text-xs text-primary font-semibold uppercase tracking-[0.2em] mb-5 block">
               Built in the open
             </span>
             <h2 class="font-title text-3xl sm:text-4xl font-semibold text-default tracking-[-0.03em] leading-[1.1]">
-              No paywall, no surveillance, no lock-in.
+              Who builds it, and what it can touch.
             </h2>
           </div>
-          <div class="lg:col-span-7 grid sm:grid-cols-3 gap-8 lg:gap-10">
+          <div class="lg:col-span-7 grid sm:grid-cols-2 gap-8 lg:gap-10">
             <div>
-              <UIcon name="i-heroicons-check-badge" class="size-6 text-primary mb-3" />
+              <UIcon name="i-simple-icons-github" class="size-6 text-primary mb-3" />
               <div class="font-title text-base font-semibold text-default mb-1.5 tracking-[-0.01em]">
-                MIT
+                Open source, MIT
               </div>
               <p class="text-muted text-sm leading-relaxed">
-                Released on GitHub. Built with Nuxt by a Nuxt core team member.
+                Read every line on <NuxtLink to="https://github.com/harlan-zw/requestindexing.com" target="_blank" :class="linkClass">
+                  {{ 'GitHub' }}
+                </NuxtLink>.
               </p>
             </div>
             <div>
-              <UIcon name="i-heroicons-eye-slash" class="size-6 text-primary mb-3" />
+              <UIcon name="i-heroicons-user-circle" class="size-6 text-primary mb-3" />
               <div class="font-title text-base font-semibold text-default mb-1.5 tracking-[-0.01em]">
-                Minimal data
+                Built by Harlan Wilton
               </div>
               <p class="text-muted text-sm leading-relaxed">
-                We collect what's needed to make the product work. Delete it any time.
+                Maintainer of <NuxtLink to="https://nuxtseo.com" target="_blank" :class="linkClass">
+                  {{ 'Nuxt SEO' }}
+                </NuxtLink>. Building Request Indexing since 2024.
               </p>
             </div>
             <div>
-              <UIcon name="i-heroicons-lock-closed" class="size-6 text-primary mb-3" />
+              <UIcon name="i-heroicons-key" class="size-6 text-primary mb-3" />
               <div class="font-title text-base font-semibold text-default mb-1.5 tracking-[-0.01em]">
-                Encrypted
+                What it changes in Search Console
               </div>
               <p class="text-muted text-sm leading-relaxed">
-                At rest and in transit for every sensitive field, including OAuth tokens.
+                We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify.
+              </p>
+            </div>
+            <div>
+              <UIcon name="i-heroicons-trash" class="size-6 text-primary mb-3" />
+              <div class="font-title text-base font-semibold text-default mb-1.5 tracking-[-0.01em]">
+                Delete any time
+              </div>
+              <p class="text-muted text-sm leading-relaxed">
+                Deleting your account removes every Team you own and all Sites and data in them. Google can keep the access you gave Request Indexing. Remove it in your <NuxtLink to="https://myaccount.google.com/connections" target="_blank" :class="linkClass">
+                  {{ 'Google Account' }}
+                </NuxtLink>.
               </p>
             </div>
           </div>
@@ -721,12 +749,6 @@ const marketingTools = [
         :ui="{ container: 'max-w-3xl', title: 'font-title' }"
       >
         <UAccordion :items="faqItems" multiple />
-        <p class="text-sm text-muted">
-          <NuxtLink to="https://nuxtseo.com/learn-seo/google-search-timelines" class="underline underline-offset-4">
-            Understand Google Search timelines
-          </NuxtLink>
-          and the limits of the reported observations.
-        </p>
       </UPageSection>
 
       <!-- CTA -->
@@ -736,7 +758,7 @@ const marketingTools = [
           description="Free and open source."
           variant="subtle"
           :links="[
-            { label: 'Get Started Free', to: '/pro/onboarding', color: 'primary', size: 'xl', trailingIcon: 'i-heroicons-arrow-right' },
+            { label: 'Get started free', to: '/pro/onboarding', color: 'primary', size: 'xl', trailingIcon: 'i-heroicons-arrow-right' },
             { label: 'View on GitHub', to: 'https://github.com/harlan-zw/requestindexing.com', target: '_blank', variant: 'ghost', color: 'neutral', size: 'xl', icon: 'i-simple-icons-github' },
           ]"
         />
