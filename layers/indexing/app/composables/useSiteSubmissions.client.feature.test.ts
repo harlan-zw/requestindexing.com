@@ -94,3 +94,32 @@ it('reads one Site\'s receipt window once for the summary and the outcomes', asy
   expect(reads.outcomes!.data.value).toMatchObject({ sent: 1, checked: 1, notInspected: 1 })
   expect(state.indexingUrls).toHaveBeenCalledTimes(1)
 })
+
+it('pages through the substring search until a homepage finds its own row', async () => {
+  const receivedAt = new Date(Date.now() - 86_000_000).toISOString()
+  state.indexNowReceipts.mockResolvedValue({ submissionReceipts: [
+    { _tag: 'accepted', id: 'in_1', trigger: 'manual', urls: ['https://example.com/'], createdAt: new Date(Date.now() - 86_400_000).toISOString(), updatedAt: receivedAt, reason: null, retryAt: null },
+  ], pagination: { hasMore: false } })
+  // The homepage's term matches every row, so the first page holds only longer URLs.
+  const others = Array.from({ length: 100 }, (_, index) => ({ url: `https://example.com/p/${index}`, verdict: 'PASS', coverageState: 'Submitted and indexed', lastCrawlTime: null, lastCheckedAt: new Date().toISOString() }))
+  state.indexingUrls.mockImplementation(async ({ query }: { query: { search: string, offset: number } }) => {
+    expect(query.search).toBe('https://example.com')
+    return query.offset === 0
+      ? { urls: others, pagination: { hasMore: true } }
+      : { urls: [{ url: 'https://example.com/', verdict: 'PASS', coverageState: 'Submitted and indexed', lastCrawlTime: null, lastCheckedAt: new Date().toISOString() }], pagination: { hasMore: false } }
+  })
+  const reads: { outcomes?: ReturnType<typeof useSubmissionOutcomes> } = {}
+  const app = createApp(defineComponent({
+    setup() {
+      reads.outcomes = useSubmissionOutcomes(site, { limit: 0 })
+      return () => h('div')
+    },
+  }))
+  state.app.vueApp = app
+  app.mount(document.createElement('div'))
+  mounted.push(app)
+  await settle()
+
+  expect(state.indexingUrls).toHaveBeenCalledTimes(2)
+  expect(reads.outcomes!.data.value).toMatchObject({ sent: 1, checked: 1, indexed: 1 })
+})

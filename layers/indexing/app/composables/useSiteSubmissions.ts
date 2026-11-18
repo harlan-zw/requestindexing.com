@@ -15,19 +15,22 @@ import type { IndexingRead, IndexingReadStatus, IndexingSite } from '@nuxtseo/pr
 import type { IndexingSubmissionOutcomes, IndexingSubmissionOutcomesParams, IndexingSubmissionSummary } from '@nuxtseo/pro-indexing/shared/submissions'
 import type { MaybeRefOrGetter } from 'vue'
 import type { SiteIndexingGrant } from '#layers/indexing/shared/contracts/indexing-grant'
-import type { SubmissionWindow, UrlLookup } from '#layers/indexing/shared/submissions'
+import type { InspectionRow, SubmissionWindow, UrlLookup } from '#layers/indexing/shared/submissions'
 import { computed, toValue } from 'vue'
 import { mapSettled } from '#layers/indexing/shared/map-settled'
 import {
   automaticSendingOf,
   buildSubmissionOutcomes,
+  exactRows,
   lookupFromSearch,
   outcomeCandidates,
   readReceiptWindow,
+  receivedFingerprint,
+  searchTerm,
   submissionWindowStart,
   summarizeSubmissionWindow,
-  URL_SEARCH_LIMIT,
-  urlMatchKey,
+  URL_SEARCH_PAGE_LIMIT,
+  URL_SEARCH_PAGE_SIZE,
   windowCompleteness,
 } from '#layers/indexing/shared/submissions'
 import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
@@ -74,14 +77,14 @@ function useSubmissionWindow(site: SiteInput) {
       const appId = toValue(site)?.id
       const [indexNow, google, connection, grant] = await Promise.all([
         readReceiptWindow(async (offset, limit) => {
-          const page = await client.listSiteIndexNowSubmissionReceipts({ params: { siteId: id }, query: { limit, offset } }, true)
+          const page = await client.listSiteIndexNowSubmissionReceipts({ params: { siteId: id }, query: { limit, offset } }, true, { signal })
           return { receipts: page.submissionReceipts, hasMore: page.pagination.hasMore }
         }, since),
         readReceiptWindow(async (offset, limit) => {
-          const page = await client.listSiteGoogleSubmissionReceipts({ params: { siteId: id }, query: { limit, offset } }, true)
+          const page = await client.listSiteGoogleSubmissionReceipts({ params: { siteId: id }, query: { limit, offset } }, true, { signal })
           return { receipts: page.submissionReceipts, hasMore: page.pagination.hasMore }
         }, since),
-        client.getSiteIndexNowConnection({ params: { siteId: id } }, true),
+        client.getSiteIndexNowConnection({ params: { siteId: id } }, true, { signal }),
         // The grant says whether Request Indexing can send this Site's URLs to
         // Google at all. A failed read cannot rule Google out, so it counts as able.
         appId
@@ -115,26 +118,42 @@ export function useSubmissionSummary(site: SiteInput): IndexingRead<IndexingSubm
   }
 }
 
-/** The `submissionOutcomes` capability. A URL with no accepted Submission makes no search. */
+/**
+ * One URL's saved URL Inspection result. Pages through the substring search
+ * until the exact URL, the end of the matches, or `URL_SEARCH_PAGE_LIMIT`, so a
+ * homepage or a section URL still finds its own row.
+ */
+async function findInspection(search: (term: string, offset: number) => Promise<{ urls: readonly InspectionRow[], hasMore: boolean }>, url: string): Promise<UrlLookup> {
+  const rows: InspectionRow[] = []
+  for (let page = 0; page < URL_SEARCH_PAGE_LIMIT; page++) {
+    const result = await search(searchTerm(url), page * URL_SEARCH_PAGE_SIZE)
+    rows.push(...result.urls)
+    if (exactRows(url, rows).length || !result.hasMore)
+      return lookupFromSearch(url, rows, !result.hasMore)
+  }
+  return lookupFromSearch(url, rows, false)
+}
+
+/** The `submissionOutcomes` capability. A URL no search engine received makes no search. */
 export function useSubmissionOutcomes(site: SiteInput, params: MaybeRefOrGetter<IndexingSubmissionOutcomesParams>): IndexingRead<IndexingSubmissionOutcomes> {
   const window = useSubmissionWindow(site)
   const engineId = computed(() => toValue(site)?.dataId ?? undefined)
   const filter = computed(() => toValue(params))
-  // A new window read starts a new outcome read: `since` moves with each one.
+  // Keyed on what the Submissions are, not on when the window was read, so a
+  // refresh that finds the same Submissions reuses these searches.
   const outcomes = useGscdumpQuery<IndexingSubmissionOutcomes | null>(
-    () => `submissions:outcomes:${engineId.value ?? ''}:${window.data.value?.since ?? ''}:${JSON.stringify(filter.value)}`,
+    () => `submissions:outcomes:${engineId.value ?? ''}:${window.data.value ? receivedFingerprint(window.data.value) : ''}:${JSON.stringify(filter.value)}`,
     engineId,
     async (id, client, signal) => {
       const current = window.data.value
       if (!current)
         return null
       const { matching, looked } = outcomeCandidates(current, filter.value)
-      const lookups = await mapSettled(looked, { limit: OUTCOME_SEARCH_CONCURRENCY, signal }, async (entry): Promise<UrlLookup> => {
-        // The search drops a trailing slash, so `/docs` and `/docs/` find each other.
-        const term = urlMatchKey(entry.url).replace(/\/$/, '')
-        const page = await client.listSiteIndexingUrls({ params: { siteId: id }, query: { search: term, limit: URL_SEARCH_LIMIT, count: 0 } }, true, { signal })
-        return lookupFromSearch(entry.url, page.urls, page.pagination.hasMore)
-      }, (): UrlLookup => ({ _tag: 'unknown' }))
+      const search = async (term: string, offset: number) => {
+        const page = await client.listSiteIndexingUrls({ params: { siteId: id }, query: { search: term, limit: URL_SEARCH_PAGE_SIZE, offset, count: 0 } }, true, { signal })
+        return { urls: page.urls, hasMore: page.pagination.hasMore }
+      }
+      const lookups = await mapSettled(looked, { limit: OUTCOME_SEARCH_CONCURRENCY, signal }, entry => findInspection(search, entry.url), (): UrlLookup => ({ _tag: 'unknown' }))
       return buildSubmissionOutcomes(current, filter.value, matching, looked, lookups)
     },
     [],

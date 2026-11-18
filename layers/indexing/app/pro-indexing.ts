@@ -24,19 +24,23 @@ export const PRO_INDEXING_COPY_OVERRIDES = {
     emptyNoObservation: 'Google has not reported coverage for this Site yet. The breakdown appears after the first Search Console sync.',
     emptyAllIndexed: 'Every inspected URL is indexed, so there is nothing to break down.',
   },
+  changes: {
+    inspectionSource: 'Counts come from Google URL Inspection checks, one URL per change. Each Site counts at most 500 changes.',
+  },
   diagnosis: {
     scope: '{indexed} URLs indexed site-wide.',
   },
   urls: {
     inspectInGsc: 'Inspect in Search Console',
   },
-  // Outcomes cover accepted Submissions only (gscdump#304), so the Afterwards
-  // block names accepted URLs, and "not inspected" carries no "yet".
+  // Outcomes cover the URLs a search engine received (gscdump#304: IndexNow
+  // HTTP 200 or 202, Google HTTP 200), so the Afterwards block names received
+  // URLs, and "not inspected" carries no "yet".
   submissions: {
-    afterwardsTooltip: 'Google\'s latest URL Inspection result for each URL an engine accepted, from a check made after it accepted the URL. It shows what happened next. It does not show that sending caused it.',
-    afterwardsScope: 'Of {count} accepted URLs',
-    afterwardsScopeOne: 'Of 1 accepted URL',
-    afterwardsPartial: 'Google results cover {checked} of the {count} accepted URLs.',
+    afterwardsTooltip: 'Google\'s latest URL Inspection result for each URL a search engine received, from a check made after it received the URL. It shows what happened next. It does not show that sending caused it.',
+    afterwardsScope: 'Of {count} received URLs',
+    afterwardsScopeOne: 'Of 1 received URL',
+    afterwardsPartial: 'Google results cover {checked} of the {count} received URLs.',
     notInspected: 'Not inspected since it was sent',
   },
 } as const satisfies ProIndexingCopyOverrides

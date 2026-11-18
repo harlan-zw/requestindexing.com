@@ -194,9 +194,10 @@ timeline on the URLs page come from `@nuxtseo/pro-indexing`. Their strings are t
 defaults, canonical in nuxtseo.com's COPY.md, except the rows in "Dashboard indexing section assets".
 
 A receipt proves receipt only. "Afterwards" shows order in time, never cause, and never a
-timeframe. The Afterwards block counts accepted Submissions only (gscdump#304): each URL by its
-newest accepted Submission, and Google's saved result only from a check after that. A URL with no
-index verdict, or one its search could not find for certain, is left out of the totals.
+timeframe. The Afterwards block counts the URLs a search engine received (gscdump#304: IndexNow
+HTTP 200 or 202, Google HTTP 200): each URL by the newest time an engine received it, and Google's
+saved result only from a check after that. A URL with no index verdict, or one its search could not
+find for certain, is left out of the totals.
 
 | Asset | String |
 | --- | --- |
@@ -720,9 +721,10 @@ The fleet Indexing tabs (Overview, Issues, Changes) and the per-Site indexing se
 | Copy export | Copy as Markdown | Fleet Overview toolbar |
 | Download export | Download Markdown | Fleet Overview toolbar |
 | Export title | Indexing coverage: All Sites | The SDK writes the heading; All Sites is the scope |
-| Submissions, Afterwards tooltip | Google's latest URL Inspection result for each URL an engine accepted, from a check made after it accepted the URL. It shows what happened next. It does not show that sending caused it. | Outcomes count accepted Submissions only (gscdump#304) |
-| Submissions, Afterwards scope | Of {count} accepted URLs · Of 1 accepted URL | The totals cover accepted URLs, not every URL sent |
-| Submissions, Afterwards partial | Google results cover {checked} of the {count} accepted URLs. | Same scope as the line above |
+| Submissions, Afterwards tooltip | Google's latest URL Inspection result for each URL a search engine received, from a check made after it received the URL. It shows what happened next. It does not show that sending caused it. | Outcomes cover received URLs only (gscdump#304) |
+| Submissions, Afterwards scope | Of {count} received URLs · Of 1 received URL | The totals cover received URLs, not every URL sent |
+| Submissions, Afterwards partial | Google results cover {checked} of the {count} received URLs. | Same scope as the line above |
+| Changes, source note | Counts come from Google URL Inspection checks, one URL per change. Each Site counts at most 500 changes. | Changes come from each Site's URL Inspection transitions, at most 500 per read |
 | Submissions, not inspected | Not inspected since it was sent | The default "Not inspected yet" implies a check will come |
 
 The Markdown body is `buildIndexingPortfolioMarkdown` from `@gscdump/sdk/indexing`. Its words are gscdump's.

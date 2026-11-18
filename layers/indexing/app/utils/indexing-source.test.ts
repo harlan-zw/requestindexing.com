@@ -42,6 +42,16 @@ describe('toIndexingInspectResult', () => {
 describe('changesRollupFromTransitions', () => {
   const at = (day: string) => `${day}T04:00:00.000Z`
 
+  it('never counts a change from or to no verdict', () => {
+    const rollup = changesRollupFromTransitions([
+      { siteId: 's_one', transitions: [
+        { field: 'indexStatus', fromValue: null, toValue: 'PASS', changedBefore: at('2026-11-10') },
+        { field: 'indexStatus', fromValue: 'PASS', toValue: null, changedBefore: at('2026-11-11') },
+      ] },
+    ] as Parameters<typeof changesRollupFromTransitions>[0], '2026-11-13')
+    expect(rollup.rows).toEqual([])
+  })
+
   it('counts a verdict leaving PASS as dropped and reaching PASS as indexed, by the day it was seen', () => {
     const rollup = changesRollupFromTransitions([
       { siteId: 's_one', transitions: [

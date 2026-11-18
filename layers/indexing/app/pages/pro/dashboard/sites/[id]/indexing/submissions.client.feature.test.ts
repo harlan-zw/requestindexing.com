@@ -203,15 +203,15 @@ describe('submissions page', () => {
     ])
   })
 
-  it('totals Google\'s results for accepted URLs only, from checks after each acceptance', async () => {
+  it('totals Google\'s results for received URLs only, from checks after each was received', async () => {
     const host = mountWith(SubmissionsPage)
     await settle()
     const afterwards = card(host).querySelector<HTMLElement>('[data-submissions="afterwards"]')!
-    expect(afterwards.textContent).toContain('Of 3 accepted URLs')
+    expect(afterwards.textContent).toContain('Of 3 received URLs')
     const facts = Object.fromEntries([...afterwards.querySelectorAll('[data-afterwards]')].map(fact => [fact.getAttribute('data-afterwards'), fact.querySelector('dd')?.textContent?.trim()]))
     expect(facts).toEqual({ 'indexed': '1', 'not-indexed': '0', 'not-inspected': '2' })
     expect(afterwards.textContent).toContain('Not inspected since it was sent')
-    // One search per accepted URL; the rejected Google URL is never looked up.
+    // One search per received URL; the rejected Google URL is never looked up.
     expect(engine.indexingUrls.mock.calls.map(([input]) => input.query.search).sort()).toEqual([PAGE_A, PAGE_B, JOB].sort())
   })
 
@@ -244,7 +244,7 @@ describe('submissions page', () => {
     expect([...card(host).querySelectorAll('[data-engine]')].map(row => row.getAttribute('data-engine'))).toEqual(['indexnow'])
   })
 
-  it('searches nothing for a URL no engine accepted', async () => {
+  it('searches nothing for a URL no engine received', async () => {
     const Probe = defineComponent({
       setup() {
         const read = useSubmissionOutcomes({ id: 'kv1109', ref: 'kv1109', label: 'example.com', url: null, dataId: 's_engine' }, { url: 'https://example.com/never' })

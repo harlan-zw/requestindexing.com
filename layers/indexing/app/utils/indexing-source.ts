@@ -115,6 +115,10 @@ export function changesRollupFromTransitions(reads: readonly SiteTransitionsRead
     for (const transition of read.transitions) {
       if (transition.field !== 'indexStatus')
         continue
+      // A change counts only between two verdicts, never from or to no
+      // verdict (the `@nuxtseo/pro-indexing` roll-up contract).
+      if (transition.fromValue == null || transition.toValue == null)
+        continue
       const wasIndexed = transition.fromValue === 'PASS'
       const isIndexed = transition.toValue === 'PASS'
       if (wasIndexed === isIndexed)

@@ -8,10 +8,11 @@
 // Inspection results. When the operations ship, the capabilities read them and
 // this file keeps only the automatic sending helpers at the bottom.
 //
-// Outcomes follow gscdump.com#1233 and gscdump#304: only accepted Submissions
-// count, each URL is anchored on its newest accepted Submission, and the time
-// is when the engine accepted it (`updatedAt`). Google's saved result counts
-// only when Google inspected the URL after that. Order in time, never cause.
+// Outcomes follow gscdump.com#1233 and gscdump#304: one row for each URL a
+// search engine received (IndexNow HTTP 200 or 202, Google HTTP 200), anchored
+// on the newest time an engine received it (`updatedAt`). Google's saved
+// result counts only when Google inspected the URL after that. Order in time,
+// never cause.
 
 import type { GscdumpIndexingUrl } from '@gscdump/contracts'
 import type { GoogleSubmissionReceiptV1, IndexNowAutomaticSendingV1, IndexNowConnectionV1, IndexNowSubmissionReceiptV1 } from '@gscdump/contracts/v1'
@@ -37,10 +38,12 @@ const DAY_MS = 86_400_000
 export const RECEIPT_PAGE_SIZE = 100
 /** Pages read per channel before the window counts as partial. gscdump admits 60 reads a minute per list. */
 export const RECEIPT_PAGE_LIMIT = 5
-/** Accepted URLs whose saved URL Inspection result the totals read, most recently accepted first. */
+/** Received URLs whose saved URL Inspection result the totals read, most recently received first. */
 export const OUTCOME_LOOKUP_LIMIT = 10
-/** Rows one URL search reads. gscdump matches by substring, so a short URL can sit among many. */
-export const URL_SEARCH_LIMIT = 100
+/** Rows one URL search page reads. gscdump matches by substring, so a short URL can sit among many. */
+export const URL_SEARCH_PAGE_SIZE = 100
+/** Search pages read for one URL before its result counts as unknown. */
+export const URL_SEARCH_PAGE_LIMIT = 3
 
 /** The verdicts gscdump files under `status=not_indexed`. `PASS` is indexed; no verdict is its `pending`. */
 const NOT_INDEXED_VERDICTS: ReadonlySet<string> = new Set(['FAIL', 'PARTIAL', 'NEUTRAL'])
@@ -136,24 +139,40 @@ function googleState(receipt: Pick<GoogleSubmissionReceiptV1, '_tag'>): Indexing
   return receipt._tag === 'accepted' ? 'accepted' : 'failed'
 }
 
-/** One URL in one Submission, with the time the engine accepted it when it did. */
+/**
+ * A URL's identity, as gscdump keys it (`URL.href`): `/docs` and `/docs/` stay
+ * two URLs. Only the `{ url }` filter folds a trailing slash.
+ */
+export function urlKey(url: string): string {
+  return URL.parse(url)?.href ?? url
+}
+
+/** A URL without its fragment, or a trailing slash on a non-root path, for the `{ url }` filter only. */
+export function urlMatchKey(url: string): string {
+  const parsed = URL.parse(url)
+  if (!parsed)
+    return url
+  const path = parsed.pathname === '/' ? '/' : parsed.pathname.replace(/\/$/, '')
+  return `${parsed.origin}${path}${parsed.search}`
+}
+
+/** One URL in one Submission, with the time an engine received it when it did. */
 interface UrlSend {
   readonly url: string
   readonly send: IndexingSubmissionSend
-  readonly acceptedAt: string | null
+  readonly receivedAt: string | null
 }
 
 function urlSends(window: SubmissionWindow): UrlSend[] {
   const sends: UrlSend[] = []
   for (const receipt of window.indexNow) {
-    const state = indexNowState(receipt)
+    // HTTP 202 means IndexNow received the URLs while it still checks the key.
+    const received = receipt._tag === 'accepted' || receipt._tag === 'pending'
     for (const url of new Set(receipt.urls))
-      sends.push({ url, send: { engine: 'indexnow', trigger: receipt.trigger, state, sentAt: receipt.createdAt }, acceptedAt: state === 'accepted' ? receipt.updatedAt : null })
+      sends.push({ url, send: { engine: 'indexnow', trigger: receipt.trigger, state: indexNowState(receipt), sentAt: receipt.createdAt }, receivedAt: received ? receipt.updatedAt : null })
   }
-  for (const receipt of window.google) {
-    const state = googleState(receipt)
-    sends.push({ url: receipt.url, send: { engine: 'google', trigger: 'manual', state, sentAt: receipt.createdAt }, acceptedAt: state === 'accepted' ? receipt.updatedAt : null })
-  }
+  for (const receipt of window.google)
+    sends.push({ url: receipt.url, send: { engine: 'google', trigger: 'manual', state: googleState(receipt), sentAt: receipt.createdAt }, receivedAt: receipt._tag === 'accepted' ? receipt.updatedAt : null })
   return sends
 }
 
@@ -163,7 +182,7 @@ const byTime = (a: string, b: string) => Date.parse(a) - Date.parse(b)
 export function summarizeSubmissionWindow(window: SubmissionWindow): IndexingSubmissionSummary {
   const latest = new Map<string, IndexingSubmissionSend>()
   for (const { url, send } of urlSends(window)) {
-    const key = `${send.engine} ${url}`
+    const key = `${send.engine} ${urlKey(url)}`
     const current = latest.get(key)
     if (!current || byTime(send.sentAt, current.sentAt) > 0)
       latest.set(key, send)
@@ -190,76 +209,106 @@ export function summarizeSubmissionWindow(window: SubmissionWindow): IndexingSub
   }
 }
 
-/** A URL without its fragment, or a trailing slash on a non-root path, for matching only. */
-export function urlMatchKey(url: string): string {
-  const parsed = URL.canParse(url) ? new URL(url) : null
-  if (!parsed)
-    return url
-  const path = parsed.pathname === '/' ? '/' : parsed.pathname.replace(/\/$/, '')
-  return `${parsed.origin}${path}${parsed.search}`
-}
-
-/** A URL with at least one accepted Submission in the window. */
-export interface AcceptedUrl {
+/** A URL a search engine received in the window. */
+export interface ReceivedUrl {
   readonly url: string
-  /** Every Submission of the URL in the window, oldest first, accepted or not. */
+  /** Every Submission of the URL in the window, oldest first, received or not. */
   readonly sends: readonly IndexingSubmissionSend[]
-  /** When an engine last accepted it. Google's result counts only after this. */
-  readonly acceptedAt: string
+  /** When an engine last received it. Google's result counts only after this. */
+  readonly receivedAt: string
 }
 
-/** The URLs an engine accepted in the window, most recently accepted first. */
-export function acceptedUrls(window: SubmissionWindow): AcceptedUrl[] {
-  const byUrl = new Map<string, { url: string, sends: IndexingSubmissionSend[], acceptedAt: string | null }>()
-  for (const { url, send, acceptedAt } of urlSends(window)) {
-    const key = urlMatchKey(url)
-    const entry = byUrl.get(key) ?? { url, sends: [], acceptedAt: null }
+/** The URLs a search engine received in the window, most recently received first. */
+export function receivedUrls(window: SubmissionWindow): ReceivedUrl[] {
+  const byUrl = new Map<string, { url: string, sends: IndexingSubmissionSend[], receivedAt: string | null }>()
+  for (const { url, send, receivedAt } of urlSends(window)) {
+    const key = urlKey(url)
+    const entry = byUrl.get(key) ?? { url, sends: [], receivedAt: null }
     entry.sends.push(send)
-    if (acceptedAt && (!entry.acceptedAt || byTime(acceptedAt, entry.acceptedAt) > 0))
-      entry.acceptedAt = acceptedAt
+    if (receivedAt && (!entry.receivedAt || byTime(receivedAt, entry.receivedAt) > 0))
+      entry.receivedAt = receivedAt
     byUrl.set(key, entry)
   }
-  const accepted: AcceptedUrl[] = []
+  const received: ReceivedUrl[] = []
   for (const entry of byUrl.values()) {
-    if (entry.acceptedAt)
-      accepted.push({ url: entry.url, sends: entry.sends.sort((a, b) => byTime(a.sentAt, b.sentAt)), acceptedAt: entry.acceptedAt })
+    if (entry.receivedAt)
+      received.push({ url: entry.url, sends: entry.sends.sort((a, b) => byTime(a.sentAt, b.sentAt)), receivedAt: entry.receivedAt })
   }
-  return accepted.sort((a, b) => byTime(b.acceptedAt, a.acceptedAt))
+  return received.sort((a, b) => byTime(b.receivedAt, a.receivedAt))
+}
+
+/**
+ * A short stable digest of the received URLs and their times. The outcome
+ * reads key on it, so a refreshed window with the same Submissions reuses
+ * their searches.
+ */
+export function receivedFingerprint(window: SubmissionWindow): string {
+  let hash = 0x811C9DC5
+  for (const entry of receivedUrls(window)) {
+    for (const char of `${entry.url}@${entry.receivedAt}|`) {
+      hash ^= char.charCodeAt(0)
+      hash = Math.imul(hash, 0x01000193) >>> 0
+    }
+  }
+  return hash.toString(16)
 }
 
 /** The fields of a saved URL Inspection row the outcome reads. */
 export type InspectionRow = Pick<GscdumpIndexingUrl, 'url' | 'verdict' | 'coverageState' | 'lastCrawlTime' | 'lastCheckedAt'>
 
 /**
- * What one URL search found. `absent`: the search returned every match and
- * none is this URL. `unknown`: it returned only part of them, or failed, so
- * nothing can be said.
+ * What a URL search found. `absent`: the search returned every match and none
+ * is this URL. `unknown`: it stopped before the end, or failed, with no row
+ * for this URL.
  */
 export type UrlLookup
   = | { readonly _tag: 'found', readonly row: InspectionRow }
     | { readonly _tag: 'absent' }
     | { readonly _tag: 'unknown' }
 
-/** The row for `url` in one search result, matched across a trailing slash. */
-export function lookupFromSearch(url: string, rows: readonly InspectionRow[], hasMore: boolean): UrlLookup {
-  const key = urlMatchKey(url)
-  const row = rows.find(candidate => urlMatchKey(candidate.url) === key)
-  if (row)
-    return { _tag: 'found', row }
-  return hasMore ? { _tag: 'unknown' } : { _tag: 'absent' }
+/**
+ * The term a URL search sends: the URL as the receipt holds it, without one
+ * trailing slash, so `/docs` and `/docs/` both match. gscdump's `LIKE` is
+ * literal, so no other part of the URL is rewritten.
+ */
+export function searchTerm(url: string): string {
+  return url.endsWith('/') ? url.slice(0, -1) : url
+}
+
+const newest = (rows: readonly InspectionRow[]) => rows.reduce((best, row) => byTime(row.lastCheckedAt, best.lastCheckedAt) > 0 ? row : best)
+
+/** The rows that are this exact URL, as gscdump keys it. */
+export function exactRows(url: string, rows: readonly InspectionRow[]): InspectionRow[] {
+  const key = urlKey(url)
+  return rows.filter(row => urlKey(row.url) === key)
 }
 
 /**
- * Google's saved result for an accepted URL. `null` leaves the URL out of the
+ * The row for `url` among the rows a search returned. The exact URL wins; its
+ * other trailing slash form counts only without one. With several, the newest
+ * check wins.
+ */
+export function lookupFromSearch(url: string, rows: readonly InspectionRow[], complete: boolean): UrlLookup {
+  const exact = exactRows(url, rows)
+  if (exact.length)
+    return { _tag: 'found', row: newest(exact) }
+  const folded = rows.filter(row => urlMatchKey(row.url) === urlMatchKey(url))
+  if (folded.length)
+    return { _tag: 'found', row: newest(folded) }
+  return complete ? { _tag: 'absent' } : { _tag: 'unknown' }
+}
+
+/**
+ * Google's saved result for a received URL. `null` leaves the URL out of the
  * totals: its search could not tell, or Google recorded no index verdict.
  */
-export function googleAfterwards(acceptedAt: string, lookup: UrlLookup): IndexingGoogleAfterwards | null {
+export function googleAfterwards(receivedAt: string, lookup: UrlLookup): IndexingGoogleAfterwards | null {
   if (lookup._tag === 'unknown')
     return null
   if (lookup._tag === 'absent')
     return { _tag: 'not-inspected' }
   const { row } = lookup
-  if (!(Date.parse(row.lastCheckedAt) > Date.parse(acceptedAt)))
+  if (!(Date.parse(row.lastCheckedAt) > Date.parse(receivedAt)))
     return { _tag: 'not-inspected' }
   if (row.verdict === 'PASS')
     return { _tag: 'indexed', checkedAt: row.lastCheckedAt, crawledAt: row.lastCrawlTime }
@@ -268,10 +317,10 @@ export function googleAfterwards(acceptedAt: string, lookup: UrlLookup): Indexin
   return null
 }
 
-/** The accepted URLs a `submissionOutcomes` read covers, and the ones it looks up. */
-export function outcomeCandidates(window: SubmissionWindow, params: IndexingSubmissionOutcomesParams): { matching: AcceptedUrl[], looked: AcceptedUrl[] } {
+/** The received URLs a `submissionOutcomes` read covers, and the ones it looks up. */
+export function outcomeCandidates(window: SubmissionWindow, params: IndexingSubmissionOutcomesParams): { matching: ReceivedUrl[], looked: ReceivedUrl[] } {
   const wanted = params.url === undefined ? null : urlMatchKey(params.url)
-  const matching = acceptedUrls(window).filter(entry => wanted === null || urlMatchKey(entry.url) === wanted)
+  const matching = receivedUrls(window).filter(entry => wanted === null || urlMatchKey(entry.url) === wanted)
   return { matching, looked: matching.slice(0, OUTCOME_LOOKUP_LIMIT) }
 }
 
@@ -283,12 +332,12 @@ export function outcomeCandidates(window: SubmissionWindow, params: IndexingSubm
 export function buildSubmissionOutcomes(
   window: SubmissionWindow,
   params: IndexingSubmissionOutcomesParams,
-  matching: readonly AcceptedUrl[],
-  looked: readonly AcceptedUrl[],
+  matching: readonly ReceivedUrl[],
+  looked: readonly ReceivedUrl[],
   lookups: readonly UrlLookup[],
 ): IndexingSubmissionOutcomes {
   const outcomes: IndexingSubmissionOutcome[] = looked.flatMap((entry, index) => {
-    const afterwards = googleAfterwards(entry.acceptedAt, lookups[index] ?? { _tag: 'unknown' })
+    const afterwards = googleAfterwards(entry.receivedAt, lookups[index] ?? { _tag: 'unknown' })
     return afterwards ? [{ url: entry.url, sends: entry.sends, afterwards }] : []
   })
   const reasons = new Map<string, number>()

@@ -21,4 +21,4 @@ Done means: a Site's Submissions page in production shows the shared `@nuxtseo/p
 ## Log
 
 - 2026-11-18: Submissions page and automatic sending built. gscdump.com#1220 merged 2026-11-17 and its deploy succeeded. The nuxtseo.com Submissions section had no commits yet.
-- 2026-11-18: Adopted `@nuxtseo/pro-indexing` 0.1.8 (nuxtseo.com#2165). gscdump.com answered 404 on the summary and outcome routes while #1233 was open, so the capabilities build both from the receipt lists. Outcomes count accepted Submissions only (gscdump#304).
+- 2026-11-18: Adopted `@nuxtseo/pro-indexing` 0.1.8 (nuxtseo.com#2165). gscdump.com answered 404 on the summary and outcome routes while #1233 was open, so the capabilities build both from the receipt lists. Outcomes cover the URLs a search engine received: IndexNow HTTP 200 or 202, Google HTTP 200 (gscdump#304).
