@@ -6,41 +6,65 @@
 //  2. Member-of teams that already have a `gscdumpTeamId` → addMember so gscdump's
 //     `requireSiteAccess` authorizes the user on the team-share R2 path.
 //
-// Errors land in `notifications` via the mirror client; never thrown.
+// Account recovery also resolves the Personal Team of the replacement identity.
 
 import type { H3Event } from 'h3'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, exists, isNull, or } from 'drizzle-orm'
 import { teamMemberships, teams, users } from '#layers/pro-saas/server/database'
 import { useGscdumpTeamsClient } from './gscdump-teams-client'
 
 export async function syncUserGscdumpTeams(event: H3Event | undefined, opts: {
   userId: number
   gscdumpUserId: string
+  mode: 'regular' | 'account-recovery'
 }) {
-  const { userId, gscdumpUserId } = opts
+  const { userId, gscdumpUserId, mode } = opts
   const db = useDrizzle(event)
   const teamsClient = useGscdumpTeamsClient(event)
 
-  // Pass 1 — own teams missing a gscdumpTeamId.
-  const ownOrphans = await db.select({
+  const ownTeams = await db.select({
     id: teams.teamId,
     name: teams.name,
     personalTeam: teams.personalTeam,
+    gscdumpTeamId: teams.gscdumpTeamId,
   })
     .from(teams)
-    .where(and(eq(teams.ownerId, userId), isNull(teams.gscdumpTeamId)))
+    .where(and(
+      eq(teams.ownerId, userId),
+      or(isNull(teams.gscdumpTeamId), mode === 'account-recovery' ? eq(teams.personalTeam, true) : undefined),
+    ))
     .all()
 
-  for (const team of ownOrphans) {
+  for (const team of ownTeams) {
+    const recoveringPersonalTeam = mode === 'account-recovery' && team.personalTeam
+    // gscdump returns the canonical Personal Team for this owner.
     const result = await teamsClient.createTeam(
       { ownerUserId: gscdumpUserId, name: team.name, personalTeam: team.personalTeam },
       { actorUserId: userId, proTeamId: team.id },
     )
-    if (result?.team?.id) {
-      await db.update(teams)
-        .set({ gscdumpTeamId: result.team.id, updatedAt: Date.now() })
-        .where(eq(teams.teamId, team.id))
+    if (!result?.team?.id) {
+      if (recoveringPersonalTeam)
+        throw new Error('Could not recover the gscdump Personal Team.')
+      continue
     }
+
+    const currentIdentity = db.select({ id: users.userId }).from(users).where(and(
+      eq(users.userId, userId),
+      eq(users.gscdumpUserId, gscdumpUserId),
+      recoveringPersonalTeam ? eq(users.gscdumpRecoveryLinkReconcileUserId, gscdumpUserId) : undefined,
+    ))
+    const updated = await db.update(teams)
+      .set({ gscdumpTeamId: result.team.id, updatedAt: Date.now() })
+      .where(and(
+        eq(teams.teamId, team.id),
+        eq(teams.ownerId, userId),
+        team.gscdumpTeamId === null ? isNull(teams.gscdumpTeamId) : eq(teams.gscdumpTeamId, team.gscdumpTeamId),
+        exists(currentIdentity),
+      ))
+      .returning({ id: teams.teamId })
+      .get()
+    if (!updated && recoveringPersonalTeam)
+      throw new Error('The Personal Team changed during gscdump recovery.')
   }
 
   // Pass 2 — non-owned memberships in teams that have a gscdumpTeamId.

@@ -20,6 +20,7 @@ const gscdump = vi.hoisted(() => ({
   registration: { siteId: 's_ri', status: 'pending', existing: false } as { siteId: string, status: string, existing?: boolean },
   readSiteAccess: vi.fn(),
   registerSite: vi.fn(),
+  createTeam: vi.fn(),
 }))
 
 vi.mock('./gscdump-client', () => ({
@@ -39,7 +40,12 @@ vi.mock('./gscdump-client', () => ({
 vi.mock('./gscdump-origin', () => ({ getGscdumpWebhookUrl: () => 'https://requestindexing.test/api/webhooks/gscdump' }))
 vi.mock('./gscdump-account-status', () => ({ rememberGscdumpAccountStatus: async () => undefined }))
 vi.mock('./onboarding', () => ({ updateOnboardingState: async () => undefined }))
-vi.mock('./sync-user-gscdump-teams', () => ({ syncUserGscdumpTeams: async () => undefined }))
+vi.mock('./gscdump-teams-client', () => ({
+  useGscdumpTeamsClient: () => ({
+    createTeam: gscdump.createTeam,
+    addMember: async () => undefined,
+  }),
+}))
 vi.mock('#domain-events/server', () => ({ dispatchEvent: vi.fn(async () => undefined) }))
 
 type ProDatabase = Parameters<typeof createUserWithPersonalTeam>[0]
@@ -60,6 +66,7 @@ describe('a linked Site this partner cannot read', () => {
     gscdump.registerSite.mockReset()
     gscdump.readSiteAccess.mockReset().mockImplementation(async (siteId: string) => gscdump.readable.has(siteId) ? { _tag: 'Readable' } : { _tag: 'NotFound' })
     gscdump.registerSite.mockImplementation(async () => ({ _tag: 'Registered', registration: gscdump.registration }))
+    gscdump.createTeam.mockReset().mockResolvedValue({ team: { id: 't_restored' } })
 
     const created = await createUserWithPersonalTeam(
       db,
@@ -83,6 +90,15 @@ describe('a linked Site this partner cannot read', () => {
 
   function reconcile(linkScope: 'unreported' | 'all' = 'unreported') {
     return reconcileGscdumpOnboardingForUser({ userId, gscdumpUserId: 'u_harlan', linkScope })
+  }
+
+  function markPersonalTeamForRecovery() {
+    sqlite.prepare('UPDATE teams SET gscdump_team_id = ? WHERE team_id = ?').run('t_deleted', teamId)
+    sqlite.prepare('UPDATE users SET gscdump_recovery_link_reconcile_user_id = ? WHERE user_id = ?').run('u_harlan', userId)
+  }
+
+  function personalTeamMirror() {
+    return sqlite.prepare('SELECT gscdump_team_id AS mirror FROM teams WHERE team_id = ?').get(teamId)
   }
 
   it.each([
@@ -114,6 +130,43 @@ describe('a linked Site this partner cannot read', () => {
 
     expect(result).toMatchObject({ attemptedSites: 1, linkedSites: 1 })
     expect(siteState()).toEqual({ linked: 's_ri', status: 'pending' })
+  })
+
+  it('restores the Personal Team mirror along with the Site after account recovery', async () => {
+    linkSite('s_deleted', 'synced')
+    markPersonalTeamForRecovery()
+
+    await reconcile('all')
+
+    expect(personalTeamMirror()).toEqual({ mirror: 't_restored' })
+    expect(siteState()).toEqual({ linked: 's_ri', status: 'pending' })
+  })
+
+  it('retries Personal Team recovery after gscdump cannot resolve the replacement', async () => {
+    linkSite('s_deleted', 'synced')
+    markPersonalTeamForRecovery()
+    gscdump.createTeam.mockResolvedValueOnce(null)
+
+    await reconcileTask.run!({ name: 'reconcile-gscdump-onboarding', context: {}, payload: {} } as never)
+    expect(personalTeamMirror()).toEqual({ mirror: 't_deleted' })
+    expect(siteState()).toEqual({ linked: 's_deleted', status: 'synced' })
+
+    await reconcileTask.run!({ name: 'reconcile-gscdump-onboarding', context: {}, payload: {} } as never)
+    expect(personalTeamMirror()).toEqual({ mirror: 't_restored' })
+    expect(siteState()).toEqual({ linked: 's_ri', status: 'pending' })
+  })
+
+  it('keeps the Personal Team unchanged if a newer account replaces the recovery identity', async () => {
+    linkSite('s_deleted', 'synced')
+    markPersonalTeamForRecovery()
+    gscdump.createTeam.mockImplementationOnce(async () => {
+      sqlite.prepare('UPDATE users SET gscdump_user_id = ?, gscdump_recovery_link_reconcile_user_id = ? WHERE user_id = ?').run('u_newer', 'u_newer', userId)
+      return { team: { id: 't_restored' } }
+    })
+
+    await expect(reconcile('all')).rejects.toThrow('The Personal Team changed during gscdump recovery.')
+    expect(personalTeamMirror()).toEqual({ mirror: 't_deleted' })
+    expect(siteState()).toEqual({ linked: 's_deleted', status: 'synced' })
   })
 
   it('keeps a synced teammate Site when checking all links after account recovery', async () => {
