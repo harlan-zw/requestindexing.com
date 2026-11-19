@@ -4,6 +4,7 @@ import { migratedDatabase, proDatabase } from '~~/tests/support/migrated-d1'
 import { createUserWithPersonalTeam } from '#layers/pro-saas/server/utils/create-user-with-personal-team'
 import reconcileTask from '../tasks/reconcile-gscdump-onboarding'
 import { reconcileGscdumpOnboardingForUser } from './reconcile-gscdump-onboarding'
+import { assertLocalRegisteredGscSiteScope } from './registered-site-scope'
 
 vi.hoisted(() => {
   // A Nitro task is its definition object. The hourly run is called as one.
@@ -20,6 +21,7 @@ const gscdump = vi.hoisted(() => ({
   registration: { siteId: 's_ri', status: 'pending', existing: false } as { siteId: string, status: string, existing?: boolean },
   readSiteAccess: vi.fn(),
   registerSite: vi.fn(),
+  createTeam: vi.fn(),
 }))
 
 vi.mock('./gscdump-client', () => ({
@@ -39,7 +41,12 @@ vi.mock('./gscdump-client', () => ({
 vi.mock('./gscdump-origin', () => ({ getGscdumpWebhookUrl: () => 'https://requestindexing.test/api/webhooks/gscdump' }))
 vi.mock('./gscdump-account-status', () => ({ rememberGscdumpAccountStatus: async () => undefined }))
 vi.mock('./onboarding', () => ({ updateOnboardingState: async () => undefined }))
-vi.mock('./sync-user-gscdump-teams', () => ({ syncUserGscdumpTeams: async () => undefined }))
+vi.mock('./gscdump-teams-client', () => ({
+  useGscdumpTeamsClient: () => ({
+    createTeam: gscdump.createTeam,
+    addMember: async () => undefined,
+  }),
+}))
 vi.mock('#domain-events/server', () => ({ dispatchEvent: vi.fn(async () => undefined) }))
 
 type ProDatabase = Parameters<typeof createUserWithPersonalTeam>[0]
@@ -49,17 +56,24 @@ describe('a linked Site this partner cannot read', () => {
   let db: ProDatabase
   let userId: number
   let teamId: number
+  let rolloutProgress: unknown
 
   beforeEach(async () => {
     sqlite = migratedDatabase()
     db = proDatabase(sqlite) as unknown as ProDatabase
     vi.stubGlobal('useDrizzle', () => db)
+    rolloutProgress = { _tag: 'Complete' }
+    vi.stubGlobal('useStorage', () => ({
+      getItem: async () => rolloutProgress,
+      setItem: async (_key: string, value: unknown) => { rolloutProgress = value },
+    }))
     gscdump.lifecycleSiteIds = []
     gscdump.readable = new Set()
     gscdump.registration = { siteId: 's_ri', status: 'pending', existing: false }
     gscdump.registerSite.mockReset()
     gscdump.readSiteAccess.mockReset().mockImplementation(async (siteId: string) => gscdump.readable.has(siteId) ? { _tag: 'Readable' } : { _tag: 'NotFound' })
     gscdump.registerSite.mockImplementation(async () => ({ _tag: 'Registered', registration: gscdump.registration }))
+    gscdump.createTeam.mockReset().mockResolvedValue({ team: { id: 't_restored' } })
 
     const created = await createUserWithPersonalTeam(
       db,
@@ -84,6 +98,156 @@ describe('a linked Site this partner cannot read', () => {
   function reconcile(linkScope: 'unreported' | 'all' = 'unreported') {
     return reconcileGscdumpOnboardingForUser({ userId, gscdumpUserId: 'u_harlan', linkScope })
   }
+
+  function markPersonalTeamForRecovery() {
+    sqlite.prepare('UPDATE teams SET gscdump_team_id = ? WHERE team_id = ?').run('t_deleted', teamId)
+    sqlite.prepare('UPDATE users SET gscdump_recovery_link_reconcile_user_id = ? WHERE user_id = ?').run('u_harlan', userId)
+  }
+
+  function personalTeamMirror() {
+    return sqlite.prepare('SELECT gscdump_team_id AS mirror FROM teams WHERE team_id = ?').get(teamId)
+  }
+
+  it('repairs completed recoveries in the production hourly run and restores proxy Site scope', async () => {
+    rolloutProgress = null
+    linkSite('s_ri', 'synced')
+    sqlite.prepare('UPDATE teams SET gscdump_team_id = ? WHERE team_id = ?').run('t_deleted', teamId)
+    const readIdentity = async () => ({ identity: { siteId: 's_ri', requestedUrl: 'https://newworldartists.net', userId: 'u_harlan', teamId: 't_restored' } })
+    await expect(assertLocalRegisteredGscSiteScope(db, 'site-nwa', 's_ri', readIdentity)).rejects.toMatchObject({ statusCode: 403 })
+
+    await reconcileTask.run!({ name: 'reconcile-gscdump-onboarding', context: {}, payload: {} } as never)
+
+    expect(personalTeamMirror()).toEqual({ mirror: 't_restored' })
+    expect(await assertLocalRegisteredGscSiteScope(db, 'site-nwa', 's_ri', readIdentity)).toEqual({ _tag: 'Registered' })
+    expect(siteState()).toEqual({ linked: 's_ri', status: 'synced' })
+    expect(gscdump.registerSite).not.toHaveBeenCalled()
+  })
+
+  it('retries a failed rollout batch without changing the mirror', async () => {
+    sqlite.prepare('UPDATE teams SET gscdump_team_id = ? WHERE team_id = ?').run('t_deleted', teamId)
+    gscdump.createTeam.mockResolvedValueOnce(null)
+    const input = { payload: { repairPersonalTeams: true } }
+
+    await expect(reconcileTask.run!(input as never)).rejects.toThrow('Could not recover the gscdump Personal Team.')
+    expect(personalTeamMirror()).toEqual({ mirror: 't_deleted' })
+    await reconcileTask.run!(input as never)
+    expect(personalTeamMirror()).toEqual({ mirror: 't_restored' })
+  })
+
+  it('repairs later historical recoveries while a missing upstream owner remains queued for retry', async () => {
+    rolloutProgress = null
+    linkSite('s_ri', 'synced')
+    let laterTeamId = teamId
+    for (let i = 0; i < 20; i++) {
+      const created = await createUserWithPersonalTeam(
+        db,
+        { name: `User ${i}`, email: `auto${i}@example.test`, avatar: '', lastLogin: 1, sub: `auto-${i}` },
+        { provider: 'google', providerUserId: `auto-${i}`, email: `auto${i}@example.test`, emailVerified: true, displayName: `User ${i}` },
+      )
+      sqlite.prepare('UPDATE users SET gscdump_user_id = ? WHERE user_id = ?').run(`u_${i}`, created.user.userId)
+      laterTeamId = created.team.teamId
+    }
+    sqlite.prepare('UPDATE sites SET team_id = ? WHERE id = ?').run(laterTeamId, 'site-nwa')
+    sqlite.prepare('UPDATE teams SET gscdump_team_id = ?').run('t_deleted')
+    gscdump.createTeam.mockImplementation(async ({ ownerUserId }: { ownerUserId: string }) =>
+      ownerUserId === 'u_harlan' ? null : { team: { id: 't_restored' } })
+    const readIdentity = async () => ({ identity: { siteId: 's_ri', requestedUrl: 'https://newworldartists.net', userId: 'u_19', teamId: 't_restored' } })
+    await expect(assertLocalRegisteredGscSiteScope(db, 'site-nwa', 's_ri', readIdentity)).rejects.toMatchObject({ statusCode: 403 })
+    const hourly = () => reconcileTask.run!({ payload: {} } as never)
+    for (let run = 0; run < 4; run++)
+      await hourly()
+
+    expect(await assertLocalRegisteredGscSiteScope(db, 'site-nwa', 's_ri', readIdentity)).toEqual({ _tag: 'Registered' })
+    expect(personalTeamMirror()).toEqual({ mirror: 't_deleted' })
+    expect(rolloutProgress).toMatchObject({ _tag: 'Complete', retryUserIds: [userId] })
+    expect(siteState()).toEqual({ linked: 's_ri', status: 'synced' })
+    expect(gscdump.registerSite).not.toHaveBeenCalled()
+
+    // The failed owner can recover after the scan has finished.
+    gscdump.createTeam.mockResolvedValue({ team: { id: 't_restored' } })
+    await hourly()
+    expect(personalTeamMirror()).toEqual({ mirror: 't_restored' })
+    expect(rolloutProgress).toMatchObject({ _tag: 'Complete', retryUserIds: [] })
+    gscdump.createTeam.mockClear()
+    await hourly()
+    expect(gscdump.createTeam).not.toHaveBeenCalled()
+  })
+
+  it('does not overwrite a newer identity during rollout repair', async () => {
+    sqlite.prepare('UPDATE teams SET gscdump_team_id = ? WHERE team_id = ?').run('t_deleted', teamId)
+    gscdump.createTeam.mockImplementationOnce(async () => {
+      sqlite.prepare('UPDATE users SET gscdump_user_id = ? WHERE user_id = ?').run('u_newer', userId)
+      return { team: { id: 't_restored' } }
+    })
+
+    await expect(reconcileTask.run!({ payload: { repairPersonalTeams: true } } as never)).rejects.toThrow('The Personal Team changed during gscdump recovery.')
+    expect(personalTeamMirror()).toEqual({ mirror: 't_deleted' })
+  })
+
+  it('rotates persistent failures so later queued owners can recover with their current identity', async () => {
+    const retryUserIds = [userId]
+    for (let i = 0; i < 10; i++) {
+      const created = await createUserWithPersonalTeam(
+        db,
+        { name: `Retry ${i}`, email: `retry${i}@example.test`, avatar: '', lastLogin: 1, sub: `retry-${i}` },
+        { provider: 'google', providerUserId: `retry-${i}`, email: `retry${i}@example.test`, emailVerified: true, displayName: `Retry ${i}` },
+      )
+      sqlite.prepare('UPDATE users SET gscdump_user_id = ? WHERE user_id = ?').run(`u_retry_${i}`, created.user.userId)
+      retryUserIds.push(created.user.userId)
+    }
+    // Recovery changed the queued owner's identity before this retry.
+    sqlite.prepare('UPDATE users SET gscdump_user_id = ? WHERE user_id = ?').run('u_current', retryUserIds.at(-1)!)
+    rolloutProgress = { _tag: 'Complete', retryUserIds }
+    gscdump.createTeam.mockImplementation(async ({ ownerUserId }: { ownerUserId: string }) =>
+      ownerUserId === 'u_current' ? { team: { id: 't_current' } } : null)
+
+    await reconcileTask.run!({ payload: {} } as never)
+    expect(gscdump.createTeam).toHaveBeenCalledTimes(10)
+    await reconcileTask.run!({ payload: {} } as never)
+
+    expect(sqlite.prepare('SELECT gscdump_team_id AS mirror FROM teams WHERE owner_id = ?').get(retryUserIds.at(-1)!)).toEqual({ mirror: 't_current' })
+    expect(rolloutProgress).toMatchObject({ _tag: 'Complete', retryUserIds: expect.not.arrayContaining([retryUserIds.at(-1)!]) })
+    expect(rolloutProgress).toMatchObject({ retryUserIds: expect.arrayContaining([userId]) })
+  })
+
+  it('replays the scan when saving its failed owners and cursor fails', async () => {
+    rolloutProgress = null
+    const save = vi.fn(async (_key: string, value: unknown) => {
+      rolloutProgress = value
+    })
+    save.mockRejectedValueOnce(new Error('KV unavailable'))
+    vi.stubGlobal('useStorage', () => ({ getItem: async () => rolloutProgress, setItem: save }))
+    gscdump.createTeam.mockResolvedValue(null)
+
+    await reconcileTask.run!({ payload: {} } as never)
+    expect(rolloutProgress).toBeNull()
+    await reconcileTask.run!({ payload: {} } as never)
+
+    expect(gscdump.createTeam).toHaveBeenCalledTimes(2)
+    expect(rolloutProgress).toEqual({ _tag: 'Complete', retryUserIds: [userId] })
+  })
+
+  it('bounds rollout batches and resumes after the returned user cursor', async () => {
+    for (let i = 0; i < 10; i++) {
+      const created = await createUserWithPersonalTeam(
+        db,
+        { name: `User ${i}`, email: `user${i}@example.test`, avatar: '', lastLogin: 1, sub: `sub-${i}` },
+        { provider: 'google', providerUserId: `sub-${i}`, email: `user${i}@example.test`, emailVerified: true, displayName: `User ${i}` },
+      )
+      sqlite.prepare('UPDATE users SET gscdump_user_id = ? WHERE user_id = ?').run(`u_${i}`, created.user.userId)
+    }
+    sqlite.prepare('INSERT INTO teams (public_id, name, owner_id, personal_team, gscdump_team_id) VALUES (?, ?, ?, 0, ?)')
+      .run('t_shared', 'Shared', userId, 't_keep')
+
+    const first = await reconcileTask.run!({ payload: { repairPersonalTeams: true } } as never)
+    expect(first.result).toEqual({ usersProcessed: 10, nextAfterUserId: 10 })
+    expect(gscdump.createTeam.mock.calls.map(([input]) => input.ownerUserId)).toEqual(['u_harlan', ...Array.from({ length: 9 }, (_, i) => `u_${i}`)])
+    gscdump.createTeam.mockClear()
+    const last = await reconcileTask.run!({ payload: { repairPersonalTeams: true, afterUserId: 10 } } as never)
+    expect(last.result).toEqual({ usersProcessed: 1, nextAfterUserId: null })
+    expect(gscdump.createTeam.mock.calls.map(([input]) => input.ownerUserId)).toEqual(['u_9'])
+    expect(sqlite.prepare('SELECT gscdump_team_id FROM teams WHERE public_id = ?').get('t_shared')).toEqual({ gscdump_team_id: 't_keep' })
+  })
 
   it.each([
     ['never reported', null],
@@ -114,6 +278,43 @@ describe('a linked Site this partner cannot read', () => {
 
     expect(result).toMatchObject({ attemptedSites: 1, linkedSites: 1 })
     expect(siteState()).toEqual({ linked: 's_ri', status: 'pending' })
+  })
+
+  it('restores the Personal Team mirror along with the Site after account recovery', async () => {
+    linkSite('s_deleted', 'synced')
+    markPersonalTeamForRecovery()
+
+    await reconcile('all')
+
+    expect(personalTeamMirror()).toEqual({ mirror: 't_restored' })
+    expect(siteState()).toEqual({ linked: 's_ri', status: 'pending' })
+  })
+
+  it('retries Personal Team recovery after gscdump cannot resolve the replacement', async () => {
+    linkSite('s_deleted', 'synced')
+    markPersonalTeamForRecovery()
+    gscdump.createTeam.mockResolvedValueOnce(null)
+
+    await reconcileTask.run!({ name: 'reconcile-gscdump-onboarding', context: {}, payload: {} } as never)
+    expect(personalTeamMirror()).toEqual({ mirror: 't_deleted' })
+    expect(siteState()).toEqual({ linked: 's_deleted', status: 'synced' })
+
+    await reconcileTask.run!({ name: 'reconcile-gscdump-onboarding', context: {}, payload: {} } as never)
+    expect(personalTeamMirror()).toEqual({ mirror: 't_restored' })
+    expect(siteState()).toEqual({ linked: 's_ri', status: 'pending' })
+  })
+
+  it('keeps the Personal Team unchanged if a newer account replaces the recovery identity', async () => {
+    linkSite('s_deleted', 'synced')
+    markPersonalTeamForRecovery()
+    gscdump.createTeam.mockImplementationOnce(async () => {
+      sqlite.prepare('UPDATE users SET gscdump_user_id = ?, gscdump_recovery_link_reconcile_user_id = ? WHERE user_id = ?').run('u_newer', 'u_newer', userId)
+      return { team: { id: 't_restored' } }
+    })
+
+    await expect(reconcile('all')).rejects.toThrow('The Personal Team changed during gscdump recovery.')
+    expect(personalTeamMirror()).toEqual({ mirror: 't_deleted' })
+    expect(siteState()).toEqual({ linked: 's_deleted', status: 'synced' })
   })
 
   it('keeps a synced teammate Site when checking all links after account recovery', async () => {

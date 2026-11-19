@@ -122,8 +122,12 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
     }).catch((err: unknown) => logger.error('[pro:integration:linked]', err))
   }
 
-  await syncUserGscdumpTeams(event, { userId, gscdumpUserId })
-    .catch((e: unknown) => logger.error('[gscdump reconcile] syncUserGscdumpTeams failed:', e))
+  const syncTeams = syncUserGscdumpTeams(event, { userId, gscdumpUserId, mode: repairingRecoveredLinks ? 'account-recovery' : 'regular' })
+  // Keep the recovery marker until the Personal Team and Site links can both recover.
+  if (repairingRecoveredLinks)
+    await syncTeams
+  else
+    await syncTeams.catch((e: unknown) => logger.error('[gscdump reconcile] syncUserGscdumpTeams failed:', e))
 
   // The team comes from the database, checked against membership, never from
   // the caller. A removed member's cookie still names the old team, and
