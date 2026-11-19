@@ -18,9 +18,20 @@ useSeoMeta({
 
         <h2>Cookies</h2>
         <p>Yes, we use cookies. You can manage them in your browser settings if you like.</p>
+        <p>When you sign in, Request Indexing sets the <code>nuxt-session</code> cookie to keep you signed in. It lasts up to 90 days.</p>
+        <p>The <code>pro-first-touch</code> cookie records how you first reached Request Indexing: the kind of page you landed on, such as the home page, a tool, or a guide, the time, the domain of the site that linked you, and any campaign tags (<code>utm_</code> values) in the link. It holds no URL you checked, no full referrer address, and no other part of the query string. It lasts up to 30 days. When you sign in, Request Indexing deletes it. If that sign-in creates your account, Request Indexing first saves its values with your signup record.</p>
 
         <h2>Analytics</h2>
         <p>We use the anonymous analytics provided by <a href="https://usefathom.com/" rel="nofollow" target="_blank">Fathom Analytics</a> to see how our tool is doing. This helps us scale and improve without getting nosy.</p>
+
+        <h2>Services that receive data</h2>
+        <p><a href="https://gscdump.com/" target="_blank">gscdump.com</a>: Request Indexing runs on gscdump.com. When you connect Google Search Console, Request Indexing sends gscdump.com your Google account ID, email address, and name, and the Google access you gave. gscdump.com reads and stores your Search Console data, and runs URL Inspection, sitemap, and IndexNow work for your Sites.</p>
+        <p>
+          <a href="https://dataforseo.com/" rel="nofollow" target="_blank">DataForSEO</a>: The free tools at <NuxtLink to="/tools">
+            /tools
+          </NuxtLink> send each URL or domain they check to DataForSEO, which runs a Google <code>site:</code> search for it. The Site Indexing Report also reads traffic and keyword estimates for the domain from DataForSEO.
+        </p>
+        <p><a href="https://postmarkapp.com/" rel="nofollow" target="_blank">Postmark</a>: Postmark delivers the emails Request Indexing sends, such as onboarding emails, Free allowance emails, and Team invitations. It receives the recipient's email address and the message.</p>
 
         <h2>Your Rights</h2>
         <p>You’ve got control over your info. Want to delete your account or see what data we have on you? Just hit the button on your account page or reach out to us.</p>

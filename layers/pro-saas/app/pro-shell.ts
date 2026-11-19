@@ -48,15 +48,6 @@ export const PRO_SHELL_COPY_OVERRIDES = {
     switchConfirm: 'Switch Team',
   },
   setupOffers: {
-    skill: {
-      body: 'Let your coding agent read your indexing record through the gscdump CLI.',
-    },
-    mcp: {
-      body: 'Read your Search Console data from hosted AI clients.',
-    },
-    api: {
-      body: 'Call the gscdump HTTP API with an API key.',
-    },
     bing: {
       title: 'Connect Bing Webmaster Tools',
       siteBody: 'Read Bing crawl evidence for this Site.',
@@ -106,3 +97,22 @@ export const PRO_SHELL_COPY_OVERRIDES = {
     },
   },
 } as const satisfies NonNullable<ProShellAppConfig['copy']>
+
+/**
+ * Request Indexing's own setup offers, beside the shell's Bing and Connect
+ * another Site offers. The shell's agent skill, MCP and API offers do not show:
+ * agent users go to gscdump (MARKETING.md), and the user menu still links the
+ * Developers page.
+ */
+export const REQUEST_INDEXING_SETUP_OFFER_COPY = {
+  indexNow: {
+    title: 'Send pages with IndexNow',
+    body: 'Publish your key file and verify it. Request Indexing then sends new and changed sitemap URLs to Bing and other participating search engines.',
+    cta: 'Set up IndexNow',
+  },
+  watchedUrls: {
+    title: 'Watch your first URLs',
+    body: 'Keep scheduled URL Inspection evidence for pages you choose. This does not request indexing.',
+    cta: 'Open Watched URLs',
+  },
+} as const

@@ -55,7 +55,7 @@ A freelancer or small agency can give a client the reason, with its date.
 **Not for.** Marketing never chases them. Saying so is a kindness, and a signal to the people it is for (Godin).
 
 - **The guarantee buyer** who wants instant or guaranteed indexing, or a black-hat shortcut. VISION rejects both.
-- **The agent operator.** gscdump serves them through MCP and the CLI. Request Indexing links there once and never leads with agents.
+- **The agent operator.** gscdump serves them through MCP and the CLI. Request Indexing links there once and never leads with agents. The dashboard Setup offers lead with IndexNow and Watched URLs, and carry no agent offer.
 - **The growth team**, which nuxtseo Pro serves, and **the platform buyer** who wants rank tracking or AI visibility.
 
 ### Boundary with gscdump
@@ -229,6 +229,5 @@ Product surfaces follow the registers in COPY.md. Every claim names its number o
 
 Resolve one, fold it in above, then delete it here.
 
-1. **The dashboard Setup offers.** Three of five lead with agents, and no account holds an API key. The footer now sends agent users to gscdump.com.
-2. **The Google connect step.** About half of signups stop there. Nothing records why.
-3. **The paid tier for operators.** What it costs, and when. Marketing quotes no price until one exists.
+1. **The Google connect step.** About half of signups stop there. Nothing records why.
+2. **The paid tier for operators.** What it costs, and when. Marketing quotes no price until one exists.

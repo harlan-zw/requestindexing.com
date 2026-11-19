@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
     recommendations.push({
       type: 'info',
       title: 'No ranking keywords detected',
-      description: 'This domain isn\'t ranking for any tracked keywords. Build topical authority with targeted content.',
+      description: 'DataForSEO Labs found no ranking keywords for this domain. A page must be indexed before it can rank. First, check which pages Google indexed.',
     })
   }
 
