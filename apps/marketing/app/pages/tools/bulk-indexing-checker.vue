@@ -10,7 +10,7 @@ const faqs = [
   },
   {
     question: 'Why are most of my pages not indexed?',
-    answer: 'IndexCheckr studied 16 million pages that its users track. 61.94% of them were on an indexed domain but were not indexed themselves. Common causes are low content quality, duplicate content, thin pages, crawl budget limits on large sites, and low domain authority.',
+    answer: 'IndexCheckr studied 16 million pages that its users track. 61.94% of them were on an indexed domain but were not indexed themselves. Common causes are low content quality, duplicate content, thin pages, and crawl budget limits on large sites.',
     sources: [
       { label: 'IndexCheckr indexing study', to: 'https://indexcheckr.com/resources/google-indexing' },
     ],

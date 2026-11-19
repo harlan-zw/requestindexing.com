@@ -26,6 +26,8 @@ These exact strings. Do not paraphrase them per page.
 | Landing meta title | Request Google Indexing and See Why Pages Are Not Indexed | `apps/marketing/app/pages/index.vue`; `app.vue` appends ` · Request Indexing` |
 | Landing meta description | Request Google indexing for your pages, then see which URLs Google has indexed, which it has not, and the reason it gives. Free and open source. | the landing page only |
 | Agent link | Use an AI agent: gscdump | public footer, links to gscdump.com/mcp. Agent users go to gscdump (MARKETING.md boundary). The Developers page stays inside the dashboard |
+| Listing, one line | See which of your pages Google indexed, and the reason it gives for the rest. Send new and changed pages to Bing and other search engines with IndexNow. | directories, partner pages, and family links on nuxtseo.com and gscdump.com (`docs/marketing/channel-kit.md`, section 6). Never in an agent or MCP directory |
+| Listing, two lines | Request Indexing checks the URLs in your sitemaps with Google's URL Inspection, within your Free allowance. It shows which pages Google indexed, the reason it gives for the rest, and what changed. It also sends new and changed pages to Bing and other search engines with IndexNow, once your key is verified. Free and open source. | directory listings with room for a description, such as AlternativeTo and SaaSHub |
 
 **The short pitch adds a second half in long form.** `README.md` and `VISION.md` both follow the
 tagline with "Search Console data and multi-engine submission, in one small app." That sentence
@@ -352,6 +354,15 @@ A `site:` search is public search output. URL Inspection is Google's own report 
 | Verdict offer action, signed out | Connect Google | links to `/pro/onboarding`, whose first step has the same label |
 | Verdict offer action, signed in | Open Indexing | links to `/pro/dashboard/indexing`, the sidebar item of the same name |
 | Google Index Checker tags | Single URL · No signup | the `/tools` card. Never "Instant": a speed claim with no evidence |
+| Tools step 3 | Send new pages · Verify your IndexNow key. Request Indexing then sends new and changed sitemap URLs to Bing and other search engines. For Google, use URL Inspection or a sitemap. | the third step on `/tools`. "URL Inspection or a sitemap" links `/indexing-api-for-blog-posts` |
+| Tools closing action | Find out which of your pages Google has indexed · See Google's verdict and reason for the URLs in your sitemaps, within your Free allowance. Send new and changed pages to Bing and other search engines with IndexNow. Free and open source. · Get started free · Read the guides | the closing action on `/tools`. The heading reuses the landing closing action |
+| Site report connect offer | Improve Your Indexing · Connect Google Search Console to see Google's verdict and reason for the URLs in your sitemaps. Request Indexing also sends new and changed pages to Bing and other search engines with IndexNow. | the Site Indexing Report result, beside Get Started Free |
+| Site report, no ranking keywords | No ranking keywords detected · DataForSEO Labs found no ranking keywords for this domain. A page must be indexed before it can rank. First, check which pages Google indexed. | a Site Indexing Report recommendation, from `site-report.post.ts` |
+| Google Index Checker pipeline | Discovery: Google finds your URL through a sitemap or links · Crawl: Googlebot visits and renders your page · Indexing: Google decides whether to add the page to its index | "The Indexing Pipeline" on `/tools/google-indexing-checker` |
+
+**No folklore on the tool pages.** `VERIFIED-CLAIMS.md` has no evidence row for domain
+authority, topical authority, or pre-crawl and post-crawl quality scoring. No tool FAQ, pipeline
+step, or recommendation names them as a cause or a fix.
 
 ## Free allowance assets
 
@@ -752,9 +763,12 @@ The dashboard frame, the command palette, the sidebar back link, the Fleet Sites
 | Team switch confirm body | Switching to {workspace} leaves the current Site. Unsaved filters on this page are lost. | Never Workspace for a Team |
 | Team switch confirm action | Switch Team | Never Workspace for a Team |
 | Refused action tooltip | Your Team role does not allow this. Ask a Team admin. | Says who can change it |
-| Agent skill offer body | Let your coding agent read your indexing record through the gscdump CLI. | The skill is gscdump's |
-| MCP offer body | Read your Search Console data from hosted AI clients. | Names the data this app reads |
-| API offer body | Call the gscdump HTTP API with an API key. | There is no typed SDK here |
+| IndexNow offer title | Send pages with IndexNow | Request Indexing's own offer. Reuses the landing IndexNow card title |
+| IndexNow offer body | Publish your key file and verify it. Request Indexing then sends new and changed sitemap URLs to Bing and other participating search engines. | Automatic sending starts at key verification (Truth rules) |
+| IndexNow offer action | Set up IndexNow | Opens the IndexNow page of the first connected Site |
+| Watched URLs offer title | Watch your first URLs | Request Indexing's own offer |
+| Watched URLs offer body | Keep scheduled URL Inspection evidence for pages you choose. This does not request indexing. | The Watched URLs intro, verbatim |
+| Watched URLs offer action | Open Watched URLs | Opens the Watched URLs page of the first connected Site |
 | Bing offer title | Connect Bing Webmaster Tools | Bing submission is not claimed (Truth rules) |
 | Bing offer body, one Site | Read Bing crawl evidence for this Site. | Bing submission is not claimed |
 | Bing offer body, every Site | Connect Bing once, then link each Site to read its Bing crawl evidence. | Bing submission is not claimed |
@@ -772,6 +786,11 @@ The dashboard frame, the command palette, the sidebar back link, the Fleet Sites
 | Copy invitation link | Copy invitation link | Members page |
 | Invitation link copied | Link copied | Members page |
 | Setup progress label | Setup progress | Onboarding is called setup |
+
+**The setup offers never lead with agents.** Request Indexing shows the IndexNow, Bing, Watched
+URLs, and Connect another Site offers. It shows no agent skill, MCP, or API offer, because agent
+users go to gscdump (MARKETING.md, "Who arrives today" and "Not for"). The user menu and the
+command palette still link the Developers page.
 
 Onboarding Step words, under `proShell.copy.onboarding.steps`:
 
@@ -867,6 +886,20 @@ after a delete. `layers/pro-saas/shared/account-deletion-copy.ts` holds them.
 | Engine record | gscdump.com, which Request Indexing runs on, deletes the record it keeps for your account. Your API keys stop working. |
 | Google access | Google can keep the access you gave Request Indexing. Remove it in your Google Account. |
 | Google access action | Open Google Account connections, a link to `https://myaccount.google.com/connections` |
+
+## Privacy page assets
+
+These strings apply to `apps/marketing/app/pages/privacy.vue`. Each one states what the code does
+today, with the file that shows it. The page makes no promise that the code cannot show.
+
+| Asset | String | Evidence |
+| --- | --- | --- |
+| Session cookie | When you sign in, Request Indexing sets the `nuxt-session` cookie to keep you signed in. It lasts up to 90 days. | `runtimeConfig.session.maxAge` in `nuxt.config.ts`; `nuxt-auth-utils` names the cookie |
+| First-touch cookie | The `pro-first-touch` cookie records how you first reached Request Indexing: the kind of page you landed on, such as the home page, a tool, or a guide, the time, the domain of the site that linked you, and any campaign tags (`utm_` values) in the link. It holds no URL you checked, no full referrer address, and no other part of the query string. It lasts up to 30 days. Request Indexing reads it only when a sign-in creates your account, and saves its values with your signup record. Each sign-in deletes the cookie. A later visit can set it again. | `layers/pro-saas/shared/signup-attribution.ts`; `docs/runbooks/signup-funnel.md`; `layers/pro-saas-auth/server/utils/auth/finalize.ts` |
+| Services heading | Services that receive data | |
+| gscdump.com | Request Indexing runs on gscdump.com. When you connect Google Search Console, Request Indexing sends gscdump.com your Google account ID, email address, and name, and the Google access you gave. gscdump.com reads and stores your Search Console data, and runs URL Inspection, sitemap, and IndexNow work for your Sites. | `layers/pro-gsc/server/routes/auth/integrations/gsc/callback.get.ts`; Truth rules |
+| DataForSEO | The free tools at /tools send each URL or domain they check to DataForSEO, which runs a Google `site:` search for it. The Site Indexing Report also reads traffic and keyword estimates for the domain from DataForSEO. | PRODUCT-06 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
+| Postmark | Postmark delivers the emails Request Indexing sends, such as onboarding emails, Free allowance emails, and Team invitations. It receives the recipient's email address and the message. | `layers/core/server/utils/email.ts` |
 
 ## Banned language
 

@@ -1,59 +1,96 @@
 <script setup lang="ts">
+import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import type { SiteFleetRow } from '~~/layers/core/app/types/data'
-import type { DeveloperApiKeysState } from '#layers/pro-gsc/shared/developer-api-keys'
 import type { FreeAllowanceView } from '#layers/pro-gsc/shared/free-allowance'
+import type { SetupSiteRead } from '#layers/pro-saas/app/utils/overview-setup-offers'
 import ProShellSetupOffers from '@nuxtseo/pro-shell/app/components/ProShellSetupOffers.vue'
 import { readProShellConfig, useProShellCopy } from '@nuxtseo/pro-shell/app/composables/useProShellCopy'
 import { useProShellSetupDismissals } from '@nuxtseo/pro-shell/app/composables/useProShellSetupDismissals'
-import { buildSharedSetupOffers } from '@nuxtseo/pro-shell/shared/setup-offers'
 import { useProBingIntegration } from '#layers/pro-gsc/app/composables/useProGscdump'
-import { developerSetupCompletion } from '#layers/pro-gsc/shared/developer-setup'
-import { anotherSiteCompletion, bingSetupCompletion } from '#layers/pro-saas/app/utils/overview-setup-offers'
+import { useGscdumpQuery } from '#layers/pro-gsc/app/composables/useProGscdump/_internal'
+import { REQUEST_INDEXING_SETUP_OFFER_COPY } from '#layers/pro-saas/app/pro-shell'
+import {
+  anotherSiteCompletion,
+  bingSetupCompletion,
+  buildOverviewSetupOffers,
+  indexNowSetupCompletion,
+  watchedUrlsSetupCompletion,
+} from '#layers/pro-saas/app/utils/overview-setup-offers'
 
 /**
- * "Finish setting up" on the dashboard home: `@nuxtseo/pro-shell`'s five
- * shared offers, each with its Setup completion from a read this app already
- * makes. The agent skill, MCP and API offers read the Developers page's API
- * key state, Bing reads the Integrations row, and Add another Site reads the
- * Site count against the Free allowance. Every read is client-only, and the
- * cards wait until all of them land, so none reshuffles.
+ * "Finish setting up" on the dashboard home: Request Indexing's IndexNow and
+ * Watched URLs offers, and the shell's Bing and Add another Site offers, each
+ * with its Setup completion from a read this app already makes. IndexNow and
+ * Watched URLs read the first Site linked to gscdump. Bing reads the
+ * Integrations row, and Add another Site reads the Site count against the Free
+ * allowance. Every read is client-only, and the cards wait until all of them
+ * land, so none reshuffles.
  */
 const { sites } = defineProps<{ sites: readonly SiteFleetRow[] }>()
 
 const proFetch = useProFetch()
-const { data: keysState, status: keysStatus } = useLazyFetch<DeveloperApiKeysState>('/api/pro/developer/api-keys', {
-  $fetch: proFetch,
-  server: false,
-})
 const { data: usage, status: usageStatus } = useLazyFetch<{ allowance: FreeAllowanceView }>('/api/pro/usage', {
   $fetch: proFetch,
   server: false,
 })
 const bing = useProBingIntegration(() => sites)
 
+// Both Site offers open one Site: the first linked to gscdump. Read it by its
+// gscdump id; link to it by the app's own id.
+const target = computed(() => sites.find(site => site.gscdumpSiteId) ?? null)
+const { caller, isAdmin } = useCaller()
+const teamPolicy = useTeamPolicy(() => caller.value?.currentTeamId)
+const canWrite = computed(() => isAdmin.value || teamPolicy.can('write-data'))
+const readSiteId = computed(() => caller.value && canWrite.value ? target.value?.gscdumpSiteId ?? undefined : undefined)
+
+type IndexNowConnection = GscdumpV1OperationResponse<'partner.sites.indexing.indexnow.connection.get'>['data']
+type WatchedRecord = GscdumpV1OperationResponse<'partner.sites.indexing.watched.list'>['data']
+const indexNow = useGscdumpQuery<IndexNowConnection>(
+  () => `setup-offers:indexnow:${readSiteId.value ?? ''}`,
+  readSiteId,
+  (id, client) => client.getSiteIndexNowConnection({ params: { siteId: id } }, true),
+  [],
+)
+const watched = useGscdumpQuery<WatchedRecord>(
+  () => `setup-offers:watched:${readSiteId.value ?? ''}`,
+  readSiteId,
+  (id, client) => client.listSiteWatchedUrls({ params: { siteId: id } }, true),
+  [],
+)
+
+function siteRead<T>(query: { data: Ref<T | null | undefined>, error: Ref<unknown>, status: Ref<string> }): SetupSiteRead<T> {
+  if (!target.value)
+    return { _tag: 'no-site' }
+  if (!caller.value)
+    return { _tag: 'checking' }
+  if (!canWrite.value)
+    return { _tag: 'read-only' }
+  if (query.error.value)
+    return { _tag: 'read-failed' }
+  if (query.status.value !== 'success' || !query.data.value)
+    return { _tag: 'checking' }
+  return { _tag: 'ready', value: query.data.value }
+}
+
 const routes = readProShellConfig().routes ?? {}
-const copy = useProShellCopy().setupOffers
+const shellCopy = useProShellCopy().setupOffers
 const { dismissedKeys, dismiss } = useProShellSetupDismissals()
 
-// A failed read is no data: its offers show no card rather than a guess.
-const keys = computed(() => keysStatus.value === 'error' ? { _tag: 'SearchConsoleRequired' as const } : keysState.value ?? null)
+// A failed read is no data: its offer shows no card rather than a guess.
 const allowance = computed<FreeAllowanceView | null>(() => usageStatus.value === 'error' ? { _tag: 'Unavailable' } : usage.value?.allowance ?? null)
 
-const offers = computed(() => {
-  const developer = developerSetupCompletion(keys.value)
-  return buildSharedSetupOffers({
-    routes,
-    copy,
-    site: null,
-    completion: {
-      'skill': developer.skill,
-      'mcp': developer.mcp,
-      'api': developer.api,
-      'bing': bingSetupCompletion(bing.state.value),
-      'another-site': anotherSiteCompletion({ siteCount: sites.length, allowance: allowance.value }),
-    },
-  })
-})
+const offers = computed(() => buildOverviewSetupOffers({
+  routes,
+  shellCopy,
+  copy: REQUEST_INDEXING_SETUP_OFFER_COPY,
+  siteId: target.value?.siteId ?? null,
+  completion: {
+    bing: bingSetupCompletion(bing.state.value),
+    anotherSite: anotherSiteCompletion({ siteCount: sites.length, allowance: allowance.value }),
+    indexNow: indexNowSetupCompletion(siteRead(indexNow)),
+    watchedUrls: watchedUrlsSetupCompletion(siteRead(watched)),
+  },
+}))
 const loading = computed(() => offers.value.some(offer => offer.completion._tag === 'unknown'))
 </script>
 

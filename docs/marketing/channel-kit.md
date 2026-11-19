@@ -135,10 +135,7 @@ Google's reason is the useful part. URL Inspection shows it for one URL at a tim
 
 ## 6. Listing text
 
-One description for every directory, partner page, and family link. Move it to `COPY.md` as a canonical asset before first use.
-
-- **One line:** See which of your pages Google indexed, and the reason it gives for the rest.
-- **Two lines:** Request Indexing checks the URLs in your sitemaps with Google's URL Inspection. It shows which pages Google indexed, the reason it gives for the rest, and what changed. Free and open source.
+One description for every directory, partner page, and family link. `COPY.md` holds it as the canonical assets "Listing, one line" and "Listing, two lines". Copy them from there, never from this file.
 
 **Where:** nuxtseo.com and gscdump.com link here with the one line. AlternativeTo and SaaSHub list it next to the submit-only indexers.
 **Not here:** agent and MCP directories. That shelf belongs to gscdump.
