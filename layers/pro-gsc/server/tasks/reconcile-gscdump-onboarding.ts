@@ -1,4 +1,4 @@
-import { and, eq, gt, isNotNull, isNull, or, sql } from 'drizzle-orm'
+import { and, eq, gt, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { logger } from '~~/shared/server/logger'
 import { sites, teams, users } from '#layers/pro-saas/server/database'
@@ -26,11 +26,15 @@ type ReconcileTaskResult
     | { usersProcessed: number, usersFailed: number, attemptedSites: number, linkedSites: number }
 
 const repairProgress = z.discriminatedUnion('_tag', [
-  z.object({ _tag: z.literal('Pending'), afterUserId: z.number().int().nonnegative() }),
-  z.object({ _tag: z.literal('Complete') }),
+  z.object({ _tag: z.literal('Pending'), afterUserId: z.number().int().nonnegative(), retryUserIds: z.array(z.number().int().positive()).default([]) }),
+  z.object({ _tag: z.literal('Complete'), retryUserIds: z.array(z.number().int().positive()).default([]) }),
 ])
 
-async function repairPersonalTeamBatch(db: ReturnType<typeof useDrizzle>, afterUserId: number) {
+async function repairPersonalTeamBatch(
+  db: ReturnType<typeof useDrizzle>,
+  afterUserId: number,
+  onFailure?: (userId: number, error: unknown) => void,
+) {
   const rows = await db.selectDistinct({ userId: users.userId, gscdumpUserId: users.gscdumpUserId })
     .from(users)
     .innerJoin(teams, and(eq(teams.ownerId, users.userId), eq(teams.personalTeam, true)))
@@ -43,6 +47,10 @@ async function repairPersonalTeamBatch(db: ReturnType<typeof useDrizzle>, afterU
       userId: row.userId,
       gscdumpUserId: row.gscdumpUserId!,
       mode: 'personal-team-repair',
+    }).catch((error: unknown) => {
+      if (!onFailure)
+        throw error
+      onFailure(row.userId, error)
     })
   }
   return {
@@ -57,14 +65,40 @@ async function advancePersonalTeamRepair(db: ReturnType<typeof useDrizzle>) {
   const key = 'personal-teams-v1'
   const saved = await storage.getItem(key)
   const progress = repairProgress.parse(saved ?? { _tag: 'Pending', afterUserId: 0 })
-  if (progress._tag === 'Complete')
+  if (progress._tag === 'Complete' && progress.retryUserIds.length === 0)
     return
-  const batch = await repairPersonalTeamBatch(db, progress.afterUserId)
-  // Commit progress only after the entire batch succeeds. A crash or failure
-  // replays the same idempotent Team lookups on the next hourly invocation.
+  // Rotate retries independently of the scan, including after it completes.
+  // Read the current identity so an old failure cannot restore an obsolete Team.
+  const retryUserIds = progress.retryUserIds.slice(USERS_PER_RUN)
+  const recordFailure = (userId: number, error: unknown) => {
+    retryUserIds.push(userId)
+    logger.error('[gscdump reconcile task] Personal Team owner queued for retry:', userId, error)
+  }
+  const retryIds = progress.retryUserIds.slice(0, USERS_PER_RUN)
+  if (retryIds.length) {
+    const rows = await db.select({ userId: users.userId, gscdumpUserId: users.gscdumpUserId })
+      .from(users)
+      .where(inArray(users.userId, retryIds))
+      .all()
+    for (const row of rows) {
+      // Deleted or disconnected owners no longer need this rollout repair.
+      if (!row.gscdumpUserId)
+        continue
+      await syncUserGscdumpTeams(undefined, {
+        userId: row.userId,
+        gscdumpUserId: row.gscdumpUserId,
+        mode: 'personal-team-repair',
+      }).catch((error: unknown) => recordFailure(row.userId, error))
+    }
+  }
+  const batch = progress._tag === 'Pending'
+    ? await repairPersonalTeamBatch(db, progress.afterUserId, recordFailure)
+    : { nextAfterUserId: null }
+  // Save failed owners and the cursor together. A failed write or interrupted
+  // run replays idempotent lookups without skipping an unrecorded failure.
   await storage.setItem(key, batch.nextAfterUserId === null
-    ? { _tag: 'Complete' }
-    : { _tag: 'Pending', afterUserId: batch.nextAfterUserId })
+    ? { _tag: 'Complete', retryUserIds }
+    : { _tag: 'Pending', afterUserId: batch.nextAfterUserId, retryUserIds })
 }
 
 // Scheduled hourly in `nuxt.config.ts`. A site stays unlinked when its Search

@@ -134,8 +134,10 @@ describe('a linked Site this partner cannot read', () => {
     expect(personalTeamMirror()).toEqual({ mirror: 't_restored' })
   })
 
-  it('resumes automatic rollout across hourly runs and retries a failed batch', async () => {
+  it('repairs later historical recoveries while a missing upstream owner remains queued for retry', async () => {
     rolloutProgress = null
+    linkSite('s_ri', 'synced')
+    let laterTeamId = teamId
     for (let i = 0; i < 20; i++) {
       const created = await createUserWithPersonalTeam(
         db,
@@ -143,21 +145,29 @@ describe('a linked Site this partner cannot read', () => {
         { provider: 'google', providerUserId: `auto-${i}`, email: `auto${i}@example.test`, emailVerified: true, displayName: `User ${i}` },
       )
       sqlite.prepare('UPDATE users SET gscdump_user_id = ? WHERE user_id = ?').run(`u_${i}`, created.user.userId)
+      laterTeamId = created.team.teamId
     }
+    sqlite.prepare('UPDATE sites SET team_id = ? WHERE id = ?').run(laterTeamId, 'site-nwa')
+    sqlite.prepare('UPDATE teams SET gscdump_team_id = ?').run('t_deleted')
+    gscdump.createTeam.mockImplementation(async ({ ownerUserId }: { ownerUserId: string }) =>
+      ownerUserId === 'u_harlan' ? null : { team: { id: 't_restored' } })
+    const readIdentity = async () => ({ identity: { siteId: 's_ri', requestedUrl: 'https://newworldartists.net', userId: 'u_19', teamId: 't_restored' } })
+    await expect(assertLocalRegisteredGscSiteScope(db, 'site-nwa', 's_ri', readIdentity)).rejects.toMatchObject({ statusCode: 403 })
     const hourly = () => reconcileTask.run!({ payload: {} } as never)
+    for (let run = 0; run < 4; run++)
+      await hourly()
+
+    expect(await assertLocalRegisteredGscSiteScope(db, 'site-nwa', 's_ri', readIdentity)).toEqual({ _tag: 'Registered' })
+    expect(personalTeamMirror()).toEqual({ mirror: 't_deleted' })
+    expect(rolloutProgress).toMatchObject({ _tag: 'Complete', retryUserIds: [userId] })
+    expect(siteState()).toEqual({ linked: 's_ri', status: 'synced' })
+    expect(gscdump.registerSite).not.toHaveBeenCalled()
+
+    // The failed owner can recover after the scan has finished.
+    gscdump.createTeam.mockResolvedValue({ team: { id: 't_restored' } })
     await hourly()
-    expect(gscdump.createTeam.mock.calls.map(([input]) => input.ownerUserId)).toEqual(['u_harlan', ...Array.from({ length: 9 }, (_, i) => `u_${i}`)])
-    gscdump.createTeam.mockClear()
-    // Fail after one successful repair. The next invocation must replay this batch.
-    gscdump.createTeam.mockResolvedValueOnce({ team: { id: 't_restored' } }).mockRejectedValueOnce(new Error('engine unavailable'))
-    await hourly()
-    expect(gscdump.createTeam.mock.calls.map(([input]) => input.ownerUserId)).toEqual(['u_9', 'u_10'])
-    gscdump.createTeam.mockClear()
-    await hourly()
-    expect(gscdump.createTeam.mock.calls.map(([input]) => input.ownerUserId)).toEqual(Array.from({ length: 10 }, (_, i) => `u_${i + 9}`))
-    gscdump.createTeam.mockClear()
-    await hourly()
-    expect(gscdump.createTeam.mock.calls.map(([input]) => input.ownerUserId)).toEqual(['u_19'])
+    expect(personalTeamMirror()).toEqual({ mirror: 't_restored' })
+    expect(rolloutProgress).toMatchObject({ _tag: 'Complete', retryUserIds: [] })
     gscdump.createTeam.mockClear()
     await hourly()
     expect(gscdump.createTeam).not.toHaveBeenCalled()
@@ -172,6 +182,49 @@ describe('a linked Site this partner cannot read', () => {
 
     await expect(reconcileTask.run!({ payload: { repairPersonalTeams: true } } as never)).rejects.toThrow('The Personal Team changed during gscdump recovery.')
     expect(personalTeamMirror()).toEqual({ mirror: 't_deleted' })
+  })
+
+  it('rotates persistent failures so later queued owners can recover with their current identity', async () => {
+    const retryUserIds = [userId]
+    for (let i = 0; i < 10; i++) {
+      const created = await createUserWithPersonalTeam(
+        db,
+        { name: `Retry ${i}`, email: `retry${i}@example.test`, avatar: '', lastLogin: 1, sub: `retry-${i}` },
+        { provider: 'google', providerUserId: `retry-${i}`, email: `retry${i}@example.test`, emailVerified: true, displayName: `Retry ${i}` },
+      )
+      sqlite.prepare('UPDATE users SET gscdump_user_id = ? WHERE user_id = ?').run(`u_retry_${i}`, created.user.userId)
+      retryUserIds.push(created.user.userId)
+    }
+    // Recovery changed the queued owner's identity before this retry.
+    sqlite.prepare('UPDATE users SET gscdump_user_id = ? WHERE user_id = ?').run('u_current', retryUserIds.at(-1)!)
+    rolloutProgress = { _tag: 'Complete', retryUserIds }
+    gscdump.createTeam.mockImplementation(async ({ ownerUserId }: { ownerUserId: string }) =>
+      ownerUserId === 'u_current' ? { team: { id: 't_current' } } : null)
+
+    await reconcileTask.run!({ payload: {} } as never)
+    expect(gscdump.createTeam).toHaveBeenCalledTimes(10)
+    await reconcileTask.run!({ payload: {} } as never)
+
+    expect(sqlite.prepare('SELECT gscdump_team_id AS mirror FROM teams WHERE owner_id = ?').get(retryUserIds.at(-1)!)).toEqual({ mirror: 't_current' })
+    expect(rolloutProgress).toMatchObject({ _tag: 'Complete', retryUserIds: expect.not.arrayContaining([retryUserIds.at(-1)!]) })
+    expect(rolloutProgress).toMatchObject({ retryUserIds: expect.arrayContaining([userId]) })
+  })
+
+  it('replays the scan when saving its failed owners and cursor fails', async () => {
+    rolloutProgress = null
+    const save = vi.fn(async (_key: string, value: unknown) => {
+      rolloutProgress = value
+    })
+    save.mockRejectedValueOnce(new Error('KV unavailable'))
+    vi.stubGlobal('useStorage', () => ({ getItem: async () => rolloutProgress, setItem: save }))
+    gscdump.createTeam.mockResolvedValue(null)
+
+    await reconcileTask.run!({ payload: {} } as never)
+    expect(rolloutProgress).toBeNull()
+    await reconcileTask.run!({ payload: {} } as never)
+
+    expect(gscdump.createTeam).toHaveBeenCalledTimes(2)
+    expect(rolloutProgress).toEqual({ _tag: 'Complete', retryUserIds: [userId] })
   })
 
   it('bounds rollout batches and resumes after the returned user cursor', async () => {
