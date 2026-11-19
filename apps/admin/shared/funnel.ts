@@ -30,6 +30,8 @@ export type GoogleConnectStop = typeof GOOGLE_CONNECT_STOPS[number]['key']
 
 const STOP_BY_EVENT: Record<string, GoogleConnectStop> = {
   gsc_connect_started: 'noReturn',
+  // Written only while Connect Google had a Skip, removed on 2026-11-19.
+  // Older signups keep their record.
   gsc_connect_skipped: 'skipped',
   gsc_connect_cancelled: 'cancelled',
   gsc_scope_missing: 'scopeMissing',

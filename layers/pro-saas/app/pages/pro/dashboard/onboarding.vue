@@ -110,13 +110,6 @@ const returnToSites = '/pro/dashboard/onboarding?step=sites'
 // Sitemap submission and Add and verify ask for more when the reader uses them.
 const gscConnectUrl = `/auth/integrations/gsc/connect?scope=read&returnTo=${encodeURIComponent(returnToSites)}`
 
-// Skip on the Connect Google step is the one stop the server cannot see.
-function skipConnect(skip: () => void) {
-  void getAppFetch()('/api/pro/onboarding/observation', { method: 'POST', body: { type: 'gsc_connect_skipped' }, retry: 0 })
-    .catch(() => console.warn('The skipped Google connection could not be recorded.'))
-  skip()
-}
-
 // Coming back from Google, the session cookie is fresh but this page's copy is
 // not. Refreshing on mount is what makes the connect step flip to "connected".
 onMounted(() => refreshSession())
@@ -193,12 +186,12 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       </div>
 
       <!-- One way forward: before a grant the Connect button drives the
-           advance, so the footer offers only the skip; after, only Continue. -->
+           advance, so the footer is empty; after, it offers Continue. There
+           is no skip (COPY.md, Connect Google assets). A member of a Team
+           that already has a Site may continue without a grant. -->
       <UiWizardNav
-        :skip-label="step.skippable ? frameCopy.skip : undefined"
-        :show-next="gscConnected"
+        :show-next="gscConnected || hasSites"
         :next-label="frameCopy.next"
-        @skip="skipConnect(() => controls.skip())"
         @next="controls.next()"
       />
     </template>

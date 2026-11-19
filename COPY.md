@@ -459,7 +459,7 @@ Retained observations do not establish lifetime first use.
 | Acquisition channel | Acquisition channel |
 | Google stops heading | Where signups stop before Connected Google |
 | Google stops explanation | Each signup without Google counts once, at its latest connect record. A signup from before connect attempts were recorded shows No connect attempt recorded. |
-| Google stop labels | No connect attempt recorded · Skipped Connect Google · No return from Google recorded · Cancelled on Google's consent screen · Search Console box unticked · Google connection failed |
+| Google stop labels | No connect attempt recorded · Skipped Connect Google · No return from Google recorded · Cancelled on Google's consent screen · Search Console box unticked · Google connection failed. Only a signup from before Skip was removed can show Skipped Connect Google |
 
 ## Admin feedback reports
 
@@ -545,6 +545,16 @@ Request Indexing can change, and how to take the access back. Strings live in
 
 **Never list the Indexing API as a Connect Google benefit.** Connect Google does not grant it.
 Submit to Google asks for its own grant on the Account page.
+
+**Connect Google has no Skip.** Harlan removed it on 2026-11-19: 16 of the 34 signups who never
+connected Google left through it onto an empty dashboard. The step offers only Connect Google
+Search Console, then Continue. The Sites step's "Skip and connect it later" stays for a connected
+account whose properties cannot connect. A reader who does not connect can sign out or delete the
+account.
+
+| Asset | String |
+| --- | --- |
+| Finish refused, Google required | Connect Google Search Console before you finish setup. |
 
 ## Setup examples and optional feedback
 
