@@ -21,7 +21,7 @@ export const PRO_SHELL_ROUTES = {
   siteOverview: '/pro/dashboard/sites/[site]',
   siteIndexing: '/pro/dashboard/sites/[site]/indexing',
   siteSearchConsole: '/pro/dashboard/sites/[site]/search-console',
-  siteBingIndexing: '/pro/dashboard/sites/[site]/indexing/bing',
+  siteBingIndexing: '/pro/dashboard/sites/[site]/webmaster-tools/crawl',
 } as const satisfies NonNullable<ProShellAppConfig['routes']>
 
 export const PRO_SHELL_COPY_OVERRIDES = {

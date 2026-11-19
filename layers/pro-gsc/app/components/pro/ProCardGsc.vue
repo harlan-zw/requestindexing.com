@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { Period } from '../../composables/useGscPeriod'
 import { gscMetricColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
+import { formatReportingDay } from '@nuxtseo/design-system/app/composables/formatting'
 import { useChartBrush } from '@nuxtseo/design-system/app/composables/useChartBrush'
 import { onKeyStroke } from '@vueuse/core'
 import { AnimatePresence, motion, useMotionValue, useSpring } from 'motion-v'
@@ -204,20 +205,20 @@ function onChartMove(e: MouseEvent) {
 const hoverDateShort = computed(() => {
   if (!tooltipData.value?.date)
     return ''
-  return new Date(tooltipData.value.date).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  return formatReportingDay(tooltipData.value.date, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 })
 
 // Full-date strings used in the tooltip card header/footer for comparison clarity.
 const hoverDateFull = computed(() => {
   if (!tooltipData.value?.date)
     return ''
-  return new Date(tooltipData.value.date).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  return formatReportingDay(tooltipData.value.date, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 })
 
 const hoverPrevDateFull = computed(() => {
   if (!tooltipPrev.value?.date)
     return ''
-  return new Date(tooltipPrev.value.date).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  return formatReportingDay(tooltipPrev.value.date, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 })
 
 function tooltipDelta(col: string): number {
@@ -280,7 +281,7 @@ function onTooltip(data: DateAnalytics | null, prev: DateAnalytics | null, isEst
 function formatDragDate(iso: string): string {
   if (!iso)
     return ''
-  return new Date(iso).toLocaleDateString('en', { month: 'short', day: 'numeric' })
+  return formatReportingDay(iso)
 }
 
 const dragStartLabel = computed(() => formatDragDate(dragRange.value?.startDate ?? ''))
@@ -486,8 +487,7 @@ const zoomRangeLabel = computed(() => {
   const r = zoomedRange.value
   if (!r)
     return ''
-  const fmt = (d: string) => new Date(d).toLocaleDateString('en', { month: 'short', day: 'numeric' })
-  return `${fmt(r.start)} → ${fmt(r.end)}`
+  return `${formatReportingDay(r.start)} → ${formatReportingDay(r.end)}`
 })
 </script>
 

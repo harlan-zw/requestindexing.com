@@ -7,7 +7,9 @@
 // are flat menu rows (owner decision 10), so the taxonomy names the question
 // the reader brings rather than the upstream feature.
 
-export type ProNavGroupId = 'search' | 'indexing' | 'footer'
+import { SEARCH_CONSOLE, WEBMASTER_TOOLS } from '@nuxtseo/pro-search/shared/navigation'
+
+export type ProNavGroupId = 'search' | 'indexing' | 'webmaster-tools' | 'footer'
 
 export interface ProNavGroupDef {
   id: ProNavGroupId
@@ -19,7 +21,8 @@ export interface ProNavGroupDef {
 }
 
 export const proNavGroups: readonly ProNavGroupDef[] = [
-  { id: 'search', label: 'Search Performance' },
+  { id: 'search', label: SEARCH_CONSOLE.label },
   { id: 'indexing', label: 'Indexing' },
+  { id: 'webmaster-tools', label: WEBMASTER_TOOLS.label, pinned: true },
   { id: 'footer', label: 'Settings', footer: true },
 ]

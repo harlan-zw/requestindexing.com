@@ -23,10 +23,10 @@ function labelsOf(section: { links: Array<{ label: string }> }) {
 }
 
 describe('useProSiteNav', () => {
-  it('groups the site rows under Search Performance, Indexing and a settings rail', () => {
+  it('groups the site rows under Search Console, Indexing and a settings rail', () => {
     const { sections, footerLinks } = nav()
 
-    expect(sections.value.map(section => section.label)).toEqual(['Search Performance', 'Indexing'])
+    expect(sections.value.map(section => section.label)).toEqual(['Search Console', 'Indexing'])
     expect(labelsOf(sections.value[0]!)).toEqual(['Overview', 'Queries', 'Pages', 'Countries'])
     expect(labelsOf(sections.value[1]!)).toEqual(['Overview', 'Submissions', 'Recovery', 'Sitemaps', 'URLs', 'Watched URLs'])
     expect(footerLinks.value.map(link => link.label)).toEqual(['Site settings'])
@@ -74,12 +74,16 @@ describe('useProSiteNav', () => {
     expect(urls.active!(`/pro/dashboard/sites/${SITE}/indexing`)).toBe(false)
   })
 
-  it('withholds a flagged row until its flag is on', () => {
-    expect(labelsOf(nav().sections.value[0]!)).not.toContain('Bing')
-
+  it('puts Webmaster Tools in its own row when Bing is enabled', () => {
+    expect(nav().pinnedLinks.value.map(link => link.label)).not.toContain('Webmaster Tools')
     const flagged = nav({ flags: { bing: true } })
-    expect(labelsOf(flagged.sections.value[0]!)).toEqual(['Overview', 'Queries', 'Pages', 'Countries', 'Bing'])
-    expect(labelsOf(flagged.sections.value[1]!)).toContain('Bing')
+    const webmasterTools = flagged.pinnedLinks.value.find(link => link.label === 'Webmaster Tools')
+    const path = `/pro/dashboard/sites/${SITE}/webmaster-tools`
+
+    expect(webmasterTools?.to).toBe(path)
+    expect(webmasterTools?.icon).toBe('bing')
+    expect(webmasterTools?.active?.(`${path}/crawl`)).toBe(true)
+    expect(flagged.sections.value.flatMap(labelsOf)).not.toContain('Bing')
   })
 
   it('marks a row waiting when its integration is unmet, and leaves it clickable', () => {

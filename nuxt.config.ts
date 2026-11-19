@@ -56,6 +56,7 @@ export default defineNuxtConfig({
     // `@nuxtseo/pro-indexing` extends `@nuxtseo/pro-shell`, which extends
     // `@nuxtseo/design-system`, so one entry brings all three.
     '@nuxtseo/pro-indexing',
+    '@nuxtseo/pro-search',
   ],
   nuxtDx: {
     report: true,

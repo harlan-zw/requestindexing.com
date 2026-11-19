@@ -14,6 +14,7 @@
 import type { UiIcon } from '@nuxtseo/design-system/shared/icons'
 import type { IntegrationReadiness } from '#layers/pro-saas/shared/policies/integration-readiness'
 import type { ProNavGroupId } from './nav-groups'
+import { WEBMASTER_TOOLS, WEBMASTER_TOOLS_TABS } from '@nuxtseo/pro-search/shared/navigation'
 
 /**
  * Names a runtime flag that must be on before the row exists.
@@ -86,15 +87,6 @@ export const proSiteFeatureManifest = {
     order: 16,
     route: `${SITE_ROOT}/search-console/countries`,
     integration: 'gsc-connected',
-  },
-  'search-console.bing': {
-    label: 'Bing',
-    icon: 'search-check',
-    group: 'search',
-    order: 18,
-    route: `${SITE_ROOT}/search-console/bing`,
-    integration: 'gsc-connected',
-    flag: 'bing',
   },
 
   // ── Indexing ──
@@ -170,12 +162,21 @@ export const proSiteFeatureManifest = {
     route: `${SITE_ROOT}/indexing/indexnow`,
     parent: 'indexing.submissions',
   },
-  'indexing.bing': {
-    label: 'Bing',
-    icon: 'search-check',
-    group: 'indexing',
+  'webmaster-tools': {
+    ...WEBMASTER_TOOLS,
+    group: 'webmaster-tools',
     order: 40,
-    route: `${SITE_ROOT}/indexing/bing`,
+    route: `${SITE_ROOT}/webmaster-tools`,
+    integration: 'gsc-connected',
+    flag: 'bing',
+  },
+  'webmaster-tools.crawl': {
+    label: WEBMASTER_TOOLS_TABS[1].label,
+    icon: WEBMASTER_TOOLS.icon,
+    group: 'webmaster-tools',
+    order: null,
+    route: `${SITE_ROOT}/webmaster-tools/crawl`,
+    parent: 'webmaster-tools',
     integration: 'gsc-connected',
     flag: 'bing',
   },
@@ -276,6 +277,8 @@ const FLAGGED_ROUTE_MATCHERS: readonly { flag: ProFeatureFlag, match: RegExp }[]
  */
 export function requiredProFeatureFlag(path: string): ProFeatureFlag | null {
   const clean = path.split('?')[0]!.split('#')[0]!
+  if (/^\/pro\/dashboard\/webmaster-tools\/?$/.test(clean) || /^\/pro\/dashboard\/sites\/[^/]+\/(?:search-console|indexing)\/bing\/?$/.test(clean))
+    return 'bing'
   return FLAGGED_ROUTE_MATCHERS.find(entry => entry.match.test(clean))?.flag ?? null
 }
 

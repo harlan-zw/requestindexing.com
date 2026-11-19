@@ -39,7 +39,7 @@ function siteHost(site: BingIntegrationSiteRef): string {
 }
 
 function siteBingPath(site: BingIntegrationSiteRef): string {
-  return `/pro/dashboard/sites/${encodeURIComponent(site.siteId)}/indexing/bing`
+  return `/pro/dashboard/sites/${encodeURIComponent(site.siteId)}/webmaster-tools/crawl`
 }
 
 const rows = computed(() => bing.rows.value)
