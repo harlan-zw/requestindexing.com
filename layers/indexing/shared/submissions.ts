@@ -5,8 +5,11 @@
 // in contracts 7.17.0, but gscdump.com does not serve them yet
 // (gscdump.com#1233). Until it does, these build the same shapes from what it
 // serves: both receipt lists, the IndexNow connection, and gscdump's saved URL
-// Inspection results. When the operations ship, the capabilities read them and
-// this file keeps only the automatic sending helpers at the bottom.
+// Inspection results. When `listSiteSubmissionOutcomes` ships, the outcomes
+// capability reads it. The summary stays on the receipt lists either way.
+// gscdump's summary adds up every receipt, so a URL sent twice counts twice.
+// The shared section counts each URL once per engine, by its latest
+// Submission Receipt (`@nuxtseo/pro-indexing` 0.1.9).
 //
 // Outcomes follow gscdump.com#1233 and gscdump#304: one row for each URL a
 // search engine received (IndexNow HTTP 200 or 202, Google HTTP 200), anchored
