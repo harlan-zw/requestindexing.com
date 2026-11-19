@@ -60,9 +60,6 @@ minimumReleaseAgeExclude:
   - '@takumi-rs/helpers@2.15.0'
   - '@takumi-rs/wasm@2.15.0'
   - sitemapd@0.2.3
-  - '@nuxtseo/design-system@0.1.9'
-  - '@nuxtseo/pro-shell@0.1.9'
-  - '@nuxtseo/pro-indexing@0.1.9'
   - '@nuxtseo/design-system@0.1.10'
   - '@nuxtseo/pro-shell@0.1.10'
   - '@nuxtseo/pro-indexing@0.1.10'
