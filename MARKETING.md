@@ -28,7 +28,7 @@ From [the customer evidence](docs/audits/2026-11-17-customer-evidence.md):
 - **Nobody uses it as an agent door.** No account in the last 90 days holds an active API key.
 - **Search is steady and flat** for 16 months.
 
-**Gap.** Return use is unmeasured, signup source covers about 5% of signups, and the first evidence view has recorded nobody since it began on 2026-11-07.
+**Gap.** Return use is unmeasured, signup source covers about 5% of signups, and the first evidence view records only two opt-in paths that few users take. The Site indexing pages, where users read Google's verdict, record nothing.
 
 ## Who it is for
 
@@ -139,12 +139,12 @@ The cues that bring someone to us, ranked by the evidence. Each needs a page tha
 
 | Cue | Evidence | Page that answers it | Served today |
 |---|---|---|---|
-| "Make Google index my page" | At least 37% of clicks | Home | Not honestly: the H1 promises the outcome |
+| "Make Google index my page" | At least 37% of clicks | Home | Yes since #420: IndexNow and Google's reason sit under the H1 |
 | "Where is Search Console's Request Indexing button?" | Position 7.4, under 1% CTR | `/request-indexing-google-search-console` | Published 2026-11-05; the home page ranks instead |
 | "Is this page indexed?" | "index checker" 720 US searches a month | Free Google Index Checker | Ranks poorly |
-| "Why is my page or Site not indexed?" | The clearest customer email | One guide per Google reason | No page yet |
+| "Why is my page or Site not indexed?" | The clearest customer email | `/why-is-my-page-not-indexed`, `/why-is-my-site-not-indexed` | Since #438: one section per reason, no page per reason yet |
 | "Can I use the Indexing API?" | 260 US searches a month | Indexing API guides | Yes |
-| "Submit to Bing", "IndexNow" | One GitHub issue; Bing and other engines take IndexNow | IndexNow page, a guide, the home page | The home page names it under the H1; no setup guide yet |
+| "Submit to Bing", "IndexNow" | One GitHub issue; Bing and other engines take IndexNow | IndexNow page, a guide, the home page | Yes: the home page names it under the H1, and `/indexnow-setup` walks through the key file (#422) |
 
 ## Forces and status
 
@@ -193,7 +193,7 @@ The cues that bring someone to us, ranked by the evidence. Each needs a page tha
 
 - Baseline: 28%, 2026-10-19 to 2026-11-17.
 - Target: 40% for the window ending 2027-01-16. Most of the loss is at the Google connect step, where anxiety is cheapest to move.
-- Next metric: the first view of Google's evidence for one of their own pages. It has recorded nobody since 2026-11-07. Confirm the event records, then switch.
+- Next metric: the first view of Google's evidence for one of their own pages. Checked 2026-11-19: the event records, but only on two opt-in paths that few users take. Record views on the Site indexing pages first, then switch.
 
 ## Flip test
 
