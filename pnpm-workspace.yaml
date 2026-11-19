@@ -60,10 +60,10 @@ minimumReleaseAgeExclude:
   - '@takumi-rs/helpers@2.15.0'
   - '@takumi-rs/wasm@2.15.0'
   - sitemapd@0.2.3
-  - '@nuxtseo/design-system@0.1.11'
-  - '@nuxtseo/pro-shell@0.1.11'
-  - '@nuxtseo/pro-indexing@0.1.11'
-  - '@nuxtseo/pro-search@0.1.11'
+  - '@nuxtseo/design-system@0.1.12'
+  - '@nuxtseo/pro-shell@0.1.12'
+  - '@nuxtseo/pro-indexing@0.1.12'
+  - '@nuxtseo/pro-search@0.1.12'
   - '@gscdump/analysis@7.18.0'
   - '@gscdump/engine-gsc-api@7.18.0'
 
@@ -185,10 +185,10 @@ catalog:
   '@nuxt/test-utils': ^4.3.2
   '@nuxt/ui': ^4.11.2
   '@nuxtjs/seo': ^6.0.1
-  '@nuxtseo/design-system': ^0.1.11
-  '@nuxtseo/pro-indexing': ^0.1.11
-  '@nuxtseo/pro-search': 0.1.11
-  '@nuxtseo/pro-shell': ^0.1.11
+  '@nuxtseo/design-system': ^0.1.12
+  '@nuxtseo/pro-indexing': ^0.1.12
+  '@nuxtseo/pro-search': 0.1.12
+  '@nuxtseo/pro-shell': ^0.1.12
   '@sentry/cloudflare': ^11.1.0
   '@sentry/nuxt': ^11.1.0
   '@takumi-rs/core': ^2.15.0
