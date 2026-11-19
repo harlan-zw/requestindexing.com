@@ -113,6 +113,19 @@ export function resolveGscConnection(input: GscConnectionInput): GscConnection {
   return input.gscdumpConnected ? { _tag: 'Connected' } : { _tag: 'NotConnected' }
 }
 
+/** gscdump account states in which a stored engine key cannot read Search Console. */
+const UNUSABLE_GRANT_STATUSES: ReadonlySet<AccountStatus> = new Set(['scope_missing', 'reauth_required', 'refresh_missing', 'disconnected'])
+
+/**
+ * Whether the account's Google grant can read Search Console now. A stored
+ * key is necessary but not enough: gscdump's account status can say the grant
+ * behind it lost its scope or its refresh token. An unknown status (not read,
+ * or the read failed) leaves the stored key to decide.
+ */
+export function hasUsableGoogleGrant(input: { gscdumpConnected: boolean, accountStatus: AccountStatus | null }): boolean {
+  return input.gscdumpConnected && !(input.accountStatus && UNUSABLE_GRANT_STATUSES.has(input.accountStatus))
+}
+
 /** The signals every Onboarding Step reads, augmented onto the shell's context. */
 declare module '@nuxtseo/pro-shell/shared/onboarding' {
   interface ProShellOnboardingContext {
@@ -301,7 +314,7 @@ export interface OnboardingCompletionInput {
   hasSites: boolean
   /** The user chose "Skip and connect it later" on the sites step. */
   skipSites: boolean
-  /** gscdump holds a user id and key for this account. */
+  /** The account's Google grant can read Search Console (`hasUsableGoogleGrant`). */
   googleConnected: boolean
   now: Date
 }

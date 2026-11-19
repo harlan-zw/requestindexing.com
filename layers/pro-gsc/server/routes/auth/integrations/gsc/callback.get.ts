@@ -322,10 +322,19 @@ export default defineEventHandler(async (event) => {
   ])
 
   // The funnel milestone gates nothing on the next page, so it runs after the
-  // response.
-  event.waitUntil(emitFirstProEvent(db, session.user.id, 'gsc_connected', {
-    email: googleUser?.email ?? null,
-  }).catch((error: unknown) => logger.error('[google auth] proEvent emit failed:', errorDetails(error).message)))
+  // response. It needs an engine key the next read can use: a grant whose
+  // gscdump hand-off failed cannot read Search Console, so it records as a
+  // failed connect against this attempt, and the admin stop table counts it.
+  const engineReady = !!gscdumpUserId && !!gscdumpApiKey && !gscdumpSyncFailed
+  if (engineReady) {
+    event.waitUntil(emitFirstProEvent(db, session.user.id, 'gsc_connected', {
+      email: googleUser?.email ?? null,
+    }).catch((error: unknown) => logger.error('[google auth] proEvent emit failed:', errorDetails(error).message)))
+  }
+  else if (attempt) {
+    const reason = !googleUser ? 'userinfo' : !refreshToken ? 'refresh_token' : 'engine'
+    event.waitUntil(recordGoogleConnectEvent(db, session.user.id, 'gsc_connect_failed', attempt, { reason }))
+  }
 
   // Reconcile gscdump-dependent side effects asynchronously. User database
   // provisioning can lag OAuth; this waits in the background and avoids turning

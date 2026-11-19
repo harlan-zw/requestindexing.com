@@ -5,6 +5,7 @@ import {
   DASHBOARD_CARD_STEPS,
   FIRST_RUN_STEPS,
   gscCallbackErrorRedirect,
+  hasUsableGoogleGrant,
   ONBOARDING_ROUTE,
   ONBOARDING_STEPS,
   parseOnboardingCompletedFlag,
@@ -312,5 +313,20 @@ describe('parseOnboardingCompletedFlag', () => {
     expect(parseOnboardingCompletedFlag('1')).toBe(true)
     expect(parseOnboardingCompletedFlag('')).toBe(true)
     expect(parseOnboardingCompletedFlag('yes')).toBe(true)
+  })
+})
+
+describe('hasUsableGoogleGrant', () => {
+  it('needs a stored engine key', () => {
+    expect(hasUsableGoogleGrant({ gscdumpConnected: false, accountStatus: null })).toBe(false)
+    expect(hasUsableGoogleGrant({ gscdumpConnected: true, accountStatus: null })).toBe(true)
+  })
+
+  it.each(['scope_missing', 'reauth_required', 'refresh_missing', 'disconnected'] as const)('reads a stored key with gscdump status %s as unusable', (accountStatus) => {
+    expect(hasUsableGoogleGrant({ gscdumpConnected: true, accountStatus })).toBe(false)
+  })
+
+  it.each(['ready', 'db_provisioning', 'oauth_received'] as const)('reads a stored key with gscdump status %s as usable', (accountStatus) => {
+    expect(hasUsableGoogleGrant({ gscdumpConnected: true, accountStatus })).toBe(true)
   })
 })

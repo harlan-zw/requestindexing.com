@@ -57,9 +57,15 @@ async function mount() {
       return () => h(Suspense, null, { default: () => h(Onboarding) })
     },
   })
-  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'UButton', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
+  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
     app.component(name, defineComponent({ render: () => null }))
   app.component('UiWizardProgress', defineComponent({ render: () => null }))
+  // The Connect action is the step's only way forward, so the stub keeps its
+  // test id and link for the assertions below.
+  app.component('UButton', defineComponent({
+    props: ['to', 'label'],
+    setup: (props, { attrs }) => () => props.to ? h('a', { 'href': props.to, 'data-testid': attrs['data-testid'] }, props.label) : null,
+  }))
   app.component('UiAuthHeading', defineComponent({
     props: ['title', 'description'],
     setup: props => () => h('div', [h('h1', props.title), h('p', props.description)]),
@@ -118,7 +124,8 @@ it('offers no Skip on Connect Google, so a new account can only connect', async 
   route.query = { step: 'connect' }
   session.value = { hasSites: false, gscdumpConnected: false }
   const host = await mount()
-  expect(host.textContent).toContain('Connect Google Search Console')
+  expect(host.querySelector('[data-testid="connect-gsc-btn"]')?.getAttribute('href'))
+    .toBe('/auth/integrations/gsc/connect?scope=read&returnTo=%2Fpro%2Fdashboard%2Fonboarding%3Fstep%3Dsites')
   expect(host.querySelector('[data-testid="step-skip"]')).toBeNull()
   expect(host.querySelector('[data-testid="step-next"]')).toBeNull()
   route.query = { step: 'sync' }

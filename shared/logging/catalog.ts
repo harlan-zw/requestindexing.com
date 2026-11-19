@@ -22,6 +22,7 @@ export const LOG_CATALOG = {
   'gscdump.proxy.failed': 'gscdump.com upstream call from proxy failed',
   'gscdump.teams.client_failed': 'gscdump teams-client mutation failed',
   'gscdump.integration.probe_failed': 'pro gscdump-integration probe failed on the client plugin',
+  'gscdump.account_status.unavailable': 'gscdump account status could not be read when setup finished with no Site; the stored key decided',
   'gscdump.engine.fallback': 'browser DuckDB-WASM path threw and fell back to cloud (paying user got slow path)',
   'gscdump.table_cell.unresolved': 'a table cell read (top association) failed; the cells degrade to a dash',
   'gscdump.registration.refused': 'gscdump refused a Site registration (Free allowance or duplicate property); the Site stays connected without Search Console',

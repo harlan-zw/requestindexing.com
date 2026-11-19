@@ -10,7 +10,9 @@ vi.mock('#layers/pro-saas/app/components/pro/ProSiteAddForm.vue', () => ({ defau
 const selected = ref({ _tag: 'Available', url: 'https://www.example.com/Article?q=One', host: 'www.example.com', siteId: 's_example', canInspect: true })
 const session = ref({ gscdumpConnected: true, gscdumpAccountStatus: 'ready', gscEmail: 'owner@example.test', team: { teamId: 1 } })
 const navigate = vi.fn()
+const route = { query: {} as Record<string, string> }
 Object.assign(globalThis, {
+  useRoute: () => route,
   ref,
   computed,
   watch,
@@ -43,6 +45,8 @@ const example = {
 }
 
 beforeEach(() => {
+  route.query = {}
+  session.value = { gscdumpConnected: true, gscdumpAccountStatus: 'ready', gscEmail: 'owner@example.test', team: { teamId: 1 } }
   selected.value = { _tag: 'Available', url: example.url, host: 'www.example.com', siteId: 's_example', canInspect: true }
   read = { _tag: 'Missing' }
   inspection = { _tag: 'Evidence', evidence: example }
@@ -83,6 +87,10 @@ async function mount() {
   app = createApp(defineComponent({ setup: () => () => h(Suspense, null, { default: () => h(Page) }) }))
   for (const name of ['ProSetupExample', 'ProSetupExitFeedback'])
     app.component(name, defineComponent({ render: () => null }))
+  app.component('ProGscConnectReturnAlert', defineComponent({
+    props: ['result'],
+    setup: props => () => h('div', { 'data-testid': 'connect-return', 'data-result': props.result._tag }),
+  }))
   app.component('UButton', defineComponent({
     props: ['label', 'loading', 'to'],
     setup: (props, { attrs, slots }) => () => props.to ? h('a', { ...attrs, href: props.to }, props.label ?? slots.default?.()) : h('button', { ...attrs, disabled: props.loading }, props.label ?? slots.default?.()),
@@ -160,4 +168,18 @@ it('keeps the URL and names the excluding property without offering an inspectio
   const consoleLink = [...host.querySelectorAll('a')].find(link => link.textContent === 'Open Search Console')!
   expect(new URL(consoleLink.href).searchParams.get('resource_id')).toBe('sc-domain:example.com')
   expect(checks()).toEqual([])
+})
+
+it('says why Google returned with no grant when saved-page setup still needs Google', async () => {
+  session.value = { gscdumpConnected: false, gscdumpAccountStatus: null as unknown as string, gscEmail: '', team: { teamId: 1 } }
+  route.query = { error: 'gsc_connect_cancelled' }
+  await mount()
+  expect(host.querySelector('[data-testid="connect-return"]')?.getAttribute('data-result')).toBe('Cancelled')
+  expect([...host.querySelectorAll('a')].some(a => a.textContent === 'Connect Google Search Console')).toBe(true)
+})
+
+it('shows no return alert once the account is connected', async () => {
+  route.query = { error: 'gsc_connect_failed' }
+  await mount()
+  expect(host.querySelector('[data-testid="connect-return"]')).toBeNull()
 })
