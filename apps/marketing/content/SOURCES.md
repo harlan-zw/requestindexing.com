@@ -14,6 +14,7 @@ Open each full supporting page. Discovery patterns are not citations.
 | Bing IndexNow pages | 90 | https://www.bing.com/indexnow/getstarted ; `bing.com/indexnow/*` | Bing's list of platforms and plugins with IndexNow support, and Bing's own limits. A vendor list, not our test. |
 | Platform documentation for the key file | 90 | https://developers.cloudflare.com/cache/advanced-configuration/crawler-hints/ ; https://wordpress.org/plugins/indexnow/ ; https://nuxt.com/docs/4.x/directory-structure/public ; https://docs.netlify.com/configure-builds/overview/ ; https://vercel.com/docs/builds/configure-a-build ; `docs.github.com/en/pages/*` ; `support.squarespace.com/hc/en-us/articles/*` | Where each platform serves a static file, or whether it sends IndexNow itself. Most pages do not mention IndexNow; the guide connects them to the protocol rules. Added 18 November 2026. |
 | Request Indexing implementation | 95 | https://github.com/harlan-zw/requestindexing.com ; `/blob/<revision>/*` | What the inspected revision implements. No live integration proof or guarantee. |
+| Retained URL Inspection API results | 80 | gscdump `get-indexing-urls` for a Site that the operator owns | The exact `coverageState` strings that Google returned, on the recorded check dates. One Site observed; not documentation. Added 19 November 2026. |
 | Current competitor official pages | 90 | https://indexly.ai/ ; https://seogets.com/ ; https://tagparrot.com/pricing | Their advertised plans and features with date, currency and billing interval. Vendor claims are attributed, not our tests. |
 | Google product help centers | 90 | https://support.google.com/analytics/answer/1308621 ; `support.google.com/<product>/answer/*` | Product behaviour in Google's words. Check whether the article is marked legacy. |
 | Google employee original statements | 85 | https://bsky.app/profile/johnmu.com ; dated original posts, official office-hours and Search Off the Record transcripts, and recorded conference sessions | Original context required. Employee identity alone does not establish policy or implementation. |
@@ -44,6 +45,19 @@ Open each full supporting page. Discovery patterns are not citations.
 - https://developers.google.com/search/blog/2023/06/sitemaps-lastmod-ping
 - https://developers.google.com/search/blog/2024/06/mobile-indexing-vlast-final-final.doc
 - https://developers.google.com/crawling/docs/crawl-budget
+- https://support.google.com/webmasters/answer/7440203
+- https://support.google.com/webmasters/answer/9012289
+- https://support.google.com/webmasters/answer/9128668
+- https://support.google.com/webmasters/answer/34592
+- https://support.google.com/webmasters/answer/7451001
+- https://developers.google.com/search/docs/fundamentals/how-search-works
+- https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
+- https://developers.google.com/search/docs/crawling-indexing/block-indexing
+- https://developers.google.com/search/docs/crawling-indexing/robots/intro
+- https://developers.google.com/search/docs/crawling-indexing/robots/create-robots-txt
+- https://developers.google.com/crawling/docs/troubleshooting/http-status-codes
+- https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls
+- https://developers.google.com/search/docs/crawling-indexing/links-crawlable
 
 Competitor final supporting URLs and product source revisions belong in VERIFIED-CLAIMS.md before dependent briefs pass.
 

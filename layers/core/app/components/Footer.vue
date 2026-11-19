@@ -26,6 +26,14 @@ const links = [
         to: '/request-indexing-google-search-console',
       },
       {
+        label: 'Why a Page Is Not Indexed',
+        to: '/why-is-my-page-not-indexed',
+      },
+      {
+        label: 'Why a Site Is Not Indexed',
+        to: '/why-is-my-site-not-indexed',
+      },
+      {
         label: 'Set Up IndexNow',
         to: '/indexnow-setup',
       },

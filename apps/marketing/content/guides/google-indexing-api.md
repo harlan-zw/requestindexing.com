@@ -2,7 +2,7 @@
 title: "Google Indexing API: What It Does and When to Use It"
 description: "Understand Google's supported Indexing API use, notification responses, approval requirements, and how it differs from URL Inspection."
 navigation:
-  order: 1
+  order: 4
   icon: i-heroicons-book-open
 icon: i-heroicons-book-open
 publishedAt: "2026-03-04"

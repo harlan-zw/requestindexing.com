@@ -1,6 +1,6 @@
 # Content refresh ledger
 
-Scope: six guides and three comparisons. Preserve all nine URLs. A tenth guide, request-indexing-google-search-console, was added on 5 November 2026 outside this pass. An eleventh, indexnow-setup, was added on 18 November 2026 outside this pass.
+Scope: six guides and three comparisons. Preserve all nine URLs. A tenth guide, request-indexing-google-search-console, was added on 5 November 2026 outside this pass. An eleventh, indexnow-setup, was added on 18 November 2026 outside this pass. Two more, why-is-my-page-not-indexed and why-is-my-site-not-indexed, were added on 19 November 2026 outside this pass.
 Original base Git revision: cf640ac56542cca8850b2ce3ab773f35c8910e21. Review date: 15 September 2026.
 Authority: prepare improved content and owned PRs for review. No automatic merge or production publication.
 
@@ -34,6 +34,8 @@ Prioritize reader problems and verified source gaps; no measured demand claim is
 | comparisons/vs-tagparrot.md | /comparisons/vs-tagparrot | Is Tag Parrot still available and what replaces its workflow? | article reviewed |
 | guides/request-indexing-google-search-console.md | /request-indexing-google-search-console | How do I request indexing for one URL in Search Console, and what does the result mean? | draft, awaiting review |
 | guides/indexnow-setup.md | /indexnow-setup | How do I set up IndexNow on my platform, send my URLs, and read what an accepted notification proves? | draft, awaiting review |
+| guides/why-is-my-page-not-indexed.md | /why-is-my-page-not-indexed | What does the reason Google gives for my page mean, and what do I fix first? | draft, awaiting review |
+| guides/why-is-my-site-not-indexed.md | /why-is-my-site-not-indexed | Why did Google index few or none of the pages on my new site, and what do I check? | draft, awaiting review |
 
 Pilot: indexing-api-for-blog-posts. Each brief records owner, revision, review evidence, and decision.
 New articles are excluded from this pass. Candidate gaps may be recorded without publication.

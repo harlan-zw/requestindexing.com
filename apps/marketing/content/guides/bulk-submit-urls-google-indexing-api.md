@@ -2,7 +2,7 @@
 title: "Bulk Indexing API Requests: Track Every URL Result"
 description: "Send eligible URLs sequentially with Node.js, understand multipart batches, and keep per-URL results separate from shared project quota."
 navigation:
-  order: 4
+  order: 7
   icon: i-heroicons-arrow-up-tray
 icon: i-heroicons-arrow-up-tray
 publishedAt: "2026-03-04"
