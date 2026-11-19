@@ -44,7 +44,7 @@ export function proSitePalettePages(flags: ProFeatureFlags): ProShellSitePage[] 
     if ('flag' in entry && entry.flag && !flags[entry.flag])
       continue
     const group = entry.group === 'footer' ? null : groupLabels.get(entry.group)
-    const label = group ? (entry.label === 'Overview' ? group : `${group}: ${entry.label}`) : entry.label
+    const label = group ? (entry.label === 'Overview' || entry.label === group ? group : `${group}: ${entry.label}`) : entry.label
     const path = expandProSiteRoute(entry.route, SITE_PLACEHOLDER).slice(root.length).replace(/^\/+/, '')
     pages.push({ id: featureId, label, path, icon: entry.icon })
   }

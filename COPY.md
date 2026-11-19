@@ -170,8 +170,10 @@ copy sends the reader to their Google Account instead.
 
 **IndexNow ships; Bing submission does not.** IndexNow submission arrived through the gscdump
 protocol (PRODUCT-10), so a marketing page may name it with the IndexNow channel strings below.
-Bing Webmaster Tools reads crawl evidence only, behind the `bing` flag. Do not claim Bing
+Bing Webmaster Tools reads search performance and crawl evidence behind the `bing` flag. Do not claim Bing
 submission, or "multi-engine submission", until the protocol ships it.
+
+Dashboard navigation uses Search Console and Webmaster Tools. The Webmaster Tools tabs use Performance and Crawl.
 
 ## Indexing channel assets
 

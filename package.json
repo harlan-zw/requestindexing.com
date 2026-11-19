@@ -57,6 +57,7 @@
     "@nuxtjs/seo": "catalog:",
     "@nuxtseo/design-system": "catalog:",
     "@nuxtseo/pro-indexing": "catalog:",
+    "@nuxtseo/pro-search": "catalog:",
     "@nuxtseo/pro-shell": "catalog:",
     "@takumi-rs/core": "catalog:",
     "@tanstack/table-core": "catalog:",

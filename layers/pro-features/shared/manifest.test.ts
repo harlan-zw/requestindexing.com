@@ -3,6 +3,9 @@ import { readProFeatureFlags, requiredProFeatureFlag } from './manifest'
 
 describe('requiredProFeatureFlag', () => {
   it('names the flag a declared Bing route needs', () => {
+    expect(requiredProFeatureFlag('/pro/dashboard/webmaster-tools')).toBe('bing')
+    expect(requiredProFeatureFlag('/pro/dashboard/sites/s_abc/webmaster-tools')).toBe('bing')
+    expect(requiredProFeatureFlag('/pro/dashboard/sites/s_abc/webmaster-tools/crawl')).toBe('bing')
     expect(requiredProFeatureFlag('/pro/dashboard/sites/s_abc/search-console/bing')).toBe('bing')
     expect(requiredProFeatureFlag('/pro/dashboard/sites/s_abc/indexing/bing')).toBe('bing')
   })
