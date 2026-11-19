@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   DASHBOARD_CARD_STEPS,
   FIRST_RUN_STEPS,
-  gscScopeMissingRedirect,
+  gscCallbackErrorRedirect,
   ONBOARDING_ROUTE,
   ONBOARDING_STEPS,
   parseOnboardingCompletedFlag,
@@ -42,31 +42,33 @@ describe('resolveGscConnection', () => {
     expect(resolveGscConnection({ gscdumpConnected: true, accountStatus, error: undefined })).toEqual(CONNECTED)
   })
 
-  it('ignores an unrelated error value', () => {
-    expect(resolveGscConnection({ gscdumpConnected: true, accountStatus: null, error: 'google_auth_failed' })).toEqual(CONNECTED)
+  it('keeps a connected account connected when a later step-up returns cancelled', () => {
+    expect(resolveGscConnection({ gscdumpConnected: true, accountStatus: null, error: 'gsc_connect_cancelled' })).toEqual(CONNECTED)
   })
 })
 
-describe('gscScopeMissingRedirect', () => {
+describe('gscCallbackErrorRedirect', () => {
   it('sends a wizard return back to the connect step', () => {
-    expect(gscScopeMissingRedirect('/pro/dashboard/onboarding?step=sites'))
+    expect(gscCallbackErrorRedirect('/pro/dashboard/onboarding?step=sites', 'gsc_scope_missing'))
       .toBe('/pro/dashboard/onboarding?step=connect&error=gsc_scope_missing')
+    expect(gscCallbackErrorRedirect('/pro/dashboard/onboarding?step=sites', 'gsc_connect_cancelled'))
+      .toBe('/pro/dashboard/onboarding?step=connect&error=gsc_connect_cancelled')
   })
 
   it('keeps any other return page and marks it', () => {
-    expect(gscScopeMissingRedirect('/pro/dashboard/account'))
+    expect(gscCallbackErrorRedirect('/pro/dashboard/account', 'gsc_scope_missing'))
       .toBe('/pro/dashboard/account?error=gsc_scope_missing')
-    expect(gscScopeMissingRedirect('/pro/dashboard/sites/s_1?tab=pages#top'))
-      .toBe('/pro/dashboard/sites/s_1?tab=pages&error=gsc_scope_missing#top')
+    expect(gscCallbackErrorRedirect('/pro/dashboard/sites/s_1?tab=pages#top', 'gsc_connect_failed'))
+      .toBe('/pro/dashboard/sites/s_1?tab=pages&error=gsc_connect_failed#top')
   })
 
   it('replaces an earlier error instead of stacking a second one', () => {
-    expect(gscScopeMissingRedirect('/pro/dashboard?error=google_auth_failed'))
+    expect(gscCallbackErrorRedirect('/pro/dashboard?error=gsc_connect_failed', 'gsc_scope_missing'))
       .toBe('/pro/dashboard?error=gsc_scope_missing')
   })
 
   it('falls back to the dashboard when there is no return page', () => {
-    expect(gscScopeMissingRedirect(undefined)).toBe('/pro/dashboard?error=gsc_scope_missing')
+    expect(gscCallbackErrorRedirect(undefined, 'gsc_connect_cancelled')).toBe('/pro/dashboard?error=gsc_connect_cancelled')
   })
 })
 

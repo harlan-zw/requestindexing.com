@@ -16,8 +16,9 @@
 
 import type { AccountStatus } from '@gscdump/contracts'
 import type { ProShellOnboardingStep } from '@nuxtseo/pro-shell/shared/onboarding'
+import type { GscCallbackError } from '#layers/pro-gsc/shared/gsc-grant'
 import { evaluateOnboardingSteps, resolveOnboarding, STEP_COMPLETE, STEP_OPTIONAL, STEP_PENDING } from '@nuxtseo/pro-shell/shared/onboarding'
-import { GSC_SCOPE_MISSING_ERROR, isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
+import { isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
 import { PAGE_TASK_ROUTE } from './page-task'
 
 /** Where a signed-out visitor starts. Renders the provider buttons. */
@@ -232,18 +233,19 @@ export function resolveOnboardingResumeStep(signals: OnboardingResumeSignals): O
 }
 
 /**
- * Where the OAuth callback sends a user whose grant has no Search Console
- * scope. `returnTo` is already parsed by `safeAuthRedirect`.
+ * Where the OAuth callback sends a user when Google returns no usable grant:
+ * the Search Console box was unticked, the reader cancelled, or the round trip
+ * failed. `returnTo` is already parsed by `safeAuthRedirect`.
  *
  * A wizard return names `step=sites`, the step after a successful connect, so
  * it is rewritten to `connect`: that is the step that shows the error and the
  * retry. Any other page keeps its path and gains the error marker.
  */
-export function gscScopeMissingRedirect(returnTo: string | null | undefined): string {
+export function gscCallbackErrorRedirect(returnTo: string | null | undefined, error: GscCallbackError): string {
   const url = new URL(returnTo || DASHBOARD_ROUTE, 'https://callback.local')
   if (isUnder(url.pathname, ONBOARDING_ROUTE))
     url.searchParams.set('step', 'connect')
-  url.searchParams.set('error', GSC_SCOPE_MISSING_ERROR)
+  url.searchParams.set('error', error)
   return `${url.pathname}${url.search}${url.hash}`
 }
 

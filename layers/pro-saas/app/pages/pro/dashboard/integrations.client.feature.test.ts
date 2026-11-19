@@ -91,7 +91,7 @@ describe('the Search Console row', () => {
     expect(host.textContent).toContain('Connected. This Google account has no Search Console property.')
     expect(host.textContent).toContain('agent@example.com has no Search Console property')
     expect(grantLinks(host).map(a => a.textContent)).toEqual(['Connect another Google account'])
-    expect(grantLinks(host)[0]!.getAttribute('href')).toBe('/auth/integrations/gsc/connect?returnTo=%2Fpro%2Fdashboard%2Fintegrations')
+    expect(grantLinks(host)[0]!.getAttribute('href')).toBe('/auth/integrations/gsc/connect?scope=read&returnTo=%2Fpro%2Fdashboard%2Fintegrations')
     expect([...host.querySelectorAll('a')].map(a => a.textContent?.trim())).toEqual(
       expect.arrayContaining(['Open Search Console', 'How to verify a site']),
     )

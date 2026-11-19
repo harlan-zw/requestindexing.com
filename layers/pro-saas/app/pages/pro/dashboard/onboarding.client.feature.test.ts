@@ -57,7 +57,7 @@ async function mount() {
       return () => h(Suspense, null, { default: () => h(Onboarding) })
     },
   })
-  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'UIcon', 'UButton', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
+  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'UButton', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
     app.component(name, defineComponent({ render: () => null }))
   app.component('UiWizardProgress', defineComponent({ render: () => null }))
   app.component('UiAuthHeading', defineComponent({

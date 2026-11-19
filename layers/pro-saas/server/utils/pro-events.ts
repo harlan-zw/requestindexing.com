@@ -1,11 +1,21 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, notExists, sql } from 'drizzle-orm'
 import { logWarn } from '~~/shared/logging'
-import { proEvents } from '#layers/pro-saas/server/database'
+import { proEvents, users } from '#layers/pro-saas/server/database'
 
 type ProDB = ReturnType<typeof useDrizzle>
 
 // The signup funnel reads in this order: signed_up, gsc_connected, site_added,
 // onboarding_completed. Each type records one first-time milestone per user.
+// The `gsc_connect_*` and `gsc_scope_missing` types say where a signup stopped
+// before `gsc_connected`. They are not first-time milestones: see
+// `recordGoogleConnectEvent`.
+export type GoogleConnectEventType
+  = | 'gsc_connect_started'
+    | 'gsc_connect_skipped'
+    | 'gsc_connect_cancelled'
+    | 'gsc_connect_failed'
+    | 'gsc_scope_missing'
+
 export type ProEventType
   = | 'signed_up'
     | 'page_task_started'
@@ -74,4 +84,37 @@ export async function hasProEvent(
     logWarn('pro_event.record_failed', err, { fn: 'hasProEvent', type, userId })
     return false
   }
+}
+
+/**
+ * One row per Google connect attempt and outcome. A reader can cancel, try
+ * again and fail, so the funnel needs every attempt, not the first: the latest
+ * row says where they stopped. `attempt` names the attempt. A second delivery
+ * of the same outcome for it, such as a reloaded callback, adds no row; the
+ * insert and its check are one statement.
+ *
+ * Same best-effort contract as `emitFirstProEvent`.
+ */
+export async function recordGoogleConnectEvent(
+  db: ProDB,
+  userId: number,
+  type: GoogleConnectEventType,
+  attempt: string,
+  payload: Record<string, unknown> = {},
+  now = Date.now(),
+): Promise<void> {
+  const sameOutcome = and(
+    eq(proEvents.userId, userId),
+    eq(proEvents.type, type),
+    sql`json_extract(${proEvents.payload}, '$.attempt') = ${attempt}`,
+  )
+  await db.insert(proEvents).select(db.select({
+    proEventId: sql<number | null>`NULL`.as('pro_event_id'),
+    userId: users.userId,
+    type: sql<string>`${type}`.as('type'),
+    payload: sql<Record<string, unknown>>`${JSON.stringify({ ...payload, attempt })}`.as('payload'),
+    createdAt: sql<number>`${now}`.as('created_at'),
+  }).from(users).where(and(eq(users.userId, userId), notExists(db.select().from(proEvents).where(sameOutcome))))).catch((err: unknown) => {
+    logWarn('pro_event.record_failed', err, { fn: 'recordGoogleConnectEvent', type, userId })
+  })
 }

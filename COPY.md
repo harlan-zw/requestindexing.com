@@ -157,7 +157,7 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | IndexNow takes any page type on the host, and needs a key file on the site | INDEXNOW-03 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
 | Once a Site's IndexNow key is verified, Request Indexing sends its new and changed sitemap URLs to IndexNow | Automatic sending, gscdump.com ADR-0031, shipped in #414. The verify action on the IndexNow page turns it on. Only changes found after it turns on are sent. Never say that an engine indexed a URL it sent |
 | Free and open source, MIT | `LICENSE`, and the repository is public |
-| We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify | the connect flow asks for `webmasters` (read and write) and `indexing`. A sitemap submission comes from Submit sitemap on the Sitemaps tab, or from gscdump's daily sync when it finds a live sitemap. A property is added only when the reader selects Verify ownership in Add and verify, after a separate grant of `siteverification` |
+| We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify | setup, the Site add form, the Connect Search Console button, and the no-property actions ask for `webmasters.readonly` only. `webmasters` (read and write) comes from Allow submission on the Sitemaps tab, Connect or Reconnect on Integrations, and the reconnect action on a Search Console read error. Add and verify asks for it with `siteverification`. A sitemap submission comes from Submit sitemap on the Sitemaps tab, or from gscdump's daily sync when it finds a live sitemap and the grant has `webmasters`. A property is added only when the reader selects Verify ownership in Add and verify. No Search Console grant asks for `indexing`: the Indexing API grant has its own client (gscdump.com ADR-0016) |
 | The Free allowance numbers | gscdump returns them from `partner.users.entitlements.get`; copy reads them at runtime and never hardcodes one |
 | Reported Google timing observations provide context, never a countdown or product speed claim | TIMING-01 to TIMING-03 in `apps/marketing/content/VERIFIED-CLAIMS.md`. Attribute the report beside numbers. Keep stage dependencies and slow cases visible |
 | A free tool verdict is an estimate from a Google `site:` search | PRODUCT-06 in `apps/marketing/content/VERIFIED-CLAIMS.md`. The tools read no Search Console data and no URL Inspection result |
@@ -457,6 +457,9 @@ Retained observations do not establish lifetime first use.
 | Attribution capture time | Captured at (UTC) |
 | Sign-in provider | Sign-in provider |
 | Acquisition channel | Acquisition channel |
+| Google stops heading | Where signups stop before Connected Google |
+| Google stops explanation | Each signup without Google counts once, at its latest connect record. A signup from before connect attempts were recorded shows No connect attempt recorded. |
+| Google stop labels | No connect attempt recorded · Skipped Connect Google · No return from Google recorded · Cancelled on Google's consent screen · Search Console box unticked · Google connection failed |
 
 ## Admin feedback reports
 
@@ -508,7 +511,7 @@ Keep the exact URL and host through sign-in, consent, connection, and recovery.
 | Saved-page coverage label | Google coverage state |
 | Saved-page details action | View inspection details |
 | Saved-page account pending | This Site is being connected to Search Console. Refresh its status in a moment. |
-| Saved-page read access | This step asks for read-only Search Console access. Extra permissions appear with the actions that need them. |
+| Saved-page read access | the Search Console read access string in Connect Google assets, verbatim |
 | Saved-page retry | Retry |
 | Saved-page property limit | This Site's connected property does not cover your selected page. |
 | Saved-page connected property | Connected property |
@@ -518,6 +521,30 @@ Keep the exact URL and host through sign-in, consent, connection, and recovery.
 | Saved-page copied URL | URL copied |
 | Saved-page copy failed | Copy the selected URL above. Your browser could not copy it. |
 | Saved-page changed | Your saved page changed. Reload this page before you inspect it. |
+
+## Connect Google assets
+
+The Connect Google step, the signup page, and the return from Google's consent screen.
+Every reader sees these before they give Google access. Say what Google asks for, what
+Request Indexing can change, and how to take the access back. Strings live in
+`layers/pro-saas/shared/gsc-connect-copy.ts`.
+
+| Asset | String |
+| --- | --- |
+| Benefits | Read your queries, pages and coverage. · Keep your data past Google's 16-month window. |
+| Access heading | What Google asks for |
+| Search Console read access | Setup asks for read-only Search Console access. Extra permissions appear with the actions that need them. |
+| Access changes | the Search Console access sentence in Truth rules, verbatim |
+| Access removal | You can remove this access at any time in your Google Account. |
+| Access removal action | Open Google Account connections, a link to `https://myaccount.google.com/connections` |
+| Signup access note | the Search Console read access string, then the Search Console access sentence in Truth rules, both verbatim. On `/pro/onboarding` below the provider buttons |
+| Cancelled, title | Search Console is not connected |
+| Cancelled, detail | Google returned without Search Console access, so Request Indexing cannot read your data yet. Connect again when you are ready. |
+| Failed, title | The Google connection did not finish |
+| Failed, detail | Google returned an error, so Request Indexing cannot read your Search Console data yet. Connect again. |
+
+**Never list the Indexing API as a Connect Google benefit.** Connect Google does not grant it.
+Submit to Google asks for its own grant on the Account page.
 
 ## Setup examples and optional feedback
 

@@ -13,6 +13,44 @@ export const FUNNEL_STEPS = [
   { key: 'setupCompleted', label: 'Finished setup' },
 ] as const
 
+/**
+ * Where a signup without Google stopped, from the `gsc_connect_*` and
+ * `gsc_scope_missing` records. A signup counts once, at its latest record.
+ */
+export const GOOGLE_CONNECT_STOPS = [
+  { key: 'noRecord', label: 'No connect attempt recorded' },
+  { key: 'skipped', label: 'Skipped Connect Google' },
+  { key: 'noReturn', label: 'No return from Google recorded' },
+  { key: 'cancelled', label: 'Cancelled on Google\'s consent screen' },
+  { key: 'scopeMissing', label: 'Search Console box unticked' },
+  { key: 'failed', label: 'Google connection failed' },
+] as const
+
+export type GoogleConnectStop = typeof GOOGLE_CONNECT_STOPS[number]['key']
+
+const STOP_BY_EVENT: Record<string, GoogleConnectStop> = {
+  gsc_connect_started: 'noReturn',
+  gsc_connect_skipped: 'skipped',
+  gsc_connect_cancelled: 'cancelled',
+  gsc_scope_missing: 'scopeMissing',
+  gsc_connect_failed: 'failed',
+}
+
+/** The connect event types the stop reads. */
+export const GOOGLE_CONNECT_EVENT_TYPES = Object.keys(STOP_BY_EVENT)
+
+/**
+ * The latest connect record decides. A Connect press with nothing after it is
+ * only that: the app sent the reader to Google and saw no return. They may
+ * have closed Google's screen, or they may still be on it.
+ */
+export function resolveGoogleConnectStop(events: readonly { type: string, time: number }[]): GoogleConnectStop {
+  const latest = events
+    .filter(event => event.type in STOP_BY_EVENT)
+    .reduce<{ type: string, time: number } | null>((last, event) => !last || event.time >= last.time ? event : last, null)
+  return latest ? STOP_BY_EVENT[latest.type]! : 'noRecord'
+}
+
 export interface FunnelUser {
   id: number
   name: string | null
@@ -23,6 +61,8 @@ export interface FunnelUser {
   googleConnected: boolean
   siteConnected: boolean
   setupCompleted: boolean
+  /** Set when Google is not connected. */
+  googleConnectStop?: GoogleConnectStop
   acquisition?: AcquisitionEvidence
   journey?: UserJourney
   feedback?: FeedbackObservation[]
@@ -150,6 +190,10 @@ export function buildFunnelReport(users: FunnelUser[], query: FunnelQuery, now =
       return { step, reason, users: cohort.filter(user => user.feedback?.some(answer => answer.step === step && answer.reason === reason)).length }
     }),
     onboardingAnswers: summarizeOnboardingAnswers(cohort),
+    googleConnectStops: GOOGLE_CONNECT_STOPS.map(stop => ({
+      ...stop,
+      users: cohort.filter(user => !user.googleConnected && (user.googleConnectStop ?? 'noRecord') === stop.key).length,
+    })),
     sources,
     stages,
     days,

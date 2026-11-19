@@ -10,6 +10,10 @@
  *
  * `returnTo` defaults to the current page, which sends the reader back to the
  * surface that asked. A card or an empty state places this control itself.
+ *
+ * It asks for read-only access, as setup does: every surface that renders it
+ * offers a first connect or a retry. Write access comes from the actions that
+ * need it (Allow submission on the Sitemaps tab, Add and verify).
  */
 const { returnTo, label = 'Connect Search Console' } = defineProps<{
   /** Where Google returns the reader. Defaults to the current page. */
@@ -20,7 +24,7 @@ const { returnTo, label = 'Connect Search Console' } = defineProps<{
 
 const route = useRoute()
 const connectHref = computed(
-  () => `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent(returnTo ?? route.fullPath)}`,
+  () => `/auth/integrations/gsc/connect?scope=read&returnTo=${encodeURIComponent(returnTo ?? route.fullPath)}`,
 )
 </script>
 
