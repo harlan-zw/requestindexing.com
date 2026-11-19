@@ -111,6 +111,10 @@ function rows(input: Omit<RowsBody, 'filter' | 'searchType'> & { searchType: Gsc
   return parsed('analytics.rows.query', contract().analyticsRowsRequest.safeParse(input)) as RowsRequest
 }
 
+export function parseLiveSearchPerformanceRequest(input: RowsBody): RowsRequest {
+  return parsed('analytics.rows.query', contract().analyticsRowsRequest.safeParse(input)) as RowsRequest
+}
+
 export interface BreakdownInput {
   searchType: GscSearchType
   dimension: BreakdownDimension

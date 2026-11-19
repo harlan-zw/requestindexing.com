@@ -73,6 +73,7 @@ export interface SearchTypeOption {
 // with a missing label instead of silently vanishing.
 const SEARCH_TYPE_UI: Record<GscSearchType, { label: string, icon: string }> = {
   web: { label: 'Web', icon: 'globe' },
+  webMultimodal: { label: 'Web Multimodal', icon: 'image' },
   image: { label: 'Images', icon: 'image' },
   video: { label: 'Video', icon: 'video' },
   news: { label: 'News', icon: 'newspaper' },

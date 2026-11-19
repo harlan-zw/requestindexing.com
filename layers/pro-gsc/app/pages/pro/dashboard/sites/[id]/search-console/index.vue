@@ -1,10 +1,12 @@
 <script lang="ts" setup>
+import type { AnalyticsRowsV1Request } from '@gscdump/contracts/v1/http'
 import type { GscdumpDataRow } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { fmtGscMetric, formatNumber, getPath } from '@nuxtseo/design-system/app/composables/formatting'
 import { computed, ref, watch } from 'vue'
 import ProCardGsc from '#layers/pro-gsc/app/components/pro/ProCardGsc.vue'
 import ProGscReadError from '#layers/pro-gsc/app/components/pro/ProGscReadError.vue'
 import ProGscSurfaceBar from '#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue'
+import ProLiveSearchPerformance from '#layers/pro-gsc/app/components/pro/ProLiveSearchPerformance.vue'
 import ProQueryLabel from '#layers/pro-gsc/app/components/pro/ProQueryLabel.vue'
 import { periodToDateRange } from '#layers/pro-gsc/app/composables/useGscPeriod'
 import { useGscQueryIdentity } from '#layers/pro-gsc/app/composables/useGscQueryIdentity'
@@ -16,9 +18,11 @@ import {
   useProGscQueryVariants,
   useProQueryPositionSparklines,
 } from '#layers/pro-gsc/app/composables/useProGscdump'
+import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump/useProGscdump'
 import { buildBrandFacet, buildQuestionFacet, useProGscFilters } from '#layers/pro-gsc/app/composables/useProGscFilters'
 import ProSparklineCell from '#layers/pro-gsc/app/internal/components/pro/ProSparklineCell.vue'
 import { resolveSiteSearchState, sampleOverlay } from '#layers/pro-gsc/app/utils/site-search-state'
+import { parseLiveSearchPerformanceRequest } from '#layers/pro-gsc/shared/analytics-requests'
 import { deriveUrlBrandKeywords } from '#layers/pro-gsc/shared/brand-queries'
 import { canonicalQueryKey } from '#layers/pro-gsc/shared/canonical-query'
 import { overviewLead } from '#layers/pro-gsc/shared/overview-lead'
@@ -36,6 +40,18 @@ definePageMeta({
 
 const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, isLifecycleSettled, hold, gscData, gscStatusError, refreshGscStatus } = useSite('Search Console')
 const analyticsSiteId = computed(() => isLifecycleSettled.value && isReady.value && !hold.value ? gscdumpSiteId.value ?? undefined : undefined)
+const gscdump = useProGscdump()
+
+async function loadLiveSearchPerformance(body: AnalyticsRowsV1Request) {
+  if (!analyticsSiteId.value)
+    throw new Error('Connect Search Console before running this report.')
+  const response = await gscdump.queryAnalyticsRows({
+    params: { siteId: analyticsSiteId.value },
+    body: parseLiveSearchPerformanceRequest(body),
+  }, true)
+  return response.rows
+}
+
 const { session } = useUserSession()
 
 const { period, columns, stableData, compareMode, searchType, brand, questions, zoomTo, resetZoom } = useProGscFilters()
@@ -453,6 +469,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
            metrics and the Brand and Questions facets. Country and Device stay
            off: a per-Site breakdown cannot cross-filter by them. -->
       <ProGscSurfaceBar v-if="searchState._tag === 'Ready'" surface="overview" :site-id="siteId" />
+      <ProLiveSearchPerformance v-if="analyticsSiteId" :key="analyticsSiteId" :range="sparkRange" :load-rows="loadLiveSearchPerformance" />
 
       <UiAlert v-if="gscData?.syncStatus === 'syncing' && gscData.syncProgress" status="info" :title="`Syncing ${Math.round(gscData.syncProgress.percent)}%`">
         {{ gscData.syncProgress.completed }} of {{ gscData.syncProgress.total }} Search Console tasks completed.
