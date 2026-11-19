@@ -1,7 +1,16 @@
 import type { BingIntegrationSummary } from '#layers/pro-gsc/app/utils/bing-integration-view'
 import type { FreeAllowanceView, MeteredEntitlements } from '#layers/pro-gsc/shared/free-allowance'
+import { resolveProShellCopy } from '@nuxtseo/pro-shell/shared/copy'
+import { selectSetupOffers } from '@nuxtseo/pro-shell/shared/setup-offers'
 import { describe, expect, it } from 'vitest'
-import { anotherSiteCompletion, bingSetupCompletion } from './overview-setup-offers'
+import { PRO_SHELL_COPY_OVERRIDES, PRO_SHELL_ROUTES, REQUEST_INDEXING_SETUP_OFFER_COPY } from '../pro-shell'
+import {
+  anotherSiteCompletion,
+  bingSetupCompletion,
+  buildOverviewSetupOffers,
+  indexNowSetupCompletion,
+  watchedUrlsSetupCompletion,
+} from './overview-setup-offers'
 
 function summary(pending: BingIntegrationSummary['pending']): BingIntegrationSummary {
   return { linked: 0, eligible: 2, linkable: 0, sitemapsMissing: 0, notEnabled: 0, pending }
@@ -47,5 +56,55 @@ describe('anotherSiteCompletion', () => {
     expect(anotherSiteCompletion({ siteCount: 2, allowance: null })).toEqual({ _tag: 'unknown' })
     expect(anotherSiteCompletion({ siteCount: 2, allowance: { _tag: 'Unavailable' } })).toEqual({ _tag: 'unknown' })
     expect(anotherSiteCompletion({ siteCount: 0, allowance: { _tag: 'Hidden' } })).toEqual({ _tag: 'unavailable' })
+  })
+})
+
+describe('indexNowSetupCompletion', () => {
+  it('offers IndexNow until the Site key is verified', () => {
+    expect(indexNowSetupCompletion({ _tag: 'ready', value: { _tag: 'disconnected' } })).toEqual({ _tag: 'pending' })
+    expect(indexNowSetupCompletion({ _tag: 'ready', value: { _tag: 'verification-required' } })).toEqual({ _tag: 'pending' })
+    expect(indexNowSetupCompletion({ _tag: 'ready', value: { _tag: 'connected' } })).toEqual({ _tag: 'complete' })
+  })
+
+  it('waits only while the read runs, and shows no card without a Site, write access, or a read', () => {
+    expect(indexNowSetupCompletion({ _tag: 'checking' })).toEqual({ _tag: 'unknown' })
+    for (const read of [{ _tag: 'no-site' }, { _tag: 'read-only' }, { _tag: 'read-failed' }] as const)
+      expect(indexNowSetupCompletion(read)).toEqual({ _tag: 'unavailable' })
+  })
+})
+
+describe('watchedUrlsSetupCompletion', () => {
+  it('offers Watched URLs until the Site watches one URL', () => {
+    expect(watchedUrlsSetupCompletion({ _tag: 'ready', value: { watched: [] } })).toEqual({ _tag: 'pending' })
+    expect(watchedUrlsSetupCompletion({ _tag: 'ready', value: { watched: [{ url: 'https://example.com/' }] } })).toEqual({ _tag: 'complete' })
+    expect(watchedUrlsSetupCompletion({ _tag: 'read-failed' })).toEqual({ _tag: 'unavailable' })
+  })
+})
+
+describe('buildOverviewSetupOffers', () => {
+  const pending = { _tag: 'pending' } as const
+  function offers(siteId: string | null) {
+    return buildOverviewSetupOffers({
+      routes: PRO_SHELL_ROUTES,
+      shellCopy: resolveProShellCopy(PRO_SHELL_COPY_OVERRIDES).setupOffers,
+      copy: REQUEST_INDEXING_SETUP_OFFER_COPY,
+      siteId,
+      completion: { bing: pending, anotherSite: pending, indexNow: pending, watchedUrls: pending },
+    })
+  }
+
+  it('leads with IndexNow, and never offers the agent skill, MCP, or API', () => {
+    expect(selectSetupOffers(offers('site_app_1'), new Set()).map(offer => offer.key)).toEqual(['indexnow', 'bing', 'watched-urls', 'another-site'])
+    expect(selectSetupOffers(offers('site_app_1'), new Set(['indexnow'])).map(offer => offer.key)).toEqual(['bing', 'watched-urls', 'another-site'])
+  })
+
+  it('opens the IndexNow and Watched URLs pages of the Site by its app id', () => {
+    const links = Object.fromEntries(offers('site_app_1').map(offer => [offer.key, offer.action]))
+    expect(links.indexnow).toEqual({ _tag: 'Link', to: '/pro/dashboard/sites/site_app_1/indexing/indexnow' })
+    expect(links['watched-urls']).toEqual({ _tag: 'Link', to: '/pro/dashboard/sites/site_app_1/indexing/watched' })
+  })
+
+  it('keeps the shell offers and drops the Site offers without a linked Site', () => {
+    expect(offers(null).map(offer => offer.key)).toEqual(['bing', 'another-site'])
   })
 })

@@ -2,7 +2,7 @@
 title: "Google Indexing API Quotas: Which Limit Applies?"
 description: "Check project quotas, Pacific Time resets, approval requirements, and per-request errors without confusing Google's limits with a tool's own limit."
 navigation:
-  order: 6
+  order: 9
   icon: i-heroicons-chart-bar
 icon: i-heroicons-chart-bar
 publishedAt: "2026-03-04"

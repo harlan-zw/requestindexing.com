@@ -11,6 +11,7 @@
 import type { UiNavLink } from '@nuxtseo/design-system/app/shared/nav'
 import type { ProShellNavManifest } from '@nuxtseo/pro-shell/shared/nav'
 import type { ProNavSite } from '#layers/pro-features/app/composables/useProSingleSiteNav'
+import { WEBMASTER_TOOLS } from '@nuxtseo/pro-search/shared/navigation'
 import ProShellSidebarNav from '@nuxtseo/pro-shell/app/components/ProShellSidebarNav.vue'
 import { useProShellRoute } from '@nuxtseo/pro-shell/app/composables/useProShellRoute'
 import { pathNavItems } from '@nuxtseo/pro-shell/shared/nav'
@@ -18,6 +19,7 @@ import { computed } from 'vue'
 import { NuxtLink, UiFavicon, UiIcon, UiNavList, UiSkeleton } from '#components'
 import { useProNavSetupBadges } from '#layers/pro-features/app/composables/useProNavSetupBadges'
 import { integrationsRailLinks } from '#layers/pro-features/app/utils/integrations-pending'
+import { readProFeatureFlags } from '#layers/pro-features/shared/manifest'
 import { HELD_LABEL, HELD_TITLE } from '#layers/pro-gsc/shared/entitlement-copy'
 
 const { sites, loading = false } = defineProps<{
@@ -35,6 +37,7 @@ const addSiteTo = resolveRoute('addSite')
 // Integrations joins the rail only while one is pending. It always lives in
 // the user menu, as upstream.
 const { integrationsSetup } = useProNavSetupBadges()
+const features = readProFeatureFlags(useRuntimeConfig().public)
 
 const manifest = computed<ProShellNavManifest>(() => ({
   pinnedLabel: 'Team',
@@ -42,6 +45,9 @@ const manifest = computed<ProShellNavManifest>(() => ({
     { id: 'dashboard', label: 'Dashboard', icon: 'home', target: { _tag: 'Route', name: 'dashboard' }, active: (p: string) => p === dashboardTo },
     // Active on every fleet Indexing tab: Overview, Issues and Changes.
     { id: 'indexing', label: 'Indexing', icon: 'database', target: { _tag: 'Path', to: '/pro/dashboard/indexing' }, active: (p: string) => p === '/pro/dashboard/indexing' || p.startsWith('/pro/dashboard/indexing/') },
+    ...(features.bing
+      ? [{ id: 'webmaster-tools', ...WEBMASTER_TOOLS, target: { _tag: 'Path', to: '/pro/dashboard/webmaster-tools' } } as const]
+      : []),
   ],
   railLabel: 'Manage',
   rail: [

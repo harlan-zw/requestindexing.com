@@ -8,7 +8,7 @@ const faqs = [
   },
   {
     question: 'Why is Google not indexing my website?',
-    answer: 'Common causes: robots.txt blocking crawlers, noindex tags, low content quality that leads to "Crawled - currently not indexed", duplicate content, slow pages, missing sitemaps, and low domain authority. Gary Illyes of Google said "the general quality of the site" can matter a lot to how many URLs Search Console lists as crawled but not indexed.',
+    answer: 'Common causes: robots.txt blocking crawlers, noindex tags, low content quality that leads to "Crawled - currently not indexed", duplicate content, slow pages, and missing sitemaps. Gary Illyes of Google said "the general quality of the site" can matter a lot to how many URLs Search Console lists as crawled but not indexed.',
     sources: [
       { label: 'Gary Illyes at SERP Conf 2024', to: 'https://www.youtube.com/watch?v=DJVaGCZLmt8' },
     ],
@@ -299,7 +299,7 @@ const recommendationColor = {
               Improve Your Indexing
             </h3>
             <p class="text-sm text-[var(--ui-text-muted)] mb-3">
-              Connect Google Search Console to Request Indexing for per-URL coverage data and one-click Indexing API submission for eligible pages.
+              Connect Google Search Console to see Google's verdict and reason for the URLs in your sitemaps. Request Indexing also sends new and changed pages to Bing and other search engines with IndexNow.
             </p>
             <div class="flex flex-wrap gap-3">
               <UButton to="/pro/onboarding" color="primary" trailing-icon="i-heroicons-arrow-right">

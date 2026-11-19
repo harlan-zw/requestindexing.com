@@ -51,6 +51,8 @@ const iconMap: Record<string, string> = {
   'i-heroicons-chart-bar': 'i-heroicons-chart-bar',
   'i-heroicons-document-magnifying-glass': 'i-heroicons-document-magnifying-glass',
   'i-heroicons-paper-airplane': 'i-heroicons-paper-airplane',
+  'i-heroicons-question-mark-circle': 'i-heroicons-question-mark-circle',
+  'i-heroicons-globe-alt': 'i-heroicons-globe-alt',
 }
 </script>
 

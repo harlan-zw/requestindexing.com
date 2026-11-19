@@ -10,7 +10,7 @@ const faqs = [
   },
   {
     question: 'Why is my page not showing in Google?',
-    answer: 'Common reasons: the page is too new, low content quality that leads to "Crawled - currently not indexed", robots.txt blocking crawlers, a noindex tag, duplicate content, or low domain authority. Confirm the status with this checker, then fix the cause and request indexing in URL Inspection.',
+    answer: 'Common reasons: the page is too new, low content quality that leads to "Crawled - currently not indexed", robots.txt blocking crawlers, a noindex tag, or duplicate content. Confirm the status with this checker, then fix the cause and request indexing in URL Inspection.',
   },
   {
     question: 'How long does Google take to index a new page?',
@@ -23,7 +23,7 @@ const faqs = [
   },
   {
     question: 'What\'s the difference between "Discovered" and "Crawled" not indexed?',
-    answer: '"Discovered - currently not indexed" means Google knows your URL exists but has not crawled it yet, often because of crawl budget or low predicted quality. "Crawled - currently not indexed" means Google visited the page and chose not to index it. Gary Illyes of Google named "dupe elimination" and "the general quality of the site" as two possible causes.',
+    answer: '"Discovered - currently not indexed" means Google knows your URL exists but has not crawled it yet. "Crawled - currently not indexed" means Google visited the page and chose not to index it. Gary Illyes of Google named "dupe elimination" and "the general quality of the site" as two possible causes.',
     sources: [
       { label: 'Gary Illyes at SERP Conf 2024', to: 'https://www.youtube.com/watch?v=DJVaGCZLmt8' },
     ],
@@ -268,10 +268,8 @@ function checkIndex() {
             </h3>
             <ol class="list-decimal list-inside space-y-1 text-[var(--ui-text-muted)]">
               <li><strong>Discovery:</strong> Google finds your URL through a sitemap or links</li>
-              <li><strong>Pre-crawl scoring:</strong> Google predicts quality before it visits</li>
               <li><strong>Crawl:</strong> Googlebot visits and renders your page</li>
-              <li><strong>Post-crawl scoring:</strong> Google assesses the content quality</li>
-              <li><strong>Indexation:</strong> the page joins the serving index</li>
+              <li><strong>Indexing:</strong> Google decides whether to add the page to its index</li>
             </ol>
           </div>
           <div>

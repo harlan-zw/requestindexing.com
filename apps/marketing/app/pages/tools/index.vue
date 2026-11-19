@@ -170,12 +170,12 @@ const tools = [
               03
             </div>
             <div class="font-title text-base font-semibold text-default mb-1.5 tracking-[-0.01em]">
-              Automate submission
+              Send new pages
             </div>
             <p class="text-muted text-sm leading-relaxed">
-              Sign up to submit job posting and livestream URLs through the Indexing API. Other pages need <NuxtLink to="/indexing-api-for-blog-posts" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
+              Verify your IndexNow key. Request Indexing then sends new and changed sitemap URLs to Bing and other search engines. For Google, use <NuxtLink to="/indexing-api-for-blog-posts" class="underline decoration-primary/30 underline-offset-4 hover:decoration-primary/60 transition-colors">
                 URL Inspection or a sitemap
-              </NuxtLink> instead.
+              </NuxtLink>.
             </p>
           </div>
         </div>
@@ -185,11 +185,11 @@ const tools = [
     <!-- CTA -->
     <UPageSection :ui="{ container: 'max-w-4xl' }">
       <UPageCTA
-        title="Need to fix indexing at scale?"
-        description="Request Indexing sends your eligible pages straight to Google's Indexing API. Free and open source."
+        title="Find out which of your pages Google has indexed"
+        description="See Google's verdict and reason for the URLs in your sitemaps, within your Free allowance. Send new and changed pages to Bing and other search engines with IndexNow. Free and open source."
         variant="subtle"
         :links="[
-          { label: 'Get Started Free', to: '/pro/onboarding', color: 'primary', size: 'xl', trailingIcon: 'i-heroicons-arrow-right' },
+          { label: 'Get started free', to: '/pro/onboarding', color: 'primary', size: 'xl', trailingIcon: 'i-heroicons-arrow-right' },
           { label: 'Read the guides', to: '/guides', variant: 'ghost', color: 'neutral', size: 'xl' },
         ]"
       />

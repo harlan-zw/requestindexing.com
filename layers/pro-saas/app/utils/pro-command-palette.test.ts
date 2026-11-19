@@ -32,11 +32,10 @@ describe('proSitePalettePages', () => {
     expect(rows).toEqual([
       ['nuxt.com', '/pro/dashboard/sites/s_abc'],
       ['nuxt.com: Overview', '/pro/dashboard/sites/s_abc'],
-      ['nuxt.com: Search Performance', '/pro/dashboard/sites/s_abc/search-console'],
-      ['nuxt.com: Search Performance: Queries', '/pro/dashboard/sites/s_abc/search-console/queries'],
-      ['nuxt.com: Search Performance: Pages', '/pro/dashboard/sites/s_abc/search-console/pages'],
-      ['nuxt.com: Search Performance: Countries', '/pro/dashboard/sites/s_abc/search-console/countries'],
-      ['nuxt.com: Search Performance: Bing', '/pro/dashboard/sites/s_abc/search-console/bing'],
+      ['nuxt.com: Search Console', '/pro/dashboard/sites/s_abc/search-console'],
+      ['nuxt.com: Search Console: Queries', '/pro/dashboard/sites/s_abc/search-console/queries'],
+      ['nuxt.com: Search Console: Pages', '/pro/dashboard/sites/s_abc/search-console/pages'],
+      ['nuxt.com: Search Console: Countries', '/pro/dashboard/sites/s_abc/search-console/countries'],
       ['nuxt.com: Indexing', '/pro/dashboard/sites/s_abc/indexing'],
       ['nuxt.com: Indexing: Submissions', '/pro/dashboard/sites/s_abc/indexing/submissions'],
       ['nuxt.com: Indexing: Submit to Google', '/pro/dashboard/sites/s_abc/indexing/submit'],
@@ -45,15 +44,16 @@ describe('proSitePalettePages', () => {
       ['nuxt.com: Indexing: Sitemaps', '/pro/dashboard/sites/s_abc/indexing/sitemaps'],
       ['nuxt.com: Indexing: URLs', '/pro/dashboard/sites/s_abc/indexing/urls'],
       ['nuxt.com: Indexing: Watched URLs', '/pro/dashboard/sites/s_abc/indexing/watched'],
-      ['nuxt.com: Indexing: Bing', '/pro/dashboard/sites/s_abc/indexing/bing'],
+      ['nuxt.com: Webmaster Tools', '/pro/dashboard/sites/s_abc/webmaster-tools'],
+      ['nuxt.com: Webmaster Tools: Crawl', '/pro/dashboard/sites/s_abc/webmaster-tools/crawl'],
       ['nuxt.com: Site settings', '/pro/dashboard/sites/s_abc/settings'],
     ])
   })
 
   it('leaves out a flagged row while its flag is off', () => {
     const labels = commands({}).map(command => command.label)
-    expect(labels).not.toContain('nuxt.com: Search Performance: Bing')
-    expect(labels).not.toContain('nuxt.com: Indexing: Bing')
+    expect(labels).not.toContain('nuxt.com: Webmaster Tools')
+    expect(labels).not.toContain('nuxt.com: Webmaster Tools: Crawl')
     expect(labels).toContain('nuxt.com: Indexing: IndexNow')
   })
 })

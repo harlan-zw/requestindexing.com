@@ -75,6 +75,8 @@ export const PRERENDERED_PAGE_PATHS = [
   '/tools/bulk-indexing-checker',
   '/tools/google-indexing-checker',
   '/tools/site-indexing-report',
+  '/why-is-my-page-not-indexed',
+  '/why-is-my-site-not-indexed',
 ] as const
 
 /**

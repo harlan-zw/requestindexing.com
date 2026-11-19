@@ -2,7 +2,7 @@
 title: "Can You Use the Google Indexing API for Blog Posts?"
 description: "Ordinary blog posts are outside Google's supported Indexing API use. Learn when to use URL Inspection or a sitemap, and what an accepted request proves."
 navigation:
-  order: 5
+  order: 8
   icon: i-heroicons-exclamation-triangle
 icon: i-heroicons-exclamation-triangle
 publishedAt: "2026-03-04"

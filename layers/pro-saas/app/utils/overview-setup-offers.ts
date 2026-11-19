@@ -1,10 +1,15 @@
-// The Setup completion of the Bing and Add another Site offers on the
-// dashboard home, from the reads this app already makes. Pure, so the rule is
-// tested without a Nuxt app. The agent offers read `developerSetupCompletion`.
-import type { SetupCompletion } from '@nuxtseo/pro-shell/shared/setup-offers'
+// The setup offers on the dashboard home: the Setup completion of the shell's
+// Bing and Add another Site offers, and Request Indexing's own IndexNow and
+// Watched URLs offers, from the reads this app already makes. Pure, so the
+// rules are tested without a Nuxt app.
+import type { ProShellCopy } from '@nuxtseo/pro-shell/shared/copy'
+import type { ProShellRouteMap } from '@nuxtseo/pro-shell/shared/routes'
+import type { SetupCompletion, SetupOffer } from '@nuxtseo/pro-shell/shared/setup-offers'
 import type { BingIntegrationState } from '#layers/pro-gsc/app/utils/bing-integration-view'
 import type { FreeAllowanceView } from '#layers/pro-gsc/shared/free-allowance'
-import { SETUP_COMPLETE, SETUP_PENDING, SETUP_RECONNECT, SETUP_UNAVAILABLE, SETUP_UNKNOWN } from '@nuxtseo/pro-shell/shared/setup-offers'
+import type { REQUEST_INDEXING_SETUP_OFFER_COPY } from '../pro-shell'
+import { buildSharedSetupOffers, SETUP_COMPLETE, SETUP_PENDING, SETUP_RECONNECT, SETUP_UNAVAILABLE, SETUP_UNKNOWN } from '@nuxtseo/pro-shell/shared/setup-offers'
+import { expandProSiteRoute, proSiteFeatureManifest } from '#layers/pro-features/shared/manifest'
 
 /**
  * Bing, from the Integrations row's state. `connect` is owed only while no
@@ -43,4 +48,102 @@ export function anotherSiteCompletion(input: { siteCount: number, allowance: Fre
     return SETUP_PENDING
   const { used, allowance: limit } = allowance.entitlements.meters.sites
   return used < limit ? SETUP_PENDING : SETUP_COMPLETE
+}
+
+/**
+ * One engine read for the Site the IndexNow and Watched URLs offers open: the
+ * first Site linked to gscdump. `no-site` is an account with no linked Site.
+ * `read-only` is a Team role that cannot set up either one, so no read runs.
+ */
+export type SetupSiteRead<T>
+  = | { readonly _tag: 'no-site' }
+    | { readonly _tag: 'read-only' }
+    | { readonly _tag: 'checking' }
+    | { readonly _tag: 'read-failed' }
+    | { readonly _tag: 'ready', readonly value: T }
+
+// A failed read shows no card rather than a guess, and never holds the other
+// cards back: only `checking` waits.
+function siteReadCompletion<T>(read: SetupSiteRead<T>, done: (value: T) => boolean): SetupCompletion {
+  switch (read._tag) {
+    case 'checking':
+      return SETUP_UNKNOWN
+    case 'no-site':
+    case 'read-only':
+    case 'read-failed':
+      return SETUP_UNAVAILABLE
+    case 'ready':
+      return done(read.value) ? SETUP_COMPLETE : SETUP_PENDING
+  }
+}
+
+/**
+ * IndexNow, until the Site's key is verified. Verifying turns automatic
+ * sending on (gscdump.com ADR-0031), so a reader who later turns it off chose
+ * to, and the offer does not return.
+ */
+export function indexNowSetupCompletion(read: SetupSiteRead<{ readonly _tag: string }>): SetupCompletion {
+  return siteReadCompletion(read, connection => connection._tag === 'connected')
+}
+
+/** Watched URLs, until the Site watches at least one URL. */
+export function watchedUrlsSetupCompletion(read: SetupSiteRead<{ readonly watched: readonly unknown[] }>): SetupCompletion {
+  return siteReadCompletion(read, record => record.watched.length > 0)
+}
+
+export interface OverviewSetupOfferInput {
+  readonly routes: ProShellRouteMap
+  readonly shellCopy: ProShellCopy['setupOffers']
+  readonly copy: typeof REQUEST_INDEXING_SETUP_OFFER_COPY
+  /** The app's own id of the Site the IndexNow and Watched URLs offers open, never its gscdump id. Null with no linked Site. */
+  readonly siteId: string | null
+  readonly completion: {
+    readonly bing: SetupCompletion
+    readonly anotherSite: SetupCompletion
+    readonly indexNow: SetupCompletion
+    readonly watchedUrls: SetupCompletion
+  }
+}
+
+/**
+ * Every offer the dashboard home can show. The shell's Bing and Add another
+ * Site offers keep their own priorities (3 and 13). The shell's agent skill,
+ * MCP and API offers get no completion, so they never show (COPY.md, "Dashboard
+ * shell assets"). IndexNow comes first, because it is the channel a Site can
+ * send through today. Watched URLs sits between Bing and Add another Site.
+ */
+export function buildOverviewSetupOffers(input: OverviewSetupOfferInput): SetupOffer[] {
+  const { completion, siteId } = input
+  const shared = buildSharedSetupOffers({
+    routes: input.routes,
+    copy: input.shellCopy,
+    site: null,
+    completion: { 'bing': completion.bing, 'another-site': completion.anotherSite },
+  })
+  if (!siteId)
+    return shared
+  const route = (feature: 'indexing.indexnow' | 'indexing.watched') => expandProSiteRoute(proSiteFeatureManifest[feature].route, siteId)
+  return [
+    ...shared,
+    {
+      key: 'indexnow',
+      dismissKey: 'indexnow',
+      ...input.copy.indexNow,
+      action: { _tag: 'Link', to: route('indexing.indexnow') },
+      marks: [{ _tag: 'Icon', icon: 'i-lucide-send' }],
+      accent: 'var(--color-orange-500)',
+      priority: 2,
+      completion: completion.indexNow,
+    },
+    {
+      key: 'watched-urls',
+      dismissKey: 'watched-urls',
+      ...input.copy.watchedUrls,
+      action: { _tag: 'Link', to: route('indexing.watched') },
+      marks: [{ _tag: 'Icon', icon: 'i-lucide-clock' }],
+      accent: 'var(--color-violet-500)',
+      priority: 5,
+      completion: completion.watchedUrls,
+    },
+  ]
 }

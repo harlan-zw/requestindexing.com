@@ -2,7 +2,7 @@
 title: "How to Set Up IndexNow for Bing and Other Search Engines"
 description: "Notify Bing and other participating search engines with IndexNow. Put the key file on your platform, verify it, and learn what a receipt proves."
 navigation:
-  order: 7
+  order: 3
   icon: i-heroicons-paper-airplane
   breadcrumb: Set Up IndexNow
 icon: i-heroicons-paper-airplane
