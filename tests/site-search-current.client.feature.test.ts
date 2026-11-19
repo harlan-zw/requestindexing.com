@@ -68,6 +68,7 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscdump', () => ({
 }))
 vi.mock('#layers/pro-gsc/app/components/pro/ProGraphGsc.vue', () => ({ default: () => h('div', 'Current chart') }))
 vi.mock('#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue', () => ({ default: () => null }))
+vi.mock('#layers/pro-gsc/app/components/pro/ProLiveSearchPerformance.vue', () => ({ default: () => null }))
 vi.mock('#layers/pro-gsc/app/internal/components/pro/ProSparklineCell.vue', () => ({ default: () => null }))
 const { default: Page } = await import('#layers/pro-gsc/app/pages/pro/dashboard/sites/[id]/search-console/index.vue')
 const mounted: Array<() => void> = []
