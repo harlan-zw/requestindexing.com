@@ -4,8 +4,10 @@ import { useProShellCopy } from '@nuxtseo/pro-shell/app/composables/useProShellC
 import { useProShellOnboardingFlow, useProShellOnboardingSteps } from '@nuxtseo/pro-shell/app/composables/useProShellOnboarding'
 import { REQUEST_HONOUR } from '@nuxtseo/pro-shell/shared/onboarding'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
-
 import ProSetupFirstSiteReport from '~~/layers/indexing/app/components/ProSetupFirstSiteReport.vue'
+
+import { parseGscConnectReturn } from '#layers/pro-gsc/shared/gsc-grant'
+import { GSC_CONNECT_COPY } from '#layers/pro-saas/shared/gsc-connect-copy'
 import {
   DASHBOARD_ROUTE,
   FIRST_RUN_FLOW,
@@ -51,6 +53,9 @@ const gsc = computed(() => resolveGscConnection({
   error: route.query.error,
 }))
 const gscConnected = computed(() => gsc.value._tag === 'Connected')
+// A Google round trip that came back with no grant: cancelled, or failed. Only
+// an unconnected account shows it; a connected one keeps its grant.
+const gscReturn = computed(() => gscConnected.value ? null : parseGscConnectReturn(route.query.error))
 const siteCount = ref(session.value?.hasSites ? 1 : 0)
 const hasSites = computed(() => siteCount.value > 0)
 
@@ -100,7 +105,10 @@ const flow = useProShellOnboardingFlow({
 const currentStep = computed(() => parseOnboardingStep(flow.current.value?.id) ?? 'connect')
 
 const returnToSites = '/pro/dashboard/onboarding?step=sites'
-const gscConnectUrl = `/auth/integrations/gsc/connect?returnTo=${encodeURIComponent(returnToSites)}`
+// Read-only, as nuxtseo.com's setup asks: every setup step works with it, and
+// Google's consent screen then lists one Search Console line instead of three.
+// Sitemap submission and Add and verify ask for more when the reader uses them.
+const gscConnectUrl = `/auth/integrations/gsc/connect?scope=read&returnTo=${encodeURIComponent(returnToSites)}`
 
 // Coming back from Google, the session cookie is fresh but this page's copy is
 // not. Refreshing on mount is what makes the connect step flip to "connected".
@@ -129,6 +137,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         />
 
         <ProGscScopeMissingAlert v-if="gsc._tag === 'ScopeMissing'" />
+        <ProGscConnectReturnAlert v-else-if="gscReturn" :result="gscReturn" />
 
         <div v-if="gscConnected" class="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 px-3 py-3">
           <UIcon name="i-heroicons-check-circle" class="size-5 shrink-0 text-primary" aria-hidden="true" />
@@ -145,19 +154,25 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         <template v-else>
           <ProSetupExample />
           <ul class="space-y-2 text-sm text-muted">
-            <li class="flex gap-2">
+            <li v-for="benefit in GSC_CONNECT_COPY.benefits" :key="benefit" class="flex gap-2">
               <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-              Read your queries, pages and coverage.
-            </li>
-            <li class="flex gap-2">
-              <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-              Submit to Google. Google documents the Indexing API for job posting and livestream pages only.
-            </li>
-            <li class="flex gap-2">
-              <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-              Keep your data past Google's 16-month window.
+              {{ benefit }}
             </li>
           </ul>
+          <section class="space-y-2 rounded-lg border border-default bg-elevated/40 px-4 py-3 text-sm" aria-labelledby="gsc-access-heading" data-testid="gsc-access">
+            <h3 id="gsc-access-heading" class="flex items-center gap-2 font-medium text-highlighted">
+              <UIcon name="i-lucide-shield-check" class="size-4 shrink-0 text-primary" aria-hidden="true" />
+              {{ GSC_CONNECT_COPY.accessHeading }}
+            </h3>
+            <p>{{ GSC_CONNECT_COPY.readAccess }}</p>
+            <p>{{ GSC_CONNECT_COPY.changes }}</p>
+            <p>
+              {{ GSC_CONNECT_COPY.remove }}
+              <ULink :to="GSC_CONNECT_COPY.removeHref" external target="_blank" rel="noopener" class="font-medium text-highlighted underline">
+                {{ GSC_CONNECT_COPY.removeAction }}
+              </ULink>
+            </p>
+          </section>
           <UButton
             :to="gscConnectUrl"
             external
@@ -171,12 +186,12 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       </div>
 
       <!-- One way forward: before a grant the Connect button drives the
-           advance, so the footer offers only the skip; after, only Continue. -->
+           advance, so the footer is empty; after, it offers Continue. There
+           is no skip (COPY.md, Connect Google assets). A member of a Team
+           that already has a Site may continue without a grant. -->
       <UiWizardNav
-        :skip-label="step.skippable ? frameCopy.skip : undefined"
-        :show-next="gscConnected"
+        :show-next="gscConnected || hasSites"
         :next-label="frameCopy.next"
-        @skip="controls.skip()"
         @next="controls.next()"
       />
     </template>

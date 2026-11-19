@@ -65,6 +65,7 @@ function parseIPv4(host: string): number | null {
 function isPrivateIPv4(int: number): boolean {
   const a = (int >>> 24) & 0xFF
   const b = (int >>> 16) & 0xFF
+  const c = (int >>> 8) & 0xFF
   // 0.0.0.0/8 (incl. 0.0.0.0)
   if (a === 0)
     return true
@@ -87,13 +88,13 @@ function isPrivateIPv4(int: number): boolean {
   if (a === 100 && b >= 64 && b <= 127)
     return true
   // 192.0.0.0/24, 192.0.2.0/24 reserved/test
-  if (a === 192 && b === 0)
+  if (a === 192 && b === 0 && (c === 0 || c === 2))
     return true
   // 198.18.0.0/15 benchmarking
   if (a === 198 && (b === 18 || b === 19))
     return true
-  if ((a === 198 && b === 51 && ((int >>> 8) & 0xFF) === 100)
-    || (a === 203 && b === 0 && ((int >>> 8) & 0xFF) === 113)) {
+  if ((a === 198 && b === 51 && c === 100)
+    || (a === 203 && b === 0 && c === 113)) {
     return true
   }
   // 224.0.0.0/4 multicast + 240.0.0.0/4 reserved

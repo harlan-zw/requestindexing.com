@@ -14,10 +14,13 @@ export const defaultProSaasFeatures = {
   accountDeletion: true,
   api: true,
   feedback: false,
-  // On, like nuxtseo.com. A GitHub-only account cannot read Search Console, so
-  // the wizard's first step tells it to add Google before it can go further;
-  // that is a better answer than hiding an identity people already have.
-  githubSignIn: true,
+  // Off until production has a GitHub OAuth client. nuxtseo.com turns it on,
+  // but Request Indexing never set `NUXT_OAUTH_GITHUB_CLIENT_ID` or `_SECRET`:
+  // every "Continue with GitHub" ended on /login with those variable names in
+  // the error, and no account has a GitHub identity. Set both secrets, then
+  // turn this on. A GitHub-only account still needs Google for Search Console;
+  // the wizard's first step tells it so.
+  githubSignIn: false,
   googleSignIn: true,
   invitations: true,
   onboarding: true,

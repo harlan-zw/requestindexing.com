@@ -16,8 +16,9 @@
 
 import type { AccountStatus } from '@gscdump/contracts'
 import type { ProShellOnboardingStep } from '@nuxtseo/pro-shell/shared/onboarding'
+import type { GscCallbackError } from '#layers/pro-gsc/shared/gsc-grant'
 import { evaluateOnboardingSteps, resolveOnboarding, STEP_COMPLETE, STEP_OPTIONAL, STEP_PENDING } from '@nuxtseo/pro-shell/shared/onboarding'
-import { GSC_SCOPE_MISSING_ERROR, isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
+import { isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
 import { PAGE_TASK_ROUTE } from './page-task'
 
 /** Where a signed-out visitor starts. Renders the provider buttons. */
@@ -135,19 +136,19 @@ export const DASHBOARD_CARD_FLOW = 'dashboard-card'
  * registry. No component: the page fills each `#step-<id>` slot. Copy lives
  * under `proShell.copy.onboarding.steps` (COPY.md, Setup steps).
  *
- * Registering a site is the only requirement. Connecting Search Console is a
- * capability the product offers, not a stage that gates it: a user who has not
- * verified a property, who signed in with GitHub, or whose grant fails cannot
- * satisfy it on demand. This mirrors nuxtseo.com ADR-0035.
+ * Connect Google is required, unless the Team already has a Site. This
+ * departs from nuxtseo.com ADR-0035, which offers a skip: Harlan removed it
+ * on 2026-11-19, after 16 of the 34 signups who never connected left through
+ * it onto an empty dashboard and none signed in again.
  *
- * - `connect` is `Optional` once a Site exists, so a user who already
- *   registered one is never sent back to it: that is the state they land in
- *   when Google is unreachable. Before any Site it is `Pending`, so a fresh
- *   account starts on it. It draws its own nav: Skip until Search Console is
- *   connected, then Continue, never both (nuxtseo.com's `UiWizardNav` rule).
+ * - `connect` is `Optional` once a Site exists, so a member of a Team that
+ *   already has one is never sent back to it. Before any Site it is
+ *   `Pending`, so a fresh account starts on it. It has no skip: its only way
+ *   forward is Connect Google Search Console, then Continue.
  * - `sites` needs a Site. Its skip ("Skip and connect it later") shows only
- *   once connecting is blocked, so it never reads as the first choice. It
- *   draws its own Continue, disabled until a Site exists.
+ *   for a connected account whose connecting is blocked, so it never reads as
+ *   the first choice and never stands in for Connect Google. It draws its own
+ *   Continue, disabled until a Site exists.
  * - `sync` is terminal. Next finishes setup. It uses the frame's nav, which
  *   the onboarding page disables until a Site exists, because finishing
  *   without one is refused.
@@ -164,7 +165,6 @@ export const FIRST_RUN_STEPS: readonly ProShellOnboardingStep[] = [
         return STEP_COMPLETE
       return ctx.hasSites ? STEP_OPTIONAL : STEP_PENDING
     },
-    skip: ctx => ctx.gsc._tag !== 'Connected',
   },
   {
     id: 'sites',
@@ -173,7 +173,7 @@ export const FIRST_RUN_STEPS: readonly ProShellOnboardingStep[] = [
     titleKey: 'sites',
     nav: 'step',
     state: ctx => ctx.hasSites ? STEP_COMPLETE : STEP_PENDING,
-    skip: ctx => !ctx.hasSites && ctx.connectBlocked,
+    skip: ctx => !ctx.hasSites && ctx.connectBlocked && ctx.gsc._tag === 'Connected',
   },
   {
     id: 'sync',
@@ -232,18 +232,19 @@ export function resolveOnboardingResumeStep(signals: OnboardingResumeSignals): O
 }
 
 /**
- * Where the OAuth callback sends a user whose grant has no Search Console
- * scope. `returnTo` is already parsed by `safeAuthRedirect`.
+ * Where the OAuth callback sends a user when Google returns no usable grant:
+ * the Search Console box was unticked, the reader cancelled, or the round trip
+ * failed. `returnTo` is already parsed by `safeAuthRedirect`.
  *
  * A wizard return names `step=sites`, the step after a successful connect, so
  * it is rewritten to `connect`: that is the step that shows the error and the
  * retry. Any other page keeps its path and gains the error marker.
  */
-export function gscScopeMissingRedirect(returnTo: string | null | undefined): string {
+export function gscCallbackErrorRedirect(returnTo: string | null | undefined, error: GscCallbackError): string {
   const url = new URL(returnTo || DASHBOARD_ROUTE, 'https://callback.local')
   if (isUnder(url.pathname, ONBOARDING_ROUTE))
     url.searchParams.set('step', 'connect')
-  url.searchParams.set('error', GSC_SCOPE_MISSING_ERROR)
+  url.searchParams.set('error', error)
   return `${url.pathname}${url.search}${url.hash}`
 }
 
@@ -300,12 +301,14 @@ export interface OnboardingCompletionInput {
   hasSites: boolean
   /** The user chose "Skip and connect it later" on the sites step. */
   skipSites: boolean
+  /** gscdump holds a user id and key for this account. */
+  googleConnected: boolean
   now: Date
 }
 
 export type OnboardingCompletion
   = | { _tag: 'AlreadyComplete', completedAt: string }
-    | { _tag: 'Blocked', reason: 'no_sites', message: string }
+    | { _tag: 'Blocked', reason: 'no_sites' | 'google_required', message: string }
     | { _tag: 'Complete', completedAt: string, sites: 'connected' | 'skipped' }
 
 /**
@@ -315,7 +318,10 @@ export type OnboardingCompletion
  * with the skip. The dashboard then offers Connect a Site on
  * `CONNECT_SITE_ROUTE`, which works after onboarding. Without the skip,
  * finishing with no Site is refused, so a stray click on the last step does
- * not leave an empty dashboard.
+ * not leave an empty dashboard. The skip needs Google connected: without
+ * Google there is no property to connect, and a link to the sites step must
+ * not finish setup the way the removed Connect Google skip did. A Team that
+ * already has a Site finishes without its member's own grant.
  */
 export function resolveOnboardingCompletion(input: OnboardingCompletionInput): OnboardingCompletion {
   if (input.completedAt) {
@@ -330,6 +336,14 @@ export function resolveOnboardingCompletion(input: OnboardingCompletionInput): O
       _tag: 'Blocked',
       reason: 'no_sites',
       message: 'Connect at least one Site before you finish setup.',
+    }
+  }
+
+  if (!input.hasSites && !input.googleConnected) {
+    return {
+      _tag: 'Blocked',
+      reason: 'google_required',
+      message: 'Connect Google Search Console before you finish setup.',
     }
   }
 

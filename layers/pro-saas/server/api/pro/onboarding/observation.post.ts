@@ -3,8 +3,11 @@ import { assertGscdumpBrowserUnsafeMethodOrigin } from '#layers/pro-gsc/server/u
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 import { emitFirstProEvent } from '#layers/pro-saas/server/utils/pro-events'
 
-export default defineProApiHandler({ team: true, body: z.object({ type: z.literal('setup_example_viewed') }).strict() }, async ({ event, db, caller }) => {
+// A setup observation only the browser sees: the example opened.
+const observation = z.object({ type: z.literal('setup_example_viewed') }).strict()
+
+export default defineProApiHandler({ team: true, body: observation }, async ({ event, db, caller, body }) => {
   assertGscdumpBrowserUnsafeMethodOrigin(event)
-  await emitFirstProEvent(db, caller.user.id, 'setup_example_viewed')
+  await emitFirstProEvent(db, caller.user.id, body.type)
   return { received: true }
 })

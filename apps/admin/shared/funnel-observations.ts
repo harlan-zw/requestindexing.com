@@ -3,7 +3,7 @@ import type { AcquisitionEvidence, FeedbackObservation, StageTimes } from './jou
 import { z } from 'zod'
 import { parseStoredOnboardingAnswers } from '#layers/pro-saas/shared/onboarding-answers'
 import { SETUP_EXIT_REASONS } from '#layers/pro-saas/shared/setup-experiments'
-import { funnelTimestamp } from './funnel'
+import { funnelTimestamp, resolveGoogleConnectStop } from './funnel'
 import { stagePairDelays } from './journey-evidence'
 
 export interface FunnelAccount { id: number, name: string | null, email: string, createdAt: unknown, completedAt: unknown, source: string | null, teamId: number, engineUserId: string | null, onboardingAnswers?: unknown }
@@ -83,6 +83,6 @@ export function buildObservedFunnelUsers(accounts: FunnelAccount[], events: Funn
         feedback.set(parsed.data.step, { ...parsed.data, recordedAt: observation.at })
     }
     const siteCount = sitesByTeam.get(account.teamId) ?? 0
-    return [{ id: account.id, name: account.name, email: account.email, signedUpAt, signupEvidence: signup ? 'event' : 'account', source: acquisition.label, googleConnected: !!times.googleConnected, siteConnected: !!times.siteConnected, setupCompleted: !!times.setupCompleted, acquisition, journey: { stageTimes: times, delays: stagePairDelays(times, now), coverage: 'first-recorded', cutoff: new Date(now).toISOString(), invalidHistory: { beforeSignup: observations.filter(event => event.time < Date.parse(signedUpAt)).length, future: observations.filter(event => event.time > now).length, invalidTimestamp: rawEvents.length - observations.length } }, feedback: [...feedback.values()], currentSites: { count: siteCount, knownUrlCount: null, unknownSizeSites: siteCount, scope: 'current-team', capturedAt: new Date(now).toISOString() }, engineUserId: account.engineUserId, onboardingAnswers: parseStoredOnboardingAnswers(account.onboardingAnswers) }]
+    return [{ id: account.id, name: account.name, email: account.email, signedUpAt, signupEvidence: signup ? 'event' : 'account', source: acquisition.label, googleConnected: !!times.googleConnected, ...(!times.googleConnected && { googleConnectStop: resolveGoogleConnectStop(valid) }), siteConnected: !!times.siteConnected, setupCompleted: !!times.setupCompleted, acquisition, journey: { stageTimes: times, delays: stagePairDelays(times, now), coverage: 'first-recorded', cutoff: new Date(now).toISOString(), invalidHistory: { beforeSignup: observations.filter(event => event.time < Date.parse(signedUpAt)).length, future: observations.filter(event => event.time > now).length, invalidTimestamp: rawEvents.length - observations.length } }, feedback: [...feedback.values()], currentSites: { count: siteCount, knownUrlCount: null, unknownSizeSites: siteCount, scope: 'current-team', capturedAt: new Date(now).toISOString() }, engineUserId: account.engineUserId, onboardingAnswers: parseStoredOnboardingAnswers(account.onboardingAnswers) }]
   })
 }

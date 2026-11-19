@@ -56,8 +56,8 @@ export function useIndexNowConnection(engineSiteId: MaybeRefOrGetter<string | un
   )
 }
 
-/** The Nuxt data key of a Site's receipt window. Refresh it after a send or a switch change. */
-export function submissionWindowKey(engineSiteId: string): string {
+/** The Nuxt data key of a Site's receipt window. */
+function submissionWindowKey(engineSiteId: string): string {
   return `submissions:window:${engineSiteId}`
 }
 
@@ -105,6 +105,15 @@ function useSubmissionWindow(site: SiteInput) {
     // share the one read in flight instead of restarting it.
     { dedupe: 'defer' },
   )
+}
+
+/**
+ * Re-reads a Site's receipt window after a send or a switch change. It cancels
+ * a read in flight, because that read started before the write.
+ */
+export function useSubmissionWindowRefresh(site: SiteInput): () => Promise<void> {
+  const window = useSubmissionWindow(site)
+  return () => window.refresh({ dedupe: 'cancel' })
 }
 
 /** The `submissions` capability. */

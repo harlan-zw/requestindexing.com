@@ -5,8 +5,11 @@
 // in contracts 7.17.0, but gscdump.com does not serve them yet
 // (gscdump.com#1233). Until it does, these build the same shapes from what it
 // serves: both receipt lists, the IndexNow connection, and gscdump's saved URL
-// Inspection results. When the operations ship, the capabilities read them and
-// this file keeps only the automatic sending helpers at the bottom.
+// Inspection results. When `listSiteSubmissionOutcomes` ships, the outcomes
+// capability reads it. The summary stays on the receipt lists either way.
+// gscdump's summary adds up every receipt, so a URL sent twice counts twice.
+// The shared section counts each URL once per engine, by its latest
+// Submission Receipt (`@nuxtseo/pro-indexing` 0.1.9).
 //
 // Outcomes follow gscdump.com#1233 and gscdump#304: one row for each URL a
 // search engine received (IndexNow HTTP 200 or 202, Google HTTP 200), anchored
@@ -238,14 +241,13 @@ export function receivedUrls(window: SubmissionWindow): ReceivedUrl[] {
 }
 
 /**
- * A short stable digest of the received URLs and their times. The outcome
- * reads key on it, so a refreshed window with the same Submissions reuses
- * their searches.
+ * A short digest of the outcome anchors and their timeline events. An
+ * unchanged window reuses its searches. A new or changed send refreshes it.
  */
 export function receivedFingerprint(window: SubmissionWindow): string {
   let hash = 0x811C9DC5
   for (const entry of receivedUrls(window)) {
-    for (const char of `${entry.url}@${entry.receivedAt}|`) {
+    for (const char of JSON.stringify([entry.url, entry.receivedAt, entry.sends])) {
       hash ^= char.charCodeAt(0)
       hash = Math.imul(hash, 0x01000193) >>> 0
     }
@@ -284,17 +286,13 @@ export function exactRows(url: string, rows: readonly InspectionRow[]): Inspecti
 }
 
 /**
- * The row for `url` among the rows a search returned. The exact URL wins; its
- * other trailing slash form counts only without one. With several, the newest
- * check wins.
+ * Use the newest saved inspection for the same URL. URL identity normalizes
+ * the Site root slash and preserves trailing slashes on other paths.
  */
 export function lookupFromSearch(url: string, rows: readonly InspectionRow[], complete: boolean): UrlLookup {
   const exact = exactRows(url, rows)
   if (exact.length)
     return { _tag: 'found', row: newest(exact) }
-  const folded = rows.filter(row => urlMatchKey(row.url) === urlMatchKey(url))
-  if (folded.length)
-    return { _tag: 'found', row: newest(folded) }
   return complete ? { _tag: 'absent' } : { _tag: 'unknown' }
 }
 
@@ -317,10 +315,20 @@ export function googleAfterwards(receivedAt: string, lookup: UrlLookup): Indexin
   return null
 }
 
-/** The received URLs a `submissionOutcomes` read covers, and the ones it looks up. */
+/**
+ * The received URLs a `submissionOutcomes` read covers, and the ones it looks
+ * up. A `{ url }` read takes the exact URL; its other trailing slash form
+ * counts only when an engine received no exact one.
+ */
 export function outcomeCandidates(window: SubmissionWindow, params: IndexingSubmissionOutcomesParams): { matching: ReceivedUrl[], looked: ReceivedUrl[] } {
-  const wanted = params.url === undefined ? null : urlMatchKey(params.url)
-  const matching = receivedUrls(window).filter(entry => wanted === null || urlMatchKey(entry.url) === wanted)
+  const received = receivedUrls(window)
+  let matching = received
+  if (params.url !== undefined) {
+    const exact = urlKey(params.url)
+    const folded = urlMatchKey(params.url)
+    const exactEntries = received.filter(entry => urlKey(entry.url) === exact)
+    matching = exactEntries.length ? exactEntries : received.filter(entry => urlMatchKey(entry.url) === folded)
+  }
   return { matching, looked: matching.slice(0, OUTCOME_LOOKUP_LIMIT) }
 }
 

@@ -45,7 +45,7 @@ useSeoMeta({
   ogType: 'article',
   author: 'Harlan Wilton',
   articleAuthor: ['Harlan Wilton'],
-  articleSection: 'Google Indexing Guides',
+  articleSection: 'Indexing Guides',
   articleTag: page.value?.keywords,
   articlePublishedTime,
   articleModifiedTime,
@@ -71,7 +71,7 @@ useSchemaOrg([
     keywords: page.value?.keywords,
     datePublished: articlePublishedTime.value,
     dateModified: articleModifiedTime.value,
-    articleSection: ['Google Indexing Guides'],
+    articleSection: ['Indexing Guides'],
   }),
 ])
 

@@ -150,8 +150,13 @@ describe('lookupFromSearch', () => {
     expect(lookupFromSearch('https://a.test/docs/', rows, true)).toEqual({ _tag: 'found', row: rows[1] })
   })
 
-  it('falls back across a trailing slash only without an exact row, and never takes a longer URL', () => {
-    expect(lookupFromSearch('https://a.test/docs/', [row('https://a.test/docs', 'x', 'PASS')], true)).toMatchObject({ _tag: 'found' })
+  it('matches both forms of the Site root', () => {
+    const root = row('https://a.test', 'x', 'PASS')
+    expect(lookupFromSearch('https://a.test/', [root], true)).toEqual({ _tag: 'found', row: root })
+  })
+
+  it('keeps non-root slash forms separate and ignores longer URLs', () => {
+    expect(lookupFromSearch('https://a.test/docs/', [row('https://a.test/docs', 'x', 'PASS')], true)).toEqual({ _tag: 'absent' })
     expect(lookupFromSearch('https://a.test/docs', [row('https://a.test/docs-2', 'x', 'PASS')], true)).toEqual({ _tag: 'absent' })
     expect(lookupFromSearch('https://a.test/docs', [row('https://a.test/docs-2', 'x', 'PASS')], false)).toEqual({ _tag: 'unknown' })
   })
@@ -181,6 +186,20 @@ describe('buildSubmissionOutcomes', () => {
 
   it('looks up nothing for a URL no engine received', () => {
     expect(outcomeCandidates(current, { url: 'https://a.test/never' })).toEqual({ matching: [], looked: [] })
+  })
+
+  it('reads only the exact URL when an engine received both trailing slash forms', () => {
+    const both = window({ indexNow: [
+      indexNow('in_2', 'accepted', '2026-11-16T12:00:00.000Z', ['https://a.test/docs']),
+      indexNow('in_1', 'accepted', '2026-11-15T12:00:00.000Z', ['https://a.test/docs/']),
+    ] })
+    expect(outcomeCandidates(both, { url: 'https://a.test/docs/' }).matching.map(entry => entry.url)).toEqual(['https://a.test/docs/'])
+    expect(outcomeCandidates(both, { url: 'https://a.test/docs' }).matching.map(entry => entry.url)).toEqual(['https://a.test/docs'])
+  })
+
+  it('reads the other trailing slash form when an engine received only that one', () => {
+    const one = window({ indexNow: [indexNow('in_1', 'accepted', '2026-11-15T12:00:00.000Z', ['https://a.test/docs/'])] })
+    expect(outcomeCandidates(one, { url: 'https://a.test/docs' }).matching.map(entry => entry.url)).toEqual(['https://a.test/docs/'])
   })
 })
 

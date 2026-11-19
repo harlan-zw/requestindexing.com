@@ -376,6 +376,41 @@ function inspectStage(key: string) {
         </p>
       </section>
 
+      <section v-if="report.googleConnectStops?.some(stop => stop.users)" aria-labelledby="funnel-google-stops-heading" class="space-y-3">
+        <h2 id="funnel-google-stops-heading" class="text-lg font-semibold">
+          Where signups stop before Connected Google
+        </h2>
+        <p class="text-sm text-muted">
+          Each signup without Google counts once, at its latest connect record. A signup from before connect attempts were recorded shows No connect attempt recorded.
+        </p>
+        <div class="overflow-x-auto rounded-lg border border-default">
+          <table class="w-full text-left text-sm tabular-nums">
+            <caption class="sr-only">
+              Signups without Google, by their latest connect record
+            </caption>
+            <thead class="bg-muted">
+              <tr>
+                <th scope="col" class="p-4">
+                  Stop
+                </th><th scope="col" class="p-4">
+                  Users
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="stop in report.googleConnectStops" :key="stop.key" class="border-t border-default">
+                <th scope="row" class="p-4 font-medium min-w-52">
+                  {{ stop.label }}
+                </th>
+                <td class="p-4">
+                  {{ stop.users }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section aria-labelledby="funnel-users-heading" class="space-y-3">
         <h2 id="funnel-users-heading" class="text-lg font-semibold">
           Users in this cohort

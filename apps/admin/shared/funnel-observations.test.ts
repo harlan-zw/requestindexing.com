@@ -68,3 +68,17 @@ it('does not clamp missing, future or reversed timestamps into a successful zero
   const summary = summarizeDelays([{ stageTimes: { signedUp: null, googleConnected: null, siteConnected: null, evidenceViewed: null, setupCompleted: null }, delays: pairs, coverage: 'first-recorded', cutoff: new Date(start).toISOString() }])
   expect(summary[0]).toMatchObject({ knownPairs: 0, reversedPairs: 1, medianMs: null })
 })
+
+it('records where a signup without Google stopped, and nothing once Google is connected', () => {
+  const [stopped, connected] = buildObservedFunnelUsers([account, { ...account, id: 2 }], [
+    { userId: 1, type: 'signed_up', createdAt: start, payload: null },
+    { userId: 1, type: 'gsc_connect_started', createdAt: start + 60000, payload: { scope: 'read' } },
+    { userId: 1, type: 'gsc_connect_cancelled', createdAt: start + 90000, payload: null },
+    { userId: 2, type: 'signed_up', createdAt: start, payload: null },
+    { userId: 2, type: 'gsc_connect_started', createdAt: start + 60000, payload: { scope: 'read' } },
+    { userId: 2, type: 'gsc_connected', createdAt: start + 90000, payload: null },
+  ], [], start + 600000)
+  expect(stopped?.googleConnectStop).toBe('cancelled')
+  expect(connected?.googleConnected).toBe(true)
+  expect(connected?.googleConnectStop).toBeUndefined()
+})

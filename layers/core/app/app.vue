@@ -5,16 +5,6 @@ import { isRuntimeOnlyRoute } from '~~/shared/routes'
 
 const useIdFunction = () => useId()
 
-const colorMode = useColorMode()
-
-const color = computed(() => colorMode.value === 'dark' ? '#111827' : 'white')
-
-useHead({
-  meta: [
-    { key: 'theme-color', name: 'theme-color', content: color },
-  ],
-})
-
 useSeoMeta({
   titleTemplate: '%s %separator Request Indexing',
   ogSiteName: 'Request Indexing',

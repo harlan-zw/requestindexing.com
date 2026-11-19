@@ -71,11 +71,11 @@ plan's words. No other string repeats it.
 | What you get heading | IndexNow for Bing and others. Google's reason for each sitemap URL. |
 | IndexNow card | Send pages with IndexNow · IndexNow notifies Bing and other participating search engines about any page type. Google is not one of them. Once your key is verified, Request Indexing sends new and changed sitemap URLs for you. |
 | Sitemap URLs card | Every sitemap URL, with its reason · Request Indexing inspects the URLs in your sitemaps with URL Inspection, within your Free allowance. Each URL shows Google's verdict and reason. |
-| Changes card | What changed · Coverage over time, and the URLs whose verdict changed since last week. |
-| Watched URLs card | Watched URLs · Keep scheduled URL Inspection evidence for pages you choose. (the Watched URLs intro) |
+| Changes card | What changed · Coverage over time, and the URLs whose verdict changed in the last 28 days. (`INDEXING_CHANGES_WINDOW_DAYS`) |
+| Watched URLs card | Watched URLs · Keep scheduled URL Inspection evidence for pages you choose. This does not request indexing. (the Watched URLs intro, verbatim) |
 | Sitemaps card | Sitemaps · What you declared, what Google discovered, and what drifted between the two. |
 | History line | Request Indexing also keeps your Search Console history past Google's 16-month window, within your Free allowance. |
-| How it works description | Connect Google once. Request Indexing sends your new pages with IndexNow and shows what Google reports for each URL. |
+| How it works description | Connect Google once. After your IndexNow key is verified, Request Indexing sends new and changed sitemap URLs with IndexNow. It shows what Google reports for each URL. |
 | Step 3 | Send · Send new and changed pages with IndexNow · Publish your IndexNow key file and verify the key. Automatic sending then sends new and changed sitemap URLs after each sitemap update. |
 | Step 3 bullets | Bing and other participating search engines. Google is not one of them. · Any page type on your site. · A receipt records the notification outcome. · For job posting and livestream pages only, you can also submit to Google's Indexing API. |
 | Step 3 example | The IndexNow request. Request Indexing sends it for you. |
@@ -157,7 +157,7 @@ Copy never outruns the code. Each approved claim carries its standing evidence.
 | IndexNow takes any page type on the host, and needs a key file on the site | INDEXNOW-03 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
 | Once a Site's IndexNow key is verified, Request Indexing sends its new and changed sitemap URLs to IndexNow | Automatic sending, gscdump.com ADR-0031, shipped in #414. The verify action on the IndexNow page turns it on. Only changes found after it turns on are sent. Never say that an engine indexed a URL it sent |
 | Free and open source, MIT | `LICENSE`, and the repository is public |
-| We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify | the connect flow asks for `webmasters` (read and write) and `indexing`. A sitemap submission comes from Submit sitemap on the Sitemaps tab, or from gscdump's daily sync when it finds a live sitemap. A property is added only when the reader selects Verify ownership in Add and verify, after a separate grant of `siteverification` |
+| We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify | setup, the Site add form, the Connect Search Console button, and the no-property actions ask for `webmasters.readonly` only. `webmasters` (read and write) comes from Allow submission on the Sitemaps tab, Connect or Reconnect on Integrations, and the reconnect action on a Search Console read error. Add and verify asks for it with `siteverification`. A sitemap submission comes from Submit sitemap on the Sitemaps tab, or from gscdump's daily sync when it finds a live sitemap and the grant has `webmasters`. A property is added only when the reader selects Verify ownership in Add and verify. No Search Console grant asks for `indexing`: the Indexing API grant has its own client (gscdump.com ADR-0016) |
 | The Free allowance numbers | gscdump returns them from `partner.users.entitlements.get`; copy reads them at runtime and never hardcodes one |
 | Reported Google timing observations provide context, never a countdown or product speed claim | TIMING-01 to TIMING-03 in `apps/marketing/content/VERIFIED-CLAIMS.md`. Attribute the report beside numbers. Keep stage dependencies and slow cases visible |
 | A free tool verdict is an estimate from a Google `site:` search | PRODUCT-06 in `apps/marketing/content/VERIFIED-CLAIMS.md`. The tools read no Search Console data and no URL Inspection result |
@@ -457,6 +457,9 @@ Retained observations do not establish lifetime first use.
 | Attribution capture time | Captured at (UTC) |
 | Sign-in provider | Sign-in provider |
 | Acquisition channel | Acquisition channel |
+| Google stops heading | Where signups stop before Connected Google |
+| Google stops explanation | Each signup without Google counts once, at its latest connect record. A signup from before connect attempts were recorded shows No connect attempt recorded. |
+| Google stop labels | No connect attempt recorded · Skipped Connect Google · No return from Google recorded · Cancelled on Google's consent screen · Search Console box unticked · Google connection failed. Only a signup from before Skip was removed can show Skipped Connect Google |
 
 ## Admin feedback reports
 
@@ -508,7 +511,7 @@ Keep the exact URL and host through sign-in, consent, connection, and recovery.
 | Saved-page coverage label | Google coverage state |
 | Saved-page details action | View inspection details |
 | Saved-page account pending | This Site is being connected to Search Console. Refresh its status in a moment. |
-| Saved-page read access | This step asks for read-only Search Console access. Extra permissions appear with the actions that need them. |
+| Saved-page read access | the Search Console read access string in Connect Google assets, verbatim |
 | Saved-page retry | Retry |
 | Saved-page property limit | This Site's connected property does not cover your selected page. |
 | Saved-page connected property | Connected property |
@@ -518,6 +521,40 @@ Keep the exact URL and host through sign-in, consent, connection, and recovery.
 | Saved-page copied URL | URL copied |
 | Saved-page copy failed | Copy the selected URL above. Your browser could not copy it. |
 | Saved-page changed | Your saved page changed. Reload this page before you inspect it. |
+
+## Connect Google assets
+
+The Connect Google step, the signup page, and the return from Google's consent screen.
+Every reader sees these before they give Google access. Say what Google asks for, what
+Request Indexing can change, and how to take the access back. Strings live in
+`layers/pro-saas/shared/gsc-connect-copy.ts`.
+
+| Asset | String |
+| --- | --- |
+| Benefits | Read your queries, pages and coverage. · Keep your data past Google's 16-month window. |
+| Access heading | What Google asks for |
+| Search Console read access | Setup asks for read-only Search Console access. Extra permissions appear with the actions that need them. |
+| Access changes | the Search Console access sentence in Truth rules, verbatim |
+| Access removal | You can remove this access at any time in your Google Account. |
+| Access removal action | Open Google Account connections, a link to `https://myaccount.google.com/connections` |
+| Signup access note | the Search Console read access string, then the Search Console access sentence in Truth rules, both verbatim. On `/pro/onboarding` below the provider buttons |
+| Cancelled, title | Search Console is not connected |
+| Cancelled, detail | Google returned without Search Console access, so Request Indexing cannot read your data yet. Connect again when you are ready. |
+| Failed, title | The Google connection did not finish |
+| Failed, detail | Google returned an error, so Request Indexing cannot read your Search Console data yet. Connect again. |
+
+**Never list the Indexing API as a Connect Google benefit.** Connect Google does not grant it.
+Submit to Google asks for its own grant on the Account page.
+
+**Connect Google has no Skip.** Harlan removed it on 2026-11-19: 16 of the 34 signups who never
+connected Google left through it onto an empty dashboard. The step offers only Connect Google
+Search Console, then Continue. The Sites step's "Skip and connect it later" stays for a connected
+account whose properties cannot connect. A reader who does not connect can sign out or delete the
+account.
+
+| Asset | String |
+| --- | --- |
+| Finish refused, Google required | Connect Google Search Console before you finish setup. |
 
 ## Setup examples and optional feedback
 
@@ -791,7 +828,7 @@ The fleet Indexing tabs (Overview, Issues, Changes) and the per-Site indexing se
 | Copy export | Copy as Markdown | Fleet Overview toolbar |
 | Download export | Download Markdown | Fleet Overview toolbar |
 | Export title | Indexing coverage: All Sites | The SDK writes the heading; All Sites is the scope |
-| Submissions, Afterwards tooltip | Google's latest URL Inspection result for each URL a search engine received, from a check made after it received the URL. It shows what happened next. It does not show that sending caused it. | Outcomes cover received URLs only (gscdump#304) |
+| Submissions, Afterwards tooltip | Google's latest URL Inspection result for each URL a search engine received, from a check made after it received the URL. It shows what happened next. It does not show that sending caused it. IndexNow does not notify Google. | Outcomes cover received URLs only (gscdump#304). A URL only IndexNow received still counts, so the tooltip says IndexNow does not reach Google (GLOSSARY: IndexNow) |
 | Submissions, Afterwards scope | Of {count} received URLs · Of 1 received URL | The totals cover received URLs, not every URL sent |
 | Submissions, Afterwards partial | Google results cover {checked} of the {count} received URLs. | Same scope as the line above |
 | Changes, source note | Counts come from Google URL Inspection checks, one URL per change. Each Site counts at most 500 changes. | Changes come from each Site's URL Inspection transitions, at most 500 per read |

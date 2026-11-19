@@ -4,6 +4,7 @@ import { provideIndexingSource } from '@nuxtseo/pro-indexing/app/composables/use
 import { parseIndexingUrlsQuery } from '@nuxtseo/pro-indexing/shared/urls-query'
 import { IndexingUrlsTable } from '#components'
 import { useRequestIndexingSource } from '#layers/indexing/app/composables/useRequestIndexingSource'
+import SubmissionWindowHold from '#layers/indexing/app/internal/components/submissions/SubmissionWindowHold.vue'
 import { useIndexingUrlsFirstPageSeed } from '#layers/indexing/app/internal/composables/useIndexingUrlsFirstPageSeed'
 import {
   INDEXING_URLS_PAGE_SIZE,
@@ -33,22 +34,26 @@ const indexingSite = computed<IndexingSite | null>(() => siteId.value
   ? { id: siteId.value, ref: siteId.value, label: siteName.value, url: site.value?.url ?? null, dataId: gscdumpSiteId.value ?? null }
   : null)
 
+// Each opened row's Submission timeline reads the Site's receipt window. The
+// table keeps one row open at a time, so from the first opened row the page
+// holds the window; otherwise each row reads every receipt list again.
+const holdSubmissionWindow = ref(false)
+
 // This page's IndexingSource: a view-only role has no `inspect`, so no row
 // offers "Re-check with Google".
 const appSource = useRequestIndexingSource()
+const { submissionOutcomes } = appSource
 const source: IndexingSource = {
   ...appSource,
   get inspect() {
     return canWrite.value ? appSource.inspect : undefined
   },
+  submissionOutcomes: submissionOutcomes && ((site, params) => {
+    holdSubmissionWindow.value = true
+    return submissionOutcomes(site, params)
+  }),
 }
 provideIndexingSource(source)
-
-// Each opened row's Submission timeline reads the Site's receipt window. The
-// table keeps one row open at a time, so without a reader that lives as long
-// as the page, Nuxt drops the window when a row closes and the next row reads
-// every receipt list again. This read is that page-long reader.
-source.submissions?.(indexingSite)
 
 // The clean first page renders on the server with its rows. Filtered deep
 // links and client navigations fetch in the browser.
@@ -59,6 +64,7 @@ if (import.meta.server && gscdumpSiteId.value && isFirstPageIndexingUrlsRouteQue
 
 <template>
   <ProPageStates>
+    <SubmissionWindowHold v-if="holdSubmissionWindow" :site="indexingSite" />
     <IndexingUrlsTable
       :key="`urls-${tableQuery.issue}-${tableQuery.facet}-${tableQuery.cohort}-${canWrite}`"
       :site="indexingSite"

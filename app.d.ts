@@ -60,6 +60,8 @@ module '#auth-utils' {
     pageTask?: import('./layers/pro-saas/shared/page-task').PageTask
     googleOauthState?: string
     googleOauthReturnTo?: string
+    /** One Google connect attempt, so its funnel records dedupe and the latest attempt wins. */
+    googleOauthAttempt?: string
     googleIndexingAuth?: {
       returnTo: string
       state: string

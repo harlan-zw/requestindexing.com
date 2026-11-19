@@ -37,7 +37,7 @@ export const PRO_INDEXING_COPY_OVERRIDES = {
   // HTTP 200 or 202, Google HTTP 200), so the Afterwards block names received
   // URLs, and "not inspected" carries no "yet".
   submissions: {
-    afterwardsTooltip: 'Google\'s latest URL Inspection result for each URL a search engine received, from a check made after it received the URL. It shows what happened next. It does not show that sending caused it.',
+    afterwardsTooltip: 'Google\'s latest URL Inspection result for each URL a search engine received, from a check made after it received the URL. It shows what happened next. It does not show that sending caused it. IndexNow does not notify Google.',
     afterwardsScope: 'Of {count} received URLs',
     afterwardsScopeOne: 'Of 1 received URL',
     afterwardsPartial: 'Google results cover {checked} of the {count} received URLs.',
