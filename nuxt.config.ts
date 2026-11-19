@@ -327,8 +327,13 @@ export default defineNuxtConfig({
         },
       },
     },
+    storage: {
+      // Rollout cursors must survive Worker restarts without cache expiration.
+      'gscdump-rollout': { driver: 'cloudflare-kv-binding', binding: 'CACHE', base: 'gscdump-rollout' },
+    },
     devStorage: {
-      cache: { driver: 'memory' },
+      'cache': { driver: 'memory' },
+      'gscdump-rollout': { driver: 'fs', base: './.data/gscdump-rollout' },
     },
     sourceMap: false,
     experimental: {

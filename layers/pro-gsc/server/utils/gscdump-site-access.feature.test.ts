@@ -56,11 +56,17 @@ describe('a linked Site this partner cannot read', () => {
   let db: ProDatabase
   let userId: number
   let teamId: number
+  let rolloutProgress: unknown
 
   beforeEach(async () => {
     sqlite = migratedDatabase()
     db = proDatabase(sqlite) as unknown as ProDatabase
     vi.stubGlobal('useDrizzle', () => db)
+    rolloutProgress = { _tag: 'Complete' }
+    vi.stubGlobal('useStorage', () => ({
+      getItem: async () => rolloutProgress,
+      setItem: async (_key: string, value: unknown) => { rolloutProgress = value },
+    }))
     gscdump.lifecycleSiteIds = []
     gscdump.readable = new Set()
     gscdump.registration = { siteId: 's_ri', status: 'pending', existing: false }
@@ -102,13 +108,14 @@ describe('a linked Site this partner cannot read', () => {
     return sqlite.prepare('SELECT gscdump_team_id AS mirror FROM teams WHERE team_id = ?').get(teamId)
   }
 
-  it('repairs completed recoveries in the rollout batch and restores proxy Site scope', async () => {
+  it('repairs completed recoveries in the production hourly run and restores proxy Site scope', async () => {
+    rolloutProgress = null
     linkSite('s_ri', 'synced')
     sqlite.prepare('UPDATE teams SET gscdump_team_id = ? WHERE team_id = ?').run('t_deleted', teamId)
     const readIdentity = async () => ({ identity: { siteId: 's_ri', requestedUrl: 'https://newworldartists.net', userId: 'u_harlan', teamId: 't_restored' } })
     await expect(assertLocalRegisteredGscSiteScope(db, 'site-nwa', 's_ri', readIdentity)).rejects.toMatchObject({ statusCode: 403 })
 
-    await reconcileTask.run!({ name: 'reconcile-gscdump-onboarding', context: {}, payload: { repairPersonalTeams: true } } as never)
+    await reconcileTask.run!({ name: 'reconcile-gscdump-onboarding', context: {}, payload: {} } as never)
 
     expect(personalTeamMirror()).toEqual({ mirror: 't_restored' })
     expect(await assertLocalRegisteredGscSiteScope(db, 'site-nwa', 's_ri', readIdentity)).toEqual({ _tag: 'Registered' })
@@ -125,6 +132,35 @@ describe('a linked Site this partner cannot read', () => {
     expect(personalTeamMirror()).toEqual({ mirror: 't_deleted' })
     await reconcileTask.run!(input as never)
     expect(personalTeamMirror()).toEqual({ mirror: 't_restored' })
+  })
+
+  it('resumes automatic rollout across hourly runs and retries a failed batch', async () => {
+    rolloutProgress = null
+    for (let i = 0; i < 20; i++) {
+      const created = await createUserWithPersonalTeam(
+        db,
+        { name: `User ${i}`, email: `auto${i}@example.test`, avatar: '', lastLogin: 1, sub: `auto-${i}` },
+        { provider: 'google', providerUserId: `auto-${i}`, email: `auto${i}@example.test`, emailVerified: true, displayName: `User ${i}` },
+      )
+      sqlite.prepare('UPDATE users SET gscdump_user_id = ? WHERE user_id = ?').run(`u_${i}`, created.user.userId)
+    }
+    const hourly = () => reconcileTask.run!({ payload: {} } as never)
+    await hourly()
+    expect(gscdump.createTeam.mock.calls.map(([input]) => input.ownerUserId)).toEqual(['u_harlan', ...Array.from({ length: 9 }, (_, i) => `u_${i}`)])
+    gscdump.createTeam.mockClear()
+    // Fail after one successful repair. The next invocation must replay this batch.
+    gscdump.createTeam.mockResolvedValueOnce({ team: { id: 't_restored' } }).mockRejectedValueOnce(new Error('engine unavailable'))
+    await hourly()
+    expect(gscdump.createTeam.mock.calls.map(([input]) => input.ownerUserId)).toEqual(['u_9', 'u_10'])
+    gscdump.createTeam.mockClear()
+    await hourly()
+    expect(gscdump.createTeam.mock.calls.map(([input]) => input.ownerUserId)).toEqual(Array.from({ length: 10 }, (_, i) => `u_${i + 9}`))
+    gscdump.createTeam.mockClear()
+    await hourly()
+    expect(gscdump.createTeam.mock.calls.map(([input]) => input.ownerUserId)).toEqual(['u_19'])
+    gscdump.createTeam.mockClear()
+    await hourly()
+    expect(gscdump.createTeam).not.toHaveBeenCalled()
   })
 
   it('does not overwrite a newer identity during rollout repair', async () => {

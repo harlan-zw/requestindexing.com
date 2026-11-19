@@ -25,6 +25,48 @@ type ReconcileTaskResult
   = | { usersProcessed: number, nextAfterUserId: number | null }
     | { usersProcessed: number, usersFailed: number, attemptedSites: number, linkedSites: number }
 
+const repairProgress = z.discriminatedUnion('_tag', [
+  z.object({ _tag: z.literal('Pending'), afterUserId: z.number().int().nonnegative() }),
+  z.object({ _tag: z.literal('Complete') }),
+])
+
+async function repairPersonalTeamBatch(db: ReturnType<typeof useDrizzle>, afterUserId: number) {
+  const rows = await db.selectDistinct({ userId: users.userId, gscdumpUserId: users.gscdumpUserId })
+    .from(users)
+    .innerJoin(teams, and(eq(teams.ownerId, users.userId), eq(teams.personalTeam, true)))
+    .where(and(isNotNull(users.gscdumpUserId), gt(users.userId, afterUserId)))
+    .orderBy(users.userId)
+    .limit(USERS_PER_RUN)
+    .all()
+  for (const row of rows) {
+    await syncUserGscdumpTeams(undefined, {
+      userId: row.userId,
+      gscdumpUserId: row.gscdumpUserId!,
+      mode: 'personal-team-repair',
+    })
+  }
+  return {
+    usersProcessed: rows.length,
+    nextAfterUserId: rows.length === USERS_PER_RUN ? rows.at(-1)!.userId : null,
+  }
+}
+
+async function advancePersonalTeamRepair(db: ReturnType<typeof useDrizzle>) {
+  // This mount uses persistent KV, separate from the expiring cache driver.
+  const storage = useStorage('gscdump-rollout')
+  const key = 'personal-teams-v1'
+  const saved = await storage.getItem(key)
+  const progress = repairProgress.parse(saved ?? { _tag: 'Pending', afterUserId: 0 })
+  if (progress._tag === 'Complete')
+    return
+  const batch = await repairPersonalTeamBatch(db, progress.afterUserId)
+  // Commit progress only after the entire batch succeeds. A crash or failure
+  // replays the same idempotent Team lookups on the next hourly invocation.
+  await storage.setItem(key, batch.nextAfterUserId === null
+    ? { _tag: 'Complete' }
+    : { _tag: 'Pending', afterUserId: batch.nextAfterUserId })
+}
+
 // Scheduled hourly in `nuxt.config.ts`. A site stays unlinked when its Search
 // Console property is verified after the site was added, or when gscdump could
 // not read the grant at the time. Neither sends this app a signal it would act
@@ -37,29 +79,9 @@ export default defineTask<ReconcileTaskResult>({
   async run({ payload }: { payload?: unknown } = {}) {
     const db = useDrizzle()
     const rollout = rolloutPayload.parse(payload ?? {})
-    // Explicit rollout pass for recoveries completed before the Personal Team fix.
-    // Start with repairPersonalTeams: true, then pass the returned nextAfterUserId.
-    // Stop when nextAfterUserId is null.
-    // A failed batch throws without advancing its cursor. Retry the same payload.
+    // Retain the explicit batch interface for operator-directed repair passes.
     if (rollout.repairPersonalTeams) {
-      const rows = await db.selectDistinct({ userId: users.userId, gscdumpUserId: users.gscdumpUserId })
-        .from(users)
-        .innerJoin(teams, and(eq(teams.ownerId, users.userId), eq(teams.personalTeam, true)))
-        .where(and(isNotNull(users.gscdumpUserId), gt(users.userId, rollout.afterUserId)))
-        .orderBy(users.userId)
-        .limit(USERS_PER_RUN)
-        .all()
-      for (const row of rows) {
-        await syncUserGscdumpTeams(undefined, {
-          userId: row.userId,
-          gscdumpUserId: row.gscdumpUserId!,
-          mode: 'personal-team-repair',
-        })
-      }
-      return { result: {
-        usersProcessed: rows.length,
-        nextAfterUserId: rows.length === USERS_PER_RUN ? rows.at(-1)!.userId : null,
-      } }
+      return { result: await repairPersonalTeamBatch(db, rollout.afterUserId) }
     }
     // A recovered account stays selected until its full writable-Team repair
     // succeeds. Otherwise select users with an unlinked Site on their current
@@ -115,6 +137,11 @@ export default defineTask<ReconcileTaskResult>({
     }
 
     const summary = { usersProcessed: rows.length, usersFailed, attemptedSites, linkedSites }
+    // Historical recoveries have no pending marker or unreported Site. The
+    // production schedule must scan them independently of the routine query.
+    await advancePersonalTeamRepair(db).catch((error: unknown) => {
+      logger.error('[gscdump reconcile task] Personal Team rollout will retry:', error)
+    })
     logger.log('[gscdump reconcile task] run complete:', summary)
     return { result: summary }
   },
