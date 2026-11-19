@@ -183,3 +183,18 @@ it('shows no return alert once the account is connected', async () => {
   await mount()
   expect(host.querySelector('[data-testid="connect-return"]')).toBeNull()
 })
+
+it('says why the server refused Continue later', async () => {
+  session.value = { gscdumpConnected: false, gscdumpAccountStatus: null as unknown as string, gscEmail: '', team: { teamId: 1 } }
+  selected.value = { _tag: 'Available', url: example.url, host: 'www.example.com', siteId: null as unknown as string, canInspect: false }
+  api.fetch.mockImplementation(async (path: string) => {
+    if (path.endsWith('/complete'))
+      throw Object.assign(new Error('refused'), { data: { statusMessage: 'validation_failed', data: { code: 'validation_failed', message: 'Connect Google Search Console before you finish setup.', requestId: 'r_1' } } })
+    return read
+  })
+  await mount()
+  const later = [...host.querySelectorAll('button')].find(button => button.textContent === 'Continue later')
+  later?.click()
+  await flush()
+  expect(host.textContent).toContain('Connect Google Search Console before you finish setup.')
+})

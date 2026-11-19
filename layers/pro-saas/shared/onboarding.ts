@@ -103,14 +103,15 @@ export interface GscConnectionInput {
  * account status does: a user who unticked Search Console before the callback
  * checked the grant still holds a key, and only gscdump knows it is unusable.
  *
- * Only `scope_missing` maps here. `reauth_required` and `refresh_missing` need
- * a reconnect too, but the ScopeMissing alert tells the user to tick a box,
- * which is the wrong instruction for them.
+ * Only `scope_missing` maps to ScopeMissing, whose alert tells the user to
+ * tick a box. `reauth_required`, `refresh_missing` and `disconnected` read as
+ * NotConnected: the key is stored but cannot read, so the wizard offers
+ * Connect again, as `hasUsableGoogleGrant` and the finish route expect.
  */
 export function resolveGscConnection(input: GscConnectionInput): GscConnection {
   if (isGscScopeMissingError(input.error) || input.accountStatus === 'scope_missing')
     return { _tag: 'ScopeMissing' }
-  return input.gscdumpConnected ? { _tag: 'Connected' } : { _tag: 'NotConnected' }
+  return hasUsableGoogleGrant(input) ? { _tag: 'Connected' } : { _tag: 'NotConnected' }
 }
 
 /** gscdump account states in which a stored engine key cannot read Search Console. */
@@ -314,14 +315,18 @@ export interface OnboardingCompletionInput {
   hasSites: boolean
   /** The user chose "Skip and connect it later" on the sites step. */
   skipSites: boolean
-  /** The account's Google grant can read Search Console (`hasUsableGoogleGrant`). */
-  googleConnected: boolean
+  /**
+   * The account's Google grant, as a fresh gscdump read found it. `Unknown`
+   * when gscdump could not say: finishing with no Site closes setup for good,
+   * so it waits for an answer.
+   */
+  googleGrant: 'Usable' | 'Unusable' | 'Unknown'
   now: Date
 }
 
 export type OnboardingCompletion
   = | { _tag: 'AlreadyComplete', completedAt: string }
-    | { _tag: 'Blocked', reason: 'no_sites' | 'google_required', message: string }
+    | { _tag: 'Blocked', reason: 'no_sites' | 'google_required' | 'google_unverified', message: string }
     | { _tag: 'Complete', completedAt: string, sites: 'connected' | 'skipped' }
 
 /**
@@ -352,7 +357,15 @@ export function resolveOnboardingCompletion(input: OnboardingCompletionInput): O
     }
   }
 
-  if (!input.hasSites && !input.googleConnected) {
+  if (!input.hasSites && input.googleGrant === 'Unknown') {
+    return {
+      _tag: 'Blocked',
+      reason: 'google_unverified',
+      message: 'Request Indexing could not check your Google connection. Try again in a moment.',
+    }
+  }
+
+  if (!input.hasSites && input.googleGrant !== 'Usable') {
     return {
       _tag: 'Blocked',
       reason: 'google_required',

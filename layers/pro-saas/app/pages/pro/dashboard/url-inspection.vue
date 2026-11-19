@@ -5,6 +5,7 @@ import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProFirstSiteReport from '~~/layers/indexing/app/components/ProFirstSiteReport.vue'
 import { parseGscConnectReturn } from '#layers/pro-gsc/shared/gsc-grant'
 import ProSiteAddForm from '#layers/pro-saas/app/components/pro/ProSiteAddForm.vue'
+import { readProErrorMessage } from '#layers/pro-saas/shared/errors'
 import { hasUsableGoogleGrant } from '#layers/pro-saas/shared/onboarding'
 import { PAGE_SETUP_COPY as copy, PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 
@@ -94,7 +95,8 @@ async function finish(later = false) {
         await navigateTo('/pro/dashboard')
       else showDetails.value = true
     })
-    .catch(() => { actionError.value = 'Could not finish setup' })
+    // The server says why, for example that Google must be connected first.
+    .catch((error: unknown) => { actionError.value = readProErrorMessage(error) ?? 'Could not finish setup' })
   finishing.value = false
 }
 

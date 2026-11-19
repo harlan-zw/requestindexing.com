@@ -68,15 +68,26 @@ describe('the first Google grant', () => {
 
   it('records a failed connect, not Connected Google, when the gscdump hand-off fails', async () => {
     state.register.mockRejectedValue(createError({ statusCode: 503, message: 'Unavailable', data: { code: 'temporarily_unavailable' } }))
-    expect(await connect()).toContain('gsc_sync_warning=1')
+    // The step that asked shows the failed alert, as a cancelled grant does.
+    expect(await connect()).toMatch(/^\/pro\/dashboard\/onboarding\?step=connect&error=gsc_connect_failed/)
     expect(state.emitFirst).not.toHaveBeenCalledWith(expect.anything(), 42, 'gsc_connected', expect.anything())
     expect(connectEvents()).toEqual([{ type: 'gsc_connect_failed', reason: 'engine', attempt: 'attempt-1' }])
   })
 
   it('records a failed connect when Google returned no refresh token', async () => {
     state.exchange.mockResolvedValue({ ok: true, value: { accessToken: 'access', refreshToken: null, expiresAt: 12345, scope: 'email https://www.googleapis.com/auth/webmasters.readonly' } })
-    expect(await connect()).toContain('gsc_sync_reason=MISSING_REFRESH_TOKEN')
+    expect(await connect()).toMatch(/error=gsc_connect_failed/)
     expect(state.emitFirst).not.toHaveBeenCalledWith(expect.anything(), 42, 'gsc_connected', expect.anything())
     expect(connectEvents()).toEqual([{ type: 'gsc_connect_failed', reason: 'refresh_token', attempt: 'attempt-1' }])
+  })
+
+  it('records a failed connect, and marks the return, when Google user info fails', async () => {
+    vi.stubGlobal('$fetch', async () => {
+      throw new Error('userinfo unavailable')
+    })
+    expect(await connect()).toMatch(/error=gsc_connect_failed/)
+    expect(state.register).not.toHaveBeenCalled()
+    expect(state.emitFirst).not.toHaveBeenCalledWith(expect.anything(), 42, 'gsc_connected', expect.anything())
+    expect(connectEvents()).toEqual([{ type: 'gsc_connect_failed', reason: 'userinfo', attempt: 'attempt-1' }])
   })
 })

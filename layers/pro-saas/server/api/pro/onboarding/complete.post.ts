@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { logWarn } from '~~/shared/logging'
 import { dispatchEvent } from '#domain-events/server'
-import { readGscdumpAccountStatus } from '#layers/pro-gsc/server/utils/gscdump-account-status'
+import { forgetGscdumpAccountStatus, readGscdumpAccountStatus } from '#layers/pro-gsc/server/utils/gscdump-account-status'
 import { hasGscdumpConnection } from '#layers/pro-gsc/server/utils/search-console-properties'
 import { sites, users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
@@ -35,23 +35,29 @@ export default defineProApiHandler({ team: true, body: bodySchema }, async ({ db
     .where(eq(sites.teamId, ctx.team.teamId))
     .limit(1)
 
-  // Only a skip with no Site needs the grant, so only then is gscdump asked
-  // whether the stored key still reads Search Console. The read is cached.
+  // Only a first finish with no Site needs the grant, so only then is gscdump
+  // asked. The decision closes setup for good, so the read skips the cached
+  // status, and an unread status waits for a retry instead of trusting the key.
   const gscdumpConnected = hasGscdumpConnection(user)
-  const needsGrant = teamSite.length === 0 && body?.skipSites === true
-  const accountStatus = needsGrant && hasGscdumpConnection(user)
-    ? await readGscdumpAccountStatus(user.gscdumpUserId, event).catch((error: unknown) => {
-        // An unread status leaves the stored key to decide, as the session does.
-        logWarn('gscdump.account_status.unavailable', error, { userId: caller.user.id })
-        return null
-      })
-    : null
+  const needsGrant = !user?.onboardingCompletedAt && teamSite.length === 0 && body?.skipSites === true
+  let googleGrant: 'Usable' | 'Unusable' | 'Unknown' = gscdumpConnected ? 'Usable' : 'Unusable'
+  if (needsGrant && hasGscdumpConnection(user)) {
+    const logUnread = (error: unknown) => logWarn('gscdump.account_status.unavailable', error, { userId: caller.user.id })
+    await forgetGscdumpAccountStatus(user.gscdumpUserId).catch(logUnread)
+    const accountStatus = await readGscdumpAccountStatus(user.gscdumpUserId, event).catch((error: unknown) => {
+      logUnread(error)
+      return null
+    })
+    googleGrant = accountStatus === null
+      ? 'Unknown'
+      : hasUsableGoogleGrant({ gscdumpConnected, accountStatus }) ? 'Usable' : 'Unusable'
+  }
 
   const decision = resolveOnboardingCompletion({
     completedAt: user?.onboardingCompletedAt ?? null,
     hasSites: teamSite.length > 0,
     skipSites: body?.skipSites === true,
-    googleConnected: hasUsableGoogleGrant({ gscdumpConnected, accountStatus }),
+    googleGrant,
     now: new Date(),
   })
 
