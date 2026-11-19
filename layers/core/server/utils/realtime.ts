@@ -8,7 +8,7 @@ const DURABLE_BINDING = '$DurableObject'
 const DURABLE_INSTANCE = 'server'
 
 // The part of the binding this module calls. `publish` is an RPC method on
-// Nitro's Durable Object class, which `patches/nitropack@2.13.4.patch` changes
+// Nitro's Durable Object class, which the nitropack patch changes
 // to read each socket's topics from its attachment.
 interface SocketNamespace {
   idFromName: (name: string) => unknown
