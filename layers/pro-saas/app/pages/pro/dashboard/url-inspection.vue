@@ -3,7 +3,10 @@ import type { PageEvidenceRead, PageInspectionResult } from '#layers/indexing/sh
 import { useClipboard } from '@vueuse/core'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProFirstSiteReport from '~~/layers/indexing/app/components/ProFirstSiteReport.vue'
+import { parseGscConnectReturn } from '#layers/pro-gsc/shared/gsc-grant'
 import ProSiteAddForm from '#layers/pro-saas/app/components/pro/ProSiteAddForm.vue'
+import { readProErrorMessage } from '#layers/pro-saas/shared/errors'
+import { hasUsableGoogleGrant } from '#layers/pro-saas/shared/onboarding'
 import { PAGE_SETUP_COPY as copy, PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 
 definePageMeta({ layout: 'pro-onboarding', title: 'URL Inspection' })
@@ -14,7 +17,14 @@ const { data: task, status, error, refresh: refreshTask } = await useFetch('/api
 const selected = computed(() => task.value?._tag === 'Available' ? task.value : null)
 const siteId = computed(() => selected.value?.siteId ?? null)
 const connectHref = `/auth/integrations/gsc/connect?scope=read&returnTo=${encodeURIComponent(PAGE_TASK_ROUTE)}`
-const needsGoogle = computed(() => !session.value?.gscdumpConnected || ['scope_missing', 'reauth_required', 'refresh_missing', 'disconnected'].includes(session.value?.gscdumpAccountStatus ?? ''))
+const needsGoogle = computed(() => !hasUsableGoogleGrant({
+  gscdumpConnected: !!session.value?.gscdumpConnected,
+  accountStatus: session.value?.gscdumpAccountStatus ?? null,
+}))
+// Google returns here, marked, when the reader cancelled or the round trip
+// failed. Without this the Connect button simply came back, with no reason.
+const route = useRoute()
+const gscReturn = computed(() => needsGoogle.value ? parseGscConnectReturn(route.query.error) : null)
 type Read = PageEvidenceRead | PageInspectionResult | { _tag: 'Loading' }
 const read = ref<Read>({ _tag: 'Loading' })
 const inspecting = ref(false)
@@ -85,7 +95,8 @@ async function finish(later = false) {
         await navigateTo('/pro/dashboard')
       else showDetails.value = true
     })
-    .catch(() => { actionError.value = 'Could not finish setup' })
+    // The server says why, for example that Google must be connected first.
+    .catch((error: unknown) => { actionError.value = readProErrorMessage(error) ?? 'Could not finish setup' })
   finishing.value = false
 }
 
@@ -161,6 +172,7 @@ const failure = computed(() => {
         Google Search Console: {{ session.gscEmail }}
       </p>
       <template v-if="needsGoogle">
+        <ProGscConnectReturnAlert v-if="gscReturn" :result="gscReturn" />
         <ProSetupExample />
         <p>{{ copy.readAccess }}</p>
         <UButton :to="connectHref" external color="primary" label="Connect Google Search Console" class="min-h-11" />

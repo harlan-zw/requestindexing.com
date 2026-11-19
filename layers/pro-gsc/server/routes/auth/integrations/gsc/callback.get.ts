@@ -156,6 +156,10 @@ export default defineEventHandler(async (event) => {
   // The stored key's probe, when it ran beside the token update.
   let keyProbe: GscdumpKeyProbe | null = null
   let gscdumpSyncFailed = false
+  // The stored key was rejected and no replacement was adopted.
+  let keyRejected = false
+  // The credential write to D1 did not land.
+  let credentialWriteFailed = false
   let gscdumpSyncReason: string | null = null
   let gscdumpSyncMessage: string | null = null
   let recoveredMissingGscdumpUser = false
@@ -284,8 +288,10 @@ export default defineEventHandler(async (event) => {
           gscdumpApiKey = reminted.apiKey
           logger.log('[google auth] gscdump api key reminted for:', gscdumpUserId)
         }
-        else if (reminted && reminted.userId !== gscdumpUserId) {
-          logger.error('[google auth] gscdump remint returned a different user:', reminted.userId, 'expected', gscdumpUserId)
+        else {
+          keyRejected = true
+          if (reminted && reminted.userId !== gscdumpUserId)
+            logger.error('[google auth] gscdump remint returned a different user:', reminted.userId, 'expected', gscdumpUserId)
         }
       }
     }
@@ -316,16 +322,27 @@ export default defineEventHandler(async (event) => {
       })
       .where(eq(schema.users.userId, session.user.id))
       .catch((error: unknown) => {
+        credentialWriteFailed = true
         logger.error('[google auth] db update failed:', errorDetails(error).message)
       }),
     readCurrentTeam(db, session.user.id),
   ])
 
   // The funnel milestone gates nothing on the next page, so it runs after the
-  // response.
-  event.waitUntil(emitFirstProEvent(db, session.user.id, 'gsc_connected', {
-    email: googleUser?.email ?? null,
-  }).catch((error: unknown) => logger.error('[google auth] proEvent emit failed:', errorDetails(error).message)))
+  // response. It needs an engine key the next read can use, from this round
+  // trip: Google named the account, gscdump took the tokens, the key was not
+  // rejected, and D1 stored it. Otherwise it records as a failed connect
+  // against this attempt, and the admin stop table counts it.
+  const engineReady = !!googleUser && !!gscdumpUserId && !!gscdumpApiKey && !gscdumpSyncFailed && !keyRejected && !credentialWriteFailed
+  if (engineReady) {
+    event.waitUntil(emitFirstProEvent(db, session.user.id, 'gsc_connected', {
+      email: googleUser?.email ?? null,
+    }).catch((error: unknown) => logger.error('[google auth] proEvent emit failed:', errorDetails(error).message)))
+  }
+  else if (attempt) {
+    const reason = !googleUser ? 'userinfo' : !refreshToken ? 'refresh_token' : credentialWriteFailed ? 'credential_write' : 'engine'
+    event.waitUntil(recordGoogleConnectEvent(db, session.user.id, 'gsc_connect_failed', attempt, { reason }))
+  }
 
   // Reconcile gscdump-dependent side effects asynchronously. User database
   // provisioning can lag OAuth; this waits in the background and avoids turning
@@ -368,8 +385,10 @@ export default defineEventHandler(async (event) => {
     },
   })
 
-  // Redirect back to original page or dashboard
-  const redirectUrl = returnTo || '/pro/dashboard'
+  // Redirect back to original page or dashboard. A round trip that left no
+  // usable key marks the return as failed, so the page that asked shows the
+  // failed alert; a connected account keeps its grant and sees none.
+  const redirectUrl = engineReady ? returnTo || '/pro/dashboard' : gscCallbackErrorRedirect(returnTo, GSC_CONNECT_FAILED_ERROR)
   const separator = redirectUrl.includes('?') ? '&' : '?'
   if (gscdumpSyncFailed) {
     const params = new URLSearchParams({ gsc_sync_warning: '1' })

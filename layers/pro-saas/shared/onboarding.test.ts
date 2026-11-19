@@ -5,6 +5,7 @@ import {
   DASHBOARD_CARD_STEPS,
   FIRST_RUN_STEPS,
   gscCallbackErrorRedirect,
+  hasUsableGoogleGrant,
   ONBOARDING_ROUTE,
   ONBOARDING_STEPS,
   parseOnboardingCompletedFlag,
@@ -38,8 +39,13 @@ describe('resolveGscConnection', () => {
     expect(resolveGscConnection({ gscdumpConnected: true, accountStatus: 'scope_missing', error: undefined })).toEqual(SCOPE_MISSING)
   })
 
-  it.each(['ready', 'db_provisioning', 'reauth_required'] as const)('keeps a stored credential connected when gscdump reports %s', (accountStatus) => {
+  it.each(['ready', 'db_provisioning'] as const)('keeps a stored credential connected when gscdump reports %s', (accountStatus) => {
     expect(resolveGscConnection({ gscdumpConnected: true, accountStatus, error: undefined })).toEqual(CONNECTED)
+  })
+
+  it.each(['reauth_required', 'refresh_missing', 'disconnected'] as const)('reads a stored credential as not connected when gscdump reports %s', (accountStatus) => {
+    // The wizard then offers Connect again, and finishing agrees with it.
+    expect(resolveGscConnection({ gscdumpConnected: true, accountStatus, error: undefined })).toEqual(NOT_CONNECTED)
   })
 
   it('keeps a connected account connected when a later step-up returns cancelled', () => {
@@ -237,7 +243,7 @@ describe('resolveOnboardingCompletion', () => {
   const now = new Date('2026-09-15T10:00:00.000Z')
 
   it('refuses to finish onboarding with no site and no skip', () => {
-    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: false, googleConnected: true, now })).toEqual({
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: false, googleGrant: 'Usable', now })).toEqual({
       _tag: 'Blocked',
       reason: 'no_sites',
       message: 'Connect at least one Site before you finish setup.',
@@ -245,7 +251,7 @@ describe('resolveOnboardingCompletion', () => {
   })
 
   it('stamps the clock when a site is connected', () => {
-    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: false, googleConnected: true, now })).toEqual({
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: false, googleGrant: 'Usable', now })).toEqual({
       _tag: 'Complete',
       completedAt: '2026-09-15T10:00:00.000Z',
       sites: 'connected',
@@ -253,11 +259,19 @@ describe('resolveOnboardingCompletion', () => {
   })
 
   it('finishes a member of a Team that already has a Site without their own Google grant', () => {
-    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: false, googleConnected: false, now })).toMatchObject({ _tag: 'Complete', sites: 'connected' })
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: false, googleGrant: 'Unusable', now })).toMatchObject({ _tag: 'Complete', sites: 'connected' })
+  })
+
+  it('waits for gscdump when it cannot say whether the grant works', () => {
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: true, googleGrant: 'Unknown', now })).toEqual({
+      _tag: 'Blocked',
+      reason: 'google_unverified',
+      message: 'Request Indexing could not check your Google connection. Try again in a moment.',
+    })
   })
 
   it('refuses the sites skip until Google is connected', () => {
-    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: true, googleConnected: false, now })).toEqual({
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: true, googleGrant: 'Unusable', now })).toEqual({
       _tag: 'Blocked',
       reason: 'google_required',
       message: 'Connect Google Search Console before you finish setup.',
@@ -265,7 +279,7 @@ describe('resolveOnboardingCompletion', () => {
   })
 
   it('finishes with no site when a connected user skipped the sites step', () => {
-    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: true, googleConnected: true, now })).toEqual({
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: true, googleGrant: 'Usable', now })).toEqual({
       _tag: 'Complete',
       completedAt: '2026-09-15T10:00:00.000Z',
       sites: 'skipped',
@@ -274,7 +288,7 @@ describe('resolveOnboardingCompletion', () => {
 
   it('counts a site that landed before the skip as connected', () => {
     // The connect request can succeed after the form showed a failure.
-    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: true, googleConnected: true, now })).toEqual({
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: true, googleGrant: 'Usable', now })).toEqual({
       _tag: 'Complete',
       completedAt: '2026-09-15T10:00:00.000Z',
       sites: 'connected',
@@ -286,7 +300,7 @@ describe('resolveOnboardingCompletion', () => {
       completedAt: new Date('2026-09-01T00:00:00.000Z'),
       hasSites: false,
       skipSites: false,
-      googleConnected: false,
+      googleGrant: 'Unusable',
       now,
     })).toEqual({
       _tag: 'AlreadyComplete',
@@ -312,5 +326,20 @@ describe('parseOnboardingCompletedFlag', () => {
     expect(parseOnboardingCompletedFlag('1')).toBe(true)
     expect(parseOnboardingCompletedFlag('')).toBe(true)
     expect(parseOnboardingCompletedFlag('yes')).toBe(true)
+  })
+})
+
+describe('hasUsableGoogleGrant', () => {
+  it('needs a stored engine key', () => {
+    expect(hasUsableGoogleGrant({ gscdumpConnected: false, accountStatus: null })).toBe(false)
+    expect(hasUsableGoogleGrant({ gscdumpConnected: true, accountStatus: null })).toBe(true)
+  })
+
+  it.each(['scope_missing', 'reauth_required', 'refresh_missing', 'disconnected'] as const)('reads a stored key with gscdump status %s as unusable', (accountStatus) => {
+    expect(hasUsableGoogleGrant({ gscdumpConnected: true, accountStatus })).toBe(false)
+  })
+
+  it.each(['ready', 'db_provisioning', 'oauth_received'] as const)('reads a stored key with gscdump status %s as usable', (accountStatus) => {
+    expect(hasUsableGoogleGrant({ gscdumpConnected: true, accountStatus })).toBe(true)
   })
 })

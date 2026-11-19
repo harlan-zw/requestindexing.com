@@ -70,3 +70,14 @@ export interface ProErrorEnvelope {
   requestId: string
   details?: Record<string, unknown>
 }
+
+/**
+ * The message a refused Pro API call carries, or null. `defineProApiHandler`
+ * throws `createError({ data: envelope })`, and ofetch puts the h3 error body
+ * on `error.data`, so the envelope's message is at `error.data.data.message`.
+ * `error.data.message` is only the error code.
+ */
+export function readProErrorMessage(error: unknown): string | null {
+  const message = (error as { data?: { data?: { message?: unknown } } } | null)?.data?.data?.message
+  return typeof message === 'string' && message ? message : null
+}

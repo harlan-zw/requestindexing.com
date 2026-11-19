@@ -4,6 +4,7 @@
 import type { FeedbackIntent, FeedbackSubmitInput } from '@nuxtseo/pro-shell/shared/contracts'
 import type { FeedbackSubmitAdapter, FeedbackSubmitResult } from '@nuxtseo/pro-shell/shared/feedback'
 import type { DashboardFeedbackWrite } from '#layers/pro-saas/server/utils/dashboard-feedback'
+import { readProErrorMessage } from '#layers/pro-saas/shared/errors'
 
 interface ProFeedbackState {
   open: boolean
@@ -11,12 +12,6 @@ interface ProFeedbackState {
 }
 
 const SENT: FeedbackSubmitResult = { _tag: 'Sent' }
-
-/** The message a refused report carries in the Pro API envelope, or null. */
-function refusalMessage(error: unknown): string | null {
-  const message = (error as { data?: { data?: { message?: unknown } } } | null)?.data?.data?.message
-  return typeof message === 'string' && message ? message : null
-}
 
 export function useProFeedback() {
   const state = useState<ProFeedbackState>('pro:feedback', () => ({ open: false, intent: undefined }))
@@ -29,7 +24,7 @@ export function useProFeedback() {
   const submit: FeedbackSubmitAdapter = (input: FeedbackSubmitInput) =>
     proFetch<DashboardFeedbackWrite>('/api/pro/feedback', { method: 'POST', body: input })
       .then((write): FeedbackSubmitResult => write._tag === 'Recorded' ? SENT : { _tag: 'Failed', message: null })
-      .catch((error: unknown): FeedbackSubmitResult => ({ _tag: 'Failed', message: refusalMessage(error) }))
+      .catch((error: unknown): FeedbackSubmitResult => ({ _tag: 'Failed', message: readProErrorMessage(error) }))
 
   const isOpen = computed({
     get: () => state.value.open,

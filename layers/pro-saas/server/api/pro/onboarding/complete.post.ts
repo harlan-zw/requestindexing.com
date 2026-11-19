@@ -1,12 +1,14 @@
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
+import { logWarn } from '~~/shared/logging'
 import { dispatchEvent } from '#domain-events/server'
+import { forgetGscdumpAccountStatus, readGscdumpAccountStatus } from '#layers/pro-gsc/server/utils/gscdump-account-status'
 import { hasGscdumpConnection } from '#layers/pro-gsc/server/utils/search-console-properties'
 import { sites, users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 import { emitFirstProEvent } from '#layers/pro-saas/server/utils/pro-events'
 import { ProError } from '#layers/pro-saas/shared/errors'
-import { resolveOnboardingCompletion } from '#layers/pro-saas/shared/onboarding'
+import { hasUsableGoogleGrant, resolveOnboardingCompletion } from '#layers/pro-saas/shared/onboarding'
 
 // The wizard sends no body on a normal finish. `skipSites` comes from
 // "Skip and connect it later", which the sites step reveals only to a
@@ -33,11 +35,29 @@ export default defineProApiHandler({ team: true, body: bodySchema }, async ({ db
     .where(eq(sites.teamId, ctx.team.teamId))
     .limit(1)
 
+  // Only a first finish with no Site needs the grant, so only then is gscdump
+  // asked. The decision closes setup for good, so the read skips the cached
+  // status, and an unread status waits for a retry instead of trusting the key.
+  const gscdumpConnected = hasGscdumpConnection(user)
+  const needsGrant = !user?.onboardingCompletedAt && teamSite.length === 0 && body?.skipSites === true
+  let googleGrant: 'Usable' | 'Unusable' | 'Unknown' = gscdumpConnected ? 'Usable' : 'Unusable'
+  if (needsGrant && hasGscdumpConnection(user)) {
+    const logUnread = (error: unknown) => logWarn('gscdump.account_status.unavailable', error, { userId: caller.user.id })
+    await forgetGscdumpAccountStatus(user.gscdumpUserId).catch(logUnread)
+    const accountStatus = await readGscdumpAccountStatus(user.gscdumpUserId, event).catch((error: unknown) => {
+      logUnread(error)
+      return null
+    })
+    googleGrant = accountStatus === null
+      ? 'Unknown'
+      : hasUsableGoogleGrant({ gscdumpConnected, accountStatus }) ? 'Usable' : 'Unusable'
+  }
+
   const decision = resolveOnboardingCompletion({
     completedAt: user?.onboardingCompletedAt ?? null,
     hasSites: teamSite.length > 0,
     skipSites: body?.skipSites === true,
-    googleConnected: hasGscdumpConnection(user),
+    googleGrant,
     now: new Date(),
   })
 

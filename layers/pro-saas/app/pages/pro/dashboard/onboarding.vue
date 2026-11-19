@@ -7,6 +7,7 @@ import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProSetupFirstSiteReport from '~~/layers/indexing/app/components/ProSetupFirstSiteReport.vue'
 
 import { parseGscConnectReturn } from '#layers/pro-gsc/shared/gsc-grant'
+import { readProErrorMessage } from '#layers/pro-saas/shared/errors'
 import { GSC_CONNECT_COPY } from '#layers/pro-saas/shared/gsc-connect-copy'
 import {
   DASHBOARD_ROUTE,
@@ -84,8 +85,8 @@ async function finish(options: { skipSites?: boolean } = {}) {
     await navigateTo(DASHBOARD_ROUTE)
   }
   catch (err: unknown) {
-    const message = (err as { data?: { message?: string } })?.data?.message
-    toast.add({ title: 'Could not finish setup', description: message, color: 'error' })
+    // The server says why, for example that Google must be connected first.
+    toast.add({ title: 'Could not finish setup', description: readProErrorMessage(err) ?? undefined, color: 'error' })
   }
   finally {
     finishing.value = false

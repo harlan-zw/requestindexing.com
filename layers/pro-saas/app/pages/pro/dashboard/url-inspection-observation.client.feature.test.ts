@@ -31,6 +31,7 @@ beforeEach(() => {
   task.value = { _tag: 'Available', url: 'https://example.com/a', siteId: 'site-a', canInspect: true }
   session.value = { user: { id: 7 }, team: { teamId: 1 }, gscdumpConnected: true }
   Object.assign(globalThis, {
+    useRoute: () => ({ query: {} }),
     onMounted,
     onScopeDispose,
     useTemplateRef,

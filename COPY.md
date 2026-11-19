@@ -555,6 +555,7 @@ account.
 | Asset | String |
 | --- | --- |
 | Finish refused, Google required | Connect Google Search Console before you finish setup. |
+| Finish refused, Google unverified | Request Indexing could not check your Google connection. Try again in a moment. |
 
 ## Setup examples and optional feedback
 
