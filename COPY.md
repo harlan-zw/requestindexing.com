@@ -765,10 +765,10 @@ The dashboard frame, the command palette, the sidebar back link, the Fleet Sites
 | Refused action tooltip | Your Team role does not allow this. Ask a Team admin. | Says who can change it |
 | IndexNow offer title | Send pages with IndexNow | Request Indexing's own offer. Reuses the landing IndexNow card title |
 | IndexNow offer body | Publish your key file and verify it. Request Indexing then sends new and changed sitemap URLs to Bing and other participating search engines. | Automatic sending starts at key verification (Truth rules) |
-| IndexNow offer action | Set up IndexNow | Opens the IndexNow page of the first connected Site |
+| IndexNow offer action | Set up IndexNow | Opens the IndexNow page of the Site in view, or of the first connected Site on the dashboard home |
 | Watched URLs offer title | Watch your first URLs | Request Indexing's own offer |
 | Watched URLs offer body | Keep scheduled URL Inspection evidence for pages you choose. This does not request indexing. | The Watched URLs intro, verbatim |
-| Watched URLs offer action | Open Watched URLs | Opens the Watched URLs page of the first connected Site |
+| Watched URLs offer action | Open Watched URLs | Opens the Watched URLs page of the Site in view, or of the first connected Site on the dashboard home |
 | Bing offer title | Connect Bing Webmaster Tools | Bing submission is not claimed (Truth rules) |
 | Bing offer body, one Site | Read Bing crawl evidence for this Site. | Bing submission is not claimed |
 | Bing offer body, every Site | Connect Bing once, then link each Site to read its Bing crawl evidence. | Bing submission is not claimed |

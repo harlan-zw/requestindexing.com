@@ -27,9 +27,10 @@ import { DASHBOARD_CARD_FLOW, resolveGscConnection } from '#layers/pro-saas/shar
 //                                            column, the Search Console band
 //
 // Both other shapes carry `@nuxtseo/pro-shell`'s setup offers ("Finish setting
-// up") under the setup card. Upstream's crawl, analytics, Lighthouse,
-// DataForSEO, Ask, Next Actions and group surfaces have no source here and are
-// not ported.
+// up") under the setup card. A one-Site account meets its IndexNow and Watched
+// URLs offers on the Site's page instead (`ProSiteSetupOffers`). Upstream's
+// crawl, analytics, Lighthouse, DataForSEO, Ask, Next Actions and group
+// surfaces have no source here and are not ported.
 definePageMeta({
   layout: 'pro-dashboard',
   title: 'Dashboard',

@@ -3,6 +3,7 @@ import UiDataList from '@nuxtseo/design-system/app/components/data/UiDataList.vu
 import UiSkeleton from '@nuxtseo/design-system/app/components/element/UiSkeleton.vue'
 import { gscMetricColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
 import { formatNumber } from '@nuxtseo/design-system/app/composables/formatting'
+import { selectSetupOffers } from '@nuxtseo/pro-shell/shared/setup-offers'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, onMounted, ref, toValue, useId, watch } from 'vue'
 import { routeLocationKey } from 'vue-router'
@@ -70,6 +71,55 @@ vi.mock('#layers/pro-gsc/app/components/pro/ProGraphGsc.vue', () => ({ default: 
 vi.mock('#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue', () => ({ default: () => null }))
 vi.mock('#layers/pro-gsc/app/components/pro/ProLiveSearchPerformance.vue', () => ({ default: () => null }))
 vi.mock('#layers/pro-gsc/app/internal/components/pro/ProSparklineCell.vue', () => ({ default: () => null }))
+// The Site's two setup reads, as the engine answers them for each gscdump Site
+// id, and the Team role of the reader.
+const setup = vi.hoisted(() => ({ indexNow: vi.fn(), watched: vi.fn(), canWrite: true }))
+const setupClient = {
+  getSiteIndexNowConnection: ({ params }: { params: { siteId: string } }) => setup.indexNow(params.siteId),
+  listSiteWatchedUrls: ({ params }: { params: { siteId: string } }) => setup.watched(params.siteId),
+}
+// `useGscdumpQuery` without Nuxt: run the read for each Site id, like useAsyncData.
+vi.mock('#layers/pro-gsc/app/composables/useProGscdump/_internal', () => ({
+  useGscdumpQuery: (_key: unknown, siteId: () => string | undefined, fn: (id: string, gscdump: typeof setupClient) => Promise<unknown>) => {
+    const data = ref<unknown>(null)
+    const error = ref<unknown>(null)
+    const status = ref('idle')
+    watch(() => toValue(siteId), async (id) => {
+      error.value = null
+      if (!id) {
+        data.value = null
+        status.value = 'success'
+        return
+      }
+      status.value = 'pending'
+      await fn(id, setupClient).then((value) => {
+        data.value = value
+        status.value = 'success'
+      }, (failure: unknown) => {
+        error.value = failure
+        status.value = 'error'
+      })
+    }, { immediate: true })
+    return { data, error, status }
+  },
+}))
+vi.mock('@nuxtseo/pro-shell/app/composables/useProShellSetupDismissals', () => ({
+  useProShellSetupDismissals: () => ({ dismissedKeys: ref(new Set<string>()), dismiss: vi.fn() }),
+}))
+// The shell frame draws what it selects; this stand-in draws the same selection as links.
+vi.mock('@nuxtseo/pro-shell/app/components/ProShellSetupOffers.vue', () => ({
+  default: defineComponent({
+    props: ['offers', 'dismissed', 'loading'],
+    setup: props => () => props.loading
+      ? null
+      : h('nav', selectSetupOffers(props.offers, props.dismissed).map(offer =>
+          h('a', { 'data-offer': offer.key, 'href': offer.action._tag === 'Link' ? offer.action.to : '' }, offer.title))),
+  }),
+}))
+const INDEXNOW_PENDING = { _tag: 'disconnected', host: 'example.com' }
+const INDEXNOW_VERIFIED = { _tag: 'connected', host: 'example.com', keyLocation: 'https://example.com/k.txt', verifiedAt: '2026-10-20T00:00:00.000Z', automaticSending: { _tag: 'off' } }
+const WATCHING_NONE = { watched: [], limit: 50, cadenceDays: 7, meta: { siteUrl: 'sc-domain:example.com' } }
+const WATCHING_ONE = { ...WATCHING_NONE, watched: [{ url: 'https://example.com/' }] }
 const { default: Page } = await import('#layers/pro-gsc/app/pages/pro/dashboard/sites/[id]/search-console/index.vue')
 const mounted: Array<() => void> = []
 beforeEach(() => {
@@ -87,6 +137,11 @@ beforeEach(() => {
   vi.stubGlobal('useUserSession', () => ({ session, loggedIn }))
   vi.stubGlobal('fetch', capture)
   vi.stubGlobal('useNuxtApp', () => ({ runWithContext: (callback: () => unknown) => callback() }))
+  vi.stubGlobal('useCaller', () => ({ caller, isAdmin: ref(false) }))
+  vi.stubGlobal('useTeamPolicy', () => ({ can: () => setup.canWrite }))
+  setup.canWrite = true
+  setup.indexNow.mockReset().mockResolvedValue(INDEXNOW_VERIFIED)
+  setup.watched.mockReset().mockResolvedValue(WATCHING_ONE)
   vi.stubGlobal('useSite', () => ({ siteId: routeId, site: ref({ url: 'https://example.com' }), siteStatus, gscdumpSiteId: engineId, isProcessing: ref(false), isReady: ready, isNotConnected: demo, isLifecycleSettled: ref(true), hold: ref(false), gscData: ref(null), gscStatusError: ref(null), refreshGscStatus: vi.fn() }))
   vi.stubGlobal('useFetch', () => {
     demoReads()
@@ -320,4 +375,48 @@ it('keeps confirmed zero counts visible while their same-scope reads refresh', a
     expect(count.querySelector('.ui-skeleton')).toBeNull()
   }
   expect(host.textContent).toContain('No device data available')
+})
+
+function setupOffers(host: HTMLElement) {
+  return [...host.querySelectorAll('a[data-offer]')].map(link => [link.getAttribute('data-offer'), link.getAttribute('href')])
+}
+
+// A one-Site account lands on this page instead of the dashboard home, so this
+// is where it meets the IndexNow and Watched URLs offers.
+it('offers the Site IndexNow and Watched URLs, read by its gscdump id and linked by its app id', async () => {
+  setup.indexNow.mockResolvedValue(INDEXNOW_PENDING)
+  setup.watched.mockResolvedValue(WATCHING_NONE)
+  const host = await mount()
+  expect(setup.indexNow).toHaveBeenCalledWith('s_engine')
+  expect(setup.watched).toHaveBeenCalledWith('s_engine')
+  expect(setupOffers(host)).toEqual([
+    ['indexnow', '/pro/dashboard/sites/s_app/indexing/indexnow'],
+    ['watched-urls', '/pro/dashboard/sites/s_app/indexing/watched'],
+  ])
+})
+
+it.each([
+  ['IndexNow is verified', INDEXNOW_VERIFIED, WATCHING_NONE, ['watched-urls']],
+  ['the Site watches a URL', INDEXNOW_PENDING, WATCHING_ONE, ['indexnow']],
+  ['both are set up', INDEXNOW_VERIFIED, WATCHING_ONE, []],
+])('drops each Site offer once it is set up: %s', async (_case, indexNow, watched, keys) => {
+  setup.indexNow.mockResolvedValue(indexNow)
+  setup.watched.mockResolvedValue(watched)
+  const host = await mount()
+  expect(setupOffers(host).map(([key]) => key)).toEqual(keys)
+})
+
+it('hides only the offer whose read failed, and reads nothing for a Team viewer', async () => {
+  setup.indexNow.mockRejectedValue(new Error('engine down'))
+  setup.watched.mockResolvedValue(WATCHING_NONE)
+  const failed = await mount()
+  expect(setupOffers(failed).map(([key]) => key)).toEqual(['watched-urls'])
+
+  setup.canWrite = false
+  setup.indexNow.mockClear()
+  setup.watched.mockClear()
+  const viewer = await mount()
+  expect(setup.indexNow).not.toHaveBeenCalled()
+  expect(setup.watched).not.toHaveBeenCalled()
+  expect(setupOffers(viewer)).toEqual([])
 })

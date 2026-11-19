@@ -1,7 +1,8 @@
-// The setup offers on the dashboard home: the Setup completion of the shell's
-// Bing and Add another Site offers, and Request Indexing's own IndexNow and
-// Watched URLs offers, from the reads this app already makes. Pure, so the
-// rules are tested without a Nuxt app.
+// The setup offers on the dashboard home and on a Site's page. The home shows
+// the shell's Bing and Add another Site offers and Request Indexing's own
+// IndexNow and Watched URLs offers. A Site's page shows that Site's IndexNow
+// and Watched URLs offers. Each Setup completion comes from a read this app
+// already makes. Pure, so the rules are tested without a Nuxt app.
 import type { ProShellCopy } from '@nuxtseo/pro-shell/shared/copy'
 import type { ProShellRouteMap } from '@nuxtseo/pro-shell/shared/routes'
 import type { SetupCompletion, SetupOffer } from '@nuxtseo/pro-shell/shared/setup-offers'
@@ -52,8 +53,9 @@ export function anotherSiteCompletion(input: { siteCount: number, allowance: Fre
 
 /**
  * One engine read for the Site the IndexNow and Watched URLs offers open: the
- * first Site linked to gscdump. `no-site` is an account with no linked Site.
- * `read-only` is a Team role that cannot set up either one, so no read runs.
+ * first Site linked to gscdump on the dashboard home, or the Site in view on a
+ * Site's page. `no-site` means no Site linked to gscdump. `read-only` is a
+ * Team role that cannot set up either one, so no read runs.
  */
 export type SetupSiteRead<T>
   = | { readonly _tag: 'no-site' }
@@ -91,17 +93,58 @@ export function watchedUrlsSetupCompletion(read: SetupSiteRead<{ readonly watche
   return siteReadCompletion(read, record => record.watched.length > 0)
 }
 
+/** The Setup completion of Request Indexing's own offers for one Site. */
+export interface SiteSetupCompletion {
+  readonly indexNow: SetupCompletion
+  readonly watchedUrls: SetupCompletion
+}
+
+/**
+ * Request Indexing's IndexNow and Watched URLs offers, opening the pages of the
+ * Site with this app id. IndexNow comes first, because it is the channel a Site
+ * can send through today. Watched URLs sits between the shell's Bing and Add
+ * another Site offers.
+ */
+function siteOffers(input: {
+  copy: typeof REQUEST_INDEXING_SETUP_OFFER_COPY
+  siteId: string
+  dismissKey: (key: string) => string
+  completion: SiteSetupCompletion
+}): SetupOffer[] {
+  const route = (feature: 'indexing.indexnow' | 'indexing.watched') => expandProSiteRoute(proSiteFeatureManifest[feature].route, input.siteId)
+  return [
+    {
+      key: 'indexnow',
+      dismissKey: input.dismissKey('indexnow'),
+      ...input.copy.indexNow,
+      action: { _tag: 'Link', to: route('indexing.indexnow') },
+      marks: [{ _tag: 'Icon', icon: 'i-lucide-send' }],
+      accent: 'var(--color-orange-500)',
+      priority: 2,
+      completion: input.completion.indexNow,
+    },
+    {
+      key: 'watched-urls',
+      dismissKey: input.dismissKey('watched-urls'),
+      ...input.copy.watchedUrls,
+      action: { _tag: 'Link', to: route('indexing.watched') },
+      marks: [{ _tag: 'Icon', icon: 'i-lucide-clock' }],
+      accent: 'var(--color-violet-500)',
+      priority: 5,
+      completion: input.completion.watchedUrls,
+    },
+  ]
+}
+
 export interface OverviewSetupOfferInput {
   readonly routes: ProShellRouteMap
   readonly shellCopy: ProShellCopy['setupOffers']
   readonly copy: typeof REQUEST_INDEXING_SETUP_OFFER_COPY
   /** The app's own id of the Site the IndexNow and Watched URLs offers open, never its gscdump id. Null with no linked Site. */
   readonly siteId: string | null
-  readonly completion: {
+  readonly completion: SiteSetupCompletion & {
     readonly bing: SetupCompletion
     readonly anotherSite: SetupCompletion
-    readonly indexNow: SetupCompletion
-    readonly watchedUrls: SetupCompletion
   }
 }
 
@@ -109,8 +152,8 @@ export interface OverviewSetupOfferInput {
  * Every offer the dashboard home can show. The shell's Bing and Add another
  * Site offers keep their own priorities (3 and 13). The shell's agent skill,
  * MCP and API offers get no completion, so they never show (COPY.md, "Dashboard
- * shell assets"). IndexNow comes first, because it is the channel a Site can
- * send through today. Watched URLs sits between Bing and Add another Site.
+ * shell assets"). The IndexNow and Watched URLs offers open the first Site
+ * linked to gscdump, and one dismissal hides each across the home.
  */
 export function buildOverviewSetupOffers(input: OverviewSetupOfferInput): SetupOffer[] {
   const { completion, siteId } = input
@@ -122,28 +165,25 @@ export function buildOverviewSetupOffers(input: OverviewSetupOfferInput): SetupO
   })
   if (!siteId)
     return shared
-  const route = (feature: 'indexing.indexnow' | 'indexing.watched') => expandProSiteRoute(proSiteFeatureManifest[feature].route, siteId)
-  return [
-    ...shared,
-    {
-      key: 'indexnow',
-      dismissKey: 'indexnow',
-      ...input.copy.indexNow,
-      action: { _tag: 'Link', to: route('indexing.indexnow') },
-      marks: [{ _tag: 'Icon', icon: 'i-lucide-send' }],
-      accent: 'var(--color-orange-500)',
-      priority: 2,
-      completion: completion.indexNow,
-    },
-    {
-      key: 'watched-urls',
-      dismissKey: 'watched-urls',
-      ...input.copy.watchedUrls,
-      action: { _tag: 'Link', to: route('indexing.watched') },
-      marks: [{ _tag: 'Icon', icon: 'i-lucide-clock' }],
-      accent: 'var(--color-violet-500)',
-      priority: 5,
-      completion: completion.watchedUrls,
-    },
-  ]
+  return [...shared, ...siteOffers({ copy: input.copy, siteId, dismissKey: key => key, completion })]
+}
+
+export interface SiteSetupOfferInput {
+  readonly copy: typeof REQUEST_INDEXING_SETUP_OFFER_COPY
+  /** The app's own id of the Site in view, never its gscdump id. */
+  readonly siteId: string
+  readonly completion: SiteSetupCompletion
+}
+
+/**
+ * The offers on a Site's page: that Site's IndexNow and Watched URLs, until
+ * each is complete. A one-Site account lands there instead of the dashboard
+ * home, so this is where it meets them. nuxtseo.com's Site page draws a Site's
+ * own Setup offers the same way.
+ *
+ * Each dismissal names the Site, the shell's rule for a Site-scoped offer, so
+ * dismissing one Site's card leaves the next Site's card in place.
+ */
+export function buildSiteSetupOffers(input: SiteSetupOfferInput): SetupOffer[] {
+  return siteOffers({ ...input, dismissKey: key => `${key}:${input.siteId}` })
 }

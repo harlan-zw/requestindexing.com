@@ -42,7 +42,7 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 | Checkpoint | gscdump scheduled URL Inspection for a Watched URL | Watched URL 1—N retained observations | Checkpoint |
 | onboarding drip | drip_emails table, `onboarded` sequence | User 0—1 row per sequence; three emails after onboarding | (internal) |
 | Product updates | notification_optouts, category `lifecycle` | Address 0—1 opt-out per category | product updates |
-| Setup offer | `@nuxtseo/pro-shell` `ProShellSetupOffers`, dashboard home | Account 0 to 4 open offers under "Finish setting up" | (the card title) |
+| Setup offer | `@nuxtseo/pro-shell` `ProShellSetupOffers`, dashboard home and Site page | Account 0 to 4 open offers on the home, Site 0 to 2 on its page, under "Finish setting up" | (the card title) |
 | Onboarding Step | `@nuxtseo/pro-shell` Step registry, `FIRST_RUN_STEPS` and `DASHBOARD_CARD_STEPS` | Flow 1 to N steps, one Step state each | step |
 | Feedback report | feedback table, Send feedback drawer | User 0 to N reports | feedback |
 | Indexing capability | `@nuxtseo/pro-indexing` `IndexingSource` optional field; nuxtseo.com GLOSSARY.md owns the term | Source 0 to N capabilities; a missing one hides its section | (internal) |
@@ -221,7 +221,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 ### Setup offer
 
-**Is:** one "Finish setting up" card on the dashboard home: IndexNow, Bing, Watched URLs, or another Site. Each shows while its Setup completion is pending. Request Indexing shows no agent skill, MCP, or API offer. nuxtseo.com's glossary owns the term; `@nuxtseo/pro-shell` draws it.
+**Is:** one "Finish setting up" card. The dashboard home shows IndexNow, Bing, Watched URLs, and another Site. A Site's page shows that Site's IndexNow and Watched URLs. A one-Site account never sees the home, so it meets them there. Each shows while its Setup completion is pending. Request Indexing shows no agent skill, MCP, or API offer. nuxtseo.com's glossary owns the term; `@nuxtseo/pro-shell` draws it.
 
 **Use for:** code and docs about those cards.
 
