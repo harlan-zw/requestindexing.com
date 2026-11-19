@@ -2,7 +2,7 @@
 title: "Google Indexing API with Node.js: Send One Notification"
 description: "Use GoogleAuth and googleapis to send an eligible URL_UPDATED notification, inspect failures, and distinguish notification metadata from indexing status."
 navigation:
-  order: 3
+  order: 6
   icon: i-simple-icons-nodedotjs
 icon: i-simple-icons-nodedotjs
 publishedAt: "2026-03-04"

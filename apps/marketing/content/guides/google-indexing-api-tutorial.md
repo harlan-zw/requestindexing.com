@@ -2,7 +2,7 @@
 title: "Google Indexing API Setup: Your First Notification"
 description: "Set up a service account, property ownership and scoped Node.js client for your first eligible Indexing API notification."
 navigation:
-  order: 2
+  order: 5
   icon: i-heroicons-academic-cap
 icon: i-heroicons-academic-cap
 publishedAt: "2026-03-04"
