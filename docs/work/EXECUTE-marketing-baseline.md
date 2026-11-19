@@ -1,8 +1,8 @@
 # Marketing baseline
 
-Status: 2026-11-19, branch `fix-marketing-leftovers` (#439). Earlier work merged in the pull requests the ledger cites.
+Status: 2026-11-19, branch `fix-one-site-setup-offers` (#445). Earlier work merged in the pull requests the ledger cites.
 
-**Next move:** Harlan. Review #439 and its new `COPY.md` strings. Send the flip-test question. Read the home page test on 2026-12-02.
+**Next move:** Harlan. Review #445. Send the flip-test question. Read the home page test on 2026-12-02.
 
 Done means: the home page, onboarding emails, and listing text in production match `MARKETING.md`, and the metric has a measured baseline.
 
@@ -21,7 +21,7 @@ Done means: the home page, onboarding emails, and listing text in production mat
 - [x] IndexNow setup guide with the key file (#422, review notes #424)
 - [ ] Contact the people who paid for the old Pro plan (deferred 2026-11-17)
 - [x] Read the admin funnel; set the metric baseline and the 60-day target
-- [ ] Confirm the "Viewed Google evidence" event records; it has counted nobody since 2026-11-07
+- [x] Confirm the "Viewed Google evidence" event records: checked 2026-11-19. Both events still count nobody, and so do the inspection and first-report starts that lead to them. The recorders work, but few users take those two opt-in paths. The Site indexing pages, where users read Google's verdict, record no event. Connect a Site stays the metric until a Site page records evidence views
 - [x] Record where signups stop at the Google connect step: read-only Google access and stop records (#431), Connect Google required before setup finishes (#432)
 - [ ] Read the stop records and find why about half of signups stop at the Google connect step
 - [ ] Send the flip-test question; record the counts in `docs/audits/`
@@ -30,7 +30,7 @@ Done means: the home page, onboarding emails, and listing text in production mat
 - [x] Replace onboarding email 01 with the IndexNow setup email (#411, approved copy #417)
 - [x] Footer agent link points to gscdump.com/mcp (#419)
 - [x] Dashboard Setup offers lead with IndexNow and Watched URLs, with no agent offer (#439)
-- [ ] Show the IndexNow and Watched URLs offers to one-Site owners. The dashboard home redirects a one-Site account to its Site, and the Site pages draw no Setup offers. nuxtseo.com draws them on its Site page; port that
+- [x] Show the IndexNow and Watched URLs offers to one-Site owners: each Site's Search Console Overview, where a one-Site account lands, shows that Site's two offers, as nuxtseo.com's Site page does (#445)
 - [x] Reason guides: `/why-is-my-page-not-indexed` and `/why-is-my-site-not-indexed`, with Markdown twins (#438)
 - [x] Move the listing text into `COPY.md`, updated to name IndexNow (#439)
 - [ ] Put the listing text on family sites and directories
@@ -46,3 +46,4 @@ Done means: the home page, onboarding emails, and listing text in production mat
 - 2026-11-18: Branch `feat-home-indexnow-story` builds the home page plan with Harlan's changes: IndexNow under the H1, Google's own button, Why pages stop, five cards, IndexNow in step 3, and the trust and FAQ rewrites. It cuts "Google is deleting your data" and the tone items "No dark arts.", "Instant", "Indexing shouldn't be luck.", and "The complete Google Indexing API guide". The history line now names the Free allowance. The "low domain authority" lines on the tool pages remain.
 - 2026-11-19: Ledger reconciled with merged pull requests: home page #420 and #423, IndexNow guide #422 and #424, footer #419, Submissions #414, #421, #425, and #433, email 01 #411 and #417, Connect Google #431 and #432. #439 replaces the agent Setup offers with IndexNow and Watched URLs, rewrites the `/tools` closing action and the site report offer around Google's reason and IndexNow, cuts the tool page folklore, names both cookies and three services on the privacy page, and moves the listing text into `COPY.md`.
 - 2026-11-19: #438 adds the two reason guides. The zone Markdown rewrite rule now lists both paths.
+- 2026-11-19: #445 shows the IndexNow and Watched URLs offers on each Site's Search Console Overview, where a one-Site account lands. `MARKETING.md` open question 1 now points at the #431 stop records. The evidence event check found reach, not a recorder fault.

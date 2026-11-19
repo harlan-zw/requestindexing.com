@@ -8,6 +8,7 @@ import {
   anotherSiteCompletion,
   bingSetupCompletion,
   buildOverviewSetupOffers,
+  buildSiteSetupOffers,
   indexNowSetupCompletion,
   watchedUrlsSetupCompletion,
 } from './overview-setup-offers'
@@ -106,5 +107,28 @@ describe('buildOverviewSetupOffers', () => {
 
   it('keeps the shell offers and drops the Site offers without a linked Site', () => {
     expect(offers(null).map(offer => offer.key)).toEqual(['bing', 'another-site'])
+  })
+})
+
+describe('buildSiteSetupOffers', () => {
+  const pending = { _tag: 'pending' } as const
+  function siteOffers(siteId: string) {
+    return buildSiteSetupOffers({ copy: REQUEST_INDEXING_SETUP_OFFER_COPY, siteId, completion: { indexNow: pending, watchedUrls: pending } })
+  }
+  function dismissKey(offers: ReturnType<typeof siteOffers>, key: string) {
+    return offers.find(offer => offer.key === key)!.dismissKey
+  }
+
+  it('offers only the Site\'s IndexNow and Watched URLs, opened by its app id', () => {
+    expect(selectSetupOffers(siteOffers('site_app_1'), new Set()).map(offer => [offer.key, offer.action])).toEqual([
+      ['indexnow', { _tag: 'Link', to: '/pro/dashboard/sites/site_app_1/indexing/indexnow' }],
+      ['watched-urls', { _tag: 'Link', to: '/pro/dashboard/sites/site_app_1/indexing/watched' }],
+    ])
+  })
+
+  it('keeps a dismissal to its own Site', () => {
+    const dismissed = new Set([dismissKey(siteOffers('site_a'), 'indexnow')])
+    expect(selectSetupOffers(siteOffers('site_a'), dismissed).map(offer => offer.key)).toEqual(['watched-urls'])
+    expect(selectSetupOffers(siteOffers('site_b'), dismissed).map(offer => offer.key)).toEqual(['indexnow', 'watched-urls'])
   })
 })

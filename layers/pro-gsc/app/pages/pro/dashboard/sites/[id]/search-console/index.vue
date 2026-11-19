@@ -3,6 +3,7 @@ import type { AnalyticsRowsV1Request } from '@gscdump/contracts/v1/http'
 import type { GscdumpDataRow } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { fmtGscMetric, formatNumber, getPath } from '@nuxtseo/design-system/app/composables/formatting'
 import { computed, ref, watch } from 'vue'
+import ProSiteSetupOffers from '#layers/pro-gsc/app/components/overview/ProSiteSetupOffers.vue'
 import ProCardGsc from '#layers/pro-gsc/app/components/pro/ProCardGsc.vue'
 import ProGscReadError from '#layers/pro-gsc/app/components/pro/ProGscReadError.vue'
 import ProGscSurfaceBar from '#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue'
@@ -30,7 +31,9 @@ import { isBrandTerm } from '#layers/pro-gsc/shared/query-display'
 
 // Per-Site Search Console Overview, ported from nuxtseo.com's
 // `search-console/index.vue`. Dropped against upstream: the browser analyzer
-// boot progress, the chat and MCP ejects, and chart annotations.
+// boot progress, the chat and MCP ejects, and chart annotations. Added: the
+// Site's own Setup offers, from nuxtseo.com's Site page, because this page is
+// where a Site's route lands and where a one-Site account starts.
 
 definePageMeta({
   proTab: { feature: 'search-console', label: 'Overview', icon: 'i-lucide-layout-dashboard', order: 0 },
@@ -465,6 +468,9 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
     </UiAlert>
 
     <template v-else>
+      <!-- The Site's IndexNow and Watched URLs offers. They sit above the data in
+           every state, so a Site in its first sync shows them too. -->
+      <ProSiteSetupOffers :site-id="siteId" :gscdump-site-id="gscdumpSiteId ?? null" />
       <!-- The shared control strip owns period, comparison, search type, chart
            metrics and the Brand and Questions facets. Country and Device stay
            off: a per-Site breakdown cannot cross-filter by them. -->
