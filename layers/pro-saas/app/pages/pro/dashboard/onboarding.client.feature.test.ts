@@ -65,8 +65,11 @@ async function mount() {
     setup: props => () => h('div', [h('h1', props.title), h('p', props.description)]),
   }))
   app.component('UiWizardNav', defineComponent({
-    props: ['nextLabel', 'nextDisabled'],
-    setup: props => () => h('button', { disabled: props.nextDisabled }, props.nextLabel),
+    props: { nextLabel: String, nextDisabled: Boolean, skipLabel: String, showNext: { type: Boolean, default: true } },
+    setup: props => () => h('div', [
+      props.skipLabel ? h('button', { 'data-testid': 'step-skip' }, props.skipLabel) : null,
+      props.showNext ? h('button', { 'disabled': props.nextDisabled, 'data-testid': 'step-next' }, props.nextLabel) : null,
+    ]),
   }))
   app.mount(host)
   apps.push(app)
@@ -109,4 +112,23 @@ it('offers recovery instead of setup success when a bookmarked final step has no
   await nextTick()
   expect(host.textContent).toContain('Connect a Site to finish setup')
   expect(host.querySelector('button')?.disabled).toBe(true)
+})
+
+it('offers no Skip on Connect Google, so a new account can only connect', async () => {
+  route.query = { step: 'connect' }
+  session.value = { hasSites: false, gscdumpConnected: false }
+  const host = await mount()
+  expect(host.textContent).toContain('Connect Google Search Console')
+  expect(host.querySelector('[data-testid="step-skip"]')).toBeNull()
+  expect(host.querySelector('[data-testid="step-next"]')).toBeNull()
+  route.query = { step: 'sync' }
+})
+
+it('offers Continue on Connect Google once Google is connected, still with no Skip', async () => {
+  route.query = { step: 'connect' }
+  session.value = { hasSites: false, gscdumpConnected: true }
+  const host = await mount()
+  expect(host.querySelector('[data-testid="step-skip"]')).toBeNull()
+  expect(host.querySelector('[data-testid="step-next"]')).not.toBeNull()
+  route.query = { step: 'sync' }
 })

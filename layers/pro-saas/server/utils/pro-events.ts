@@ -11,7 +11,6 @@ type ProDB = ReturnType<typeof useDrizzle>
 // `recordGoogleConnectEvent`.
 export type GoogleConnectEventType
   = | 'gsc_connect_started'
-    | 'gsc_connect_skipped'
     | 'gsc_connect_cancelled'
     | 'gsc_connect_failed'
     | 'gsc_scope_missing'

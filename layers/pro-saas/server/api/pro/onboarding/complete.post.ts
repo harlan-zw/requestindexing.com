@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { dispatchEvent } from '#domain-events/server'
+import { hasGscdumpConnection } from '#layers/pro-gsc/server/utils/search-console-properties'
 import { sites, users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 import { emitFirstProEvent } from '#layers/pro-saas/server/utils/pro-events'
@@ -8,8 +9,8 @@ import { ProError } from '#layers/pro-saas/shared/errors'
 import { resolveOnboardingCompletion } from '#layers/pro-saas/shared/onboarding'
 
 // The wizard sends no body on a normal finish. `skipSites` comes from
-// "Skip and connect it later", which the sites step reveals only after
-// connecting failed.
+// "Skip and connect it later", which the sites step reveals only to a
+// connected account after connecting failed.
 const bodySchema = z.object({
   skipSites: z.boolean().optional(),
 }).optional()
@@ -23,7 +24,7 @@ const bodySchema = z.object({
  * purpose. The dashboard's Connect a Site page takes over from there.
  */
 export default defineProApiHandler({ team: true, body: bodySchema }, async ({ db, caller, team: ctx, event, body }) => {
-  const [user] = await db.select({ onboardingCompletedAt: users.onboardingCompletedAt })
+  const [user] = await db.select({ onboardingCompletedAt: users.onboardingCompletedAt, gscdumpUserId: users.gscdumpUserId, gscdumpApiKey: users.gscdumpApiKey })
     .from(users)
     .where(eq(users.userId, caller.user.id))
 
@@ -36,6 +37,7 @@ export default defineProApiHandler({ team: true, body: bodySchema }, async ({ db
     completedAt: user?.onboardingCompletedAt ?? null,
     hasSites: teamSite.length > 0,
     skipSites: body?.skipSites === true,
+    googleConnected: hasGscdumpConnection(user),
     now: new Date(),
   })
 

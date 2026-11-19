@@ -110,21 +110,21 @@ function current(ctx: Parameters<typeof resolveFirstRun>[0], requested: string |
 }
 
 describe('first-run steps', () => {
-  it('lets a user leave the connect step without a Google grant, through its skip', () => {
-    for (const gsc of [NOT_CONNECTED, SCOPE_MISSING])
-      expect(current({ gsc, hasSites: false }, 'connect').skip).toEqual({ _tag: 'Go', step: 'sites' })
+  it('offers no skip on the connect step: Connect Google is required', () => {
+    // Harlan's call on 2026-11-19: 16 of 34 signups who never connected left
+    // through this skip, onto an empty dashboard, and none signed in again.
+    for (const gsc of [NOT_CONNECTED, SCOPE_MISSING, CONNECTED])
+      expect(current({ gsc, hasSites: false }, 'connect').skip).toBeNull()
   })
 
-  it('offers no skip on the connect step once Search Console is connected', () => {
-    // The step draws only Continue then (UX replay A13: never both).
-    expect(current({ gsc: CONNECTED, hasSites: false }, 'connect').skip).toBeNull()
-  })
-
-  it('offers the sites skip once connecting is blocked and no site exists', () => {
+  it('offers the sites skip once connecting is blocked and no site exists, for a connected account only', () => {
     // A gscdump outage or a full Free allowance must not trap the user here.
     expect(current({ gsc: CONNECTED, hasSites: false, connectBlocked: true }, 'sites').current.skippable).toBe(true)
     expect(current({ gsc: CONNECTED, hasSites: false, connectBlocked: false }, 'sites').current.skippable).toBe(false)
     expect(current({ gsc: CONNECTED, hasSites: true, connectBlocked: true }, 'sites').current.skippable).toBe(false)
+    // A link straight to the sites step must not become the old skip.
+    for (const gsc of [NOT_CONNECTED, SCOPE_MISSING])
+      expect(current({ gsc, hasSites: false, connectBlocked: true }, 'sites').current.skippable).toBe(false)
   })
 
   it('keeps every step in the rail and finishes from the last one', () => {
@@ -237,7 +237,7 @@ describe('resolveOnboardingCompletion', () => {
   const now = new Date('2026-09-15T10:00:00.000Z')
 
   it('refuses to finish onboarding with no site and no skip', () => {
-    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: false, now })).toEqual({
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: false, googleConnected: true, now })).toEqual({
       _tag: 'Blocked',
       reason: 'no_sites',
       message: 'Connect at least one Site before you finish setup.',
@@ -245,15 +245,27 @@ describe('resolveOnboardingCompletion', () => {
   })
 
   it('stamps the clock when a site is connected', () => {
-    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: false, now })).toEqual({
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: false, googleConnected: true, now })).toEqual({
       _tag: 'Complete',
       completedAt: '2026-09-15T10:00:00.000Z',
       sites: 'connected',
     })
   })
 
-  it('finishes with no site when the user skipped the sites step', () => {
-    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: true, now })).toEqual({
+  it('finishes a member of a Team that already has a Site without their own Google grant', () => {
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: false, googleConnected: false, now })).toMatchObject({ _tag: 'Complete', sites: 'connected' })
+  })
+
+  it('refuses the sites skip until Google is connected', () => {
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: true, googleConnected: false, now })).toEqual({
+      _tag: 'Blocked',
+      reason: 'google_required',
+      message: 'Connect Google Search Console before you finish setup.',
+    })
+  })
+
+  it('finishes with no site when a connected user skipped the sites step', () => {
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: true, googleConnected: true, now })).toEqual({
       _tag: 'Complete',
       completedAt: '2026-09-15T10:00:00.000Z',
       sites: 'skipped',
@@ -262,7 +274,7 @@ describe('resolveOnboardingCompletion', () => {
 
   it('counts a site that landed before the skip as connected', () => {
     // The connect request can succeed after the form showed a failure.
-    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: true, now })).toEqual({
+    expect(resolveOnboardingCompletion({ completedAt: null, hasSites: true, skipSites: true, googleConnected: true, now })).toEqual({
       _tag: 'Complete',
       completedAt: '2026-09-15T10:00:00.000Z',
       sites: 'connected',
@@ -274,6 +286,7 @@ describe('resolveOnboardingCompletion', () => {
       completedAt: new Date('2026-09-01T00:00:00.000Z'),
       hasSites: false,
       skipSites: false,
+      googleConnected: false,
       now,
     })).toEqual({
       _tag: 'AlreadyComplete',
