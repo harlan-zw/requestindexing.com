@@ -469,7 +469,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
            metrics and the Brand and Questions facets. Country and Device stay
            off: a per-Site breakdown cannot cross-filter by them. -->
       <ProGscSurfaceBar v-if="searchState._tag === 'Ready'" surface="overview" :site-id="siteId" />
-      <ProLiveSearchPerformance v-if="analyticsSiteId" :key="analyticsSiteId" :range="sparkRange" :load-rows="loadLiveSearchPerformance" />
+      <ProLiveSearchPerformance v-if="analyticsSiteId" :key="analyticsSiteId" :gsc-property-url="gscData?.gscPropertyUrl ?? null" :range="sparkRange" :load-rows="loadLiveSearchPerformance" />
 
       <UiAlert v-if="gscData?.syncStatus === 'syncing' && gscData.syncProgress" status="info" :title="`Syncing ${Math.round(gscData.syncProgress.percent)}%`">
         {{ gscData.syncProgress.completed }} of {{ gscData.syncProgress.total }} Search Console tasks completed.
