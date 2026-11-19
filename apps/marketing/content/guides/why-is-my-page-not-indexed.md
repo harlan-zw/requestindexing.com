@@ -20,11 +20,15 @@ relatedPages:
     title: How to request indexing in Google Search Console
 ---
 
-**Google gives a reason for each page that it does not index. Find that reason first. Then fix the cause that it names.** Search Console shows the reason in URL Inspection for one URL, and in the Page indexing report for your whole site.
+**Google gives a reason for each page that it does not index. Find that reason first. Then fix the cause that it names.** URL Inspection in Search Console shows the reason for one URL. The Page indexing report shows the reasons for your whole site.
 
 Nobody can force Google to index a page. Request Indexing shows what Google decided, and why.
 
-Some reasons need no fix. Google says that a URL can be out of the index for a good reason. Examples are a duplicate URL, a `noindex` tag that you added on purpose, and a 404 for a page that you removed and did not replace.
+Some reasons need no fix. Google says that a URL can be out of the index for a good reason, for example:
+
+- a duplicate URL
+- a `noindex` tag that you added on purpose
+- a 404 for a page that you removed and did not replace
 
 ## Find the reason for one URL
 
@@ -36,7 +40,7 @@ To see the reasons for the whole property, open the Page indexing report. Its **
 
 [How to Request Indexing in Google Search Console](/request-indexing-google-search-console) explains URL Inspection in more detail.
 
-The sections below follow the order in which a page moves: Google finds a URL, crawls the page, then decides whether to index it. Each heading is Google's exact label.
+The sections below follow the order in which a page moves: Google finds a URL, crawls the page, then decides whether to index it. Each reason heading uses Google's words. Where Google's help page uses another name, the text gives it.
 
 ## Google does not know the URL
 
@@ -72,7 +76,12 @@ Your server returned a 500-level error when Google requested the page. Server er
 
 ### Redirect error
 
-Google could not follow a redirect. Google names four causes: a redirect chain that is too long, a redirect loop, a URL that becomes too long, and a bad or empty URL in the chain.
+Google could not follow a redirect. Google names four causes:
+
+- a redirect chain that is too long
+- a redirect loop
+- a URL that becomes too long
+- a bad or empty URL in the chain
 
 **First fix:** Make the URL redirect once, straight to the final page. A web debugging tool such as Lighthouse shows each step of the chain.
 
@@ -92,7 +101,7 @@ Your server refused Google's request. Google never sends a login, so Google says
 
 The URL returned a 404 error. Google can find a URL like this through a link, or the page existed before.
 
-**First fix:** If you removed the page and have no replacement, do nothing. If the page moved, add a 301 redirect to the new address. In general, Google recommends that you fix a 404 only if you link to the URL or list it in a sitemap.
+**First fix:** If you removed the page and have no replacement, do nothing. If the page moved, add a 301 redirect to the new address. Google's general advice: fix a 404 only if you link to the URL or list it in a sitemap.
 
 ### Soft 404
 

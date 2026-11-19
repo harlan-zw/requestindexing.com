@@ -26,7 +26,7 @@ Nobody can force Google to index a page. Request Indexing shows what Google deci
 
 ## 1. Add and verify your Search Console property
 
-You do not have to sign up for Search Console to be included in Google Search. But you need a verified property to read Google's reasons and to use the Sitemaps report.
+You do not have to sign up for Search Console to be included in Google Search. But you need a verified property to read Google's reasons and to submit a sitemap in the Sitemaps report.
 
 To add a property, you must prove that you own the site. Search Console has two types of website property:
 
@@ -37,7 +37,7 @@ If you use a URL-prefix property, make sure that it matches the address of your 
 
 ## 2. Submit a sitemap that Google can read
 
-A sitemap lists the URLs that you want Google to find. Submit it in the Sitemaps report in Search Console. You need owner permission on the property to use the report. If you do not have owner permission, add this line to your robots.txt file instead:
+A sitemap lists the URLs that you want Google to find. Submit it in the Sitemaps report in Search Console. You need owner permission on the property to submit a sitemap with the report. If you do not have owner permission, add this line to your robots.txt file instead:
 
 ```txt
 Sitemap: https://example.com/sitemap.xml

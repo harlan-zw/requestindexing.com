@@ -17,13 +17,13 @@ Read [COPY](../../COPY.md), [SOURCES](../../SOURCES.md), [VERIFIED-CLAIMS](../..
 - Related articles: why-is-my-site-not-indexed, request-indexing-google-search-console.
 - Visual plan: one HTML example for the noindex tag. No screenshot; an authenticated capture of the URLs page is a follow-up.
 - Title: "Why Is My Page Not Indexed? Google's Reasons and the First Fix". The title is also the H1 and keeps the searcher's question.
-- Navigation: order 1, after the Search Console guide and before the Indexing API guides, as the channel kit ranks them. The Indexing API guides and the IndexNow guide move down by one or more places.
+- Navigation: order 1, after the Search Console guide and before the Indexing API guides, as the channel kit ranks them. The IndexNow guide moves up from 7 to 3, so it stays beside the diagnosis guides as in the header. The six Indexing API guides move down by three places, to 4 to 9.
 - Delivery: a Markdown answer for this path needs the zone URL Rewrite Rule from `docs/arch/README.md`.
 
 ## Writing passes
 
 - Factual pass: each Google claim matched against the raw page text of its VERIFIED-CLAIMS source. Three meanings were narrowed: the duplicate reason no longer says "because it names no canonical", the canonical mismatch reason says "marked as the canonical", and the Alternate fix quotes "nothing you need to do".
-- Humanize passes: one H2 with no body was folded into the section above it. Each reason keeps one H3, so later pages can link an anchor. The fetch group opens with the canonical Reason 3 sentence.
+- Humanize passes: one H2 with no body was folded into the section above it. Each reason keeps one H3, so later pages can link an anchor. The fetch group opens with the canonical Reason 3 sentence. Sentences over 20 words became short lists: the good reasons to stay out of the index, and the four redirect causes.
 
 ## Review gate
 

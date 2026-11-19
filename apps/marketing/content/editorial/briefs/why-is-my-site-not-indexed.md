@@ -9,7 +9,7 @@ Read [COPY](../../COPY.md), [SOURCES](../../SOURCES.md), [VERIFIED-CLAIMS](../..
 - Reader: the owner of a new site with zero or few indexed pages. Many write English as a second language.
 - Question: Why did Google index few or none of the pages on my new site, and what do I check?
 - Outcome: check the Search Console property, the sitemap, robots.txt, noindex, links from the home page, and server answers, in that order; then wait for Google, and read the reason for each URL.
-- Claim IDs: GOOGLE-11, GOOGLE-25 to GOOGLE-32.
+- Claim IDs: GOOGLE-11, GOOGLE-23 to GOOGLE-32, PRODUCT-12.
 - Search evidence: none measured. `docs/marketing/channel-kit.md` row 3 cites a customer email about a Site with no indexed URLs, and `MARKETING.md` ranks "Write the whole-Site case first". No ranking or volume claim.
 - Contribution: seven checks with one example each where it helps: the two property types, the Sitemaps report statuses and the robots.txt `Sitemap:` line, Google's whole-site `Disallow` example, where noindex hides, a crawlable link, and server errors. It ends with Google's own words that it does not promise to crawl or index, and with the Request Indexing path to the reason for each URL.
 - Property framing: Google says that Search Console signup is not needed for inclusion (GOOGLE-28). The guide presents the property as the way to read reasons and to use the Sitemaps report, never as a cause.
@@ -22,7 +22,7 @@ Read [COPY](../../COPY.md), [SOURCES](../../SOURCES.md), [VERIFIED-CLAIMS](../..
 
 ## Writing passes
 
-- Factual pass: the property section now uses Google's "included in Google Search" wording, and the robots.txt example names AdsBot as Google's exception.
+- Factual pass: the property section now uses Google's "included in Google Search" wording, the robots.txt example names AdsBot as Google's exception, and owner permission is tied to submitting a sitemap, as the Sitemaps report help says.
 - Humanize passes: the last section moved the product explanation before the canonical FAQ 2 sentences, so "your Indexing page" has its context first. A condition now comes before each command.
 
 ## Review gate
