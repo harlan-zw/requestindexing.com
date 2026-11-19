@@ -30,6 +30,7 @@ Done means: the home page, onboarding emails, and listing text in production mat
 - [x] Replace onboarding email 01 with the IndexNow setup email (#411, approved copy #417)
 - [x] Footer agent link points to gscdump.com/mcp (#419)
 - [x] Dashboard Setup offers lead with IndexNow and Watched URLs, with no agent offer (#TBD)
+- [ ] Show the IndexNow and Watched URLs offers to one-Site owners. The dashboard home redirects a one-Site account to its Site, and the Site pages draw no Setup offers. nuxtseo.com draws them on its Site page; port that
 - [ ] Write the reason guides, starting with `/why-is-my-page-not-indexed`
 - [x] Move the listing text into `COPY.md`, updated to name IndexNow (#TBD)
 - [ ] Put the listing text on family sites and directories

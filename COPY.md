@@ -786,9 +786,9 @@ The dashboard frame, the command palette, the sidebar back link, the Fleet Sites
 | Setup progress label | Setup progress | Onboarding is called setup |
 
 **The setup offers never lead with agents.** Request Indexing shows the IndexNow, Bing, Watched
-URLs, and Connect another Site offers. It shows no agent skill, MCP, or API offer: no account in
-the last 90 days holds an API key, and agent users go to gscdump (MARKETING.md). The user menu
-and the command palette still link the Developers page.
+URLs, and Connect another Site offers. It shows no agent skill, MCP, or API offer, because agent
+users go to gscdump (MARKETING.md, "Who arrives today" and "Not for"). The user menu and the
+command palette still link the Developers page.
 
 Onboarding Step words, under `proShell.copy.onboarding.steps`:
 
@@ -893,7 +893,7 @@ today, with the file that shows it. The page makes no promise that the code cann
 | Asset | String | Evidence |
 | --- | --- | --- |
 | Session cookie | When you sign in, Request Indexing sets the `nuxt-session` cookie to keep you signed in. It lasts up to 90 days. | `runtimeConfig.session.maxAge` in `nuxt.config.ts`; `nuxt-auth-utils` names the cookie |
-| First-touch cookie | The `pro-first-touch` cookie records how you first reached Request Indexing: the kind of page you landed on, such as the home page, a tool, or a guide, the time, the domain of the site that linked you, and any campaign tags (`utm_` values) in the link. It holds no URL you checked, no full referrer address, and no other part of the query string. It lasts up to 30 days. When you sign in, Request Indexing deletes it. If that sign-in creates your account, Request Indexing first saves its values with your signup record. | `layers/pro-saas/shared/signup-attribution.ts`; `docs/runbooks/signup-funnel.md`; `layers/pro-saas-auth/server/utils/auth/finalize.ts` |
+| First-touch cookie | The `pro-first-touch` cookie records how you first reached Request Indexing: the kind of page you landed on, such as the home page, a tool, or a guide, the time, the domain of the site that linked you, and any campaign tags (`utm_` values) in the link. It holds no URL you checked, no full referrer address, and no other part of the query string. It lasts up to 30 days. Request Indexing reads it only when a sign-in creates your account, and saves its values with your signup record. Each sign-in deletes the cookie. A later visit can set it again. | `layers/pro-saas/shared/signup-attribution.ts`; `docs/runbooks/signup-funnel.md`; `layers/pro-saas-auth/server/utils/auth/finalize.ts` |
 | Services heading | Services that receive data | |
 | gscdump.com | Request Indexing runs on gscdump.com. When you connect Google Search Console, Request Indexing sends gscdump.com your Google account ID, email address, and name, and the Google access you gave. gscdump.com reads and stores your Search Console data, and runs URL Inspection, sitemap, and IndexNow work for your Sites. | `layers/pro-gsc/server/routes/auth/integrations/gsc/callback.get.ts`; Truth rules |
 | DataForSEO | The free tools at /tools send each URL or domain they check to DataForSEO, which runs a Google `site:` search for it. The Site Indexing Report also reads traffic and keyword estimates for the domain from DataForSEO. | PRODUCT-06 in `apps/marketing/content/VERIFIED-CLAIMS.md` |
