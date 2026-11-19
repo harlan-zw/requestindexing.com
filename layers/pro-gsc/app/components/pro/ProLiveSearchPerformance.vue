@@ -57,10 +57,19 @@ const reportRows = computed(() => {
   return [...totals].map(([label, total]) => ({ label, ...total }))
 })
 
-watch([searchType, brand, countries, devices, () => range.start, () => range.end], () => {
+function clearReport() {
   activeRun++
   status.value = 'idle'
   rows.value = []
+}
+
+watch([searchType, brand, countries, devices, () => range.start, () => range.end], clearReport, { flush: 'sync' })
+
+// The property may be unavailable while its lifecycle reloads.
+const lastKnownProperty = computed<string | null>(previous => gscPropertyUrl ?? previous ?? null)
+watch(lastKnownProperty, (_, previous) => {
+  if (previous)
+    clearReport()
 }, { flush: 'sync' })
 
 async function runReport() {
@@ -127,7 +136,7 @@ async function runReport() {
         <span class="block">Google returned no rows for these filters and dates.</span>
         <span v-if="usesBrandClassification" class="mt-1 block">
           Google only classifies queries for top-level properties with enough queries and impressions.
-          Select All queries to check Web traffic for these filters and dates.
+          Select All queries and run the report to check Web traffic for these filters and dates.
         </span>
       </p>
       <UiTableShell v-else-if="status === 'ready'" size="sm" label="Live Search Console results">
