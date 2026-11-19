@@ -23,12 +23,14 @@ const nuxtAsyncData = createRequire(createRequire(import.meta.url).resolve('nuxt
 const nuxtState = createRequire(createRequire(import.meta.url).resolve('nuxt/package.json')).resolve('./dist/app/composables/state.js')
 const nuxtOfetch = createRequire(createRequire(import.meta.url).resolve('nuxt/package.json')).resolve('ofetch')
 
+// `useIndexingPortfolio` reads each Site in the browser only, so the fleet
+// Indexing page tests need the same switch as the roster read.
 function nativeRosterRuntime() {
   return {
     name: 'native-roster-runtime',
     enforce: 'post' as const,
     transform(code: string, id: string) {
-      if (id !== nuxtAsyncData && !id.endsWith('/core/app/composables/fetch.ts'))
+      if (id !== nuxtAsyncData && !id.endsWith('/core/app/composables/fetch.ts') && !id.endsWith('/indexing/app/composables/useIndexingPortfolio.ts'))
         return
       return { code: code.replaceAll('import.meta.server', '(globalThis.__rosterServer === true)').replaceAll('import.meta.client', '(globalThis.__rosterClient === true)').replaceAll('import.meta.dev', 'false'), map: null }
     },
