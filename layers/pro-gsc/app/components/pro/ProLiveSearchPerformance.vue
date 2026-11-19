@@ -7,7 +7,8 @@ import { countryData } from '@nuxtseo/design-system/app/utils/countries'
 import { computed, ref, watch } from 'vue'
 import { UFormField, UiButton, UiSelect, UiTableShell, UiTableTd, UiTableTh, USelectMenu } from '#components'
 
-const { range, loadRows } = defineProps<{
+const { gscPropertyUrl, range, loadRows } = defineProps<{
+  gscPropertyUrl: string | null
   range: LiveSearchPerformanceInput['range']
   loadRows: (body: AnalyticsRowsV1Request) => Promise<Record<string, unknown>[]>
 }>()
@@ -33,6 +34,7 @@ const deviceItems: { label: string, value: LiveSearchPerformanceInput['devices']
 
 const searchType = ref<LiveSearchPerformanceInput['searchType']>('web')
 const brand = ref<LiveSearchPerformanceInput['brand']>('all')
+const usesBrandClassification = computed(() => searchType.value === 'web' && brand.value !== 'all')
 const countries = ref<string[]>([])
 const devices = ref<LiveSearchPerformanceInput['devices'][number][]>([])
 const rows = ref<Record<string, unknown>[]>([])
@@ -92,6 +94,14 @@ async function runReport() {
       Live Search Console report
     </summary>
     <div class="flex flex-col gap-4 px-4 pb-4">
+      <dl v-if="gscPropertyUrl" class="flex flex-wrap gap-x-2 text-sm">
+        <dt class="text-muted">
+          Search Console property
+        </dt>
+        <dd class="break-all">
+          {{ gscPropertyUrl }}
+        </dd>
+      </dl>
       <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <UFormField label="Search type">
           <UiSelect v-model="searchType" :items="searchTypes" class="w-full" />
@@ -106,7 +116,7 @@ async function runReport() {
           <USelectMenu v-model="devices" :items="deviceItems" value-key="value" multiple placeholder="All devices" class="w-full" />
         </UFormField>
       </div>
-      <p v-if="searchType === 'web' && brand !== 'all'" class="text-sm text-muted">
+      <p v-if="usesBrandClassification" class="text-sm text-muted">
         Google classifies queries from 21 February 2026 for eligible top-level properties.
       </p>
       <UiButton type="button" label="Run report" :loading="status === 'loading'" class="self-start" @click="runReport" />
@@ -114,7 +124,11 @@ async function runReport() {
         Search Console could not load this report. Try again.
       </p>
       <p v-else-if="status === 'ready' && !reportRows.length" role="status" class="text-sm text-muted">
-        Google returned no rows for these filters and dates.
+        <span class="block">Google returned no rows for these filters and dates.</span>
+        <span v-if="usesBrandClassification" class="mt-1 block">
+          Google only classifies queries for top-level properties with enough queries and impressions.
+          Select All queries to check Web traffic for these filters and dates.
+        </span>
       </p>
       <UiTableShell v-else-if="status === 'ready'" size="sm" label="Live Search Console results">
         <template #head>

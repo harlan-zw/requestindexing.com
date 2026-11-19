@@ -64,8 +64,9 @@ describe('useProGscStatus', () => {
     expect(status.data.value?.sitemapStatus).toBe(sitemapStatus)
   })
 
-  it('does not retain another Site status when the new Site read fails', async () => {
+  it('clears the linked Search Console property when the next Site read fails', async () => {
     lifecycle.read.mockResolvedValueOnce({ site: {
+      gscPropertyUrl: 'https://example.com/docs/',
       analytics: { status: 'ready', queryable: true, sourceMode: 'server', progress: { completed: 1, failed: 0, total: 1, percent: 100 }, syncedRange: { oldest: null, newest: null } },
       indexing: { status: 'idle', progress: { completed: 0, failed: 0, total: 0, percent: 0 } },
       sitemaps: { status: 'idle' },
@@ -74,8 +75,10 @@ describe('useProGscStatus', () => {
     } }).mockRejectedValueOnce(new Error('Unavailable'))
     const status = useStatus()
     await status.refresh()
+    expect(status.data.value?.gscPropertyUrl).toBe('https://example.com/docs/')
     lifecycle.site.value.gscdumpSiteId = 's_other'
     await status.refresh()
+    expect(status.data.value?.gscPropertyUrl).toBeNull()
     expect(status.isReady.value).toBe(false)
     expect(status.data.value?.syncProgress).toBe(null)
     expect(status.hasError.value).toBe(true)

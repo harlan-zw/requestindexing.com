@@ -26,6 +26,7 @@ interface IndexingProgress {
 }
 
 interface GscSyncStatus {
+  gscPropertyUrl: string | null
   syncStatus: 'pending' | 'syncing' | 'synced' | 'error' | 'idle'
   permissionLost?: boolean
   oldestDateSynced: string | null
@@ -70,6 +71,7 @@ export function computeIsNotConnected(gscdumpSiteId: string | null | undefined):
 async function readSyncStatus(proFetch: ReturnType<typeof useProFetch>, siteId: string): Promise<GscSyncStatus | null> {
   if (import.meta.dev && siteId === DEMO_GSCDUMP_SITE_ID) {
     return {
+      gscPropertyUrl: null,
       syncStatus: 'synced',
       permissionLost: false,
       oldestDateSynced: '2025-01-01',
@@ -104,6 +106,7 @@ async function readSyncStatus(proFetch: ReturnType<typeof useProFetch>, siteId: 
     const activeSitemaps = ['discovering', 'syncing'].includes(lifecycleSite.sitemaps.status)
     const activeIndexing = ['discovering', 'checking', 'waiting_for_sitemaps'].includes(lifecycleSite.indexing.status)
     return {
+      gscPropertyUrl: lifecycleSite.gscPropertyUrl ?? null,
       syncStatus,
       permissionLost: lifecycleSite.latestError?.code === 'permission_lost',
       oldestDateSynced: lifecycleStatus.oldestDateSynced,
@@ -327,6 +330,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
       return {
         connected,
         gscSiteUrl: null,
+        gscPropertyUrl: null,
         gscdumpSiteUrl: site.value.gscdumpSiteUrl,
         syncStatus: null,
         permissionLost: false,
@@ -355,6 +359,7 @@ export function useProGscStatus(siteId: MaybeRefOrGetter<string>) {
     return {
       connected: true,
       gscSiteUrl: site.value.gscdumpSiteUrl,
+      gscPropertyUrl: syncData.value.gscPropertyUrl,
       gscdumpSiteUrl: site.value.gscdumpSiteUrl,
       syncStatus: syncData.value.syncStatus,
       permissionLost: !!syncData.value.permissionLost,
