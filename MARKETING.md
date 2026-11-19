@@ -229,5 +229,5 @@ Product surfaces follow the registers in COPY.md. Every claim names its number o
 
 Resolve one, fold it in above, then delete it here.
 
-1. **The Google connect step.** About half of signups stop there. Nothing records why.
+1. **The Google connect step.** About half of signups stop there. Since #431, stop records on `/admin/funnel` show where each one stops. Read them to find why.
 2. **The paid tier for operators.** What it costs, and when. Marketing quotes no price until one exists.
