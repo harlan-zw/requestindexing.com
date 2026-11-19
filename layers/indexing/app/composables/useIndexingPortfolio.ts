@@ -22,11 +22,16 @@ import { useProGscFilters } from '#layers/pro-gsc/app/composables/useProGscFilte
 /** A roster Site as the fleet list draws it. */
 export type FleetIndexingRow = FleetSiteListRow & RequestIndexingSiteRow
 
+export interface IndexingPortfolioOptions {
+  /** A tab with a fixed window reads at least this many days, whatever the shared period. */
+  minDays?: number
+}
+
 /**
  * The page awaits `fetchSites()` and passes the roster in, so this runs
  * synchronously in setup: `provide` and the watchers need the component.
  */
-export function useIndexingPortfolio(roster: Awaited<ReturnType<typeof fetchSites>>) {
+export function useIndexingPortfolio(roster: Awaited<ReturnType<typeof fetchSites>>, { minDays = 0 }: IndexingPortfolioOptions = {}) {
   const { data: sitesData, status: sitesStatus, error: sitesError, refresh: refreshSites } = roster
 
   const sites = computed<FleetIndexingRow[]>(() => (sitesData.value?.sites ?? []).map((site) => {
@@ -52,6 +57,8 @@ export function useIndexingPortfolio(roster: Awaited<ReturnType<typeof fetchSite
   // The SDK caps the read at 90 days and reads back far enough for the
   // changes a past window shows. Held readings fill the days a Site skipped.
   const window = computed<IndexingWindow>(() => indexingWindow(period.value, stableData.value, new Date()))
+  // Only the read grows. The window, and what Overview and Issues draw, keep the period.
+  const readDays = computed(() => Math.max(window.value.readDays, minDays))
 
   const gscdump = useProGscdump()
   const reads = shallowRef(new Map<string, SiteIndexingRead>())
@@ -78,7 +85,7 @@ export function useIndexingPortfolio(roster: Awaited<ReturnType<typeof fetchSite
     setRead(site.id, { _tag: 'Loading', last: lastReadings(site.id) })
     // Silent: one toast per failed Site would stack. The section shows the
     // failure with its own retry instead.
-    gscdump.getSiteIndexing({ params: { siteId: site.gscdumpSiteId }, query: { days: window.value.readDays } }, true)
+    gscdump.getSiteIndexing({ params: { siteId: site.gscdumpSiteId }, query: { days: readDays.value } }, true)
       .then((response) => {
         if (latestRequest.get(site.id) === request)
           setRead(site.id, { _tag: 'Loaded', data: readSiteIndexing(response) })
@@ -108,7 +115,7 @@ export function useIndexingPortfolio(roster: Awaited<ReturnType<typeof fetchSite
 
   if (import.meta.client) {
     watch(
-      () => [sites.value.map(site => `${site.id}:${site.gscdumpSiteId ?? ''}`).join(','), window.value.readDays] as const,
+      () => [sites.value.map(site => `${site.id}:${site.gscdumpSiteId ?? ''}`).join(','), readDays.value] as const,
       () => {
         for (const site of sites.value)
           load(site)

@@ -13,6 +13,7 @@ import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { ConnectSearchConsoleButton, IndexingPortfolioChanges, IndexingPortfolioIssues, IndexingPortfolioOverview, ProFleetSiteListLayoutControls, UiAlert, UiButton, UiCopyButton, UiEmptyState, UiMetricToggle, UiTabs, UiTogglePill } from '#components'
 import { useIndexingPortfolio } from '#layers/indexing/app/composables/useIndexingPortfolio'
 import FleetIndexingList from '#layers/indexing/app/internal/components/fleet/FleetIndexingList.vue'
+import { INDEXING_CHANGES_WINDOW_DAYS } from '#layers/indexing/app/utils/indexing-source'
 import ProDateRangePicker from '#layers/pro-gsc/app/components/pro/ProDateRangePicker.vue'
 import { useProUrlSyncedFilter } from '#layers/pro-gsc/app/composables/useProUrlSyncedFilter'
 import { NO_PROPERTY_DETAIL_OUTSIDE_LIST, noPropertyTitle } from '#layers/pro-gsc/shared/no-property-copy'
@@ -31,7 +32,11 @@ const TABS = [
 ]
 
 const roster = await fetchSites()
-const { sites, hasSites, sitesLoading, sitesError, refreshSites, period, compareMode, stableData, window, entries, retry } = useIndexingPortfolio(roster)
+// Changes compares the last 28 days, whatever the date range, so its Change
+// column needs that much trend even when the shared period is shorter.
+const { sites, hasSites, sitesLoading, sitesError, refreshSites, period, compareMode, stableData, window, entries, retry } = useIndexingPortfolio(roster, {
+  minDays: tab === 'changes' ? INDEXING_CHANGES_WINDOW_DAYS : 0,
+})
 
 // Coverage is read-only Search Console data through gscdump. Without a gscdump
 // credential every read fails, so the page asks for the connection first.
@@ -121,7 +126,9 @@ function downloadMarkdown() {
     </UiEmptyState>
 
     <div v-else-if="sitesLoading || hasSites" class="flex flex-col gap-3">
-      <div class="flex items-center gap-2 sm:gap-3 flex-wrap" role="toolbar" aria-label="Indexing filters">
+      <!-- Changes holds a fixed window, so the date range applies to Overview
+           and Issues only, and Changes has no toolbar. -->
+      <div v-if="tab !== 'changes'" class="flex items-center gap-2 sm:gap-3 flex-wrap" role="toolbar" aria-label="Indexing filters">
         <ClientOnly>
           <ProDateRangePicker
             v-model:period="period"
