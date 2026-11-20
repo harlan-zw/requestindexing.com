@@ -211,7 +211,7 @@ export function useProGscFilters() {
   // Question-intent facet: a sibling of brand on the same mechanism.
   const questions = useProUrlSyncedFilter<QuestionMode>('questions', 'pro:questions', '')
   const googleBrand = useProUrlSyncedFilter<string>('googleBrand', 'pro:googleBrand', '')
-  const siteSearchConsole = computed(() => /\/sites\/[^/]+\/search-console(?:\/(?:queries|pages|countries|devices))?\/?$/.test(route.path))
+  const siteSearchConsole = computed(() => /\/sites\/[^/]+\/search-console(?:\/(?:queries|pages)(?:\/.*)?|\/(?:countries|devices))?\/?$/.test(route.path))
   const googleSlice = computed(() => siteSearchConsole.value
     ? googleSearchSlice({ searchType: searchType.value, googleBrand: googleBrand.value, country: country.value, device: device.value })
     : null)

@@ -49,20 +49,38 @@ export function useProGscdumpData(
         return gscdump.queryAnalyticsReport({ params: { siteId: id }, body: breakdownRequest(input) })
       const dimension = googleDimension(input.dimension)
       const filters = googleRowFilters(slice, input.facets ?? [])
-      const rows = await readGoogleDashboardRows(async (body) => {
+      const read = async (body: Parameters<typeof parseLiveSearchPerformanceRequest>[0]) => {
         const response = await gscdump.queryAnalyticsRows({ params: { siteId: id }, body: parseLiveSearchPerformanceRequest(body) }, true)
         return response.rows
-      }, slice, {
+      }
+      const options = {
         range: input.range,
         dimensions: [dimension],
         filters,
         limit: input.rowLimit,
         offset: input.startRow,
         orderBy: input.orderBy,
-      })
+      }
       const search = input.search?.toLowerCase()
-      const matching = search ? rows.filter(row => String(row[dimension] ?? '').toLowerCase().includes(search)) : rows
-      return { rows: matching as unknown as GscdumpDataResponse['rows'], totals: googleMetricTotals(matching) }
+      if (!search) {
+        const rows = await readGoogleDashboardRows(read, slice, options)
+        return { rows: rows as unknown as GscdumpDataResponse['rows'], totals: googleMetricTotals(rows) }
+      }
+      // Classification cannot be combined with query-text predicates. Page the
+      // selected slice until its matching window is filled, including offsets.
+      const matching = [] as Awaited<ReturnType<typeof readGoogleDashboardRows>>
+      const end = (input.startRow ?? 0) + input.rowLimit
+      const limit = Math.min(1000, Math.max(25, end))
+      let offset = 0
+      while (matching.length < end) {
+        const rows = await readGoogleDashboardRows(read, slice, { ...options, limit, offset })
+        matching.push(...rows.filter(row => String(row[dimension] ?? '').toLowerCase().includes(search)))
+        if (rows.length < limit)
+          break
+        offset += rows.length
+      }
+      const rows = matching.slice(input.startRow ?? 0, end)
+      return { rows: rows as unknown as GscdumpDataResponse['rows'], totals: googleMetricTotals(rows) }
     },
   })
 }

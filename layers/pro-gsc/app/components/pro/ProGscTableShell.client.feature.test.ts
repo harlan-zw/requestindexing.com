@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, ref } from 'vue'
 
 const { comparisonMode } = vi.hoisted(() => ({ comparisonMode: { value: 'previous' } }))
+const googleSlice = ref<Record<string, unknown> | null>(null)
 
 // The shell's "No comparison" notice speaks about a previous period. A table
 // with no comparison at all must not show it.
@@ -13,7 +14,7 @@ function passthrough(name: string) {
 vi.mock('#components', () => ({
   UiAlert: passthrough('UiAlert'),
   UiButton: passthrough('UiButton'),
-  UiFilterMenu: passthrough('UiFilterMenu'),
+  UiFilterMenu: defineComponent({ props: ['presetFilters'], setup: props => () => h('div', { 'data-presets': JSON.stringify(props.presetFilters) }) }),
   UiIcon: passthrough('UiIcon'),
   UiInput: passthrough('UiInput'),
   UiSkeleton: passthrough('UiSkeleton'),
@@ -21,7 +22,7 @@ vi.mock('#components', () => ({
   UPagination: passthrough('UPagination'),
 }))
 vi.mock('#imports', () => ({ useProHumanFriendlyNumber: (n: number) => String(n) }))
-vi.mock('../../composables/useProGscFilters', () => ({ useProGscFilters: () => ({ country: ref(''), device: ref(''), compareMode: ref(comparisonMode.value) }) }))
+vi.mock('../../composables/useProGscFilters', () => ({ useProGscFilters: () => ({ googleSlice, country: ref(''), device: ref(''), compareMode: ref(comparisonMode.value) }) }))
 vi.mock('../../composables/useGscSavedFilters', () => ({ useGscSavedFilters: () => ({ saved: ref([]), add: vi.fn(), remove: vi.fn() }) }))
 vi.mock('./GscFilterBar.vue', () => ({ default: passthrough('GscFilterBar') }))
 vi.mock('./ProGscdumpError.vue', () => ({ default: passthrough('ProGscdumpError') }))
@@ -55,6 +56,7 @@ afterEach(() => {
     app.unmount()
   document.body.innerHTML = ''
   comparisonMode.value = 'previous'
+  googleSlice.value = null
 })
 
 it('says nothing about a previous period when the table has no comparison', () => {
@@ -81,4 +83,16 @@ it('hides the coverage notice when the selected comparison is off', () => {
   comparisonMode.value = 'none'
   const host = mount({ hasPrevData: false })
   expect(host.textContent).not.toContain('Comparison unavailable.')
+})
+
+it('explains unavailable live table comparisons and removes mover actions', () => {
+  googleSlice.value = { countries: ['usa'] }
+  const host = mount({
+    hasPrevData: false,
+    comparisonRefused: true,
+    filter: 'improving',
+    filters: [{ key: 'improving', label: 'Improving', icon: 'up', tooltip: 'Gained clicks' }],
+  })
+  expect(host.textContent).toContain('Clear Google filters to compare table rows.')
+  expect(host.querySelector('[data-presets]')?.getAttribute('data-presets')).toBe('[]')
 })

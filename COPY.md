@@ -941,5 +941,7 @@ section above, then delete it from this list.
 | Asset | Canonical string |
 | --- | --- |
 | Search Console comparison unavailable | Comparison unavailable. Both periods need complete recorded Search Console data. |
+| Search Console live table comparison unavailable | Comparison unavailable with Google filters. Clear Google filters to compare table rows. |
+| Google classification entity read unavailable | Query details and trends are unavailable with Google classification. Clear Google classification to view them. |
 | Search Console comparison read failed | Comparison data could not load. Growth values are hidden. Reload to try again. |
 | Search Console refresh failed with retained data | Search Console data could not refresh. Previous values remain visible. Retry to read them again. |

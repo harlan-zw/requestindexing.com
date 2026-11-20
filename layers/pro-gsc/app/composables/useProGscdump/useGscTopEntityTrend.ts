@@ -7,7 +7,7 @@ import { onScopeDispose, ref, shallowRef, toValue, watch } from 'vue'
 import { breakdownRequest, entityDailySeriesRequest, parseLiveSearchPerformanceRequest, siteDailySeriesRequest } from '../../../shared/analytics-requests'
 import { isSearchOperatorQuery } from '../../../shared/search-operator-queries'
 import { rankTrendEntities, trendDayRows } from '../../../shared/top-entity-trend'
-import { googleDimension, googleRowFilters, readGoogleDashboardRows } from '../../utils/google-dashboard-rows'
+import { googleDimension, googleRowFilters, readGoogleDashboardRows, readGoogleEntitySeries } from '../../utils/google-dashboard-rows'
 import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdump } from './useProGscdump'
 
@@ -160,8 +160,11 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
 
     const [total, entityRows] = await Promise.all([
       totals,
-      readRows(async () => readGoogle
-        ? readGoogle(['date', googleDimension(dimension)], 25_000)
+      readRows(async () => google
+        ? { rows: await readGoogleEntitySeries(async (body) => {
+            const response = await gscdump.queryAnalyticsRows({ params: { siteId }, body: parseLiveSearchPerformanceRequest(body) }, true)
+            return response.rows
+          }, google, { range, dimension, keys: entities.map(entity => entity.key), filters: filtersForRows }) }
         : gscdump.queryAnalyticsRows({
             params: { siteId },
             body: entityDailySeriesRequest({ searchType, dimension, keys: entities.map(entity => entity.key), range, metric, facets }),

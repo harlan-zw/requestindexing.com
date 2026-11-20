@@ -7,7 +7,7 @@ import type { GoogleSearchSlice } from '../../utils/google-search-slice'
 import { computed, onScopeDispose, ref, toValue, watch } from 'vue'
 import { entityDailySeriesRequest, parseLiveSearchPerformanceRequest } from '../../../shared/analytics-requests'
 import { entitySeriesFromRows, sparklineDateAxis } from '../../../shared/utils/gsc-series'
-import { googleDimension, googleRowFilters, readGoogleDashboardRows } from '../../utils/google-dashboard-rows'
+import { googleRowFilters, readGoogleEntitySeries } from '../../utils/google-dashboard-rows'
 import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdump } from './useProGscdump'
 
@@ -77,14 +77,14 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
   ): Promise<Map<string, number[]>> {
     const axis = sparklineDateAxis(range.start, range.end)
     if (google) {
-      const rows = await readGoogleDashboardRows(async (body) => {
+      const rows = await readGoogleEntitySeries(async (body) => {
         const response = await gscdump.queryAnalyticsRows({ params: { siteId }, body: parseLiveSearchPerformanceRequest(body) }, true)
         return response.rows
       }, google, {
         range,
-        dimensions: ['date', googleDimension(opts.dimension)],
+        dimension: opts.dimension,
+        keys,
         filters: googleRowFilters(google, facets ?? []),
-        limit: 25_000,
       })
       return entitySeriesFromRows(rows, { key: opts.dimension, metric: selectedMetric, axis })
     }

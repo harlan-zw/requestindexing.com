@@ -194,8 +194,8 @@ const { rows: decliningKeywordRows, isInitialLoading: decliningKeywordsLoading, 
 
 // Growing and Declining render the same list, so they share one template.
 const queryMovers = computed(() => [
-  { key: 'improving', title: 'Growing', tooltip: 'Queries with the biggest click gains vs the previous period.', rows: improvingKeywordRows.value, loading: improvingKeywordsLoading.value, empty: 'No growing queries this period' },
-  { key: 'declining', title: 'Declining', tooltip: 'Queries with the biggest click drops vs the previous period.', rows: decliningKeywordRows.value, loading: decliningKeywordsLoading.value, empty: 'No declining queries this period' },
+  { key: 'improving', title: 'Growing', tooltip: 'Queries with the biggest click gains vs the previous period.', rows: improvingKeywordRows.value, loading: improvingKeywordsLoading.value, empty: googleSlice.value ? 'Comparison unavailable with Google filters. Clear Google filters to compare table rows.' : 'No growing queries this period' },
+  { key: 'declining', title: 'Declining', tooltip: 'Queries with the biggest click drops vs the previous period.', rows: decliningKeywordRows.value, loading: decliningKeywordsLoading.value, empty: googleSlice.value ? 'Comparison unavailable with Google filters. Clear Google filters to compare table rows.' : 'No declining queries this period' },
 ])
 
 // ── Pages: the lead list only ───────────────────────────────────────────────
@@ -636,7 +636,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               :loading="detailPending || siteLoading || mover.loading"
               :loading-count="MOVER_ROWS"
               :items="mover.rows"
-              :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries?filter=${mover.key}`"
+              :view-more-to="googleSlice ? undefined : `/pro/dashboard/sites/${siteId}/search-console/queries?filter=${mover.key}`"
               :empty-text="mover.empty"
               :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
             >
@@ -700,7 +700,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               <!-- Each link keeps the destination its old mover list had. The
                    lead list's own "View all" already opens the unfiltered tab. -->
               <template #actions>
-                <span class="flex items-center gap-2 text-xs">
+                <span v-if="!googleSlice" class="flex items-center gap-2 text-xs">
                   <ULink
                     :to="`/pro/dashboard/sites/${siteId}/search-console/pages?filter=improving`"
                     class="text-muted hover:text-default transition-colors"

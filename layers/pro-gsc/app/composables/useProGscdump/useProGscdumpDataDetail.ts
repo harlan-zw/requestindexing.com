@@ -5,7 +5,7 @@ import type {
 import type { GoogleSearchSlice } from '../../utils/google-search-slice'
 import { dailyReportRequest, parseLiveSearchPerformanceRequest } from '../../../shared/analytics-requests'
 import { useGscSiteInvalidation } from '../../internal/composables/useGscInvalidation'
-import { googleMetricTotals, googleRowFilters, readGoogleDashboardRows } from '../../utils/google-dashboard-rows'
+import { googleEntityFilter, googleEntitySlice, googleMetricTotals, readGoogleDashboardRows } from '../../utils/google-dashboard-rows'
 import { useGscQuery } from '../useGscQuery'
 import { useProGscdump } from './useProGscdump'
 
@@ -38,11 +38,14 @@ export function useProGscdumpDataDetail(
       const slice = googleSlice.value
       if (!slice)
         return gscdump.queryAnalyticsReportDetail({ params: { siteId: id }, body: dailyReportRequest(input) })
-      const filters = googleRowFilters(slice, input.pin ? [{ column: input.pin.column, op: 'eq', value: input.pin.value }] : [])
+      const filters = input.pin ? [googleEntityFilter(slice, input.pin.column, input.pin.value)] : []
+      const selected = input.pin ? googleEntitySlice(slice, input.pin.column, input.pin.value) : slice
+      if (!selected)
+        return { daily: [], totals: googleMetricTotals([]) }
       const rows = await readGoogleDashboardRows(async (body) => {
         const response = await gscdump.queryAnalyticsRows({ params: { siteId: id }, body: parseLiveSearchPerformanceRequest(body) }, true)
         return response.rows
-      }, slice, { range: input.range, dimensions: ['date'], filters, limit: 25_000 })
+      }, selected, { range: input.range, dimensions: ['date'], filters, limit: 25_000 })
       const daily = rows.map(row => ({ date: String(row.date), ...googleMetricTotals([row]) })).sort((a, b) => a.date.localeCompare(b.date))
       return { daily, totals: googleMetricTotals(rows) }
     },
