@@ -8,7 +8,7 @@ import { useProGscdumpTableData } from '#layers/pro-gsc/app/composables/useProGs
 interface Read { limit: number, resolve: (labels: string[]) => void, fail: (status?: number) => void }
 const reads: Read[] = []
 const session = ref({ user: { id: 1 } })
-const filters = { stableData: ref(false), compareMode: ref('none'), searchType: ref('web'), columns: ref(['clicks']), brand: ref(''), questions: ref(''), country: ref(''), device: ref('') }
+const filters = { stableData: ref(false), compareMode: ref('none'), searchType: ref('web'), columns: ref(['clicks']), brand: ref(''), questions: ref(''), country: ref(''), device: ref(''), googleSlice: ref(null) }
 const meta = { siteUrl: 'sc-domain:example.com', syncStatus: 'synced', newestDateSynced: '2026-10-23', oldestDateSynced: '2026-09-25', dataDelay: '3 days' }
 vi.mock('nuxt/app', () => ({ useRoute: () => ({ query: {}, params: { id: 's_app' } }) }))
 vi.mock('#imports', () => ({ useProHumanFriendlyNumber: (value: number) => String(value) }))
