@@ -126,6 +126,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-10-26T12:00:00Z'))
   vi.stubGlobal('definePageMeta', () => {})
+  vi.stubGlobal('useRoute', () => ({ query: {} }))
   vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('useId', useId)
   vi.stubGlobal('toValue', toValue)
