@@ -1,8 +1,8 @@
 import type { AnalyticsRowsV1Request } from '@gscdump/contracts/v1/http'
-import type { UseGscQueryOptions } from '../layers/pro-gsc/app/composables/useGscQuery'
 import type { GoogleSearchSlice } from '../layers/pro-gsc/app/utils/google-search-slice'
+import type { BreakdownInput } from '../layers/pro-gsc/shared/analytics-requests'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { computed, effectScope, nextTick, reactive, ref, toValue, watch } from 'vue'
+import { computed, effectScope, nextTick, reactive, ref, toValue } from 'vue'
 import { useGscTopEntityTrend } from '../layers/pro-gsc/app/composables/useProGscdump/useGscTopEntityTrend'
 import { useProEntitySparklines } from '../layers/pro-gsc/app/composables/useProGscdump/useProEntitySparklines'
 import { useProGscdumpData } from '../layers/pro-gsc/app/composables/useProGscdump/useProGscdumpData'
@@ -21,25 +21,11 @@ vi.mock('nuxt/app', () => ({ useRoute: () => route, navigateTo: vi.fn(), useStat
 vi.mock('../layers/pro-gsc/app/composables/useProFilterStore', () => ({ useProFilterStore: () => ({ read: (_key: string, fallback: unknown) => fallback, write: vi.fn() }) }))
 vi.mock('../layers/pro-gsc/app/composables/useGscComparisonCoverage', () => ({ useGscComparisonCoverage: () => ({ allowed: ref(true), state: ref('allowed') }) }))
 vi.mock('../layers/pro-gsc/app/internal/composables/useGscInvalidation', () => ({ useGscSiteInvalidation: () => ref(0) }))
-vi.mock('../layers/pro-gsc/app/composables/useGscQuery', () => ({ useGscQuery: (options: UseGscQueryOptions<unknown>) => {
-  const data = ref<unknown>(null)
-  const error = ref<unknown>(null)
-  const pending = ref(false)
-  const refresh = async () => {
-    pending.value = true
-    await options.serverFallback(toValue(options.site) ?? '', toValue(options.params)).then((value) => {
-      data.value = value
-    }, (cause: unknown) => {
-      error.value = cause
-    })
-    pending.value = false
-  }
-  watch(options.params, refresh, { immediate: true, deep: true })
-  return { data, error, pending, refresh, status: ref('success') }
-} }))
+vi.mock('../layers/pro-gsc/app/composables/useGscQueryIdentity', () => ({ useGscQueryIdentity: () => ref({ _tag: 'Available', scope: 'fixture' }) }))
 let rows: Record<string, unknown>[] = []
 let trend = false
 const requests: AnalyticsRowsV1Request[] = []
+let beforeRead: ((signal?: AbortSignal) => Promise<void>) | undefined
 interface WireFilter {
   dimension?: string
   operator?: string
@@ -67,8 +53,9 @@ function matching(filter: WireFilter | undefined, row: Record<string, unknown>):
   return filter._groupType === 'or' ? parts.some(part => matching(part, row)) : parts.every(part => matching(part, row))
 }
 vi.mock('../layers/pro-gsc/app/composables/useProGscdump/useProGscdump', () => ({ useProGscdump: () => ({
-  queryAnalyticsRows: async ({ body }: { body: AnalyticsRowsV1Request }) => {
+  queryAnalyticsRows: async ({ body }: { body: AnalyticsRowsV1Request }, _silent: boolean, transport?: { signal?: AbortSignal }) => {
     requests.push(body)
+    await beforeRead?.(transport?.signal)
     if (trend && !body.dimensions?.includes('date'))
       return { rows: [row('shown', 9)] }
     if (trend && body.dimensions?.length === 1)
@@ -93,6 +80,7 @@ beforeEach(() => {
   requests.length = 0
   rows = []
   trend = false
+  beforeRead = undefined
   route.path = '/pro/dashboard/sites/app/search-console/pages'
   route.query = { country: 'usa', device: 'MOBILE' }
   vi.stubGlobal('toValue', toValue)
@@ -113,6 +101,58 @@ it('finds a country-filtered query ranked below the unsearched first page', asyn
   const view = run(() => useProGscdumpData('engine', { searchType: 'web', dimension: 'queryCanonical', range, comparisonRange: null, search: 'needle', rowLimit: 25, orderBy: { column: 'clicks', dir: 'desc' } }, { googleSlice: slice }))
   await settle()
   expect(view.data.value?.rows.map(row => row.queryCanonical)).toEqual(['needle'])
+  expect(requests).toHaveLength(1)
+  expect(requests[0]?.filter?._filters).toContainEqual({ dimension: 'query', operator: 'contains', expression: 'needle' })
+})
+
+it.each([
+  { dimension: 'country', search: 'us', selected: 'usa' },
+  { dimension: 'device', search: 'mob', selected: 'MOBILE' },
+] as const)('narrows selected $dimension values inside one Google list', async ({ dimension, search, selected }) => {
+  rows = [row('match'), { ...row('other'), country: 'gbr', device: 'DESKTOP' }]
+  const view = run(() => useProGscdumpData('engine', { searchType: 'web', dimension, range, comparisonRange: null, search, rowLimit: 25 }, { googleSlice: { ...slice, countries: ['usa', 'gbr'], devices: ['MOBILE', 'DESKTOP'] } }))
+  await settle()
+  expect(view.data.value?.rows).toHaveLength(1)
+  expect(view.data.value?.rows[0]).toHaveProperty(dimension, selected)
+  expect(requests).toHaveLength(1)
+  expect(requests[0]?.filter?._filters.some(filter => filter.dimension === dimension)).toBe(false)
+})
+
+it('omits the Google read when a search excludes every selected country', async () => {
+  const view = run(() => useProGscdumpData('engine', { searchType: 'web', dimension: 'country', range, comparisonRange: null, search: 'gbr', rowLimit: 25 }, { googleSlice: slice }))
+  await settle()
+  expect(view.data.value?.rows).toEqual([])
+  expect(requests).toHaveLength(0)
+})
+
+it('reports an incomplete classified query search when the read budget runs out', async () => {
+  rows = Array.from({ length: 10_000 }, (_, index) => ({ ...row(`query ${index}`), brandedClassification: 'BRANDED' }))
+  const view = run(() => useProGscdumpData('engine', { searchType: 'web', dimension: 'queryCanonical', range, comparisonRange: null, search: 'never matches', rowLimit: 25 }, { googleSlice: { ...slice, googleBrand: 'BRANDED' } }))
+  await vi.waitFor(() => expect(view.error.value?.message).toBe('Search results incomplete. Select a shorter date range.'))
+  expect(requests).toHaveLength(4)
+  expect(view.data.value).toBeNull()
+})
+
+it('stops a classified query search when its input changes', async () => {
+  rows = Array.from({ length: 3_000 }, (_, index) => ({ ...row(`query ${index}`), brandedClassification: 'BRANDED' }))
+  const pausedRead = Promise.withResolvers<void>()
+  let oldSignal: AbortSignal | undefined
+  beforeRead = (signal) => {
+    if (requests.length === 1) {
+      oldSignal = signal
+      return pausedRead.promise
+    }
+    return Promise.resolve()
+  }
+  const input = ref<BreakdownInput>({ searchType: 'web', dimension: 'queryCanonical', range, comparisonRange: null, search: 'never matches', rowLimit: 25 })
+  const view = run(() => useProGscdumpData('engine', input, { googleSlice: { ...slice, googleBrand: 'BRANDED' } }))
+  input.value = { ...input.value, search: undefined }
+  await settle()
+  pausedRead.resolve()
+  await settle()
+  expect(oldSignal?.aborted).toBe(true)
+  expect(requests).toHaveLength(2)
+  expect(view.data.value?.rows).toHaveLength(25)
 })
 it('reports comparison unavailability for a country-filtered Improving deep link', async () => {
   rows = [row('growing', 20)]

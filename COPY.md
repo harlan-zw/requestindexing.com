@@ -310,6 +310,7 @@ They replace older SDK and report descriptions for these two issue types.
 | Google classification filter | Google classification | Search Console filter menu |
 | Empty branded report eligibility | Google only classifies queries for top-level properties with enough queries and impressions. | Empty branded results |
 | Empty branded report action | Select All queries to check Web traffic for these filters and dates. | Google classification filter |
+| Incomplete classified query search | Search results incomplete. Select a shorter date range. | Search Console Queries table |
 | Search Console status read failure | Search Console status unavailable | Shared Search Console status alert |
 | Search Console status read failure help | Could not read the Search Console status. Retry this check. | Shared Search Console status alert |
 | Search Console status retry | Retry status check | Failed status read action |

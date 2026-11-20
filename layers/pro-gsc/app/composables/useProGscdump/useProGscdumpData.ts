@@ -42,17 +42,33 @@ export function useProGscdumpData(
     enabled: computed(() => !!_siteId.value),
     // Row growth changes the SDK body while retaining this query's data scope.
     watchSources: [useGscSiteInvalidation(_siteId), computed(() => _input.value.rowLimit)],
-    serverFallback: async (id) => {
+    serverFallback: async (id, _params, signal) => {
       const input = _input.value
-      const slice = googleSlice.value
-      if (!slice)
+      const selected = googleSlice.value
+      if (!selected)
         return gscdump.queryAnalyticsReport({ params: { siteId: id }, body: breakdownRequest(input) })
       const dimension = googleDimension(input.dimension)
+      const search = input.search?.toLowerCase() ?? ''
+      const searchCountryList = search && dimension === 'country' && selected.countries.length > 0
+      const searchDeviceList = search && dimension === 'device' && selected.devices.length > 0
+      // Google accepts only one filter shape per dimension. Narrow the list in
+      // place when the search targets a selected country or device dimension.
+      const slice = {
+        ...selected,
+        countries: searchCountryList ? selected.countries.filter(value => value.includes(search)) : selected.countries,
+        devices: searchDeviceList ? selected.devices.filter(value => value.toLowerCase().includes(search)) : selected.devices,
+      }
+      if ((searchCountryList && !slice.countries.length) || (searchDeviceList && !slice.devices.length))
+        return { rows: [], totals: googleMetricTotals([]) }
       const filters = googleRowFilters(slice, input.facets ?? [])
       const read = async (body: Parameters<typeof parseLiveSearchPerformanceRequest>[0]) => {
-        const response = await gscdump.queryAnalyticsRows({ params: { siteId: id }, body: parseLiveSearchPerformanceRequest(body) }, true)
+        signal.throwIfAborted()
+        const response = await gscdump.queryAnalyticsRows({ params: { siteId: id }, body: parseLiveSearchPerformanceRequest(body) }, true, { signal })
         return response.rows
       }
+      const needsScan = search && slice.googleBrand && dimension === 'query'
+      if (search && !needsScan && !searchCountryList && !searchDeviceList)
+        filters.push({ dimension, operator: 'contains', expression: search })
       const options = {
         range: input.range,
         dimensions: [dimension],
@@ -61,26 +77,23 @@ export function useProGscdumpData(
         offset: input.startRow,
         orderBy: input.orderBy,
       }
-      const search = input.search?.toLowerCase()
-      if (!search) {
+      if (!needsScan) {
         const rows = await readGoogleDashboardRows(read, slice, options)
         return { rows: rows as unknown as GscdumpDataResponse['rows'], totals: googleMetricTotals(rows) }
       }
-      // Classification cannot be combined with query-text predicates. Page the
-      // selected slice until its matching window is filled, including offsets.
+      // Google disallows query text predicates with classification.
       const matching = [] as Awaited<ReturnType<typeof readGoogleDashboardRows>>
       const end = (input.startRow ?? 0) + input.rowLimit
-      const limit = Math.min(1000, Math.max(25, end))
-      let offset = 0
-      while (matching.length < end) {
-        const rows = await readGoogleDashboardRows(read, slice, { ...options, limit, offset })
+      const limit = 2500
+      for (let page = 0; page < 4; page++) {
+        const rows = await readGoogleDashboardRows(read, slice, { ...options, limit, offset: page * limit })
         matching.push(...rows.filter(row => String(row[dimension] ?? '').toLowerCase().includes(search)))
-        if (rows.length < limit)
-          break
-        offset += rows.length
+        if (rows.length < limit || matching.length >= end) {
+          const result = matching.slice(input.startRow ?? 0, end)
+          return { rows: result as unknown as GscdumpDataResponse['rows'], totals: googleMetricTotals(result) }
+        }
       }
-      const rows = matching.slice(input.startRow ?? 0, end)
-      return { rows: rows as unknown as GscdumpDataResponse['rows'], totals: googleMetricTotals(rows) }
+      throw Object.assign(new Error('Search results incomplete. Select a shorter date range.'), { code: 'VALIDATION', retry: false })
     },
   })
 }
