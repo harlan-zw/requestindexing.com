@@ -327,7 +327,7 @@ function onApplySaved(id: string) {
     </UiAlert>
 
     <!-- Data warnings from API (e.g. incomplete date range, auth issues) -->
-    <div v-if="!isLoading && warnings?.length" class="flex items-start gap-2 px-3 py-2 rounded-lg bg-elevated border border-accented text-sm text-warning">
+    <div v-if="warnings?.length" class="flex items-start gap-2 px-3 py-2 rounded-lg bg-elevated border border-accented text-sm text-warning">
       <UiIcon name="warning" class="size-4 shrink-0 mt-0.5" />
       <div class="space-y-0.5">
         <p v-for="(w, i) in warnings" :key="i">
