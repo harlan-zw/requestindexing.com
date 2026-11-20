@@ -809,6 +809,17 @@ Onboarding Step words, under `proShell.copy.onboarding.steps`:
 
 **Claim an invitation email only when Postmark accepted it.** The server returns the delivery with the invitation. The toast stays neutral, and the Pending invitations row says which one happened.
 
+## Live work bar assets
+
+The bar shows a Site's first Search Console sync above every dashboard page. The counts build on `SITE_SYNC_LABELS`, so they say what the Manage Sites column says. Harlan approved them on 2026-11-20, with the button strings nuxtseo.com and gscdump.com share.
+
+| Asset | String | Where it goes |
+| --- | --- | --- |
+| Syncing count | {count} syncing | Bar and floating control summary, first syncs that are running |
+| Waiting count | {count} waiting to sync | Bar and floating control summary, first syncs that have not started |
+| Close label | Hide progress | Accessible label of the bar's close button, which turns the bar into the floating control |
+| Restore action | Show at top | Floating control panel, while the bar is closed and a sync runs |
+
 ## IndexNow setup email assets
 
 | Asset | String |
