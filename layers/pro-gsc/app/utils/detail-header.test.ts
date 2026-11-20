@@ -35,3 +35,12 @@ it('names a query drill-in by the quoted query and links back to Queries', () =>
     ],
   })
 })
+
+it('keeps the traffic slice when returning from a detail to its list', () => {
+  const result = resolveProHeaderPageMeta({
+    params: { id: 's_a', keyword: 'nuxt seo' },
+    query: { country: 'usa', device: 'MOBILE' },
+    meta: { proHeader: queryDetailHeader },
+  } as unknown as RouteLocationNormalizedLoaded)
+  expect(result.crumbs[0]?.to).toBe('/pro/dashboard/sites/s_a/search-console/queries?country=usa&device=MOBILE')
+})

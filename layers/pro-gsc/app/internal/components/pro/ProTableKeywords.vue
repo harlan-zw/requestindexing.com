@@ -20,6 +20,7 @@ import {
   useProTopAssociations,
 } from '../../../composables/useProGscdump'
 import { buildBrandFacet, buildQuestionFacet, useProGscFilters } from '../../../composables/useProGscFilters'
+import { searchConsoleLink } from '../../../utils/search-console-link'
 import { createProGscColumns, getProGscColumnKey } from '../../composables/createProGscColumns'
 import { useGscBackfill } from '../../composables/useGscBackfill'
 import ProSparklineCell from './ProSparklineCell.vue'
@@ -223,7 +224,7 @@ const columns = computed<UiTableColumn<KeywordTableRow>[]>(() => {
                 variants: loadedVariants?.length ? loadedVariants : r.variants,
                 variantsLoading: queryVariants.loadingFor(key),
                 brand: isBrandKeyword(query),
-                to: classified.value ? undefined : `/pro/dashboard/sites/${linkSiteId.value}/search-console/queries/${encodeURIComponent(query)}`,
+                to: classified.value ? undefined : searchConsoleLink(`/pro/dashboard/sites/${linkSiteId.value}/search-console/queries/${encodeURIComponent(query)}`, route.query),
                 onVariantOpen: () => queryVariants.open(key),
               }, () => newBadge(r)),
             ]),

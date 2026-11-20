@@ -2,6 +2,7 @@
 import { useRoute } from 'nuxt/app'
 import { computed } from 'vue'
 import { NuxtLink } from '#components'
+import { searchConsoleLink } from '../../../utils/search-console-link'
 
 // Presentational cell for the page table's "Top Keyword" column. The value is
 // resolved in bulk by `useProTopAssociations` (one scan for the whole page),
@@ -31,7 +32,7 @@ const linkSiteId = computed(() => linkRoute.params.id as string)
        `title`), so nothing is lost to a reader or a screen reader. -->
   <NuxtLink
     v-if="keyword"
-    :to="`/pro/dashboard/sites/${linkSiteId}/search-console/queries/${encodeURIComponent(keyword)}`"
+    :to="searchConsoleLink(`/pro/dashboard/sites/${linkSiteId}/search-console/queries/${encodeURIComponent(keyword)}`, linkRoute.query)"
     :title="keyword"
     class="inline-block max-w-[140px] truncate align-bottom text-sm text-muted hover:text-primary transition-colors"
   >

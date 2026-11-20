@@ -1,9 +1,14 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { computed, createApp, defineComponent, h, nextTick, ref, toValue } from 'vue'
+import { computed, createApp, defineComponent, effectScope, h, nextTick, reactive, ref, toValue } from 'vue'
+import { useProGscdumpDataDetail } from '../../../composables/useProGscdump/useProGscdumpDataDetail'
+import { useProGscFilters } from '../../../composables/useProGscFilters'
 import ProTableKeywords from './ProTableKeywords.vue'
 
 const googleSlice = ref<{ googleBrand: string } | null>({ googleBrand: 'BRANDED' })
 const cellReads: string[][] = []
+const route = reactive({ params: { id: 's_app' }, path: '/pro/dashboard/sites/s_app/search-console/queries', query: {} as Record<string, string> })
+const states = new Map<string, ReturnType<typeof ref>>()
+let realFilters = false
 const filters = {
   googleSlice,
   stableData: ref(true),
@@ -13,8 +18,25 @@ const filters = {
   questions: ref(''),
   selectGoogleBrand: () => { googleSlice.value = null },
 }
-vi.mock('nuxt/app', () => ({ useRoute: () => ({ params: { id: 's_app' } }) }))
-vi.mock('../../../composables/useProGscFilters', () => ({ useProGscFilters: () => filters, buildBrandFacet: () => null, buildQuestionFacet: () => null }))
+vi.mock('nuxt/app', () => ({
+  useRoute: () => route,
+  navigateTo: vi.fn(),
+  useState: (key: string, init: () => unknown) => {
+    if (!states.has(key))
+      states.set(key, ref(init()))
+    return states.get(key)
+  },
+}))
+vi.mock('../../../composables/useProGscFilters', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../composables/useProGscFilters')>()
+  return { ...actual, useProGscFilters: () => realFilters ? actual.useProGscFilters() : filters }
+})
+vi.mock('../../../composables/useProFilterStore', () => ({ useProFilterStore: () => ({ read: (_key: string, fallback: unknown) => fallback, write: vi.fn() }) }))
+vi.mock('../../composables/useGscInvalidation', () => ({ useGscSiteInvalidation: () => ref(0) }))
+vi.mock('../../../composables/useGscQueryIdentity', () => ({ useGscQueryIdentity: () => ref({ _tag: 'Available', scope: 'fixture' }) }))
+const readRows = vi.fn(async (_request: unknown, _silent: boolean) => ({ rows: [{ date: '2026-10-20', clicks: 7, impressions: 70, ctr: 0.1, position: 3 }] }))
+const readRecordedDetail = vi.fn(async () => ({ daily: [], totals: { clicks: 100 } }))
+vi.mock('../../../composables/useProGscdump/useProGscdump', () => ({ useProGscdump: () => ({ queryAnalyticsRows: readRows, queryAnalyticsReportDetail: readRecordedDetail }) }))
 vi.mock('../../composables/useGscBackfill', () => ({ useGscBackfill: () => ({ maybeTrigger: vi.fn() }) }))
 vi.mock('../../../composables/useProGscdump', () => ({
   useProGscdumpTableData: () => ({
@@ -25,7 +47,7 @@ vi.mock('../../../composables/useProGscdump', () => ({
     isLoading: ref(false),
     isLoadingMore: ref(false),
     error: ref(null),
-    rows: ref([{ queryCanonical: 'example', clicks: 42, impressions: 100, ctr: 0.42, position: 0 }]),
+    rows: computed(() => [{ queryCanonical: realFilters ? 'Crème + Shoes' : 'example', clicks: 42, impressions: 100, ctr: 0.42, position: 0 }]),
     total: ref(1),
     loadedCount: ref(1),
     hasMore: ref(false),
@@ -57,10 +79,56 @@ vi.mock('../../../components/pro/ProGscTableShell.vue', () => ({ default: define
   setup: props => () => h('table', [h('thead', (props.columns as { header: string }[]).map(column => h('th', column.header))), ...(props.tableData as object[]).map(original => h('tr', (props.columns as { cell: (ctx: unknown) => unknown }[]).map(column => h('td', column.cell({ row: { original } }) as never))))]),
 }) }))
 let app: ReturnType<typeof createApp>
+let detailScope = effectScope()
 afterEach(() => {
   app?.unmount()
+  detailScope.stop()
+  states.clear()
+  realFilters = false
+  route.query = {}
+  readRows.mockClear()
+  readRecordedDetail.mockClear()
+  vi.unstubAllGlobals()
   document.body.innerHTML = ''
   cellReads.length = 0
+})
+
+it('keeps the exact raw query and shared country and device filters after following a row and reloading', async () => {
+  realFilters = true
+  route.query = { country: 'usa', device: 'MOBILE' }
+  const host = document.createElement('div')
+  document.body.appendChild(host)
+  app = createApp(ProTableKeywords, { siteId: 's_app', gscdumpSiteId: 's_engine' })
+  app.component('UiButton', defineComponent({ setup: (_, { slots }) => () => h('button', slots.default?.()) }))
+  app.mount(host)
+  const destination = new URL(host.querySelector('a')!.getAttribute('href')!, 'https://requestindexing.com')
+  app.unmount()
+  states.clear()
+  route.path = destination.pathname
+  route.query = Object.fromEntries(destination.searchParams)
+  await nextTick()
+  detailScope = effectScope()
+  vi.stubGlobal('toValue', toValue)
+  const detail = detailScope.run(() => {
+    const active = useProGscFilters()
+    return useProGscdumpDataDetail('s_engine', {
+      searchType: 'web',
+      range: { start: '2026-10-20', end: '2026-10-21' },
+      comparisonRange: null,
+      pin: { column: 'queryCanonical', value: decodeURIComponent(destination.pathname.split('/').at(-1)!) },
+    }, active.googleSlice)
+  })!
+  await vi.waitFor(() => expect(detail.data.value?.totals.clicks).toBe(7))
+  expect(readRecordedDetail).not.toHaveBeenCalled()
+  expect(readRows).toHaveBeenCalledWith(expect.objectContaining({ body: expect.objectContaining({
+    filter: expect.objectContaining({
+      _filters: expect.arrayContaining([{ dimension: 'query', operator: 'equals', expression: 'Crème + Shoes' }]),
+      _nestedGroups: expect.arrayContaining([
+        expect.objectContaining({ _filters: [{ dimension: 'country', operator: 'equals', expression: 'usa' }] }),
+        expect.objectContaining({ _filters: [{ dimension: 'device', operator: 'equals', expression: 'MOBILE' }] }),
+      ]),
+    }),
+  }) }), true)
 })
 
 it('renders classified ranking with explicit unavailability and no broken query actions', async () => {
