@@ -62,8 +62,8 @@ export function useProGscdumpDates(
     pin: _filter.value,
   }))
 
-  const current = useProGscdumpDataDetail(_siteId, currentRequest)
-  const prev = useProGscdumpDataDetail(computed(() => cmp.value ? _siteId.value : ''), prevRequest)
+  const current = useProGscdumpDataDetail(_siteId, currentRequest, filters.googleSlice)
+  const prev = useProGscdumpDataDetail(computed(() => cmp.value ? _siteId.value : ''), prevRequest, filters.googleSlice)
 
   const data = computed(() => {
     const result = current.data.value

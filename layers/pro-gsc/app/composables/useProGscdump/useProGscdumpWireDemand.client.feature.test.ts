@@ -1,6 +1,7 @@
 import type { BreakdownInput, DailyReportInput } from '../../../shared/analytics-requests'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, ref, toValue } from 'vue'
+import { googleSearchSlice } from '../../utils/google-search-slice'
 import { useProGscdumpData } from './useProGscdumpData'
 import { useProGscdumpDataDetail } from './useProGscdumpDataDetail'
 
@@ -48,6 +49,35 @@ function response(kind: 'list' | 'detail', clicks: number): Response {
     meta: { requestId: 'req_native', surface: 'analytics', version: '1.0', sourceName: 'hosted-native', sourceKind: 'sql', queryMs: 0 },
   })
 }
+
+it('uses the Google classification on an existing table and discards a late answer after clearing it', async () => {
+  const input: BreakdownInput = { searchType: 'web', dimension: 'queryCanonical', range: { start: '2026-10-01', end: '2026-10-28' }, comparisonRange: null, orderBy: { column: 'clicks', dir: 'desc' }, rowLimit: 25 }
+  const googleSlice = ref(googleSearchSlice({ searchType: 'web', googleBrand: 'BRANDED', country: 'gbr,usa', device: '' }))
+  const view = scope.run(() => useProGscdumpData('s_one', input, { googleSlice }))!
+  await settle()
+  expect(reads[0]).toMatchObject({
+    path: '/api/_gscdump/analytics/v1/sites/s_one/rows',
+    body: {
+      source: 'live',
+      dimensions: ['query'],
+      filter: {
+        _filters: expect.arrayContaining([{ dimension: 'brandedClassification', operator: 'equals', expression: 'BRANDED' }]),
+        _nestedGroups: [{ _groupType: 'or', _filters: expect.arrayContaining([{ dimension: 'country', operator: 'equals', expression: 'usa' }]) }],
+      },
+    },
+  })
+  googleSlice.value = null
+  await settle()
+  expect(reads[1]?.path).toBe('/api/_gscdump/analytics/v1/sites/s_one/reports')
+  reads[1]!.reply(response('list', 42))
+  await settle()
+  reads[0]!.reply(Response.json({
+    data: { rows: [{ query: 'late live result', clicks: 99 }] },
+    meta: { requestId: 'req_live', surface: 'analytics', version: '1.0', sourceName: 'gsc-api', sourceKind: 'row', queryMs: 1 },
+  }))
+  await settle()
+  expect(view.data.value?.rows[0]?.clicks).toBe(42)
+})
 
 it('keeps a daily wire request stable across clones, property order, and omitted optional fields', async () => {
   const input = ref<DailyReportInput>({ searchType: 'web', range: { start: '2026-10-01', end: '2026-10-28' }, comparisonRange: null, pin: undefined })

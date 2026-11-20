@@ -21,6 +21,7 @@ import {
   resolveStableData,
   SEARCH_TYPE_OPTIONS,
 } from '../../shared/gsc-filter-model'
+import { googleSearchSlice } from '../utils/google-search-slice'
 import { isCustomPeriod } from './useGscPeriod'
 import { useProFilterStore } from './useProFilterStore'
 import { queryStringValue, useProUrlSyncedFilter } from './useProUrlSyncedFilter'
@@ -209,6 +210,19 @@ export function useProGscFilters() {
   const brand = useProUrlSyncedFilter<BrandMode>('brand', 'pro:brand', '')
   // Question-intent facet: a sibling of brand on the same mechanism.
   const questions = useProUrlSyncedFilter<QuestionMode>('questions', 'pro:questions', '')
+  const googleBrand = useProUrlSyncedFilter<string>('googleBrand', 'pro:googleBrand', '')
+  const siteSearchConsole = computed(() => /\/sites\/[^/]+\/search-console(?:\/(?:queries|pages|countries|devices))?\/?$/.test(route.path))
+  const googleSlice = computed(() => siteSearchConsole.value
+    ? googleSearchSlice({ searchType: searchType.value, googleBrand: googleBrand.value, country: country.value, device: device.value })
+    : null)
+
+  function selectGoogleBrand(value: string) {
+    if (value) {
+      brand.value = ''
+      questions.value = ''
+    }
+    googleBrand.value = value
+  }
 
   /**
    * One-shot reset for the Filter menu facets. Clearing each back to '' drops
@@ -222,6 +236,7 @@ export function useProGscFilters() {
     device.value = ''
     brand.value = ''
     questions.value = ''
+    googleBrand.value = ''
   }
 
   const facetFilters = computed<GscFacet[]>(() => {
@@ -230,9 +245,9 @@ export function useProGscFilters() {
     // slices.
     if (!supportsDimensions.value)
       return out
-    if (country.value)
+    if (country.value && !country.value.includes(','))
       out.push({ column: 'country', op: 'eq', value: country.value })
-    if (device.value)
+    if (device.value && !device.value.includes(','))
       out.push({ column: 'device', op: 'eq', value: device.value })
     return out
   })
@@ -246,6 +261,10 @@ export function useProGscFilters() {
     country,
     device,
     searchType,
+    googleBrand,
+    googleSlice,
+    siteSearchConsole,
+    selectGoogleBrand,
     brand,
     questions,
     supportsDimensions,

@@ -4,12 +4,12 @@ import type { MaybeRefOrGetter } from 'vue'
 import type { BreakdownDimension, BreakdownInput } from '../../../shared/analytics-requests'
 import type {
   GscComparisonFilter,
-  GscdumpDataResponse,
   GscdumpDataRow,
   GscdumpMeta,
 } from '../../../shared/gscdump-api'
 import type { GscFacet } from '../../../shared/utils/gsc-facets'
 import type { CompareMode, Period } from '../useGscPeriod'
+import type { BreakdownResult } from './useProGscdumpData'
 import { useRoute } from 'nuxt/app'
 import { computed, shallowRef, toValue, watch } from 'vue'
 import {
@@ -119,7 +119,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
   const range = computed(() => periodToDateRange(_period.value, _stableData.value))
   const requestedComparison = computed(() => compareRange(range.value, _compareMode.value))
   const coverage = useGscComparisonCoverage(() => [_siteId.value], range, requestedComparison, _searchType)
-  const comparisonRange = computed(() => coverage.allowed.value ? requestedComparison.value : null)
+  const comparisonRange = computed(() => !filters.googleSlice.value && coverage.allowed.value ? requestedComparison.value : null)
   const window = computed(() => breakdownWindow({ loadMore, page: page.value, pageSize }))
 
   const orderBy = computed(() => (isDimensionSort.value
@@ -142,7 +142,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
     moversFilter: isMoversFilter(filter.value) ? filter.value as GscComparisonFilter : undefined,
   }))
 
-  const query = useProGscdumpData(_siteId, request, { loadMore })
+  const query = useProGscdumpData(_siteId, request, { loadMore, googleSlice: filters.googleSlice })
 
   const isLoading = computed(() => query.pending.value)
   const isInitialLoading = computed(() => query.pending.value && query.data.value === null)
@@ -157,7 +157,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
     if (!loadMore)
       return ''
     const { rowLimit: _rowLimit, startRow: _startRow, ...rest } = request.value
-    return `${_siteId.value}|${JSON.stringify(rest)}|${filter.value}`
+    return `${_siteId.value}|${JSON.stringify(rest)}|${filter.value}|${JSON.stringify(filters.googleSlice.value)}`
   })
 
   if (loadMore) {
@@ -270,7 +270,7 @@ export function useProGscdumpTableData<T = GscdumpDataRow>(options: ProGscdumpTa
     setPage(page.value + 1)
   }
 
-  const response = computed<GscdumpDataResponse | null>(() => query.data.value)
+  const response = computed<BreakdownResult | null>(() => query.data.value)
 
   return {
     coverage,

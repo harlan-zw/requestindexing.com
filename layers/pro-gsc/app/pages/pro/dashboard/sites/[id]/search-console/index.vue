@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import type { AnalyticsRowsV1Request } from '@gscdump/contracts/v1/http'
 import type { GscdumpDataRow } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { fmtGscMetric, formatNumber, getPath } from '@nuxtseo/design-system/app/composables/formatting'
 import { computed, ref, watch } from 'vue'
@@ -7,7 +6,6 @@ import ProSiteSetupOffers from '#layers/pro-gsc/app/components/overview/ProSiteS
 import ProCardGsc from '#layers/pro-gsc/app/components/pro/ProCardGsc.vue'
 import ProGscReadError from '#layers/pro-gsc/app/components/pro/ProGscReadError.vue'
 import ProGscSurfaceBar from '#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue'
-import ProLiveSearchPerformance from '#layers/pro-gsc/app/components/pro/ProLiveSearchPerformance.vue'
 import ProQueryLabel from '#layers/pro-gsc/app/components/pro/ProQueryLabel.vue'
 import { periodToDateRange } from '#layers/pro-gsc/app/composables/useGscPeriod'
 import { useGscQueryIdentity } from '#layers/pro-gsc/app/composables/useGscQueryIdentity'
@@ -19,11 +17,9 @@ import {
   useProGscQueryVariants,
   useProQueryPositionSparklines,
 } from '#layers/pro-gsc/app/composables/useProGscdump'
-import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump/useProGscdump'
 import { buildBrandFacet, buildQuestionFacet, useProGscFilters } from '#layers/pro-gsc/app/composables/useProGscFilters'
 import ProSparklineCell from '#layers/pro-gsc/app/internal/components/pro/ProSparklineCell.vue'
 import { resolveSiteSearchState, sampleOverlay } from '#layers/pro-gsc/app/utils/site-search-state'
-import { parseLiveSearchPerformanceRequest } from '#layers/pro-gsc/shared/analytics-requests'
 import { deriveUrlBrandKeywords } from '#layers/pro-gsc/shared/brand-queries'
 import { canonicalQueryKey } from '#layers/pro-gsc/shared/canonical-query'
 import { overviewLead } from '#layers/pro-gsc/shared/overview-lead'
@@ -43,21 +39,10 @@ definePageMeta({
 
 const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, isLifecycleSettled, hold, gscData, gscStatusError, refreshGscStatus } = useSite('Search Console')
 const analyticsSiteId = computed(() => isLifecycleSettled.value && isReady.value && !hold.value ? gscdumpSiteId.value ?? undefined : undefined)
-const gscdump = useProGscdump()
-
-async function loadLiveSearchPerformance(body: AnalyticsRowsV1Request) {
-  if (!analyticsSiteId.value)
-    throw new Error('Connect Search Console before running this report.')
-  const response = await gscdump.queryAnalyticsRows({
-    params: { siteId: analyticsSiteId.value },
-    body: parseLiveSearchPerformanceRequest(body),
-  }, true)
-  return response.rows
-}
 
 const { session } = useUserSession()
 
-const { period, columns, stableData, compareMode, searchType, brand, questions, zoomTo, resetZoom } = useProGscFilters()
+const { period, columns, stableData, compareMode, searchType, brand, questions, zoomTo, resetZoom, googleSlice } = useProGscFilters()
 
 // No keyword profile exists yet, so brand terms come from what the site URL
 // implies. The Queries table and its Brand facet read the same list.
@@ -142,7 +127,7 @@ const { data: dates, status: datesStatus, error: datesError } = useProGscdumpDat
 // Current data gets the first read. Optional panels stay released during a
 // same-scope refresh, including terminal failures, but never across identities.
 const identity = useGscQueryIdentity()
-const detailScope = computed(() => JSON.stringify([siteId.value, analyticsSiteId.value, period.value, stableData.value, searchType.value, identity.value.scope]))
+const detailScope = computed(() => JSON.stringify([siteId.value, analyticsSiteId.value, period.value, stableData.value, searchType.value, googleSlice.value, identity.value.scope]))
 const releasedDetailScope = ref<string | null>(null)
 watch(detailScope, () => {
   releasedDetailScope.value = null
@@ -307,8 +292,9 @@ const topLabel = computed(() => {
 // chart series. Each is its own one-period read: the lead lists compare, and a
 // compared read counts every row either window has. No delta: the comparison
 // window's distinct count is not fetched.
-const queryCount = useProGscdumpPeriodCount({ siteId: detailSiteId, dimension: 'queryCanonical', period, stableData, facets: queryFacets })
-const pageCount = useProGscdumpPeriodCount({ siteId: detailSiteId, dimension: 'page', period, stableData })
+const countSite = computed(() => googleSlice.value ? undefined : detailSiteId.value)
+const queryCount = useProGscdumpPeriodCount({ siteId: countSite, dimension: 'queryCanonical', period, stableData, facets: queryFacets })
+const pageCount = useProGscdumpPeriodCount({ siteId: countSite, dimension: 'page', period, stableData })
 const heroEntityCounts = computed(() => [
   {
     key: 'queries',
@@ -475,7 +461,6 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
            metrics and the Brand and Questions facets. Country and Device stay
            off: a per-Site breakdown cannot cross-filter by them. -->
       <ProGscSurfaceBar v-if="searchState._tag === 'Ready'" surface="overview" :site-id="siteId" />
-      <ProLiveSearchPerformance v-if="analyticsSiteId" :key="analyticsSiteId" :gsc-property-url="gscData?.gscPropertyUrl ?? null" :range="sparkRange" :load-rows="loadLiveSearchPerformance" />
 
       <UiAlert v-if="gscData?.syncStatus === 'syncing' && gscData.syncProgress" status="info" :title="`Syncing ${Math.round(gscData.syncProgress.percent)}%`">
         {{ gscData.syncProgress.completed }} of {{ gscData.syncProgress.total }} Search Console tasks completed.
@@ -564,7 +549,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
             :error="datesError"
             :date-range="period"
             :columns="lead.heroColumns"
-            :entity-counts="heroEntityCounts"
+            :entity-counts="googleSlice ? [] : heroEntityCounts"
             :loading="datesStatus === 'pending' || siteLoading"
             show-buttons
             @zoom="onZoom"

@@ -3,9 +3,11 @@ import type { Metric } from 'gscdump/query'
 import type { MaybeRefOrGetter, Ref } from 'vue'
 import type { SeriesDimension } from '../../../shared/analytics-requests'
 import type { GscFacet } from '../../../shared/utils/gsc-facets'
+import type { GoogleSearchSlice } from '../../utils/google-search-slice'
 import { computed, onScopeDispose, ref, toValue, watch } from 'vue'
-import { entityDailySeriesRequest } from '../../../shared/analytics-requests'
+import { entityDailySeriesRequest, parseLiveSearchPerformanceRequest } from '../../../shared/analytics-requests'
 import { entitySeriesFromRows, sparklineDateAxis } from '../../../shared/utils/gsc-series'
+import { googleDimension, googleRowFilters, readGoogleDashboardRows } from '../../utils/google-dashboard-rows'
 import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdump } from './useProGscdump'
 
@@ -71,8 +73,21 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
     selectedMetric: Metric,
     slice: GscSearchType,
     facets: readonly GscFacet[] | undefined,
+    google: GoogleSearchSlice | null,
   ): Promise<Map<string, number[]>> {
     const axis = sparklineDateAxis(range.start, range.end)
+    if (google) {
+      const rows = await readGoogleDashboardRows(async (body) => {
+        const response = await gscdump.queryAnalyticsRows({ params: { siteId }, body: parseLiveSearchPerformanceRequest(body) }, true)
+        return response.rows
+      }, google, {
+        range,
+        dimensions: ['date', googleDimension(opts.dimension)],
+        filters: googleRowFilters(google, facets ?? []),
+        limit: 25_000,
+      })
+      return entitySeriesFromRows(rows, { key: opts.dimension, metric: selectedMetric, axis })
+    }
     const response = await gscdump.queryAnalyticsRows({
       params: { siteId },
       body: entityDailySeriesRequest({ searchType: slice, dimension: opts.dimension, keys, range, metric: selectedMetric, facets }),
@@ -87,11 +102,11 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
     token++
   })
   watch(
-    [() => toValue(opts.gscdumpSiteId), () => toValue(opts.range), _keys, metric, searchType, () => toValue(opts.facets)],
-    async ([siteId, range, keys, selectedMetric, selectedSearchType, facets]) => {
+    [() => toValue(opts.gscdumpSiteId), () => toValue(opts.range), _keys, metric, searchType, () => toValue(opts.facets), () => toValue(filters.googleSlice) ?? null],
+    async ([siteId, range, keys, selectedMetric, selectedSearchType, facets, google]) => {
       const current = ++token
       error.value = null
-      const nextScope = JSON.stringify([siteId, range, opts.dimension, selectedMetric, selectedSearchType, facets])
+      const nextScope = JSON.stringify([siteId, range, opts.dimension, selectedMetric, selectedSearchType, facets, google])
       if (nextScope !== cache.scope) {
         cache = { scope: nextScope, values: new Map(), keys, batch: null, reads: new Map(), attempted: new Set<string>() }
         map.value = new Map()
@@ -138,7 +153,7 @@ export function useProEntitySparklines(opts: UseProEntitySparklinesOptions): {
             owner.attempted.add(key)
             owner.reads.set(key, batch)
           }
-          const series = await readSeries(siteId, range, unresolved, selectedMetric, selectedSearchType, facets)
+          const series = await readSeries(siteId, range, unresolved, selectedMetric, selectedSearchType, facets, google)
           if (stopped || owner !== cache)
             return { _tag: 'Ok' }
           for (const key of unresolved)

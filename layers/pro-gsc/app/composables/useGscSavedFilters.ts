@@ -12,6 +12,7 @@ export interface GscSavedFilter {
   filter: string
   country: string
   device: string
+  googleBrand?: string
 }
 
 /**
