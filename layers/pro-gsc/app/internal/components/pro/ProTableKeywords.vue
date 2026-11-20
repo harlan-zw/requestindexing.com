@@ -67,6 +67,7 @@ const emit = defineEmits<{ available: [value: boolean] }>()
 
 const gscFilters = useProGscFilters()
 const classified = computed(() => !!gscFilters.googleSlice.value?.googleBrand)
+const rawQueries = computed(() => !!pageFilter || !!gscFilters.googleSlice.value)
 const route = useRoute()
 const linkSiteId = computed(() => (route.params.id as string) || siteId)
 const dateRange = computed(() => periodToDateRange(period, gscFilters.stableData.value))
@@ -202,7 +203,7 @@ const columns = computed<UiTableColumn<KeywordTableRow>[]>(() => {
   const allCols: UiTableColumn<KeywordTableRow>[] = [
     {
       accessorKey: 'keyword',
-      header: 'Query',
+      header: rawQueries.value ? 'Raw query' : 'Query',
       tooltip: 'The search term users type into Google',
       enableSorting: sortable,
       rowHeader: true,
@@ -218,7 +219,7 @@ const columns = computed<UiTableColumn<KeywordTableRow>[]>(() => {
               h(ProQueryLabel, {
                 keyword: query,
                 queryCanonical: key,
-                variantCount: r.variantCount,
+                variantCount: rawQueries.value ? undefined : r.variantCount,
                 variants: loadedVariants?.length ? loadedVariants : r.variants,
                 variantsLoading: queryVariants.loadingFor(key),
                 brand: isBrandKeyword(query),

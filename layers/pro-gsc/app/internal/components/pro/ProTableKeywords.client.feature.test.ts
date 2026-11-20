@@ -54,7 +54,7 @@ vi.mock('./ProTopPageCell.vue', () => ({ default: defineComponent({ render: () =
 vi.mock('../../../components/pro/ProGscTableShell.vue', () => ({ default: defineComponent({
   inheritAttrs: false,
   props: ['columns', 'tableData'],
-  setup: props => () => h('table', (props.tableData as object[]).map(original => h('tr', (props.columns as { cell: (ctx: unknown) => unknown }[]).map(column => h('td', column.cell({ row: { original } }) as never))))),
+  setup: props => () => h('table', [h('thead', (props.columns as { header: string }[]).map(column => h('th', column.header))), ...(props.tableData as object[]).map(original => h('tr', (props.columns as { cell: (ctx: unknown) => unknown }[]).map(column => h('td', column.cell({ row: { original } }) as never))))]),
 }) }))
 let app: ReturnType<typeof createApp>
 afterEach(() => {
@@ -70,6 +70,7 @@ it('renders classified ranking with explicit unavailability and no broken query 
   app.component('UiButton', defineComponent({ setup: (_, { slots }) => () => h('button', slots.default?.()) }))
   app.mount(host)
   expect(host.textContent).toContain('example')
+  expect(host.querySelector('th')?.textContent).toBe('Raw query')
   expect(host.textContent).toContain('Query details and trends are unavailable with Google classification.')
   expect(host.querySelector('a')).toBeNull()
   expect(host.querySelector('[data-sparkline]')).toBeNull()
@@ -80,4 +81,5 @@ it('renders classified ranking with explicit unavailability and no broken query 
   await nextTick()
   expect(host.querySelector('a')?.getAttribute('href')).toBe('/pro/dashboard/sites/s_app/search-console/queries/example')
   expect(host.querySelector('[data-sparkline]')).not.toBeNull()
+  expect(host.querySelector('th')?.textContent).toBe('Query')
 })

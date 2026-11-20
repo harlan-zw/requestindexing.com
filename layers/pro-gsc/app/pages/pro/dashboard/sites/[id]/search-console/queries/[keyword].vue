@@ -23,8 +23,7 @@ import { isBrandTerm } from '#layers/pro-gsc/shared/query-display'
 // the performance facts, then the deep-dive trend and the variant breakdown,
 // then the pages that rank for the term.
 //
-// Identity is the CANONICAL query group, the term the queries table displays.
-// Hero totals, sparkline, variants and the chart are all group-scoped.
+// Recorded reports use canonical groups. Live Google filters use exact spellings.
 //
 // Dropped against upstream: search volume, CPC and difficulty (those come from
 // DataForSEO, which this app does not carry) and the chat eject.
@@ -42,6 +41,7 @@ useSeoMeta({ title: () => `“${keyword.value}”` })
 const { period, columns, stableData, compareMode, zoomTo, resetZoom, googleSlice, selectGoogleBrand } = useProGscFilters()
 
 const queryActionsSupported = computed(() => !googleSlice.value?.googleBrand)
+const rawQuery = computed(() => !!googleSlice.value)
 const querySiteId = computed(() => queryActionsSupported.value ? gscdumpSiteId.value ?? undefined : undefined)
 
 function onZoom(range: { start: string, end: string } | null) {
@@ -80,6 +80,8 @@ const totals = computed(() => totalRows.value[0] ?? null)
 
 // How many raw queries the canonical groups, carried on the group row.
 const groupVariantCount = computed(() => {
+  if (rawQuery.value)
+    return 1
   const v = Number(totals.value?.variantCount)
   return Number.isFinite(v) && v > 0 ? v : 1
 })
@@ -129,7 +131,7 @@ const heroCaption = computed(() => {
 
 // Variant breakdown: the raw queries grouped under this canonical, by clicks.
 const { rows: variantSourceRows } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: querySiteId,
+  siteId: computed(() => rawQuery.value ? undefined : querySiteId.value),
   dimension: 'query',
   period,
   stableData,
@@ -145,7 +147,7 @@ const variantRows = computed(() => variantSourceRows.value
     impressions: Number(r.impressions) || 0,
     position: Number(r.position) || 0,
   })))
-const hasVariants = computed(() => variantRows.value.length > 1)
+const hasVariants = computed(() => !rawQuery.value && variantRows.value.length > 1)
 
 const isBrand = computed(() => isBrandTerm(keyword.value, deriveUrlBrandKeywords(site.value?.url)))
 
@@ -182,7 +184,7 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
       <UiEntitySummary
         v-bind="{ title: 'Search clicks' } satisfies { title: string }"
         tooltip="Search clicks"
-        tooltip-description="Clicks this query group earned from Google Search in the selected period, including every grouped variant."
+        :tooltip-description="rawQuery ? 'Clicks for this exact query spelling from Google Search in the selected period.' : 'Clicks this query group earned from Google Search in the selected period, including every grouped variant.'"
         :value="totals?.clicks != null ? formatNumber(totals.clicks) : '—'"
         :trend="clicksTrend"
         trend-suffix="%"
@@ -192,6 +194,7 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
       >
         <template #heading>
           <div class="min-w-0 flex items-center gap-3">
+            <span v-if="rawQuery" class="text-xs text-muted shrink-0">Raw query</span>
             <h2 class="text-sm font-semibold text-highlighted truncate">
               &ldquo;{{ keyword }}&rdquo;
             </h2>

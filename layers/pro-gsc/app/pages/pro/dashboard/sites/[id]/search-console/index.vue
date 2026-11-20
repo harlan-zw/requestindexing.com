@@ -45,6 +45,7 @@ const { session } = useUserSession()
 const { period, columns, stableData, compareMode, searchType, brand, questions, zoomTo, resetZoom, googleSlice, selectGoogleBrand } = useProGscFilters()
 
 const queryActionsSupported = computed(() => !googleSlice.value?.googleBrand)
+const rawQueries = computed(() => !!googleSlice.value)
 const queryActionSiteId = computed(() => queryActionsSupported.value ? analyticsSiteId.value : undefined)
 
 // No keyword profile exists yet, so brand terms come from what the site URL
@@ -564,7 +565,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
           <!-- The section title and its list are one artifact, so they sit at
                gap-2. The zone gap separates the lead from the movers below. -->
           <div class="flex flex-col gap-2">
-            <UiSectionHeader title="Search Queries" class="!mb-0" />
+            <UiSectionHeader :title="rawQueries ? 'Raw queries' : 'Search Queries'" class="!mb-0" />
             <div v-if="!queryActionsSupported" class="text-xs text-muted">
               <p>Query details and trends are unavailable with Google classification. Clear Google classification to view them.</p>
               <UiButton purpose="link" size="xs" @click="selectGoogleBrand('')">
@@ -574,7 +575,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
             <UiDataList
               :title="topLabel"
               subtle
-              tooltip="Top search queries for this period. Variants, such as plural and singular spellings, are grouped together. The #N badge is the term's average Google position."
+              :tooltip="rawQueries ? 'Raw queries for this period. Each spelling has its own metrics. The #N badge shows its average Google position.' : 'Top search queries for this period. Variants, such as plural and singular spellings, are grouped together. The #N badge is the term\'s average Google position.'"
               :loading="detailPending || siteLoading || keywordsLoading"
               :loading-count="5"
               :items="keywordRows"
@@ -586,7 +587,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
                   :key="`${canonicalQueryKey(row)}:${queryActionsSupported}`"
                   :keyword="row.queryCanonical!"
                   :query-canonical="canonicalQueryKey(row)"
-                  :variant-count="queryActionsSupported ? row.variantCount : undefined"
+                  :variant-count="rawQueries ? undefined : row.variantCount"
                   :variants="variantsFor(row)"
                   :variants-loading="variantsLoadingFor(row)"
                   :position="bestPosition(row)"
@@ -656,7 +657,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
                   :key="`${canonicalQueryKey(row)}:${queryActionsSupported}`"
                   :keyword="row.queryCanonical!"
                   :query-canonical="canonicalQueryKey(row)"
-                  :variant-count="queryActionsSupported ? row.variantCount : undefined"
+                  :variant-count="rawQueries ? undefined : row.variantCount"
                   :variants="variantsFor(row)"
                   :variants-loading="variantsLoadingFor(row)"
                   :position="bestPosition(row)"

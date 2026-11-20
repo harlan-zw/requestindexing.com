@@ -938,6 +938,15 @@ section above, then delete it from this list.
 
 ## Search Console comparison evidence
 
+Live Google query rows show individual spellings. Only recorded reports supply canonical query groups.
+
+| Asset | Canonical string |
+| --- | --- |
+| Live query ranking heading | Raw queries |
+| Live query label | Raw query |
+| Live query ranking tooltip | Raw queries for this period. Each spelling has its own metrics. The #N badge shows its average Google position. |
+| Live query clicks tooltip | Clicks for this exact query spelling from Google Search in the selected period. |
+
 | Asset | Canonical string |
 | --- | --- |
 | Search Console comparison unavailable | Comparison unavailable. Both periods need complete recorded Search Console data. |
