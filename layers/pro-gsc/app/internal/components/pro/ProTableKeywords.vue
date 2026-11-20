@@ -66,6 +66,7 @@ const {
 const emit = defineEmits<{ available: [value: boolean] }>()
 
 const gscFilters = useProGscFilters()
+const classified = computed(() => !!gscFilters.googleSlice.value?.googleBrand)
 const route = useRoute()
 const linkSiteId = computed(() => (route.params.id as string) || siteId)
 const dateRange = computed(() => periodToDateRange(period, gscFilters.stableData.value))
@@ -161,7 +162,7 @@ function rowKey(r: GscdumpDataRow): string {
   return canonicalQueryKey(r) || r.query || ''
 }
 
-const queryKeys = computed(() => rows.value.map(rowKey).filter(Boolean))
+const queryKeys = computed(() => classified.value ? [] : rows.value.map(rowKey).filter(Boolean))
 
 // The variant badge resolves the raw queries folded into a canonical when its
 // popover opens, so a table of 25 rows costs nothing until one is asked about.
@@ -221,12 +222,12 @@ const columns = computed<UiTableColumn<KeywordTableRow>[]>(() => {
                 variants: loadedVariants?.length ? loadedVariants : r.variants,
                 variantsLoading: queryVariants.loadingFor(key),
                 brand: isBrandKeyword(query),
-                to: `/pro/dashboard/sites/${linkSiteId.value}/search-console/queries/${encodeURIComponent(query)}`,
+                to: classified.value ? undefined : `/pro/dashboard/sites/${linkSiteId.value}/search-console/queries/${encodeURIComponent(query)}`,
                 onVariantOpen: () => queryVariants.open(key),
               }, () => newBadge(r)),
             ]),
           ]),
-          h(ProSparklineCell, {
+          !classified.value && h(ProSparklineCell, {
             data: sparklines.map.value.get(key) ?? null,
             pending: sparklines.pending.value,
             error: !!sparklines.error.value,
@@ -265,12 +266,18 @@ const columns = computed<UiTableColumn<KeywordTableRow>[]>(() => {
   ]
   return allCols.filter((col) => {
     const key = getProGscColumnKey(col)
-    return !key || !(excludeColumns || []).includes(key)
+    return !(classified.value && key === 'page') && (!key || !(excludeColumns || []).includes(key))
   })
 })
 </script>
 
 <template>
+  <div v-if="classified" role="status" class="flex flex-wrap items-center justify-between gap-3 py-2 text-sm text-muted">
+    <span>Query details and trends are unavailable with Google classification. Clear Google classification to view them.</span>
+    <UiButton size="xs" purpose="secondary" @click="gscFilters.selectGoogleBrand('')">
+      All queries
+    </UiButton>
+  </div>
   <ProGscTableShell
     :filters="filters"
     dimension="queryCanonical"

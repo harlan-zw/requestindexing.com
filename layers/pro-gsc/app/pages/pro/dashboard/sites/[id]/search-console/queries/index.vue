@@ -15,7 +15,7 @@ definePageMeta({
 const { siteId, site, siteStatus, gscdumpSiteId } = useSite('Queries')
 const { data: syncData, isLifecycleSettled, hasError: syncStatusError, refresh: refreshSyncStatus } = useProGscStatus(siteId)
 const { period } = useSitePeriod()
-const { brand, questions } = useProGscFilters()
+const { brand, questions, googleSlice } = useProGscFilters()
 
 // A has no keyword profile, so brand terms come from what the site URL
 // deterministically implies. The Brand facet on the control bar reads the same
@@ -81,7 +81,7 @@ const hasRows = ref(true)
         tooltip="What people searched for before Google showed one of your pages."
       />
       <ProGscTopEntityTrendPanel
-        v-if="gscdumpSiteId && hasRows"
+        v-if="gscdumpSiteId && hasRows && !googleSlice?.googleBrand"
         :gscdump-site-id="gscdumpSiteId"
         dimension="query"
         :facets="queryFacets"

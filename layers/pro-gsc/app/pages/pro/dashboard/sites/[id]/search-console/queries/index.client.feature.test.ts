@@ -7,11 +7,12 @@ const settled = ref(false)
 const failed = ref(false)
 const data = ref<{ queryable: boolean } | null>(null)
 const engineSiteId = ref<string | undefined>('s_engine')
+const googleSlice = ref<{ googleBrand: string } | null>(null)
 vi.mock('#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue', () => ({ default: defineComponent({ render: () => h('div') }) }))
-vi.mock('#layers/pro-gsc/app/components/pro/ProGscTopEntityTrendPanel.vue', () => ({ default: defineComponent({ render: () => h('div') }) }))
+vi.mock('#layers/pro-gsc/app/components/pro/ProGscTopEntityTrendPanel.vue', () => ({ default: defineComponent({ render: () => h('div', { 'data-trend': '' }, 'Search trend') }) }))
 vi.mock('#layers/pro-gsc/app/internal/components/pro/ProTableKeywords.vue', () => ({ default: defineComponent({ render: () => h('div', { 'data-query-table': '' }, 'Query results') }) }))
 vi.mock('#layers/pro-gsc/app/composables/useProGscFilters', () => ({
-  useProGscFilters: () => ({ brand: ref(null), questions: ref(null) }),
+  useProGscFilters: () => ({ brand: ref(null), questions: ref(null), googleSlice }),
   buildBrandFacet: () => null,
   buildQuestionFacet: () => null,
 }))
@@ -46,10 +47,22 @@ afterEach(() => {
   failed.value = false
   data.value = null
   engineSiteId.value = 's_engine'
+  googleSlice.value = null
   vi.clearAllMocks()
 })
 
 describe('queries during the first sync', () => {
+  it('keeps the ranking without mounting an unsupported classified trend', async () => {
+    data.value = { queryable: true }
+    settled.value = true
+    googleSlice.value = { googleBrand: 'BRANDED' }
+    const host = mount()
+    expect(host.textContent).toContain('Query results')
+    expect(host.querySelector('[data-trend]')).toBeNull()
+    googleSlice.value = null
+    await nextTick()
+    expect(host.querySelector('[data-trend]')).not.toBeNull()
+  })
   it('offers Search Console connection for an unlinked Site', () => {
     engineSiteId.value = undefined
     const host = mount()
