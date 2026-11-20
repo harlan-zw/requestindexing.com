@@ -57,8 +57,8 @@ export function useProGscdump() {
   }
 
   /** Raw grouped rows. Unlike a list report, it accepts `date` as a dimension. */
-  function queryAnalyticsRows(input: { params: { siteId: string }, body: RowsRequest }, silent = false) {
-    return runV1<GscdumpV1OperationResponse<'analytics.rows.query'>['data']>(() => createV1Client().queryAnalyticsRows(input), silent)
+  function queryAnalyticsRows(input: { params: { siteId: string }, body: RowsRequest }, silent = false, transport?: { signal?: AbortSignal }) {
+    return runV1<GscdumpV1OperationResponse<'analytics.rows.query'>['data']>(() => createV1Client().queryAnalyticsRows(input, transport), silent)
   }
 
   function queryAnalyticsReportDetail(input: { params: { siteId: string }, body: DetailReportRequest }, silent = false) {

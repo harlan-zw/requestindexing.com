@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import type { AnalyticsRowsV1Request } from '@gscdump/contracts/v1/http'
 import type { GscdumpDataRow } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { fmtGscMetric, formatNumber, getPath } from '@nuxtseo/design-system/app/composables/formatting'
 import { computed, ref, watch } from 'vue'
@@ -7,7 +6,6 @@ import ProSiteSetupOffers from '#layers/pro-gsc/app/components/overview/ProSiteS
 import ProCardGsc from '#layers/pro-gsc/app/components/pro/ProCardGsc.vue'
 import ProGscReadError from '#layers/pro-gsc/app/components/pro/ProGscReadError.vue'
 import ProGscSurfaceBar from '#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue'
-import ProLiveSearchPerformance from '#layers/pro-gsc/app/components/pro/ProLiveSearchPerformance.vue'
 import ProQueryLabel from '#layers/pro-gsc/app/components/pro/ProQueryLabel.vue'
 import { periodToDateRange } from '#layers/pro-gsc/app/composables/useGscPeriod'
 import { useGscQueryIdentity } from '#layers/pro-gsc/app/composables/useGscQueryIdentity'
@@ -19,11 +17,10 @@ import {
   useProGscQueryVariants,
   useProQueryPositionSparklines,
 } from '#layers/pro-gsc/app/composables/useProGscdump'
-import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump/useProGscdump'
 import { buildBrandFacet, buildQuestionFacet, useProGscFilters } from '#layers/pro-gsc/app/composables/useProGscFilters'
 import ProSparklineCell from '#layers/pro-gsc/app/internal/components/pro/ProSparklineCell.vue'
+import { searchConsoleLink } from '#layers/pro-gsc/app/utils/search-console-link'
 import { resolveSiteSearchState, sampleOverlay } from '#layers/pro-gsc/app/utils/site-search-state'
-import { parseLiveSearchPerformanceRequest } from '#layers/pro-gsc/shared/analytics-requests'
 import { deriveUrlBrandKeywords } from '#layers/pro-gsc/shared/brand-queries'
 import { canonicalQueryKey } from '#layers/pro-gsc/shared/canonical-query'
 import { overviewLead } from '#layers/pro-gsc/shared/overview-lead'
@@ -42,22 +39,20 @@ definePageMeta({
 })
 
 const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, isLifecycleSettled, hold, gscData, gscStatusError, refreshGscStatus } = useSite('Search Console')
-const analyticsSiteId = computed(() => isLifecycleSettled.value && isReady.value && !hold.value ? gscdumpSiteId.value ?? undefined : undefined)
-const gscdump = useProGscdump()
+const route = useRoute()
 
-async function loadLiveSearchPerformance(body: AnalyticsRowsV1Request) {
-  if (!analyticsSiteId.value)
-    throw new Error('Connect Search Console before running this report.')
-  const response = await gscdump.queryAnalyticsRows({
-    params: { siteId: analyticsSiteId.value },
-    body: parseLiveSearchPerformanceRequest(body),
-  }, true)
-  return response.rows
+function reportLink(destination: string): string {
+  return searchConsoleLink(`/pro/dashboard/sites/${siteId.value}/search-console/${destination}`, route.query)
 }
+const analyticsSiteId = computed(() => isLifecycleSettled.value && isReady.value && !hold.value ? gscdumpSiteId.value ?? undefined : undefined)
 
 const { session } = useUserSession()
 
-const { period, columns, stableData, compareMode, searchType, brand, questions, zoomTo, resetZoom } = useProGscFilters()
+const { period, columns, stableData, compareMode, searchType, brand, questions, zoomTo, resetZoom, googleSlice, selectGoogleBrand } = useProGscFilters()
+
+const queryActionsSupported = computed(() => !googleSlice.value?.googleBrand)
+const rawQueries = computed(() => !!googleSlice.value)
+const queryActionSiteId = computed(() => queryActionsSupported.value ? analyticsSiteId.value : undefined)
 
 // No keyword profile exists yet, so brand terms come from what the site URL
 // implies. The Queries table and its Brand facet read the same list.
@@ -142,7 +137,7 @@ const { data: dates, status: datesStatus, error: datesError } = useProGscdumpDat
 // Current data gets the first read. Optional panels stay released during a
 // same-scope refresh, including terminal failures, but never across identities.
 const identity = useGscQueryIdentity()
-const detailScope = computed(() => JSON.stringify([siteId.value, analyticsSiteId.value, period.value, stableData.value, searchType.value, identity.value.scope]))
+const detailScope = computed(() => JSON.stringify([siteId.value, analyticsSiteId.value, period.value, stableData.value, searchType.value, googleSlice.value, identity.value.scope]))
 const releasedDetailScope = ref<string | null>(null)
 watch(detailScope, () => {
   releasedDetailScope.value = null
@@ -209,8 +204,8 @@ const { rows: decliningKeywordRows, isInitialLoading: decliningKeywordsLoading, 
 
 // Growing and Declining render the same list, so they share one template.
 const queryMovers = computed(() => [
-  { key: 'improving', title: 'Growing', tooltip: 'Queries with the biggest click gains vs the previous period.', rows: improvingKeywordRows.value, loading: improvingKeywordsLoading.value, empty: 'No growing queries this period' },
-  { key: 'declining', title: 'Declining', tooltip: 'Queries with the biggest click drops vs the previous period.', rows: decliningKeywordRows.value, loading: decliningKeywordsLoading.value, empty: 'No declining queries this period' },
+  { key: 'improving', title: 'Growing', tooltip: 'Queries with the biggest click gains vs the previous period.', rows: improvingKeywordRows.value, loading: improvingKeywordsLoading.value, empty: googleSlice.value ? 'Comparison unavailable with Google filters. Clear Google filters to compare table rows.' : 'No growing queries this period' },
+  { key: 'declining', title: 'Declining', tooltip: 'Queries with the biggest click drops vs the previous period.', rows: decliningKeywordRows.value, loading: decliningKeywordsLoading.value, empty: googleSlice.value ? 'Comparison unavailable with Google filters. Clear Google filters to compare table rows.' : 'No declining queries this period' },
 ])
 
 // ── Pages: the lead list only ───────────────────────────────────────────────
@@ -258,7 +253,7 @@ const { rows: deviceRows, isInitialLoading: devicesLoading } = devicesTable
 //
 // The raw queries behind a canonical row are a second read, fired when the
 // variant popover opens. The row's own variants stand in until it answers.
-const queryVariants = useProGscQueryVariants({ siteId: analyticsSiteId, period, stableData, compareMode })
+const queryVariants = useProGscQueryVariants({ siteId: queryActionSiteId, period, stableData, compareMode })
 function variantsFor(row: GscdumpDataRow): Array<{ query: string, clicks: number, impressions: number, position: number }> {
   const loaded = queryVariants.variantsFor(canonicalQueryKey(row))
   return loaded?.length ? loaded : normalizedVariants(row)
@@ -270,7 +265,7 @@ function variantsLoadingFor(row: GscdumpDataRow): boolean {
 const sparkMetric = computed(() => primaryMetric.value === 'clicks' ? 'clicks' : 'impressions')
 const sparkRange = computed(() => periodToDateRange(period.value, stableData.value))
 const querySparklines = useProEntitySparklines({
-  gscdumpSiteId: analyticsSiteId,
+  gscdumpSiteId: queryActionSiteId,
   range: sparkRange,
   dimension: 'queryCanonical',
   metric: sparkMetric,
@@ -287,7 +282,7 @@ const pageSparklines = useProEntitySparklines({
 
 // Position over time for the rank badge tooltips. Nothing fetches until a
 // badge is pointed at, and a term is read once per period.
-const positionSparklines = useProQueryPositionSparklines({ gscdumpSiteId: analyticsSiteId, range: sparkRange })
+const positionSparklines = useProQueryPositionSparklines({ gscdumpSiteId: queryActionSiteId, range: sparkRange })
 
 // Consider loading when site hasn't resolved yet (siteId null = no request fired = isLoading false)
 const siteLoading = computed(() => siteStatus.value === 'pending' && !dates.value)
@@ -307,8 +302,9 @@ const topLabel = computed(() => {
 // chart series. Each is its own one-period read: the lead lists compare, and a
 // compared read counts every row either window has. No delta: the comparison
 // window's distinct count is not fetched.
-const queryCount = useProGscdumpPeriodCount({ siteId: detailSiteId, dimension: 'queryCanonical', period, stableData, facets: queryFacets })
-const pageCount = useProGscdumpPeriodCount({ siteId: detailSiteId, dimension: 'page', period, stableData })
+const countSite = computed(() => googleSlice.value ? undefined : detailSiteId.value)
+const queryCount = useProGscdumpPeriodCount({ siteId: countSite, dimension: 'queryCanonical', period, stableData, facets: queryFacets })
+const pageCount = useProGscdumpPeriodCount({ siteId: countSite, dimension: 'page', period, stableData })
 const heroEntityCounts = computed(() => [
   {
     key: 'queries',
@@ -475,7 +471,6 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
            metrics and the Brand and Questions facets. Country and Device stay
            off: a per-Site breakdown cannot cross-filter by them. -->
       <ProGscSurfaceBar v-if="searchState._tag === 'Ready'" surface="overview" :site-id="siteId" />
-      <ProLiveSearchPerformance v-if="analyticsSiteId" :key="analyticsSiteId" :gsc-property-url="gscData?.gscPropertyUrl ?? null" :range="sparkRange" :load-rows="loadLiveSearchPerformance" />
 
       <UiAlert v-if="gscData?.syncStatus === 'syncing' && gscData.syncProgress" status="info" :title="`Syncing ${Math.round(gscData.syncProgress.percent)}%`">
         {{ gscData.syncProgress.completed }} of {{ gscData.syncProgress.total }} Search Console tasks completed.
@@ -564,7 +559,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
             :error="datesError"
             :date-range="period"
             :columns="lead.heroColumns"
-            :entity-counts="heroEntityCounts"
+            :entity-counts="googleSlice ? [] : heroEntityCounts"
             :loading="datesStatus === 'pending' || siteLoading"
             show-buttons
             @zoom="onZoom"
@@ -576,22 +571,29 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
           <!-- The section title and its list are one artifact, so they sit at
                gap-2. The zone gap separates the lead from the movers below. -->
           <div class="flex flex-col gap-2">
-            <UiSectionHeader title="Search Queries" class="!mb-0" />
+            <UiSectionHeader :title="rawQueries ? 'Raw queries' : 'Search Queries'" class="!mb-0" />
+            <div v-if="!queryActionsSupported" class="text-xs text-muted">
+              <p>Query details and trends are unavailable with Google classification. Clear Google classification to view them.</p>
+              <UiButton purpose="link" size="xs" @click="selectGoogleBrand('')">
+                All queries
+              </UiButton>
+            </div>
             <UiDataList
               :title="topLabel"
               subtle
-              tooltip="Top search queries for this period. Variants, such as plural and singular spellings, are grouped together. The #N badge is the term's average Google position."
+              :tooltip="rawQueries ? 'Raw queries for this period. Each spelling has its own metrics. The #N badge shows its average Google position.' : 'Top search queries for this period. Variants, such as plural and singular spellings, are grouped together. The #N badge is the term\'s average Google position.'"
               :loading="detailPending || siteLoading || keywordsLoading"
               :loading-count="5"
               :items="keywordRows"
-              :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries`"
+              :view-more-to="reportLink('queries')"
               :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
             >
               <template #default="{ item: row }">
                 <ProQueryLabel
+                  :key="`${canonicalQueryKey(row)}:${queryActionsSupported}`"
                   :keyword="row.queryCanonical!"
                   :query-canonical="canonicalQueryKey(row)"
-                  :variant-count="row.variantCount"
+                  :variant-count="rawQueries ? undefined : row.variantCount"
                   :variants="variantsFor(row)"
                   :variants-loading="variantsLoadingFor(row)"
                   :position="bestPosition(row)"
@@ -601,11 +603,12 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
                   :position-series-dates="positionSparklines.datesFor(canonicalQueryKey(row))"
                   :position-series-loading="positionSparklines.loadingFor(canonicalQueryKey(row))"
                   :brand="isBrandKeyword(row.queryCanonical)"
-                  :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}`"
-                  @variant-open="queryVariants.open(canonicalQueryKey(row))"
-                  @position-open="positionSparklines.open(canonicalQueryKey(row))"
+                  :to="queryActionsSupported ? reportLink(`queries/${encodeURIComponent(row.queryCanonical!)}`) : undefined"
+                  @variant-open="queryActionsSupported && queryVariants.open(canonicalQueryKey(row))"
+                  @position-open="queryActionsSupported && positionSparklines.open(canonicalQueryKey(row))"
                 />
                 <ProSparklineCell
+                  v-if="queryActionsSupported"
                   :data="querySparklines.map.value.get(canonicalQueryKey(row)) ?? null"
                   :pending="querySparklines.pending.value"
                   :error="!!querySparklines.error.value"
@@ -651,15 +654,16 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               :loading="detailPending || siteLoading || mover.loading"
               :loading-count="MOVER_ROWS"
               :items="mover.rows"
-              :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries?filter=${mover.key}`"
+              :view-more-to="googleSlice ? undefined : reportLink(`queries?filter=${mover.key}`)"
               :empty-text="mover.empty"
               :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
             >
               <template #default="{ item: row }">
                 <ProQueryLabel
+                  :key="`${canonicalQueryKey(row)}:${queryActionsSupported}`"
                   :keyword="row.queryCanonical!"
                   :query-canonical="canonicalQueryKey(row)"
-                  :variant-count="row.variantCount"
+                  :variant-count="rawQueries ? undefined : row.variantCount"
                   :variants="variantsFor(row)"
                   :variants-loading="variantsLoadingFor(row)"
                   :position="bestPosition(row)"
@@ -669,11 +673,12 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
                   :position-series-dates="positionSparklines.datesFor(canonicalQueryKey(row))"
                   :position-series-loading="positionSparklines.loadingFor(canonicalQueryKey(row))"
                   :brand="isBrandKeyword(row.queryCanonical)"
-                  :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}`"
-                  @variant-open="queryVariants.open(canonicalQueryKey(row))"
-                  @position-open="positionSparklines.open(canonicalQueryKey(row))"
+                  :to="queryActionsSupported ? reportLink(`queries/${encodeURIComponent(row.queryCanonical!)}`) : undefined"
+                  @variant-open="queryActionsSupported && queryVariants.open(canonicalQueryKey(row))"
+                  @position-open="queryActionsSupported && positionSparklines.open(canonicalQueryKey(row))"
                 />
                 <ProSparklineCell
+                  v-if="queryActionsSupported"
                   :data="querySparklines.map.value.get(canonicalQueryKey(row)) ?? null"
                   :pending="querySparklines.pending.value"
                   :error="!!querySparklines.error.value"
@@ -715,16 +720,16 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               <!-- Each link keeps the destination its old mover list had. The
                    lead list's own "View all" already opens the unfiltered tab. -->
               <template #actions>
-                <span class="flex items-center gap-2 text-xs">
+                <span v-if="!googleSlice" class="flex items-center gap-2 text-xs">
                   <ULink
-                    :to="`/pro/dashboard/sites/${siteId}/search-console/pages?filter=improving`"
+                    :to="reportLink('pages?filter=improving')"
                     class="text-muted hover:text-default transition-colors"
                   >
                     Growing
                   </ULink>
                   <span class="text-dimmed" aria-hidden="true">·</span>
                   <ULink
-                    :to="`/pro/dashboard/sites/${siteId}/search-console/pages?filter=declining`"
+                    :to="reportLink('pages?filter=declining')"
                     class="text-muted hover:text-default transition-colors"
                   >
                     Declining
@@ -739,12 +744,12 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               :loading="detailPending || siteLoading || pagesLoading"
               :loading-count="5"
               :items="pageRows"
-              :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/pages`"
+              :view-more-to="reportLink('pages')"
               :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
             >
               <template #default="{ item: row }">
                 <NuxtLink
-                  :to="`/pro/dashboard/sites/${siteId}/search-console/pages/${encodeURIComponent(row.page!)}`"
+                  :to="reportLink(`pages/${encodeURIComponent(row.page!)}`)"
                   class="relative min-w-0 flex-1 truncate text-sm text-default hover:text-primary transition-colors"
                   :title="row.page"
                 >
@@ -795,7 +800,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               :loading="detailPending || siteLoading || countriesLoading"
               :loading-count="5"
               :items="countryRows"
-              :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/countries`"
+              :view-more-to="reportLink('countries')"
               :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
             >
               <template #default="{ item: row }">

@@ -41,7 +41,7 @@ export interface UseGscQueryOptions<T> {
   site: MaybeRefOrGetter<string | null | undefined>
   params: MaybeRefOrGetter<AnalysisParams>
   /** The consumer-owned hosted operation. No legacy default endpoint exists. */
-  serverFallback: (siteId: string, params: AnalysisParams) => Promise<T>
+  serverFallback: (siteId: string, params: AnalysisParams, signal: AbortSignal) => Promise<T>
   engine?: GscQueryEngine
   /** Native deep Vue sources. Each change invalidates the current read. */
   watchSources?: WatchSource[]
@@ -103,6 +103,7 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
   const pending = computed(() => status.value === 'pending')
   let generation = 0
   let disposed = false
+  let activeRead: AbortController | undefined
   const invalidationRevision = ref(0)
   let dataScope: string | undefined
   const paramsKey = computed(() => JSON.stringify(toValue(options.params), (_key, value) => {
@@ -130,6 +131,8 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
     if (disposed)
       return
     const currentGeneration = ++generation
+    activeRead?.abort()
+    activeRead = undefined
     const key = requestKey.value
     const revision = invalidationRevision.value
     const ownsRequest = () => !disposed && currentGeneration === generation && requestKey.value === key && invalidationRevision.value === revision
@@ -174,8 +177,10 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
     fallbackReason.value = null
     lastDecision.value = { mode: 'server', reason: 'forced:server' }
     const startedAt = performance.now()
+    const controller = new AbortController()
+    activeRead = controller
     try {
-      const output = await options.serverFallback(siteId, toValue(options.params))
+      const output = await options.serverFallback(siteId, toValue(options.params), controller.signal)
       if (!ownsRequest())
         return
       data.value = output
@@ -197,6 +202,10 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
       }
       status.value = failureStatus
     }
+    finally {
+      if (activeRead === controller)
+        activeRead = undefined
+    }
   }
 
   if (options.watchSources?.length) {
@@ -208,6 +217,7 @@ export function useGscQuery<T>(options: UseGscQueryOptions<T>): UseGscQueryRetur
   onScopeDispose(() => {
     disposed = true
     generation++
+    activeRead?.abort()
   })
 
   return {

@@ -3,6 +3,7 @@ import { getPath } from '@nuxtseo/design-system/app/composables/formatting'
 import { useRoute } from 'nuxt/app'
 import { computed } from 'vue'
 import { NuxtLink } from '#components'
+import { searchConsoleLink } from '../../../utils/search-console-link'
 
 // Presentational cell for the keyword table's "Top Page" column. The value is
 // resolved in bulk by `useProTopAssociations` (one scan for the whole page),
@@ -32,7 +33,7 @@ const linkSiteId = computed(() => linkRoute.params.id as string)
        `title`), so nothing is lost to a reader or a screen reader. -->
   <NuxtLink
     v-if="page"
-    :to="`/pro/dashboard/sites/${linkSiteId}/search-console/pages/${encodeURIComponent(page)}`"
+    :to="searchConsoleLink(`/pro/dashboard/sites/${linkSiteId}/search-console/pages/${encodeURIComponent(page)}`, linkRoute.query)"
     :title="page"
     class="inline-block max-w-[120px] truncate align-bottom text-sm text-muted hover:text-primary transition-colors"
   >

@@ -7,6 +7,7 @@
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import type { ProHeaderPageMeta } from '#layers/pro-saas/app/utils/pro-header-meta'
 import { decodeRouteParam } from '../../shared/route-params'
+import { searchConsoleLink } from './search-console-link'
 
 function pagePathOf(route: RouteLocationNormalizedLoaded): string {
   const raw = decodeRouteParam(route.params.page) ?? ''
@@ -26,7 +27,7 @@ function queryLabelOf(route: RouteLocationNormalizedLoaded): string {
 }
 
 function searchConsolePath(route: RouteLocationNormalizedLoaded, list: 'pages' | 'queries'): string {
-  return `/pro/dashboard/sites/${String(route.params.id)}/search-console/${list}`
+  return searchConsoleLink(`/pro/dashboard/sites/${String(route.params.id)}/search-console/${list}`, route.query)
 }
 
 export const pageDetailHeader: ProHeaderPageMeta = {

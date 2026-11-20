@@ -6,6 +6,7 @@ import { computed, ref } from 'vue'
 import { UiFilterMenu, UiIcon, UiInput, UiMetricToggle, UiTogglePill } from '#components'
 import { useGscSavedFilters } from '../../composables/useGscSavedFilters'
 import { GSC_COLUMN_OPTIONS, GSC_COLUMN_TOOLTIPS, GSC_ENTITY_COUNT_OPTIONS, useProGscFilters } from '../../composables/useProGscFilters'
+import { selectedFilterValues, toggleFilterValue } from '../../utils/google-search-slice'
 import DateRangePicker from './ProDateRangePicker.vue'
 import SearchTypePicker from './SearchTypePicker.vue'
 
@@ -75,6 +76,9 @@ const {
   searchType,
   country,
   device,
+  googleBrand,
+  siteSearchConsole,
+  selectGoogleBrand,
   brand,
   questions,
   supportsDimensions,
@@ -111,8 +115,9 @@ function questionLabel(v: string) {
 // them by brand/intent is the next question. Both need a query-bearing slice.
 const queriesInPlay = computed(() => isEntityCountActive('queries'))
 const menuDimensions = computed<FilterDimension[]>(() => [
-  ...(showFilter && supportsDimensions.value ? filterDimensions : []),
-  ...((showBrand || queriesInPlay.value) && supportsQueries.value ? [{ label: 'Brand', value: 'brand', icon: 'i-lucide-tag' }] : []),
+  ...((showFilter || siteSearchConsole.value) && supportsDimensions.value ? filterDimensions : []),
+  ...(siteSearchConsole.value && searchType.value === 'web' ? [{ label: 'Google classification', value: 'googleBrand', icon: 'i-lucide-tag' }] : []),
+  ...((showBrand || queriesInPlay.value) && supportsQueries.value ? [{ label: 'Brand terms', value: 'brand', icon: 'i-lucide-tag' }] : []),
   ...((showQuestions || queriesInPlay.value) && supportsQueries.value ? [{ label: 'Questions', value: 'questions', icon: 'i-lucide-help-circle' }] : []),
 ])
 const showFilterMenu = computed(() => menuDimensions.value.length > 0)
@@ -223,9 +228,19 @@ const DEVICE_OPTIONS = [
 ]
 
 // Filter dimension rows + their current applied value (shown trailing the row).
+const googleBrandOptions = [
+  { value: '', label: 'All queries' },
+  { value: 'BRANDED', label: 'Branded queries' },
+  { value: 'NON_BRANDED', label: 'Non-branded queries' },
+]
+
+const countriesSelected = computed(() => selectedFilterValues(country.value))
+const devicesSelected = computed(() => selectedFilterValues(device.value))
+
 const dimensionValues = computed<Record<string, string>>(() => ({
-  ...(country.value ? { country: countryData[country.value]?.name ?? country.value } : {}),
-  ...(device.value ? { device: deviceLabel(device.value) } : {}),
+  ...(country.value ? { country: countriesSelected.value.map(value => countryData[value]?.name ?? value).join(', ') } : {}),
+  ...(device.value ? { device: devicesSelected.value.map(deviceLabel).join(', ') } : {}),
+  ...(googleBrand.value ? { googleBrand: googleBrandOptions.find(option => option.value === googleBrand.value)?.label ?? '' } : {}),
   ...(brand.value ? { brand: brandLabel(brand.value) } : {}),
   ...(questions.value ? { questions: questionLabel(questions.value) } : {}),
 }))
@@ -258,15 +273,18 @@ function devicePct(value: string): number {
 function onSaveFilter() {
   const parts: string[] = []
   if (country.value)
-    parts.push(countryData[country.value]?.name ?? country.value)
+    parts.push(dimensionValues.value.country!)
   if (device.value)
-    parts.push(deviceLabel(device.value))
+    parts.push(dimensionValues.value.device!)
+  if (siteSearchConsole.value && dimensionValues.value.googleBrand)
+    parts.push(dimensionValues.value.googleBrand)
   addSavedFilter({
     label: parts.length ? parts.join(' · ') : `Saved filter ${saved.value.length + 1}`,
     q: '',
     filter: 'default',
     country: country.value,
     device: device.value,
+    googleBrand: siteSearchConsole.value ? googleBrand.value : undefined,
   })
 }
 
@@ -276,6 +294,8 @@ function onApplySavedFilter(id: string) {
     return
   country.value = sf.country
   device.value = sf.device
+  if (siteSearchConsole.value)
+    selectGoogleBrand(sf.googleBrand ?? '')
 }
 </script>
 
@@ -378,14 +398,14 @@ function onApplySavedFilter(id: string) {
               v-for="c in filteredCountries"
               :key="c.value"
               type="button"
-              :aria-pressed="country === c.value"
+              :aria-pressed="countriesSelected.includes(c.value)"
               class="cursor-pointer w-full flex items-center gap-2 px-1.5 py-1 rounded-md text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              :class="country === c.value ? 'text-default bg-elevated' : 'text-muted hover:text-default hover:bg-[var(--ui-bg-elevated)]/50'"
-              @click="country = c.value; close()"
+              :class="countriesSelected.includes(c.value) ? 'text-default bg-elevated' : 'text-muted hover:text-default hover:bg-[var(--ui-bg-elevated)]/50'"
+              @click="siteSearchConsole ? country = toggleFilterValue(country, c.value) : (country = c.value, close())"
             >
               <UiIcon :name="c.icon" class="size-4 shrink-0 rounded-sm" aria-hidden="true" />
               <span class="flex-1 text-left truncate">{{ c.label }}</span>
-              <UiIcon v-if="country === c.value" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />
+              <UiIcon v-if="countriesSelected.includes(c.value)" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -405,14 +425,29 @@ function onApplySavedFilter(id: string) {
             v-for="d in DEVICE_OPTIONS"
             :key="d.value"
             type="button"
-            :aria-pressed="device === d.value"
+            :aria-pressed="devicesSelected.includes(d.value)"
             class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-mini font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            :class="device === d.value ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
-            @click="device = device === d.value ? '' : d.value; close()"
+            :class="devicesSelected.includes(d.value) ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
+            @click="siteSearchConsole ? device = toggleFilterValue(device, d.value) : (device = device === d.value ? '' : d.value, close())"
           >
             <UiIcon :name="d.icon" class="size-3.5 shrink-0" aria-hidden="true" />
             <span class="flex-1 text-left">{{ d.label }}</span>
             <span v-if="deviceClicks" class="text-dimmed tabular-nums">{{ devicePct(d.value) }}%</span>
+          </button>
+        </div>
+
+        <div v-if="dim === 'googleBrand'" class="space-y-1">
+          <button
+            v-for="option in googleBrandOptions"
+            :key="option.value"
+            type="button"
+            :aria-pressed="googleBrand === option.value"
+            class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-mini font-medium focus-visible:ring-2 focus-visible:ring-primary"
+            :class="googleBrand === option.value ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
+            @click="selectGoogleBrand(option.value); close()"
+          >
+            <span class="flex-1 text-left">{{ option.label }}</span>
+            <UiIcon v-if="googleBrand === option.value" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />
           </button>
         </div>
 

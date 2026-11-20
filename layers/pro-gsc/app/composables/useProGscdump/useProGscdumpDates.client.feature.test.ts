@@ -1,19 +1,21 @@
+import type { GoogleSearchSlice } from '../../utils/google-search-slice'
 import type { CompareMode, Period } from '../useGscPeriod'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, effectScope, nextTick, ref, toValue, watch } from 'vue'
 import { compareRange, periodToDateRange } from '../useGscPeriod'
 import { useProGscdumpDates } from './useProGscdumpDates'
 
-const engine = vi.hoisted(() => ({ detail: vi.fn() }))
+const engine = vi.hoisted(() => ({ detail: vi.fn(), rows: vi.fn() }))
+const googleSlice = ref<GoogleSearchSlice | null>(null)
 const coverageState = ref<'checking' | 'allowed' | 'refused' | 'error'>('checking')
 const invalidation = ref(0)
 vi.mock('../useGscComparisonCoverage', () => ({ useGscComparisonCoverage: () => ({
   state: coverageState,
   allowed: computed(() => coverageState.value === 'allowed'),
 }) }))
-vi.mock('../useProGscFilters', () => ({ useProGscFilters: () => ({ searchType: ref('web') }) }))
+vi.mock('../useProGscFilters', () => ({ useProGscFilters: () => ({ searchType: ref('web'), googleSlice }) }))
 vi.mock('../../internal/composables/useGscInvalidation', () => ({ useGscSiteInvalidation: () => invalidation }))
-vi.mock('./useProGscdump', () => ({ useProGscdump: () => ({ queryAnalyticsReportDetail: engine.detail }) }))
+vi.mock('./useProGscdump', () => ({ useProGscdump: () => ({ queryAnalyticsReportDetail: engine.detail, queryAnalyticsRows: engine.rows }) }))
 Object.assign(globalThis, { computed, ref, toValue, watch, periodToDateRange, compareRange })
 
 function report(clicks = 42) {
@@ -33,6 +35,8 @@ beforeEach(() => {
   scope = effectScope()
   coverageState.value = 'checking'
   invalidation.value = 0
+  googleSlice.value = null
+  engine.rows.mockReset()
   engine.detail.mockReset().mockResolvedValue(report())
 })
 afterEach(() => scope.stop())
@@ -51,6 +55,21 @@ function use(withPrevSeries = true) {
 }
 
 describe('daily current and comparison reads', () => {
+  it.each(['custom:2026-02-21:2026-03-01', 'custom:2026-03-01:2026-03-10'] as Period[])('refuses unproved classified history for %s despite complete recorded Web coverage', async (selectedPeriod) => {
+    coverageState.value = 'allowed'
+    googleSlice.value = { searchType: 'web', googleBrand: 'BRANDED', countries: [], devices: [] }
+    engine.rows.mockResolvedValueOnce({ rows: [{ date: '2026-03-01', clicks: 42, impressions: 100, position: 3, ctr: 0.42 }] })
+      .mockResolvedValue({ rows: selectedPeriod.includes('03-10')
+        ? [{ date: '2026-02-21', clicks: 5, impressions: 20, position: 3, ctr: 0.25 }]
+        : [] })
+    const site = ref('s_one')
+    const view = scope.run(() => useProGscdumpDates(site, ref(selectedPeriod)))!
+    await settle()
+    expect(view.data.value?.period.clicks).toBe(42)
+    expect(view.data.value).toMatchObject({ comparisonRefused: true, hasPrevData: false, prevPeriod: null, prevDates: null })
+    expect(engine.rows).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps the current read stable when coverage enables one prior read', async () => {
     const { view } = use()
     await settle()

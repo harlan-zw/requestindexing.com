@@ -2,6 +2,7 @@
 import { navigateTo, useRoute } from 'nuxt/app'
 import { computed, watch } from 'vue'
 import { UiIcon } from '#components'
+import { useSite } from '#layers/pro-saas/app/composables/useSite'
 import { getSearchTypeLabel, useProGscFilters } from '../../composables/useProGscFilters'
 import ProGscControlBar from './ProGscControlBar.vue'
 
@@ -21,7 +22,8 @@ const { surface } = defineProps<{
   siteId: string
 }>()
 
-const { searchType, supportsQueries, supportsDimensions } = useProGscFilters()
+const { searchType, supportsQueries, supportsDimensions, googleSlice, siteSearchConsole } = useProGscFilters()
+const { gscData } = useSite()
 const route = useRoute()
 
 // Brand and Questions are query-text facets, so they only apply where a row is
@@ -58,6 +60,13 @@ watch([supportsQueries, supportsDimensions], () => {
     <div class="flex items-center gap-2 sm:gap-3 flex-wrap" role="toolbar" aria-label="Search Console filters">
       <ProGscControlBar v-bind="barProps" :site-id="siteId" class="w-full min-w-0" />
     </div>
+    <p v-if="siteSearchConsole && gscData?.gscPropertyUrl" class="text-xs text-muted">
+      Search Console property <span class="break-all text-default">{{ gscData.gscPropertyUrl }}</span>
+    </p>
+    <p v-if="googleSlice?.googleBrand" class="text-xs text-muted">
+      Google only classifies queries for top-level properties with enough queries and impressions.
+      Select All queries to check Web traffic for these filters and dates.
+    </p>
     <p v-if="gateNote" class="flex items-center gap-1.5 text-xs text-muted">
       <UiIcon name="info" class="size-3 text-dimmed shrink-0" aria-hidden="true" />
       {{ gateNote }}

@@ -12,6 +12,7 @@ import ProGscTableShell from '../../../components/pro/ProGscTableShell.vue'
 import { periodToDateRange } from '../../../composables/useGscPeriod'
 import { useProEntitySparklines, useProGscdumpTableData, useProTopAssociations } from '../../../composables/useProGscdump'
 import { useProGscFilters } from '../../../composables/useProGscFilters'
+import { searchConsoleLink } from '../../../utils/search-console-link'
 import { createProGscColumns, getProGscColumnKey } from '../../composables/createProGscColumns'
 import { useGscBackfill } from '../../composables/useGscBackfill'
 import ProSparklineCell from './ProSparklineCell.vue'
@@ -159,7 +160,7 @@ const columns = computed<UiTableColumn<PageTableRow>[]>(() => {
             h(UiProgressPercent, { value: r.clicks, total: data.value?.totalClicks }, () => [
               h('div', { class: 'flex items-center gap-2 min-w-0' }, [
                 h(NuxtLink, {
-                  to: `/pro/dashboard/sites/${linkSiteId.value}/search-console/pages/${encodeURIComponent(pageUrl)}`,
+                  to: searchConsoleLink(`/pro/dashboard/sites/${linkSiteId.value}/search-console/pages/${encodeURIComponent(pageUrl)}`, route.query),
                   title: pageUrl,
                   class: 'truncate text-sm font-medium text-default group-hover:text-primary transition-colors',
                 }, () => getPath(pageUrl)),

@@ -306,9 +306,11 @@ They replace older SDK and report descriptions for these two issue types.
 
 | Asset | String | Where it goes |
 | --- | --- | --- |
-| Live report property label | Search Console property | Linked property in the live Search Console report |
+| Search Console property label | Search Console property | Linked property below the Search Console filters |
+| Google classification filter | Google classification | Search Console filter menu |
 | Empty branded report eligibility | Google only classifies queries for top-level properties with enough queries and impressions. | Empty branded results |
-| Empty branded report action | Select All queries and run the report to check Web traffic for these filters and dates. | Empty branded results |
+| Empty branded report action | Select All queries to check Web traffic for these filters and dates. | Google classification filter |
+| Incomplete classified query search | Search results incomplete. Select a shorter date range. | Search Console Queries table |
 | Search Console status read failure | Search Console status unavailable | Shared Search Console status alert |
 | Search Console status read failure help | Could not read the Search Console status. Retry this check. | Shared Search Console status alert |
 | Search Console status retry | Retry status check | Failed status read action |
@@ -937,8 +939,19 @@ section above, then delete it from this list.
 
 ## Search Console comparison evidence
 
+Live Google query rows show individual spellings. Only recorded reports supply canonical query groups.
+
+| Asset | Canonical string |
+| --- | --- |
+| Live query ranking heading | Raw queries |
+| Live query label | Raw query |
+| Live query ranking tooltip | Raw queries for this period. Each spelling has its own metrics. The #N badge shows its average Google position. |
+| Live query clicks tooltip | Clicks for this exact query spelling from Google Search in the selected period. |
+
 | Asset | Canonical string |
 | --- | --- |
 | Search Console comparison unavailable | Comparison unavailable. Both periods need complete recorded Search Console data. |
+| Search Console live table comparison unavailable | Comparison unavailable with Google filters. Clear Google filters to compare table rows. |
+| Google classification entity read unavailable | Query details and trends are unavailable with Google classification. Clear Google classification to view them. |
 | Search Console comparison read failed | Comparison data could not load. Growth values are hidden. Reload to try again. |
 | Search Console refresh failed with retained data | Search Console data could not refresh. Previous values remain visible. Retry to read them again. |

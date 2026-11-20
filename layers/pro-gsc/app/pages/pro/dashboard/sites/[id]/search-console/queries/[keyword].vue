@@ -23,8 +23,7 @@ import { isBrandTerm } from '#layers/pro-gsc/shared/query-display'
 // the performance facts, then the deep-dive trend and the variant breakdown,
 // then the pages that rank for the term.
 //
-// Identity is the CANONICAL query group, the term the queries table displays.
-// Hero totals, sparkline, variants and the chart are all group-scoped.
+// Recorded reports use canonical groups. Live Google filters use exact spellings.
 //
 // Dropped against upstream: search volume, CPC and difficulty (those come from
 // DataForSEO, which this app does not carry) and the chat eject.
@@ -39,7 +38,11 @@ const keyword = computed(() => String(route.params.keyword))
 
 useSeoMeta({ title: () => `“${keyword.value}”` })
 
-const { period, columns, stableData, compareMode, zoomTo, resetZoom } = useProGscFilters()
+const { period, columns, stableData, compareMode, zoomTo, resetZoom, googleSlice, selectGoogleBrand } = useProGscFilters()
+
+const queryActionsSupported = computed(() => !googleSlice.value?.googleBrand)
+const rawQuery = computed(() => !!googleSlice.value)
+const querySiteId = computed(() => queryActionsSupported.value ? gscdumpSiteId.value ?? undefined : undefined)
 
 function onZoom(range: { start: string, end: string } | null) {
   if (range)
@@ -50,7 +53,7 @@ function onZoom(range: { start: string, end: string } | null) {
 
 // Deep-dive chart series: the whole canonical group's daily metrics.
 const { data: keywordDates, error: keywordDatesError } = useProGscdumpDates(
-  computed(() => gscdumpSiteId.value ?? ''),
+  querySiteId,
   period,
   {
     stableData,
@@ -64,7 +67,7 @@ const dateRange = computed(() => periodToDateRange(period.value, stableData.valu
 // Group totals: one aggregated row for the canonical, with the compare window
 // projected inline as `prev*` so the hero can show a trend.
 const { rows: totalRows } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
+  siteId: querySiteId,
   dimension: 'queryCanonical',
   period,
   stableData,
@@ -77,6 +80,8 @@ const totals = computed(() => totalRows.value[0] ?? null)
 
 // How many raw queries the canonical groups, carried on the group row.
 const groupVariantCount = computed(() => {
+  if (rawQuery.value)
+    return 1
   const v = Number(totals.value?.variantCount)
   return Number.isFinite(v) && v > 0 ? v : 1
 })
@@ -94,7 +99,7 @@ const clicksTrend = computed(() => {
 // Hero sparkline: the group's daily clicks, the same series the queries
 // table's spark cells use.
 const { map: sparklineMap } = useProEntitySparklines({
-  gscdumpSiteId,
+  gscdumpSiteId: querySiteId,
   range: dateRange,
   dimension: 'queryCanonical',
   keys: computed(() => [keyword.value]),
@@ -126,7 +131,7 @@ const heroCaption = computed(() => {
 
 // Variant breakdown: the raw queries grouped under this canonical, by clicks.
 const { rows: variantSourceRows } = useProGscdumpTableData<GscdumpDataRow>({
-  siteId: computed(() => gscdumpSiteId.value ?? undefined),
+  siteId: computed(() => rawQuery.value ? undefined : querySiteId.value),
   dimension: 'query',
   period,
   stableData,
@@ -142,7 +147,7 @@ const variantRows = computed(() => variantSourceRows.value
     impressions: Number(r.impressions) || 0,
     position: Number(r.position) || 0,
   })))
-const hasVariants = computed(() => variantRows.value.length > 1)
+const hasVariants = computed(() => !rawQuery.value && variantRows.value.length > 1)
 
 const isBrand = computed(() => isBrandTerm(keyword.value, deriveUrlBrandKeywords(site.value?.url)))
 
@@ -167,12 +172,19 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
   <div v-else data-testid="search-console-keyword-page" class="flex flex-col gap-5">
     <ProGscSurfaceBar surface="detail" :site-id="siteId" />
 
+    <UiAlert v-if="!queryActionsSupported" status="info" title="Query details and trends are unavailable with Google classification. Clear Google classification to view them.">
+      <template #action>
+        <UiButton purpose="secondary" @click="selectGoogleBrand('')">
+          All queries
+        </UiButton>
+      </template>
+    </UiAlert>
     <!-- Identity header: hero search clicks plus the performance facts -->
-    <ProPageZone tier="primary" first>
+    <ProPageZone v-if="queryActionsSupported" tier="primary" first>
       <UiEntitySummary
         v-bind="{ title: 'Search clicks' } satisfies { title: string }"
         tooltip="Search clicks"
-        tooltip-description="Clicks this query group earned from Google Search in the selected period, including every grouped variant."
+        :tooltip-description="rawQuery ? 'Clicks for this exact query spelling from Google Search in the selected period.' : 'Clicks this query group earned from Google Search in the selected period, including every grouped variant.'"
         :value="totals?.clicks != null ? formatNumber(totals.clicks) : '—'"
         :trend="clicksTrend"
         trend-suffix="%"
@@ -182,6 +194,7 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
       >
         <template #heading>
           <div class="min-w-0 flex items-center gap-3">
+            <span v-if="rawQuery" class="text-xs text-muted shrink-0">Raw query</span>
             <h2 class="text-sm font-semibold text-highlighted truncate">
               &ldquo;{{ keyword }}&rdquo;
             </h2>
@@ -233,13 +246,13 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
       </UiEntitySummary>
     </ProPageZone>
 
-    <ProPageZone tier="secondary">
+    <ProPageZone v-if="queryActionsSupported" tier="secondary">
       <!-- A failed read used to fall between the skeleton and the card and
-           render nothing at all. Say what happened instead. -->
+         render nothing at all. Say what happened instead. -->
       <ProGscReadError :error="keywordDatesError" />
 
       <!-- An unconnected site never resolves this read, so it would sit on the
-           skeleton forever. Say what is missing instead. -->
+         skeleton forever. Say what is missing instead. -->
       <UiEmptyState
         v-if="!keywordDates && isNotConnected"
         compact
@@ -271,7 +284,7 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
       />
 
       <!-- Which phrasings drive the clicks, and where each one ranks. Only
-           renders when the canonical actually groups more than one query. -->
+         renders when the canonical actually groups more than one query. -->
       <section v-if="hasVariants">
         <ProSectionHeader v-bind="{ title: 'Query variants' } satisfies { title: string }" :badge="variantRows.length" />
         <UiTableShell size="xs" row-hover bordered :label="`Query variants grouped under ${keyword}`">
@@ -307,8 +320,8 @@ const queriesHref = computed(() => `/pro/dashboard/sites/${siteId.value}/search-
     </ProPageZone>
 
     <!-- Cannibalisation reads directly off this table: more than one page with
-         real clicks means split ranking signals. -->
-    <ProPageZone tier="secondary">
+       real clicks means split ranking signals. -->
+    <ProPageZone v-if="queryActionsSupported" tier="secondary">
       <ProSectionHeader v-bind="{ title: 'Pages ranking for this keyword' } satisfies { title: string }" />
       <ProTablePages
         :site-id="siteId"

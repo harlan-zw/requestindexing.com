@@ -4,9 +4,10 @@ import type { MaybeRefOrGetter, Ref } from 'vue'
 import type { GscFacet } from '../../../shared/utils/gsc-facets'
 import { bucketTopEntities } from '@nuxtseo/design-system/app/utils/topEntityStack'
 import { onScopeDispose, ref, shallowRef, toValue, watch } from 'vue'
-import { breakdownRequest, entityDailySeriesRequest, siteDailySeriesRequest } from '../../../shared/analytics-requests'
+import { breakdownRequest, entityDailySeriesRequest, parseLiveSearchPerformanceRequest, siteDailySeriesRequest } from '../../../shared/analytics-requests'
 import { isSearchOperatorQuery } from '../../../shared/search-operator-queries'
 import { rankTrendEntities, trendDayRows } from '../../../shared/top-entity-trend'
+import { googleDimension, googleRowFilters, readGoogleDashboardRows, readGoogleEntitySeries } from '../../utils/google-dashboard-rows'
 import { useProGscFilters } from '../useProGscFilters'
 import { useProGscdump } from './useProGscdump'
 
@@ -102,24 +103,37 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
     pending.value = true
     result.value = { buckets: [], series: [] }
 
-    const ranking = readRows(async () => gscdump.queryAnalyticsReport({
-      params: { siteId },
-      body: breakdownRequest({
-        searchType,
-        dimension,
-        range,
-        comparisonRange: null,
-        facets,
-        orderBy: { column: metric, dir: metric === 'position' ? 'asc' : 'desc' },
-        rowLimit: candidateLimit,
-      }),
-    }, true))
+    const google = toValue(filters.googleSlice)
+    const orderBy = { column: metric, dir: metric === 'position' ? 'asc' as const : 'desc' as const }
+    const filtersForRows = google ? googleRowFilters(google, facets ?? []) : []
+    const readGoogle = google && (async (dimensions: Parameters<typeof readGoogleDashboardRows>[2]['dimensions'], limit: number, sort = false) => ({
+      rows: await readGoogleDashboardRows(async (body) => {
+        const response = await gscdump.queryAnalyticsRows({ params: { siteId }, body: parseLiveSearchPerformanceRequest(body) }, true)
+        return response.rows
+      }, google, { range, dimensions, filters: filtersForRows, limit, orderBy: sort ? orderBy : undefined }),
+    }))
+    const ranking = readRows(async () => readGoogle
+      ? readGoogle([googleDimension(dimension)], candidateLimit, true)
+      : gscdump.queryAnalyticsReport({
+          params: { siteId },
+          body: breakdownRequest({
+            searchType,
+            dimension,
+            range,
+            comparisonRange: null,
+            facets,
+            orderBy,
+            rowLimit: candidateLimit,
+          }),
+        }, true))
     // Totals need no ranked keys. Keep failures as values until the ranking
     // names entities whose chart needs the total.
-    const totals = gscdump.queryAnalyticsRows({
-      params: { siteId },
-      body: siteDailySeriesRequest({ searchType, range, metric, facets }),
-    }, true).then(
+    const totals = (readGoogle
+      ? readGoogle(['date'], 25_000)
+      : gscdump.queryAnalyticsRows({
+          params: { siteId },
+          body: siteDailySeriesRequest({ searchType, range, metric, facets }),
+        }, true)).then(
       response => ({ _tag: 'Ok', rows: response?.rows ?? [] } as const),
       cause => ({ _tag: 'Err', cause } as const),
     )
@@ -146,10 +160,15 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
 
     const [total, entityRows] = await Promise.all([
       totals,
-      readRows(async () => gscdump.queryAnalyticsRows({
-        params: { siteId },
-        body: entityDailySeriesRequest({ searchType, dimension, keys: entities.map(entity => entity.key), range, metric, facets }),
-      }, true)),
+      readRows(async () => google
+        ? { rows: await readGoogleEntitySeries(async (body) => {
+            const response = await gscdump.queryAnalyticsRows({ params: { siteId }, body: parseLiveSearchPerformanceRequest(body) }, true)
+            return response.rows
+          }, google, { range, dimension, keys: entities.map(entity => entity.key), filters: filtersForRows }) }
+        : gscdump.queryAnalyticsRows({
+            params: { siteId },
+            body: entityDailySeriesRequest({ searchType, dimension, keys: entities.map(entity => entity.key), range, metric, facets }),
+          }, true)),
     ])
     if (current !== token)
       return
@@ -203,6 +222,7 @@ export function useGscTopEntityTrend(opts: UseGscTopEntityTrendOptions): {
         () => opts.dimension,
         () => toValue(opts.topN),
         filters.searchType,
+        () => toValue(filters.googleSlice),
         () => JSON.stringify(toValue(opts.facets) ?? []),
       ],
       refetch,

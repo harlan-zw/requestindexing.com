@@ -45,7 +45,9 @@ export function useProGscdumpDates(
   const requestedComparison = computed(() => compareRange(range.value, _compareMode.value))
 
   const coverage = useGscComparisonCoverage(() => [_siteId.value], range, requestedComparison, _searchType)
-  const cmp = computed(() => coverage.allowed.value ? requestedComparison.value : null)
+  // Recorded Web coverage cannot prove continuous coverage for live Google rows.
+  const comparisonUnavailable = computed(() => !!filters.googleSlice.value && !!requestedComparison.value)
+  const cmp = computed(() => !filters.googleSlice.value && coverage.allowed.value ? requestedComparison.value : null)
 
   const currentRequest = computed<DailyReportInput>(() => ({
     searchType: _searchType.value,
@@ -62,8 +64,8 @@ export function useProGscdumpDates(
     pin: _filter.value,
   }))
 
-  const current = useProGscdumpDataDetail(_siteId, currentRequest)
-  const prev = useProGscdumpDataDetail(computed(() => cmp.value ? _siteId.value : ''), prevRequest)
+  const current = useProGscdumpDataDetail(_siteId, currentRequest, filters.googleSlice)
+  const prev = useProGscdumpDataDetail(computed(() => cmp.value ? _siteId.value : ''), prevRequest, filters.googleSlice)
 
   const data = computed(() => {
     const result = current.data.value
@@ -79,8 +81,8 @@ export function useProGscdumpDates(
       prevPeriod: previous?.totals ?? null,
       meta: result.meta,
       hasPrevData: previous !== null,
-      comparisonRefused: coverage.state.value === 'refused',
-      comparisonReadFailed: coverage.state.value === 'error' || (!!cmp.value && !prev.pending.value && !!prev.error.value),
+      comparisonRefused: comparisonUnavailable.value || coverage.state.value === 'refused',
+      comparisonReadFailed: (!comparisonUnavailable.value && coverage.state.value === 'error') || (!!cmp.value && !prev.pending.value && !!prev.error.value),
     }
   })
 

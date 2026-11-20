@@ -26,7 +26,7 @@ const loggedIn = ref(true)
 const session = ref({ user: { id: 1 }, gscConnected: true })
 const caller = ref({ user: { id: 1 }, currentTeamId: 10, isAdmin: false, memberships: [{ teamId: 10, role: 'owner', isOwner: true }] })
 const period = ref<'28d' | '7d'>('28d')
-const filters = { period, columns: ref(['clicks']), stableData: ref(false), compareMode: ref('none'), searchType: ref('web'), brand: ref<'' | 'branded' | 'nonbranded'>(''), questions: ref<'' | 'questions' | 'nonquestions'>(''), zoomTo: vi.fn(), resetZoom: vi.fn() }
+const filters = { period, columns: ref(['clicks']), stableData: ref(false), compareMode: ref('none'), searchType: ref('web'), brand: ref<'' | 'branded' | 'nonbranded'>(''), questions: ref<'' | 'questions' | 'nonquestions'>(''), googleSlice: ref(null), zoomTo: vi.fn(), resetZoom: vi.fn() }
 // The layer reads its failure copy through `tryUseNuxtApp`; with no app it keeps the defaults.
 vi.mock('nuxt/app', () => ({ tryUseNuxtApp: () => null, useRoute: () => ({ query: {} }) }))
 vi.mock('#components', () => ({
@@ -126,6 +126,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-10-26T12:00:00Z'))
   vi.stubGlobal('definePageMeta', () => {})
+  vi.stubGlobal('useRoute', () => ({ query: {} }))
   vi.stubGlobal('onMounted', onMounted)
   vi.stubGlobal('useId', useId)
   vi.stubGlobal('toValue', toValue)

@@ -5,6 +5,7 @@ import { refDebounced } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import { UiAlert, UiButton, UiFilterMenu, UiIcon, UiInput, UiSkeleton, UiTable, UPagination } from '#components'
 import { useProHumanFriendlyNumber } from '#imports'
+import { isMoversFilter } from '../../../shared/utils/gsc-facets'
 import { useGscSavedFilters } from '../../composables/useGscSavedFilters'
 import { useProGscFilters } from '../../composables/useProGscFilters'
 import GscFilterBar from './GscFilterBar.vue'
@@ -162,7 +163,7 @@ function commitQ(value = localQ.value) {
 
 // Wire the presentational GscFilterBar to URL-synced Pro facet state.
 // `countryData` is auto-imported from `design-system/app/utils/countries.ts`.
-const { country, device, compareMode } = useProGscFilters()
+const { country, device, compareMode, googleSlice } = useProGscFilters()
 const countryItems = computed(() =>
   Object.entries(countryData)
     .map(([code, d]) => ({ label: d.name, value: code, icon: `i-circle-flags:${d.alpha2}` }))
@@ -172,7 +173,9 @@ const countryItems = computed(() =>
 // UiFilterMenu consolidates the preset chips, search and facets into one popover.
 const { saved, add: addSavedFilter, remove: removeSavedFilter } = useGscSavedFilters()
 
-const presetFilters = computed(() => filters.map(f => ({ id: f.key, label: f.label, icon: f.icon })))
+const presetFilters = computed(() => filters
+  .filter(f => !googleSlice?.value || !isMoversFilter(f.key))
+  .map(f => ({ id: f.key, label: f.label, icon: f.icon })))
 
 function clearOwnedFilters() {
   commitQ('')
@@ -334,9 +337,10 @@ function onApplySaved(id: string) {
     </div>
 
     <!-- No comparison data notice -->
-    <div v-if="comparisonRefused && !isLoading && compareMode !== 'none' && hasPrevData === false" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-elevated border border-default text-sm text-muted">
+    <div v-if="comparisonRefused && !isLoading && (googleSlice || compareMode !== 'none') && hasPrevData === false" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-elevated border border-default text-sm text-muted">
       <UiIcon name="note" class="size-4 shrink-0" />
-      <span>Comparison unavailable. Both periods need complete recorded Search Console data.</span>
+      <span v-if="googleSlice">Comparison unavailable with Google filters. Clear Google filters to compare table rows.</span>
+      <span v-else>Comparison unavailable. Both periods need complete recorded Search Console data.</span>
     </div>
 
     <!-- Loading skeleton (suppressed while paging in load-more — the table stays put) -->
