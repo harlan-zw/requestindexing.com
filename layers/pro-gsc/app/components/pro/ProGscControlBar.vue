@@ -469,7 +469,7 @@ function onApplySavedFilter(id: string) {
             :aria-pressed="brand === b.value"
             class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-mini font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
             :class="brand === b.value ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
-            @click="selectGoogleBrand(''); brand = brand === b.value ? '' : b.value; close()"
+            @click="brand = brand === b.value ? '' : b.value; close()"
           >
             <span class="flex-1 text-left">{{ b.label }}</span>
             <UiIcon v-if="brand === b.value" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />
@@ -494,7 +494,7 @@ function onApplySavedFilter(id: string) {
             :aria-pressed="questions === qOpt.value"
             class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-mini font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
             :class="questions === qOpt.value ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
-            @click="selectGoogleBrand(''); questions = questions === qOpt.value ? '' : qOpt.value; close()"
+            @click="questions = questions === qOpt.value ? '' : qOpt.value; close()"
           >
             <span class="flex-1 text-left">{{ qOpt.label }}</span>
             <UiIcon v-if="questions === qOpt.value" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />

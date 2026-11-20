@@ -42,7 +42,10 @@ const analyticsSiteId = computed(() => isLifecycleSettled.value && isReady.value
 
 const { session } = useUserSession()
 
-const { period, columns, stableData, compareMode, searchType, brand, questions, zoomTo, resetZoom, googleSlice } = useProGscFilters()
+const { period, columns, stableData, compareMode, searchType, brand, questions, zoomTo, resetZoom, googleSlice, selectGoogleBrand } = useProGscFilters()
+
+const queryActionsSupported = computed(() => !googleSlice.value?.googleBrand)
+const queryActionSiteId = computed(() => queryActionsSupported.value ? analyticsSiteId.value : undefined)
 
 // No keyword profile exists yet, so brand terms come from what the site URL
 // implies. The Queries table and its Brand facet read the same list.
@@ -243,7 +246,7 @@ const { rows: deviceRows, isInitialLoading: devicesLoading } = devicesTable
 //
 // The raw queries behind a canonical row are a second read, fired when the
 // variant popover opens. The row's own variants stand in until it answers.
-const queryVariants = useProGscQueryVariants({ siteId: analyticsSiteId, period, stableData, compareMode })
+const queryVariants = useProGscQueryVariants({ siteId: queryActionSiteId, period, stableData, compareMode })
 function variantsFor(row: GscdumpDataRow): Array<{ query: string, clicks: number, impressions: number, position: number }> {
   const loaded = queryVariants.variantsFor(canonicalQueryKey(row))
   return loaded?.length ? loaded : normalizedVariants(row)
@@ -255,7 +258,7 @@ function variantsLoadingFor(row: GscdumpDataRow): boolean {
 const sparkMetric = computed(() => primaryMetric.value === 'clicks' ? 'clicks' : 'impressions')
 const sparkRange = computed(() => periodToDateRange(period.value, stableData.value))
 const querySparklines = useProEntitySparklines({
-  gscdumpSiteId: analyticsSiteId,
+  gscdumpSiteId: queryActionSiteId,
   range: sparkRange,
   dimension: 'queryCanonical',
   metric: sparkMetric,
@@ -272,7 +275,7 @@ const pageSparklines = useProEntitySparklines({
 
 // Position over time for the rank badge tooltips. Nothing fetches until a
 // badge is pointed at, and a term is read once per period.
-const positionSparklines = useProQueryPositionSparklines({ gscdumpSiteId: analyticsSiteId, range: sparkRange })
+const positionSparklines = useProQueryPositionSparklines({ gscdumpSiteId: queryActionSiteId, range: sparkRange })
 
 // Consider loading when site hasn't resolved yet (siteId null = no request fired = isLoading false)
 const siteLoading = computed(() => siteStatus.value === 'pending' && !dates.value)
@@ -562,6 +565,12 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
                gap-2. The zone gap separates the lead from the movers below. -->
           <div class="flex flex-col gap-2">
             <UiSectionHeader title="Search Queries" class="!mb-0" />
+            <div v-if="!queryActionsSupported" class="text-xs text-muted">
+              <p>Query details and trends are unavailable with Google classification. Clear Google classification to view them.</p>
+              <UiButton purpose="link" size="xs" @click="selectGoogleBrand('')">
+                All queries
+              </UiButton>
+            </div>
             <UiDataList
               :title="topLabel"
               subtle
@@ -574,9 +583,10 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
             >
               <template #default="{ item: row }">
                 <ProQueryLabel
+                  :key="`${canonicalQueryKey(row)}:${queryActionsSupported}`"
                   :keyword="row.queryCanonical!"
                   :query-canonical="canonicalQueryKey(row)"
-                  :variant-count="row.variantCount"
+                  :variant-count="queryActionsSupported ? row.variantCount : undefined"
                   :variants="variantsFor(row)"
                   :variants-loading="variantsLoadingFor(row)"
                   :position="bestPosition(row)"
@@ -586,11 +596,12 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
                   :position-series-dates="positionSparklines.datesFor(canonicalQueryKey(row))"
                   :position-series-loading="positionSparklines.loadingFor(canonicalQueryKey(row))"
                   :brand="isBrandKeyword(row.queryCanonical)"
-                  :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}`"
-                  @variant-open="queryVariants.open(canonicalQueryKey(row))"
-                  @position-open="positionSparklines.open(canonicalQueryKey(row))"
+                  :to="queryActionsSupported ? `/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}` : undefined"
+                  @variant-open="queryActionsSupported && queryVariants.open(canonicalQueryKey(row))"
+                  @position-open="queryActionsSupported && positionSparklines.open(canonicalQueryKey(row))"
                 />
                 <ProSparklineCell
+                  v-if="queryActionsSupported"
                   :data="querySparklines.map.value.get(canonicalQueryKey(row)) ?? null"
                   :pending="querySparklines.pending.value"
                   :error="!!querySparklines.error.value"
@@ -642,9 +653,10 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
             >
               <template #default="{ item: row }">
                 <ProQueryLabel
+                  :key="`${canonicalQueryKey(row)}:${queryActionsSupported}`"
                   :keyword="row.queryCanonical!"
                   :query-canonical="canonicalQueryKey(row)"
-                  :variant-count="row.variantCount"
+                  :variant-count="queryActionsSupported ? row.variantCount : undefined"
                   :variants="variantsFor(row)"
                   :variants-loading="variantsLoadingFor(row)"
                   :position="bestPosition(row)"
@@ -654,11 +666,12 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
                   :position-series-dates="positionSparklines.datesFor(canonicalQueryKey(row))"
                   :position-series-loading="positionSparklines.loadingFor(canonicalQueryKey(row))"
                   :brand="isBrandKeyword(row.queryCanonical)"
-                  :to="`/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}`"
-                  @variant-open="queryVariants.open(canonicalQueryKey(row))"
-                  @position-open="positionSparklines.open(canonicalQueryKey(row))"
+                  :to="queryActionsSupported ? `/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}` : undefined"
+                  @variant-open="queryActionsSupported && queryVariants.open(canonicalQueryKey(row))"
+                  @position-open="queryActionsSupported && positionSparklines.open(canonicalQueryKey(row))"
                 />
                 <ProSparklineCell
+                  v-if="queryActionsSupported"
                   :data="querySparklines.map.value.get(canonicalQueryKey(row)) ?? null"
                   :pending="querySparklines.pending.value"
                   :error="!!querySparklines.error.value"

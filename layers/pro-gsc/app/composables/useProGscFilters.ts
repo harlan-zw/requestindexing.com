@@ -1,7 +1,7 @@
 import type { GscSearchType } from '@gscdump/contracts'
 import type { GscColumn } from '@gscdump/sdk/period-presets'
 import type { Ref } from 'vue'
-import type { GscEntityCount } from '../../shared/gsc-filter-model'
+import type { BrandMode, GscEntityCount, QuestionMode } from '../../shared/gsc-filter-model'
 import type { GscFacet } from '../../shared/utils/gsc-facets'
 import type { CompareMode, Period } from './useGscPeriod'
 import { searchTypeSupportsDimensions, searchTypeSupportsQueries } from '@gscdump/contracts'
@@ -207,21 +207,60 @@ export function useProGscFilters() {
   // Brand classification mode. Branded and Non-branded run as a server-side
   // regex facet on the canonical query, using the site's brand terms, which the
   // consumer resolves because it holds the site profile.
-  const brand = useProUrlSyncedFilter<BrandMode>('brand', 'pro:brand', '')
-  // Question-intent facet: a sibling of brand on the same mechanism.
-  const questions = useProUrlSyncedFilter<QuestionMode>('questions', 'pro:questions', '')
-  const googleBrand = useProUrlSyncedFilter<string>('googleBrand', 'pro:googleBrand', '')
+  // These selections form one URL transaction. Independent scalar watchers
+  // would each copy the old URL and restore a mutually exclusive predicate.
+  interface QuerySelection { googleBrand: string, brand: BrandMode, questions: QuestionMode }
+  function readQuerySelection(): QuerySelection {
+    const explicitTextFacet = queryStringValue(route.query.brand) || queryStringValue(route.query.questions)
+    const rawGoogleBrand = queryStringValue(route.query.googleBrand) ?? (explicitTextFacet ? '' : store.read('pro:googleBrand', ''))
+    const googleBrand = rawGoogleBrand === 'BRANDED' || rawGoogleBrand === 'NON_BRANDED' ? rawGoogleBrand : ''
+    return {
+      googleBrand,
+      brand: googleBrand ? '' : (queryStringValue(route.query.brand) ?? store.read('pro:brand', '')) as BrandMode,
+      questions: googleBrand ? '' : (queryStringValue(route.query.questions) ?? store.read('pro:questions', '')) as QuestionMode,
+    }
+  }
+  const querySelection = useState<QuerySelection>('pro:query-selection', readQuerySelection)
+  function persistQuerySelection(value: QuerySelection) {
+    store.write('pro:brand', value.brand)
+    store.write('pro:questions', value.questions)
+    store.write('pro:googleBrand', value.googleBrand)
+  }
+  // Normalise persisted conflicts before the first consumer reads a facet.
+  persistQuerySelection(querySelection.value)
+  watch(() => [route.query.brand, route.query.questions, route.query.googleBrand], () => {
+    querySelection.value = readQuerySelection()
+    persistQuerySelection(querySelection.value)
+  }, { flush: 'sync' })
+  function selectQuery(value: QuerySelection) {
+    querySelection.value = value
+    persistQuerySelection(value)
+    navigateTo({ query: {
+      ...route.query,
+      brand: value.brand || undefined,
+      questions: value.questions || undefined,
+      googleBrand: value.googleBrand || undefined,
+    } }, { replace: true })
+  }
+  const brand = computed({
+    get: () => querySelection.value.brand,
+    set: (value: BrandMode) => selectQuery({ ...querySelection.value, brand: value, googleBrand: value ? '' : querySelection.value.googleBrand }),
+  })
+  const questions = computed({
+    get: () => querySelection.value.questions,
+    set: (value: QuestionMode) => selectQuery({ ...querySelection.value, questions: value, googleBrand: value ? '' : querySelection.value.googleBrand }),
+  })
+  const googleBrand = computed({
+    get: () => querySelection.value.googleBrand,
+    set: (value: string) => selectGoogleBrand(value),
+  })
   const siteSearchConsole = computed(() => /\/sites\/[^/]+\/search-console(?:\/(?:queries|pages)(?:\/.*)?|\/(?:countries|devices))?\/?$/.test(route.path))
   const googleSlice = computed(() => siteSearchConsole.value
     ? googleSearchSlice({ searchType: searchType.value, googleBrand: googleBrand.value, country: country.value, device: device.value })
     : null)
 
   function selectGoogleBrand(value: string) {
-    if (value) {
-      brand.value = ''
-      questions.value = ''
-    }
-    googleBrand.value = value
+    selectQuery(value ? { googleBrand: value, brand: '', questions: '' } : { ...querySelection.value, googleBrand: '' })
   }
 
   /**
@@ -234,9 +273,7 @@ export function useProGscFilters() {
   function resetFacets() {
     country.value = ''
     device.value = ''
-    brand.value = ''
-    questions.value = ''
-    googleBrand.value = ''
+    selectQuery({ brand: '', questions: '', googleBrand: '' })
   }
 
   const facetFilters = computed<GscFacet[]>(() => {
