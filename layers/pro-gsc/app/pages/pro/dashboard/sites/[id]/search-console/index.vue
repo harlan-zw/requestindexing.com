@@ -19,6 +19,7 @@ import {
 } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { buildBrandFacet, buildQuestionFacet, useProGscFilters } from '#layers/pro-gsc/app/composables/useProGscFilters'
 import ProSparklineCell from '#layers/pro-gsc/app/internal/components/pro/ProSparklineCell.vue'
+import { searchConsoleLink } from '#layers/pro-gsc/app/utils/search-console-link'
 import { resolveSiteSearchState, sampleOverlay } from '#layers/pro-gsc/app/utils/site-search-state'
 import { deriveUrlBrandKeywords } from '#layers/pro-gsc/shared/brand-queries'
 import { canonicalQueryKey } from '#layers/pro-gsc/shared/canonical-query'
@@ -38,6 +39,11 @@ definePageMeta({
 })
 
 const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, isLifecycleSettled, hold, gscData, gscStatusError, refreshGscStatus } = useSite('Search Console')
+const route = useRoute()
+
+function reportLink(destination: string): string {
+  return searchConsoleLink(`/pro/dashboard/sites/${siteId.value}/search-console/${destination}`, route.query)
+}
 const analyticsSiteId = computed(() => isLifecycleSettled.value && isReady.value && !hold.value ? gscdumpSiteId.value ?? undefined : undefined)
 
 const { session } = useUserSession()
@@ -579,7 +585,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               :loading="detailPending || siteLoading || keywordsLoading"
               :loading-count="5"
               :items="keywordRows"
-              :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/queries`"
+              :view-more-to="reportLink('queries')"
               :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
             >
               <template #default="{ item: row }">
@@ -597,7 +603,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
                   :position-series-dates="positionSparklines.datesFor(canonicalQueryKey(row))"
                   :position-series-loading="positionSparklines.loadingFor(canonicalQueryKey(row))"
                   :brand="isBrandKeyword(row.queryCanonical)"
-                  :to="queryActionsSupported ? `/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}` : undefined"
+                  :to="queryActionsSupported ? reportLink(`queries/${encodeURIComponent(row.queryCanonical!)}`) : undefined"
                   @variant-open="queryActionsSupported && queryVariants.open(canonicalQueryKey(row))"
                   @position-open="queryActionsSupported && positionSparklines.open(canonicalQueryKey(row))"
                 />
@@ -648,7 +654,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               :loading="detailPending || siteLoading || mover.loading"
               :loading-count="MOVER_ROWS"
               :items="mover.rows"
-              :view-more-to="googleSlice ? undefined : `/pro/dashboard/sites/${siteId}/search-console/queries?filter=${mover.key}`"
+              :view-more-to="googleSlice ? undefined : reportLink(`queries?filter=${mover.key}`)"
               :empty-text="mover.empty"
               :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
             >
@@ -667,7 +673,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
                   :position-series-dates="positionSparklines.datesFor(canonicalQueryKey(row))"
                   :position-series-loading="positionSparklines.loadingFor(canonicalQueryKey(row))"
                   :brand="isBrandKeyword(row.queryCanonical)"
-                  :to="queryActionsSupported ? `/pro/dashboard/sites/${siteId}/search-console/queries/${encodeURIComponent(row.queryCanonical!)}` : undefined"
+                  :to="queryActionsSupported ? reportLink(`queries/${encodeURIComponent(row.queryCanonical!)}`) : undefined"
                   @variant-open="queryActionsSupported && queryVariants.open(canonicalQueryKey(row))"
                   @position-open="queryActionsSupported && positionSparklines.open(canonicalQueryKey(row))"
                 />
@@ -716,14 +722,14 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               <template #actions>
                 <span v-if="!googleSlice" class="flex items-center gap-2 text-xs">
                   <ULink
-                    :to="`/pro/dashboard/sites/${siteId}/search-console/pages?filter=improving`"
+                    :to="reportLink('pages?filter=improving')"
                     class="text-muted hover:text-default transition-colors"
                   >
                     Growing
                   </ULink>
                   <span class="text-dimmed" aria-hidden="true">·</span>
                   <ULink
-                    :to="`/pro/dashboard/sites/${siteId}/search-console/pages?filter=declining`"
+                    :to="reportLink('pages?filter=declining')"
                     class="text-muted hover:text-default transition-colors"
                   >
                     Declining
@@ -738,12 +744,12 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               :loading="detailPending || siteLoading || pagesLoading"
               :loading-count="5"
               :items="pageRows"
-              :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/pages`"
+              :view-more-to="reportLink('pages')"
               :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
             >
               <template #default="{ item: row }">
                 <NuxtLink
-                  :to="`/pro/dashboard/sites/${siteId}/search-console/pages/${encodeURIComponent(row.page!)}`"
+                  :to="reportLink(`pages/${encodeURIComponent(row.page!)}`)"
                   class="relative min-w-0 flex-1 truncate text-sm text-default hover:text-primary transition-colors"
                   :title="row.page"
                 >
@@ -794,7 +800,7 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
               :loading="detailPending || siteLoading || countriesLoading"
               :loading-count="5"
               :items="countryRows"
-              :view-more-to="`/pro/dashboard/sites/${siteId}/search-console/countries`"
+              :view-more-to="reportLink('countries')"
               :bar-value="primaryMetric !== 'position' ? getMetricValue : undefined"
             >
               <template #default="{ item: row }">
