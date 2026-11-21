@@ -249,6 +249,12 @@ function onPageError(error: unknown) {
       <ProGscScopeMissingAlert v-if="gscScopeMissing" :retry-to="gscRetryTo" class="mb-6" />
       <ProGscConnectReturnAlert v-else-if="gscConnectReturn" :result="gscConnectReturn" :retry-to="gscRetryTo" class="mb-6" />
 
+      <!-- A Site's first sync, above every dashboard page (DESIGN.md "Live
+           work bar"). Client-only: it reads per-viewer storage. -->
+      <ClientOnly>
+        <ProLiveWork />
+      </ClientOnly>
+
       <UiEmptyState
         v-if="siteStatus === 'error'"
         icon="error"
