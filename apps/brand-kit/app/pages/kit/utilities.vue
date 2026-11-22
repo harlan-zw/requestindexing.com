@@ -83,24 +83,5 @@ useHead({ title: 'Utilities · Brand Kit' })
         </div>
       </UCard>
     </KitSection>
-
-    <KitSection title="Mega-menu motion" description="Used by header dropdowns. Three coordinated keyframe animations.">
-      <UCard variant="outline">
-        <ul class="space-y-2 text-sm">
-          <li class="flex items-center gap-3">
-            <code class="font-mono text-xs text-default w-48 shrink-0">@keyframes mega-menu-enter</code>
-            <span class="text-muted">Panel fade + 4px lift</span>
-          </li>
-          <li class="flex items-center gap-3">
-            <code class="font-mono text-xs text-default w-48 shrink-0">@keyframes mega-column-stagger</code>
-            <span class="text-muted">Per-column 8px rise</span>
-          </li>
-          <li class="flex items-center gap-3">
-            <code class="font-mono text-xs text-default w-48 shrink-0">@keyframes mega-item-fade</code>
-            <span class="text-muted">Per-item 6px slide from the left</span>
-          </li>
-        </ul>
-      </UCard>
-    </KitSection>
   </div>
 </template>
