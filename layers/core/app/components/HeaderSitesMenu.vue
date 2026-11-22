@@ -13,13 +13,12 @@ const items = computed(() =>
 </script>
 
 <template>
-  <div class="mega-menu p-2 min-w-[320px]">
-    <div class="mega-column grid grid-cols-2 gap-1" style="--stagger: 0">
+  <div class="p-2 min-w-[320px]">
+    <div class="grid grid-cols-2 gap-1">
       <HeaderMenuItem
-        v-for="(item, idx) in items"
+        v-for="item in items"
         :key="item.to"
         v-bind="item"
-        :item-delay="idx"
       />
     </div>
   </div>

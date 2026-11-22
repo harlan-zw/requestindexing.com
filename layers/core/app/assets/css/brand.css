@@ -234,37 +234,6 @@
   animation-delay: calc(var(--stagger-index, 0) * 100ms);
 }
 
-/* reka-ui NavigationMenu viewport and content motion (Header.vue). */
-@keyframes scale-in {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes scale-out {
-  from { opacity: 1; transform: scale(1); }
-  to { opacity: 0; transform: scale(0.96); }
-}
-
-@keyframes enter-from-left {
-  from { opacity: 0; transform: translateX(-20%); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes enter-from-right {
-  from { opacity: 0; transform: translateX(20%); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes exit-to-left {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(-20%); }
-}
-
-@keyframes exit-to-right {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(20%); }
-}
-
 /* ═══ Dashboard sidebar ══════════════════════════════════════════════════
    The gap between `ProShellSidebarNav` blocks, as Tailwind's `gap-3` below
    lg and `gap-5` from lg. The shell default is `gap-5` everywhere, which

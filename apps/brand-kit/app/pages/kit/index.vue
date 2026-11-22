@@ -21,7 +21,7 @@ const links = [
   { to: '/kit/tables', label: 'Data tables', icon: 'i-lucide-table', blurb: 'UiTable, UiTableShell, UiDataTableSection.' },
   { to: '/kit/format', label: 'Formatters', icon: 'i-lucide-hash', blurb: 'percentChange, calcTrendPercent, clamp.' },
   { to: '/kit/composables', label: 'Composables', icon: 'i-lucide-function-square', blurb: 'useScrollSpy, useGridCols, semantic + viz colors.' },
-  { to: '/kit/utilities', label: 'Utilities', icon: 'i-lucide-sparkle', blurb: '.bg-verdant, .animate-fade-in, mega-menu motion.' },
+  { to: '/kit/utilities', label: 'Utilities', icon: 'i-lucide-sparkle', blurb: '.bg-verdant, .animate-fade-in, .ui-popover-content.' },
 ]
 </script>
 

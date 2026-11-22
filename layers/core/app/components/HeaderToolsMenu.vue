@@ -19,13 +19,12 @@ const categories = [
 </script>
 
 <template>
-  <div class="mega-menu grid grid-cols-2 gap-0 p-0 min-w-[520px]">
+  <div class="grid grid-cols-2 gap-0 p-0 min-w-[520px]">
     <div
       v-for="(category, catIdx) in categories"
       :key="category.label"
-      class="mega-column relative"
+      class="relative"
       :class="[catIdx < categories.length - 1 ? 'border-r border-default' : '']"
-      :style="{ '--stagger': catIdx }"
     >
       <div class="px-4 pt-4 pb-1.5">
         <span class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
@@ -39,10 +38,9 @@ const categories = [
 
       <div class="px-2 pb-3 space-y-px">
         <HeaderMenuItem
-          v-for="(item, itemIdx) in category.items"
+          v-for="item in category.items"
           :key="item.to"
           v-bind="item"
-          :item-delay="itemIdx"
         />
       </div>
     </div>

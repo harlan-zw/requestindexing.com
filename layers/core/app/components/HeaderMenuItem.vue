@@ -1,20 +1,18 @@
 <script setup lang="ts">
 type BadgeColor = 'error' | 'info' | 'success' | 'primary' | 'secondary' | 'warning' | 'neutral'
 
-const { icon, label, to, badge, itemDelay = 0 } = defineProps<{
+const { icon, label, to, badge } = defineProps<{
   icon: string
   label: string
   to: string
   badge?: { label: string, color?: BadgeColor }
-  itemDelay?: number
 }>()
 </script>
 
 <template>
   <NuxtLink
     :to="to"
-    class="mega-item group flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-all duration-150 hover:bg-accented"
-    :style="{ '--item-delay': itemDelay }"
+    class="group flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-all duration-150 hover:bg-accented"
   >
     <UiIconBox :icon="icon" hover />
     <span class="text-sm text-default group-hover:text-highlighted transition-colors duration-150 whitespace-nowrap">
