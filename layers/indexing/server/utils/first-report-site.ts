@@ -40,12 +40,13 @@ export async function requireFirstReportSite(event: H3Event, write = false) {
     indexing: remote.indexing,
     // Saved verdicts only. gscdump scopes the rows to `remoteSiteId`, so only
     // the live property bounds them. An exact host check would drop the
-    // `www.` pages of a domain property. `count: 0` skips gscdump's total;
-    // the response still reports `hasMore`.
+    // `www.` pages of a domain property. It reads at most four pages of 25
+    // rows. `count: 0` skips gscdump's total; each page still reports `hasMore`.
     readSaved: () => readSavedFirstReport(
       url => pagePropertyCoversUrl(url, property),
       FIRST_REPORT_SAVED_LIMIT,
-      () => client.listSiteIndexingUrls({ params: { siteId: remoteSiteId }, query: { limit: 25, count: 0 } }).then(response => response.data),
+      4,
+      offset => client.listSiteIndexingUrls({ params: { siteId: remoteSiteId }, query: { limit: 25, offset, count: 0 } }).then(response => response.data),
     ),
     // A new Site has no published Sitemap yet, so its preview is empty.
     readCandidates: (generationId?: string) => readFirstReportCandidates(host, property, query => client.listSitemapUrls({ params: { siteId: remoteSiteId }, query }).then(response => response.data), generationId)

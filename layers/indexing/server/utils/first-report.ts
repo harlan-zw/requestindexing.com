@@ -56,17 +56,17 @@ const planScope = {
   siteId: z.string(),
   remoteSiteId: z.string(),
   property: z.string(),
-  urls: z.array(z.string().max(2048)).min(1).max(10),
   expiresAt: z.number(),
 }
 /**
- * `Inspect` is a preview the reader may approve. It holds no evidence yet.
- * `Saved` lists URLs whose saved Google verdicts the server read before it
- * signed. Only `Inspect` can start a URL Inspection.
+ * `Inspect` lists the previewed URLs the reader may approve. It holds no
+ * evidence yet. `Saved` counts the saved Google verdicts the server read
+ * before it signed, so a long URL cannot make it invalid. Only `Inspect`
+ * can start a URL Inspection.
  */
 const planSchema = z.discriminatedUnion('_tag', [
-  z.object({ _tag: z.literal('Inspect'), generationId: z.string(), ...planScope }).strict(),
-  z.object({ _tag: z.literal('Saved'), ...planScope }).strict(),
+  z.object({ _tag: z.literal('Inspect'), generationId: z.string(), urls: z.array(z.string().max(2048)).min(1).max(10), ...planScope }).strict(),
+  z.object({ _tag: z.literal('Saved'), count: z.number().int().min(1).max(10), ...planScope }).strict(),
 ])
 export type FirstReportPlan = z.infer<typeof planSchema>
 

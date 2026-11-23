@@ -23,7 +23,7 @@ export default defineProApiHandler(async (event) => {
   // that view needs no second read. An `Inspect` plan was signed before any
   // URL Inspection, so its evidence is read again here.
   if (plan._tag === 'Saved') {
-    const recorded = await emitFirstProEvent(access.db, access.caller.user.id, 'first_report_evidence_viewed', { siteId: access.site.id, count: plan.urls.length, source: 'saved' })
+    const recorded = await emitFirstProEvent(access.db, access.caller.user.id, 'first_report_evidence_viewed', { siteId: access.site.id, count: plan.count, source: 'saved' })
     return { recorded }
   }
   const rows = await Promise.all(plan.urls.map(url => readSavedPageEvidence(url, offset => access.client.listSiteIndexingUrls({ params: { siteId: access.remoteSiteId }, query: { search: url, offset, limit: 100, count: 0 } }).then(response => response.data), () => logger.warn('First report evidence could not be read.'))))

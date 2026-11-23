@@ -16,6 +16,6 @@ export default defineProApiHandler(async (event): Promise<FirstReportSaved> => {
   if (saved._tag === 'None')
     return firstReportWithoutVerdicts(access.indexing)
   // The plan lets the page record the evidence view after it renders these rows.
-  const token = await signFirstReportPlan({ _tag: 'Saved', userId: access.caller.user.id, teamId: access.teamId, siteId: access.site.id, remoteSiteId: access.remoteSiteId, property: access.property, urls: saved.rows.map(row => row.url), expiresAt: Date.now() + 10 * 60 * 1000 }, firstReportSecret(event))
+  const token = await signFirstReportPlan({ _tag: 'Saved', userId: access.caller.user.id, teamId: access.teamId, siteId: access.site.id, remoteSiteId: access.remoteSiteId, property: access.property, count: saved.rows.length, expiresAt: Date.now() + 10 * 60 * 1000 }, firstReportSecret(event))
   return { _tag: 'Verdicts', rows: saved.rows, token }
 })

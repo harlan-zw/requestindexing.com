@@ -204,3 +204,12 @@ it('holds an approved plan once gscdump starts inspecting, before spending quota
   expect(h.client.inspectSiteUrls).not.toHaveBeenCalled()
   expect(h.event).not.toHaveBeenCalled()
 })
+
+it('records a saved-verdict view even when a saved URL is longer than a plan allows', async () => {
+  const long = `https://example.com/docs/${'a'.repeat(2100)}`
+  h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: [{ url: long, coverageState: 'Submitted and indexed', verdict: 'PASS', lastCheckedAt: '2026-11-24T06:12:00Z' }], pagination: { hasMore: false } } })
+  const report = await savedRoute(event('GET'))
+  if (report._tag !== 'Verdicts')
+    throw new Error('Saved report fixture is invalid.')
+  expect(await viewedRoute(event('POST', { token: report.token }))).toEqual({ recorded: true })
+})
