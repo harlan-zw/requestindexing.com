@@ -693,6 +693,7 @@ A fresh URL Inspection runs only when the reader approves it, and only when the 
 The preview and the approval each read the engine status again. If gscdump started inspecting or reached a limit, the report shows that state instead.
 The preview reads known Sitemap URLs and spends no URL Inspection. The approval uses at most ten matching URLs.
 The cost line sits beside the approve button. Neither list is Site-wide coverage.
+After an unknown outcome, the report offers no second approval until saved verdicts arrive, because the first request may still spend the Free allowance.
 
 Dates render as a month, a day, and a year in UTC, such as Nov 24, 2026. Never show a raw ISO timestamp.
 
@@ -705,6 +706,7 @@ The reader can choose another Site.
 | First report heading | Check which pages Google indexed |
 | First report Site selector | Site |
 | First report saved loading | Loading saved Google verdicts |
+| First report saved loaded, for screen readers only | {count} saved Google verdict loaded. · {count} saved Google verdicts loaded. |
 | First report capture label | Captured, then the capture date |
 | First report sample limit | This sample covers only the URLs listed here. |
 | First report collecting | Google's verdicts appear here when the first URL Inspections finish. |

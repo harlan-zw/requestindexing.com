@@ -150,3 +150,42 @@ it('shows the engine phase when gscdump starts inspecting before the approval', 
   expect(page.buttons()).toEqual(['Check again'])
   expect(views()).toEqual([])
 })
+
+it('keeps Check again mounted while it reads, so keyboard focus stays on it', async () => {
+  io.saved.mockResolvedValueOnce({ _tag: 'Collecting', phase: 'checking' })
+  const page = await mount()
+  const button = page.host.querySelector('button')!
+  const read = Promise.withResolvers<object>()
+  io.saved.mockReturnValueOnce(read.promise)
+  await page.click('Check again')
+  expect(page.host.contains(button)).toBe(true)
+  expect(page.host.textContent).toContain('Inspecting URLs')
+  read.resolve({ _tag: 'Collecting', phase: 'checking' })
+  await flush()
+  expect(page.host.contains(button)).toBe(true)
+})
+
+it('keeps an unknown outcome unresolved, with no second approval, until saved verdicts arrive', async () => {
+  io.saved.mockResolvedValueOnce({ _tag: 'NoVerdicts' }).mockResolvedValueOnce({ _tag: 'NoVerdicts' })
+  const page = await mount()
+  await page.click('Preview URLs')
+  io.fetch.mockImplementationOnce(async () => {
+    throw new Error('connection closed')
+  })
+  await page.click('Inspect these URLs')
+  await page.click('Read saved results')
+  expect(page.host.textContent).toContain('We could not confirm what happened.')
+  expect(page.buttons()).toEqual(['Read saved results'])
+})
+
+it('announces the saved verdicts through a status region mounted before the read', async () => {
+  const read = Promise.withResolvers<object>()
+  io.saved.mockReturnValueOnce(read.promise)
+  const page = await mount()
+  const status = page.host.querySelector('[role="status"]')!
+  expect(status.textContent?.trim()).toBe('Loading saved Google verdicts')
+  read.resolve(verdicts)
+  await flush()
+  expect(page.host.querySelector('[role="status"]')).toBe(status)
+  expect(status.textContent?.trim()).toBe('1 saved Google verdict loaded.')
+})

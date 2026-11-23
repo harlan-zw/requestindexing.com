@@ -12,6 +12,7 @@ export const FIRST_REPORT_COPY = {
   heading: 'Check which pages Google indexed',
   site: 'Site',
   loadingSaved: 'Loading saved Google verdicts',
+  savedLoaded: (count: number) => `${count} saved Google ${count === 1 ? 'verdict' : 'verdicts'} loaded.`,
   captured: PAGE_SETUP_COPY.captured,
   notReported: PAGE_SETUP_COPY.notReported,
   sampleLimit: 'This sample covers only the URLs listed here.',
