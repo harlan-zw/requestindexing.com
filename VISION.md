@@ -33,8 +33,8 @@ The engine is gscdump. This app is a consumer of its public v1 protocol, the sam
 
 That boundary is the main design constraint. When a capability could live in either place, it belongs in gscdump, because gscdump's vision is explicit that nothing chargeable may sit at the thin-proxy layer. What is left here is the part gscdump deliberately will not build: a single-purpose interface for someone who does not want to learn a query language.
 
-- **gscdump** owns sync, retention, the archive, indexing inspection, sitemaps, submission, and the protocol.
-- **request-indexing** owns the job-to-be-done: one question answered well, for a person rather than an agent.
+- **gscdump** owns sync, retention, the archive, indexing inspection, sitemaps, submission, the MCP server, and the protocol.
+- **request-indexing** owns the job-to-be-done: one question answered well, for the person who owns the pages, on a screen or through their agent.
 
 ## Pricing
 
@@ -48,7 +48,9 @@ The person who published a page and wants it found. In practice: site owners who
 
 Two tiers: the one-Site owner comes in free, and the operator with several Sites, who wants indexing to run without them, pays later.
 
-The agent operator is served by gscdump directly, through MCP and the CLI. The boundary is the interface: a screen here, an agent there. That is a feature of the split, not a gap here.
+The agent operator is served by gscdump directly, through MCP and the CLI. Request Indexing builds no MCP server, CLI, or agent listing of its own.
+
+Onboarding leads with Agent setup, decided 2026-11-24. The site owner picks Claude, ChatGPT, or a coding agent, and connects it to gscdump's MCP server. Skip agent setup continues in the web flow. Every route passes Connect Google. The first result is the selected Site's First Site report, with saved Google verdicts.
 
 ## Stakes
 

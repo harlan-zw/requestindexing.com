@@ -55,14 +55,16 @@ A freelancer or small agency can give a client the reason, with its date.
 **Not for.** Marketing never chases them. Saying so is a kindness, and a signal to the people it is for (Godin).
 
 - **The guarantee buyer** who wants instant or guaranteed indexing, or a black-hat shortcut. VISION rejects both.
-- **The agent operator.** gscdump serves them through MCP and the CLI. Request Indexing links there once and never leads with agents. The dashboard Setup offers lead with IndexNow and Watched URLs, and carry no agent offer.
+- **The agent operator.** gscdump serves them through MCP and the CLI. Request Indexing links there once, and its marketing never leads with agents. The dashboard Setup offers lead with IndexNow and Watched URLs, and carry no agent offer.
 - **The growth team**, which nuxtseo Pro serves, and **the platform buyer** who wants rank tracking or AI visibility.
 
 ### Boundary with gscdump
 
-The boundary is the interface: a screen here, an agent there.
+gscdump owns the engine: sync, the archive, and the MCP server. Request Indexing owns the job, its screens, and its onboarding.
 Site count fails as a boundary. A one-Site owner may ask Claude; an agency may want a screen.
-Request Indexing is the largest source of gscdump accounts. A person who asks for an agent goes to gscdump.com.
+Request Indexing is the largest source of gscdump accounts. Outside onboarding, a person who asks for an agent goes to gscdump.com.
+**Onboarding leads with Agent setup, decided 2026-11-24.** The evidence in "Who arrives today" stands. The bet: many site owners already use an agent, and finish setup there. Each agent connects to gscdump's MCP server. Claude and ChatGPT reach it through gscdump's own listing and app. Request Indexing gets no listing. Connect Google stays required on every route, with no Skip.
+**Reversal.** If most new accounts in a 30-day window select Skip agent setup, reverse it. If, in the same window, under half of the accounts that choose an agent finish Connect Google, reverse it too. Both readings need the agent choice recorded per signup.
 
 ## The change we seek to make
 

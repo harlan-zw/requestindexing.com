@@ -25,7 +25,7 @@ These exact strings. Do not paraphrase them per page.
 | Site description | Monitor and request Google indexing for your pages | `nuxt.config.ts` site description, which feeds every page's meta description |
 | Landing meta title | Request Google Indexing and See Why Pages Are Not Indexed | `apps/marketing/app/pages/index.vue`; `app.vue` appends ` · Request Indexing` |
 | Landing meta description | Request Google indexing for your pages, then see which URLs Google has indexed, which it has not, and the reason it gives. Free and open source. | the landing page only |
-| Agent link | Use an AI agent: gscdump | public footer, links to gscdump.com/mcp. Agent users go to gscdump (MARKETING.md boundary). The Developers page stays inside the dashboard |
+| Agent link | Use an AI agent: gscdump | public footer, links to gscdump.com/mcp. Outside onboarding, agent users go to gscdump (MARKETING.md, Boundary with gscdump). Agent setup stays in onboarding, and the Developers page stays inside the dashboard |
 | Listing, one line | See which of your pages Google indexed, and the reason it gives for the rest. Send new and changed pages to Bing and other search engines with IndexNow. | directories, partner pages, and family links on nuxtseo.com and gscdump.com (`docs/marketing/channel-kit.md`, section 6). Never in an agent or MCP directory |
 | Listing, two lines | Request Indexing checks the URLs in your sitemaps with Google's URL Inspection, within your Free allowance. It shows which pages Google indexed, the reason it gives for the rest, and what changed. It also sends new and changed pages to Bing and other search engines with IndexNow, once your key is verified. Free and open source. | directory listings with room for a description, such as AlternativeTo and SaaSHub |
 
@@ -353,7 +353,7 @@ A `site:` search is public search output. URL Inspection is Google's own report 
 | Metric unavailable | Unavailable right now | under a Site Indexing Report traffic or keyword figure when DataForSEO Labs could not answer; the figure shows a dash, never zero |
 | Verdict offer heading | See Google's own verdict | below each tool result |
 | Verdict offer | Search Console's URL Inspection says whether Google indexed a page, and if not, why. Request Indexing shows that answer for the Sites you connect. | below each tool result |
-| Verdict offer action, signed out | Connect Google | links to `/pro/onboarding`, whose first step has the same label |
+| Verdict offer action, signed out | Connect Google | links to `/pro/onboarding`, whose Connect Google step has the same label |
 | Verdict offer action, signed in | Open Indexing | links to `/pro/dashboard/indexing`, the sidebar item of the same name |
 | Google Index Checker tags | Single URL · No signup | the `/tools` card. Never "Instant": a speed claim with no evidence |
 | Tools step 3 | Send new pages · Verify your IndexNow key. Request Indexing then sends new and changed sitemap URLs to Bing and other search engines. For Google, use URL Inspection or a sitemap. | the third step on `/tools`. "URL Inspection or a sitemap" links `/indexing-api-for-blog-posts` |
@@ -538,6 +538,29 @@ Keep the exact URL and host through sign-in, consent, connection, and recovery.
 | Saved-page copy failed | Copy the selected URL above. Your browser could not copy it. |
 | Saved-page changed | Your saved page changed. Reload this page before you inspect it. |
 
+## Agent setup assets
+
+Agent setup is the first onboarding step, decided 2026-11-24 (MARKETING.md, Boundary with gscdump).
+`GLOSSARY.md` defines Agent setup, Setup prompt, Coding agent, and Skip agent setup.
+The reader picks a coding agent, Claude, or ChatGPT. Each one connects to gscdump's MCP server.
+Request Indexing has no listing of its own, so no string names one.
+On every route, the first result is the First Site report for the selected Site.
+When the step joins the Step registry, add its row to the Onboarding Step words table.
+
+| Asset | String |
+| --- | --- |
+| Rail label | Agent setup |
+| Heading | Choose your agent |
+| Skip action | Skip agent setup |
+
+**Skip agent setup skips Agent setup only.** It opens the web flow and keeps the reader's
+progress. Connect Google still has no Skip (Connect Google assets). If an agent route reaches
+Finish setup without Google, it shows "Finish refused, Google required".
+
+**A Setup prompt carries no secret.** It holds no API key, cookie, or token. It fills in only
+identifiers the reader already sees, such as the Site host. On each manual step, the Setup
+prompt sits above the direct action. The direct action works without an agent.
+
 ## Connect Google assets
 
 The Connect Google step, the signup page, and the return from Google's consent screen.
@@ -636,7 +659,7 @@ The explicit inspection uses at most ten matching URLs. This sample is not Site-
 ## Connect a Site assets
 
 
-These assets apply to the property list on onboarding step 2, Connect a Site, and Manage Sites.
+These assets apply to the property list on the Connect Sites onboarding step, Connect a Site, and Manage Sites.
 A Site connects only from a verified Search Console property in the reader's own Google account.
 `{domain}` is the address the reader chose. `{email}` is the Google account of the Search Console grant.
 `layers/pro-gsc/shared/site-property.ts` holds the refusals; `ProSiteAddForm.vue` holds the list states.
@@ -796,9 +819,9 @@ The dashboard frame, the command palette, the sidebar back link, the Fleet Sites
 | Setup progress label | Setup progress | Onboarding is called setup |
 
 **The setup offers never lead with agents.** Request Indexing shows the IndexNow, Bing, Watched
-URLs, and Connect another Site offers. It shows no agent skill, MCP, or API offer, because agent
-users go to gscdump (MARKETING.md, "Who arrives today" and "Not for"). The user menu and the
-command palette still link the Developers page.
+URLs, and Connect another Site offers. It shows no agent skill, MCP, or API offer. Agent setup in
+onboarding is the one place Request Indexing leads with agents (MARKETING.md, "Not for" and
+"Boundary with gscdump"). The user menu and the command palette still link the Developers page.
 
 Onboarding Step words, under `proShell.copy.onboarding.steps`:
 
