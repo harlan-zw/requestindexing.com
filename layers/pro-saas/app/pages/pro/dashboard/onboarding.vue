@@ -5,6 +5,7 @@ import { useProShellOnboardingFlow, useProShellOnboardingSteps } from '@nuxtseo/
 import { REQUEST_HONOUR } from '@nuxtseo/pro-shell/shared/onboarding'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProSetupFirstSiteReport from '~~/layers/indexing/app/components/ProSetupFirstSiteReport.vue'
+import ProOnboardingStepGuide from '~~/layers/pro-saas/app/components/pro/ProOnboardingStepGuide.vue'
 
 import { FIRST_REPORT_COPY } from '#layers/indexing/shared/first-report'
 import { parseAgentSetupRoute } from '#layers/pro-gsc/shared/agent-setup'
@@ -142,6 +143,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
 
 <template>
   <ProShellOnboardingFrame
+    class="[&_[data-onboarding-step]]:relative"
     :flow="flow"
     :next-disabled="currentStep === 'sync' && !hasSites"
     :next-loading="finishing"
@@ -271,7 +273,20 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       />
     </template>
 
+    <!-- The step guide follows the step's buttons, so on a narrow screen it
+         never pushes the step's way forward down. The frame's class makes
+         the step section its anchor, so from 1420px the guide hangs to the
+         right of the step, top-aligned with the heading, and the column keeps
+         its width. The 672px column stays centred, so the 32px gap and the
+         320px card need that width again on the left: 1376px, plus the
+         scrollbar and a margin. The last step's guide describes the report,
+         so it waits for a Site. -->
     <template #after>
+      <ProOnboardingStepGuide
+        v-if="currentStep !== 'sync' || hasSites"
+        :step="currentStep"
+        class="min-[1420px]:absolute min-[1420px]:top-0 min-[1420px]:left-full min-[1420px]:ml-8 min-[1420px]:w-80"
+      />
       <ProOnboardingAnswers v-if="currentStep === 'sync'" />
       <ProSetupExitFeedback v-if="feedbackStep" :step="feedbackStep" />
     </template>

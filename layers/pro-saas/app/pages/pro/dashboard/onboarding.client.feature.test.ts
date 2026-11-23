@@ -62,7 +62,7 @@ async function mount() {
       return () => h(Suspense, null, { default: () => h(Onboarding) })
     },
   })
-  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'UFormField', 'USelect', 'UiStatusBadge', 'UiFavicon', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
+  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'UiIcon', 'UFormField', 'USelect', 'UiStatusBadge', 'UiFavicon', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
     app.component(name, defineComponent({ render: () => null }))
   app.component('UiWizardProgress', defineComponent({ render: () => null }))
   app.component('ProOnboardingAgentStep', ProOnboardingAgentStep)
@@ -128,6 +128,26 @@ it('offers recovery instead of setup success when a bookmarked final step has no
   await nextTick()
   expect(host.textContent).toContain('Connect a Site to finish setup')
   expect(host.querySelector('button')?.disabled).toBe(true)
+  // The last step's guide describes the report, so it waits for a Site.
+  expect(host.querySelector('[data-step-guide]')).toBeNull()
+})
+
+it.each([
+  ['agent', 'Why start with an agent'],
+  ['connect', 'Why connect Google'],
+  ['sites', 'What a Site is'],
+  ['sync', 'Saved verdicts come first'],
+])('shows the %s step guide beside the step, named by its heading', async (step, heading) => {
+  route.query = { step }
+  session.value = { hasSites: true, gscdumpConnected: true }
+  const host = await mount()
+  await nextTick()
+  const guides = host.querySelectorAll('[data-step-guide]')
+  expect(guides).toHaveLength(1)
+  const title = guides[0]!.querySelector('h2')
+  expect(title?.textContent?.trim()).toBe(heading)
+  expect(guides[0]!.getAttribute('aria-labelledby')).toBe(title?.id)
+  route.query = { step: 'sync' }
 })
 
 it('offers no Skip on Connect Google, so a new account can only connect', async () => {
@@ -160,6 +180,16 @@ it('opens Agent setup with Skip agent setup and no connection status', async () 
   expect(host.querySelector('a[href="https://claude.ai/directory/gscdump"]')).not.toBeNull()
   // Request Indexing cannot read an agent connection, so it claims none.
   expect(host.textContent).not.toMatch(/connected|waiting/i)
+  route.query = { step: 'sync' }
+})
+
+it('leads Agent setup with the skip line, and shows Continue only once an agent is chosen', async () => {
+  route.query = { step: 'agent' }
+  session.value = { hasSites: false, gscdumpConnected: false }
+  const host = await mount()
+  expect(host.textContent).toContain('You can set up agents later, and connect more than one.')
+  expect(host.querySelectorAll('[data-testid="step-skip"]')).toHaveLength(1)
+  expect(host.querySelector('[data-testid="step-next"]')).toBeNull()
   route.query = { step: 'sync' }
 })
 
