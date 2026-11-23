@@ -53,7 +53,7 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 
 Collisions: the product's submission history and Google's indexing state are different evidence. Never imply one proves the other. When a page shows Google's verdict after a Submission, "afterwards" shows order in time, never cause, and never a timeframe.
 
-Agent setup names an onboarding step. The Developers page also uses the name, for a section and for the API key that section creates. The Developers prompt carries that API key, so Setup prompt never names it. Open question 3 holds the choice.
+Agent setup is one concept in two places: the onboarding step, and the Agent setup section on the Developers page after onboarding. The Developers section keeps its name, its API key label, and its "Copy agent setup prompt" button. That prompt carries an API key, so it is not a Setup prompt (Setup prompt, exception).
 
 The Google Indexing API and IndexNow are separate channels. The Indexing API notifies Google only. IndexNow notifies Bing and other participating search engines, and Google is not one of them. Never call one channel by the other's name. Never imply that an IndexNow receipt says anything about Google.
 
@@ -235,7 +235,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 ### Onboarding Step
 
-**Is:** one step of a setup flow, registered on `@nuxtseo/pro-shell`'s Step registry: `connect`, `sites` and `sync` in the first-run wizard, and `connect-site` and `connect-search-console` on the dashboard card. Its Step state (`Pending`, `Complete`, `Optional`, `Unknown`, `NotApplicable`) comes from this app's data.
+**Is:** one step of a setup flow, registered on `@nuxtseo/pro-shell`'s Step registry: `agent`, `connect`, `sites` and `sync` in the first-run wizard, and `connect-site` and `connect-search-console` on the dashboard card. Its Step state (`Pending`, `Complete`, `Optional`, `Unknown`, `NotApplicable`) comes from this app's data.
 
 **Use for:** code and docs about setup flows. The reader sees setup, never step ids.
 
@@ -243,7 +243,11 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 **Is:** the onboarding step that leads setup, decided 2026-11-24. The reader picks a coding agent, Claude, or ChatGPT, or selects Skip agent setup. Each agent connects to gscdump's MCP server, `https://gscdump.com/mcp`. Claude reaches it through gscdump's Claude listing, and ChatGPT through gscdump's ChatGPT app. Request Indexing has no listing of its own. Every route still passes Connect Google, which has no Skip.
 
-**Use for:** the onboarding step, its rail label, and docs about it.
+The step is `agent` in `FIRST_RUN_STEPS`. Its Step state is `Optional`, so resume never lands there. A new signup opens it by URL. The chosen agent rides `?agent=` through the Connect Google round trip.
+
+One concept, two places, as in nuxtseo.com. After onboarding, the Developers page holds the same setup in its Agent setup section, for the CLI with an API key. Settled 2026-11-24.
+
+**Use for:** the onboarding step, its rail label, the Developers section, and docs about them.
 
 **Never:** connect your agent, agent onboarding. Never a Setup offer: those are dashboard cards, and they carry no agent offer.
 
@@ -255,7 +259,9 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 **Use for:** the prompt on Agent setup and on each manual onboarding step, and its copy control.
 
-**Never:** agent prompt. Never for a prompt that carries an API key, such as the Developers page prompt (Open question 3).
+**Never:** agent prompt. Never for a prompt that carries an API key, such as the Developers page prompt.
+
+**Exception:** the Developers page shipped first. Its toast says "Setup prompt copied" for a prompt that carries an API key. It stays until that prompt drops the key.
 
 **Casing:** `Setup prompt`, capital S, in prose and labels.
 
@@ -321,13 +327,3 @@ entry above, then delete it from this list.
    ("Connect Google"), and in nuxtseo.com. The Connect entry reserves the verb for attaching a
    Site. Recommended: keep Connect for both, and name the object every time ("Connect a Site",
    "Connect Google"), because the grant label already ships in three places.
-3. **The Developers page shares two names with onboarding.** Its CLI tab has a section headed
-   Agent setup, and its first copy creates an API key named Agent setup. Its button says "Copy
-   agent setup prompt", and its toast says "Setup prompt copied". That prompt carries an API key,
-   so it breaks the Setup prompt rule.
-   - Rename the Developers section, key label, button, and toast. This changes a shipped page.
-     Keys created before the change keep the old label.
-   - Keep the names, and let Agent setup cover both pages. Setup prompt then needs a recorded
-     exception for the Developers page.
-   - Remove the API key from the Developers prompt, so it becomes a Setup prompt. The CLI login
-     needs a key, so this changes the CLI route.

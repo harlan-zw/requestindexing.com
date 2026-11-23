@@ -6,6 +6,7 @@ import { REQUEST_HONOUR } from '@nuxtseo/pro-shell/shared/onboarding'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProSetupFirstSiteReport from '~~/layers/indexing/app/components/ProSetupFirstSiteReport.vue'
 
+import { parseAgentSetupRoute } from '#layers/pro-gsc/shared/agent-setup'
 import { parseGscConnectReturn } from '#layers/pro-gsc/shared/gsc-grant'
 import { readProErrorMessage } from '#layers/pro-saas/shared/errors'
 import { GSC_CONNECT_COPY } from '#layers/pro-saas/shared/gsc-connect-copy'
@@ -13,19 +14,21 @@ import {
   DASHBOARD_ROUTE,
   FIRST_RUN_FLOW,
   ONBOARDING_COMPLETION_COPY,
+  onboardingConnectReturnTo,
   parseOnboardingStep,
   resolveGscConnection,
 } from '#layers/pro-saas/shared/onboarding'
 import { PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 
-// First-run setup, three steps, the step in the URL.
+// First-run setup, four steps, the step in the URL. Agent setup leads, and a
+// new signup opens it by URL; Skip agent setup moves on to Connect Google.
 //
 // The steps are registered on `@nuxtseo/pro-shell`'s Step registry
 // (`shared/onboarding.ts`), and the shell's flow resolves the current one. The
 // step lives in `?step=` so a Google round trip comes back where it left off,
 // and so does a reload. Nothing is stored: a bare URL resumes from what the
 // user has actually done, which is the only state that survives an abandoned
-// tab. `connect` and `sites` draw their own nav from the frame's `controls`;
+// tab. `agent`, `connect` and `sites` draw their own nav from the frame's `controls`;
 // `sync` uses the frame's, which waits for a Site because finishing without
 // one is refused.
 definePageMeta({
@@ -104,12 +107,29 @@ const flow = useProShellOnboardingFlow({
   finish: () => finish(),
 })
 const currentStep = computed(() => parseOnboardingStep(flow.current.value?.id) ?? 'connect')
+// Agent setup has its own exit, Skip agent setup, so the exit question
+// shows on the web steps only.
+const feedbackStep = computed(() => currentStep.value === 'agent' ? null : currentStep.value)
 
-const returnToSites = '/pro/dashboard/onboarding?step=sites'
+// Agent setup keeps the chosen agent in `?agent=`. Step moves keep every
+// other query key, and the Google return carries it, so Back reopens Agent
+// setup with the same choice.
+const agent = ref(parseAgentSetupRoute(route.query.agent))
+watch(agent, (value) => {
+  if (value && route.query.agent !== value)
+    void navigateTo({ query: { ...route.query, agent: value } }, { replace: true })
+})
+watch(() => route.query.agent, (value) => {
+  const parsed = parseAgentSetupRoute(value)
+  if (parsed)
+    agent.value = parsed
+})
+
+const returnToSites = computed(() => onboardingConnectReturnTo(agent.value))
 // Read-only, as nuxtseo.com's setup asks: every setup step works with it, and
 // Google's consent screen then lists one Search Console line instead of three.
 // Sitemap submission and Add and verify ask for more when the reader uses them.
-const gscConnectUrl = `/auth/integrations/gsc/connect?scope=read&returnTo=${encodeURIComponent(returnToSites)}`
+const gscConnectUrl = computed(() => `/auth/integrations/gsc/connect?scope=read&returnTo=${encodeURIComponent(returnToSites.value)}`)
 
 // Coming back from Google, the session cookie is fresh but this page's copy is
 // not. Refreshing on mount is what makes the connect step flip to "connected".
@@ -125,6 +145,16 @@ useSeoMeta({ title: 'Set up Request Indexing' })
     :next-disabled="currentStep === 'sync' && !hasSites"
     :next-loading="finishing"
   >
+    <template #step-agent="{ step, controls }">
+      <ProOnboardingAgentStep
+        v-model:agent="agent"
+        :title="step.copy.title"
+        :description="step.copy.description"
+        @skip="controls.skip()"
+        @next="controls.next()"
+      />
+    </template>
+
     <template #step-connect="{ step, controls }">
       <div class="space-y-5">
         <UiAuthHeading size="md" :title="step.copy.title" :description="step.copy.description" />
@@ -186,10 +216,13 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       <!-- One way forward: before a grant the Connect button drives the
            advance, so the footer is empty; after, it offers Continue. There
            is no skip (COPY.md, Connect Google assets). A member of a Team
-           that already has a Site may continue without a grant. -->
+           that already has a Site may continue without a grant. Back
+           reopens Agent setup. -->
       <UiWizardNav
+        can-back
         :show-next="gscConnected || hasSites"
         :next-label="frameCopy.next"
+        @back="controls.back()"
         @next="controls.next()"
       />
     </template>
@@ -234,7 +267,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
     </template>
 
     <template #after>
-      <ProSetupExitFeedback :step="currentStep" />
+      <ProSetupExitFeedback v-if="feedbackStep" :step="feedbackStep" />
     </template>
   </ProShellOnboardingFrame>
 </template>

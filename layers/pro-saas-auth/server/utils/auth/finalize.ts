@@ -8,6 +8,7 @@ import { createUserWithPersonalTeam } from '#layers/pro-saas/server/utils/create
 import { enrolOnboardingDrip } from '#layers/pro-saas/server/utils/drip-sequences'
 import { claimPageTask } from '#layers/pro-saas/server/utils/page-task'
 import { clearSignupAttribution, readSignupAttribution } from '#layers/pro-saas/server/utils/signup-attribution'
+import { ONBOARDING_AGENT_SETUP_PATH } from '#layers/pro-saas/shared/onboarding'
 import { PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 import { safeAuthRedirect } from '../../../shared/utils/auth-redirect'
 import { useAuthHooks } from './hooks'
@@ -140,9 +141,9 @@ export async function signInOrCreate({ event, provider, identity }: SignInOrCrea
   if (isNewUser) {
     if (source)
       deleteCookie(event, 'auth-source')
-    // There is no onboarding page in this app; new users land on the dashboard,
-    // which walks them through connecting Search Console.
-    return sendRedirect(event, pageTask ? PAGE_TASK_ROUTE : '/pro/dashboard')
+    // A saved page continues first. Otherwise a new user opens Agent setup.
+    // Skip agent setup moves on to Connect Google.
+    return sendRedirect(event, pageTask ? PAGE_TASK_ROUTE : ONBOARDING_AGENT_SETUP_PATH)
   }
 
   // Honour stashed deep-link for returning users only.

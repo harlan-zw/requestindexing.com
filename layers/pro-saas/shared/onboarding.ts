@@ -2,9 +2,10 @@
 // middleware, the wizard page and the completion endpoint all read one rule set
 // instead of three copies that drift.
 //
-// The flow is nuxtseo.com's URL-driven wizard cut to what this product does:
-// Google Search Console is the only integration, there is no billing and there
-// are no invites, so `plan` and `invite` are gone and `integrations` folds into
+// The flow is nuxtseo.com's URL-driven wizard cut to what this product does.
+// Agent setup leads, as in nuxtseo.com (decided 2026-11-24, COPY.md Agent
+// setup assets). Google Search Console is the only integration, there is no
+// billing and there are no invites, so `plan` and `invite` are gone and `integrations` folds into
 // `connect`. nuxtseo.com's `help` step is not a step here: its questions sit on
 // the `sync` step as the optional "About you" card (Onboarding Answers), so they
 // add no time and never gate completion.
@@ -16,6 +17,7 @@
 
 import type { AccountStatus } from '@gscdump/contracts'
 import type { ProShellOnboardingStep } from '@nuxtseo/pro-shell/shared/onboarding'
+import type { AgentSetupRoute } from '#layers/pro-gsc/shared/agent-setup'
 import type { GscCallbackError } from '#layers/pro-gsc/shared/gsc-grant'
 import { evaluateOnboardingSteps, resolveOnboarding, STEP_COMPLETE, STEP_OPTIONAL, STEP_PENDING } from '@nuxtseo/pro-shell/shared/onboarding'
 import { isGscScopeMissingError } from '#layers/pro-gsc/shared/gsc-grant'
@@ -29,6 +31,12 @@ export const ONBOARDING_ENTRY_ROUTE = '/pro/onboarding'
  * the onboarding gate exempts it so it can never redirect onto itself.
  */
 export const ONBOARDING_ROUTE = '/pro/dashboard/onboarding'
+
+/**
+ * Where a new signup lands: Agent setup. A saved page outranks it
+ * (`finalize.ts`), and Skip agent setup moves on to Connect Google.
+ */
+export const ONBOARDING_AGENT_SETUP_PATH = `${ONBOARDING_ROUTE}?step=agent`
 
 /** Where a finished user lands. */
 export const DASHBOARD_ROUTE = '/pro/dashboard'
@@ -50,7 +58,7 @@ export const ONBOARDING_EXEMPT_PREFIXES = [
   ONBOARDING_ROUTE,
 ] as const
 
-export const ONBOARDING_STEPS = ['connect', 'sites', 'sync'] as const
+export const ONBOARDING_STEPS = ['agent', 'connect', 'sites', 'sync'] as const
 
 export type OnboardingStep = typeof ONBOARDING_STEPS[number]
 
@@ -155,6 +163,10 @@ export const DASHBOARD_CARD_FLOW = 'dashboard-card'
  * on 2026-11-19, after 16 of the 34 signups who never connected left through
  * it onto an empty dashboard and none signed in again.
  *
+ * - `agent` (Agent setup) is `Optional`, so resume never lands there. A new
+ *   signup opens it by URL (`ONBOARDING_AGENT_SETUP_PATH`). Skip agent setup
+ *   goes to `connect` and keeps progress. Every agent route still passes
+ *   Connect Google.
  * - `connect` is `Optional` once a Site exists, so a member of a Team that
  *   already has one is never sent back to it. Before any Site it is
  *   `Pending`, so a fresh account starts on it. It has no skip: its only way
@@ -168,6 +180,15 @@ export const DASHBOARD_CARD_FLOW = 'dashboard-card'
  *   without one is refused.
  */
 export const FIRST_RUN_STEPS: readonly ProShellOnboardingStep[] = [
+  {
+    id: 'agent',
+    flow: FIRST_RUN_FLOW,
+    order: 5,
+    titleKey: 'agent',
+    nav: 'step',
+    state: () => STEP_OPTIONAL,
+    skip: () => true,
+  },
   {
     id: 'connect',
     flow: FIRST_RUN_FLOW,
@@ -260,6 +281,19 @@ export function gscCallbackErrorRedirect(returnTo: string | null | undefined, er
     url.searchParams.set('step', 'connect')
   url.searchParams.set('error', error)
   return `${url.pathname}${url.search}${url.hash}`
+}
+
+/**
+ * Where Connect Google returns after a grant: the step after it. The chosen
+ * agent rides along in `?agent=`, so Back from a later step reopens Agent
+ * setup with the same choice. An error return keeps it too
+ * (`gscCallbackErrorRedirect` rewrites only `step` and `error`).
+ */
+export function onboardingConnectReturnTo(agent: AgentSetupRoute | null): string {
+  const query = new URLSearchParams({ step: 'sites' })
+  if (agent)
+    query.set('agent', agent)
+  return `${ONBOARDING_ROUTE}?${query}`
 }
 
 export interface OnboardingGateInput extends OnboardingResumeSignals {

@@ -71,6 +71,11 @@ export const PRO_SHELL_COPY_OVERRIDES = {
   onboarding: {
     progressLabel: 'Setup progress',
     steps: {
+      'agent': {
+        label: 'Agent setup',
+        title: 'Choose your agent',
+        description: 'Each sign-in waits for your approval.',
+      },
       'connect': {
         label: 'Connect Google',
         title: 'Connect Google Search Console',

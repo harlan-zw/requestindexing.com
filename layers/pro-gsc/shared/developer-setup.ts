@@ -14,7 +14,7 @@ export const SITE_ID_PLACEHOLDER = 's_your_site'
 export const GSCDUMP_MCP_URL = 'https://gscdump.com/mcp'
 export const GSCDUMP_API_ROOT = 'https://gscdump.com/api'
 export const GSCDUMP_SKILL_URL = 'https://gscdump.com/skill'
-const GSCDUMP_CLI_PACKAGE = '@gscdump/cli@^7.12.0'
+export const GSCDUMP_CLI_PACKAGE = '@gscdump/cli@^7.12.0'
 /** Where a Request Indexing reader connects a Site. The agent prompt sends them here, never to gscdump.com. */
 export const CONNECT_SITE_URL = `https://requestindexing.com${CONNECT_SITE_ROUTE}`
 
