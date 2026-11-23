@@ -45,7 +45,7 @@ export interface AgentSetupOption {
 
 /** COPY.md, Agent setup assets. `terminal` is a design system icon role, so it follows the active set. */
 export const AGENT_SETUP_OPTIONS: readonly AgentSetupOption[] = [
-  { route: 'coding-agent', label: 'Coding agent', detail: 'Claude Code, Codex, or Cursor, in your terminal', icon: 'terminal' },
+  { route: 'coding-agent', label: 'Coding agent', detail: 'Claude Code, Codex, or Cursor, through the gscdump CLI', icon: 'terminal' },
   { route: 'claude', label: 'Claude', detail: 'Claude on the web or desktop', icon: 'i-simple-icons-claude' },
   { route: 'chatgpt', label: 'ChatGPT', detail: 'ChatGPT on the web', icon: 'i-simple-icons-openai' },
 ]

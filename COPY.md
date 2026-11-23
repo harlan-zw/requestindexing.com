@@ -547,9 +547,10 @@ Request Indexing has no listing of its own, so no string names one.
 On every route, the first result is the First Site report for the selected Site.
 The step is `agent` in the Onboarding Step words table.
 `layers/pro-gsc/shared/agent-setup.ts` holds these strings and builds each Setup prompt.
-The chosen agent opens into numbered steps, as on gscdump.com and nuxtseo.com. The labels, choices,
-and step titles match theirs. This app keeps its own wording where its route differs: the
-`Setup prompt` casing, the gscdump CLI, the Google account sentence, and the next step note.
+The agents sit as rows in one panel, and the chosen agent opens into numbered steps, as on
+gscdump.com and nuxtseo.com. The choice lines and step titles follow gscdump.com's. This app
+keeps its own wording where its route differs: the `Setup prompt` casing, the gscdump CLI, the
+Google account sentence, and the next step note.
 `{app}` is Claude or ChatGPT. `{account}` is the Google account sentence.
 
 | Asset | String |
@@ -558,7 +559,7 @@ and step titles match theirs. This app keeps its own wording where its route dif
 | Heading | Choose your agent |
 | Lead | Each sign-in waits for your approval. |
 | Choice group name | Agent |
-| Coding agent choice | Coding agent · Claude Code, Codex, or Cursor, in your terminal |
+| Coding agent choice | Coding agent · Claude Code, Codex, or Cursor, through the gscdump CLI |
 | Claude choice | Claude · Claude on the web or desktop |
 | ChatGPT choice | ChatGPT · ChatGPT on the web |
 | Copy action | Copy setup prompt / Setup prompt copied |
