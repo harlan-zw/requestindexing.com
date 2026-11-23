@@ -85,7 +85,7 @@ async function mount() {
   host = document.createElement('div')
   document.body.appendChild(host)
   app = createApp(defineComponent({ setup: () => () => h(Suspense, null, { default: () => h(Page) }) }))
-  for (const name of ['ProSetupExample', 'ProSetupExitFeedback'])
+  for (const name of ['ProSetupExample', 'ProSetupExitFeedback', 'UiStatusBadge'])
     app.component(name, defineComponent({ render: () => null }))
   app.component('ProGscConnectReturnAlert', defineComponent({
     props: ['result'],

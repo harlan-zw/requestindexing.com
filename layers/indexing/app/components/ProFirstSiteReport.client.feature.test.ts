@@ -24,6 +24,7 @@ function mount() {
     props: ['label', 'disabled', 'loading'],
     setup: (props, { attrs }) => () => h('button', { ...attrs, disabled: props.disabled || props.loading }, props.label),
   }))
+  app.component('UiStatusBadge', defineComponent({ setup: (_, { slots }) => () => h('span', slots.default?.()) }))
   app.mount(host)
   mounted.push(app)
   return { app, host, click: (label: string) => [...host.querySelectorAll('button')].find(button => button.textContent === label)!.click() }

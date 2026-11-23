@@ -153,27 +153,9 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         </div>
 
         <template v-else>
-          <ProSetupExample />
-          <ul class="space-y-2 text-sm text-muted">
-            <li v-for="benefit in GSC_CONNECT_COPY.benefits" :key="benefit" class="flex gap-2">
-              <UIcon name="i-heroicons-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-              {{ benefit }}
-            </li>
-          </ul>
-          <section class="space-y-2 rounded-lg border border-default bg-elevated/40 px-4 py-3 text-sm" aria-labelledby="gsc-access-heading" data-testid="gsc-access">
-            <h3 id="gsc-access-heading" class="flex items-center gap-2 font-medium text-highlighted">
-              <UIcon name="i-lucide-shield-check" class="size-4 shrink-0 text-primary" aria-hidden="true" />
-              {{ GSC_CONNECT_COPY.accessHeading }}
-            </h3>
-            <p>{{ GSC_CONNECT_COPY.readAccess }}</p>
-            <p>{{ GSC_CONNECT_COPY.changes }}</p>
-            <p>
-              {{ GSC_CONNECT_COPY.remove }}
-              <ULink :to="GSC_CONNECT_COPY.removeHref" external target="_blank" rel="noopener" class="font-medium text-highlighted underline">
-                {{ GSC_CONNECT_COPY.removeAction }}
-              </ULink>
-            </p>
-          </section>
+          <p class="text-sm text-muted">
+            {{ GSC_CONNECT_COPY.readAccess }}
+          </p>
           <UButton
             :to="gscConnectUrl"
             external
@@ -183,6 +165,21 @@ useSeoMeta({ title: 'Set up Request Indexing' })
             label="Connect Google Search Console"
             data-testid="connect-gsc-btn"
           />
+          <ProSetupExample />
+          <details class="text-sm text-muted" data-testid="gsc-access">
+            <summary class="list-item min-h-11 cursor-pointer content-center font-medium text-highlighted">
+              {{ GSC_CONNECT_COPY.accessHeading }}
+            </summary>
+            <div class="space-y-2 pb-2">
+              <p>{{ GSC_CONNECT_COPY.changes }}</p>
+              <p>
+                {{ GSC_CONNECT_COPY.remove }}
+                <ULink :to="GSC_CONNECT_COPY.removeHref" external target="_blank" rel="noopener" class="font-medium text-highlighted underline">
+                  {{ GSC_CONNECT_COPY.removeAction }}
+                </ULink>
+              </p>
+            </div>
+          </details>
         </template>
       </div>
 

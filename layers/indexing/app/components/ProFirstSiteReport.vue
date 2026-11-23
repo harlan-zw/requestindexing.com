@@ -94,7 +94,9 @@ watch([() => siteId, () => session.value?.team?.teamId], () => {
           {{ row._tag === 'Evidence' ? row.evidence.url : row.url }}
         </p>
         <template v-if="row._tag === 'Evidence'">
-          <p>{{ row.evidence.coverage ?? row.evidence.verdict ?? PAGE_SETUP_COPY.notReported }}</p>
+          <UiStatusBadge :status="row.evidence.verdict === 'PASS' ? 'success' : row.evidence.verdict === 'FAIL' ? 'warning' : 'neutral'" readable>
+            <span class="whitespace-normal">{{ row.evidence.coverage ?? row.evidence.verdict ?? PAGE_SETUP_COPY.notReported }}</span>
+          </UiStatusBadge>
           <p class="text-sm text-muted">
             {{ PAGE_SETUP_COPY.source }} · {{ PAGE_SETUP_COPY.captured }} <time :datetime="row.evidence.capturedAt">{{ row.evidence.capturedAt }}</time>
           </p>

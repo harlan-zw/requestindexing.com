@@ -543,19 +543,18 @@ Keep the exact URL and host through sign-in, consent, connection, and recovery.
 ## Connect Google assets
 
 The Connect Google step, the signup page, and the return from Google's consent screen.
-Every reader sees these before they give Google access. Say what Google asks for, what
-Request Indexing can change, and how to take the access back. Strings live in
+Show the read scope before Google access. The access disclosure explains later changes
+and how to remove access. Strings live in
 `layers/pro-saas/shared/gsc-connect-copy.ts`.
 
 | Asset | String |
 | --- | --- |
-| Benefits | Read your queries, pages and coverage. · Keep your data past Google's 16-month window. |
 | Access heading | What Google asks for |
 | Search Console read access | Setup asks for read-only Search Console access. Extra permissions appear with the actions that need them. |
 | Access changes | the Search Console access sentence in Truth rules, verbatim |
 | Access removal | You can remove this access at any time in your Google Account. |
 | Access removal action | Open Google Account connections, a link to `https://myaccount.google.com/connections` |
-| Signup access note | the Search Console read access string, then the Search Console access sentence in Truth rules, both verbatim. On `/pro/onboarding` below the provider buttons |
+| Signup access note | the Search Console read access string, verbatim. On `/pro/onboarding` below the provider buttons |
 | Cancelled, title | Search Console is not connected |
 | Cancelled, detail | Google returned without Search Console access, so Request Indexing cannot read your data yet. Connect again when you are ready. |
 | Failed, title | The Google connection did not finish |
@@ -584,7 +583,6 @@ They never describe the reader's Site. Feedback never blocks leaving setup.
 | --- | --- |
 | Example heading | See an example before you connect |
 | Example label | Example from nuxtseo.com |
-| Example help | This public example shows a saved Google URL Inspection result. Your Site needs its own check. |
 | Example source link | View the public example |
 | Exit question | What would help you continue? Optional |
 | Exit permission | Understand Google access |
@@ -607,6 +605,8 @@ The explicit inspection uses at most ten matching URLs. This sample is not Site-
 | Asset | String |
 | --- | --- |
 | First report heading | Check your first Sitemap URLs |
+| First report Site selector | Site |
+| First report Site selector placeholder | Choose a Site for your first report |
 | First report help | Preview up to 10 known Sitemap URLs. Then choose whether to inspect them with Google. |
 | First report preview | Preview URLs |
 | First report source | Source: saved Sitemap membership |

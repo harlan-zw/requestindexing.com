@@ -1,6 +1,8 @@
 import type { PageEvidence } from './page-evidence'
 
 export const FIRST_REPORT_COPY = {
+  site: 'Site',
+  chooseSite: 'Choose a Site for your first report',
   heading: 'Check your first Sitemap URLs',
   help: 'Preview up to 10 known Sitemap URLs. Then choose whether to inspect them with Google.',
   preview: 'Preview URLs',

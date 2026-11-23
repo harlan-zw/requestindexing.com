@@ -5,10 +5,6 @@
  * can change, and how to take the access back.
  */
 export const GSC_CONNECT_COPY = {
-  benefits: [
-    'Read your queries, pages and coverage.',
-    'Keep your data past Google\'s 16-month window.',
-  ],
   accessHeading: 'What Google asks for',
   /** COPY.md "Search Console read access". The saved-page setup uses it too. */
   readAccess: 'Setup asks for read-only Search Console access. Extra permissions appear with the actions that need them.',

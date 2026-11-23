@@ -28,7 +28,7 @@ vi.mock('#components', () => {
 })
 
 vi.mock('~~/layers/core/app/composables/fetch', () => ({
-  fetchSites: async () => ({ data: ref({ sites: [{ siteId: 'ri_1' }] }) }),
+  fetchSites: async () => ({ data: ref({ sites: [{ siteId: 'ri_1', domain: 'example.com', property: 'sc-domain:example.com', syncStatus: 'synced' }] }) }),
 }))
 
 const session = ref({ hasSites: true, gscdumpConnected: true })
@@ -57,7 +57,7 @@ async function mount() {
       return () => h(Suspense, null, { default: () => h(Onboarding) })
     },
   })
-  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
+  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'UFormField', 'USelect', 'UiStatusBadge', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
     app.component(name, defineComponent({ render: () => null }))
   app.component('UiWizardProgress', defineComponent({ render: () => null }))
   // The Connect action is the step's only way forward, so the stub keeps its

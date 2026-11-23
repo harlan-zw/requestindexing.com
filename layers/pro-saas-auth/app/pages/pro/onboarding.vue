@@ -140,26 +140,13 @@ useSeoMeta({
         class="mb-4"
       />
 
-      <UiAuthProviders :providers="providers" @select="rememberProvider" />
+      <UiAuthProviders :providers="providers" class="[&_a]:min-h-11" @select="rememberProvider" />
 
-      <ul class="mt-6 space-y-2 text-xs text-muted">
-        <li class="flex gap-2">
-          <UIcon name="i-lucide-check" class="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />
-          <span>We set up a personal team from your Google Account.</span>
-        </li>
-        <li class="flex gap-2">
-          <UIcon name="i-lucide-check" class="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />
-          <span>You choose which Search Console properties to sync.</span>
-        </li>
-        <li class="flex gap-2">
-          <UIcon name="i-lucide-shield-check" class="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />
-          <span>You can delete your data and revoke access at any time.</span>
-        </li>
-      </ul>
-
-      <p class="mt-4 text-xs text-muted">
-        {{ GSC_CONNECT_COPY.readAccess }} {{ GSC_CONNECT_COPY.changes }}
+      <p class="mt-4 text-sm text-muted">
+        {{ GSC_CONNECT_COPY.readAccess }}
       </p>
+
+      <ProSetupExample v-if="savedPage?._tag !== 'Available'" class="mt-4" :record-view="false" :expanded="!missingScope" />
 
       <p class="mt-7 text-xs text-muted">
         Already have an account?

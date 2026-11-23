@@ -1,7 +1,6 @@
 export const SETUP_EXPERIMENT_COPY = {
   exampleHeading: 'See an example before you connect',
   exampleLabel: 'Example from nuxtseo.com',
-  exampleHelp: 'This public example shows a saved Google URL Inspection result. Your Site needs its own check.',
   exampleSource: 'View the public example',
   question: 'What would help you continue? Optional',
   permission: 'Understand Google access',
