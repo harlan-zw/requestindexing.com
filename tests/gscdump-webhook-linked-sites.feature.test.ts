@@ -4,12 +4,14 @@
 // retries with the same delivery id.
 
 import type { DatabaseSync } from 'node:sqlite'
+import type { LogSinkEntry } from '~~/shared/logging'
 import { signWebhookPayload, WEBHOOK_SIGNATURE_HEADER } from '@gscdump/sdk/webhook'
 import { eq } from 'drizzle-orm'
 import { createApp, createError, defineEventHandler, getHeader, getRequestURL, readRawBody, toWebHandler } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { sites } from '~~/layers/core/server/db/schema'
 import gscdumpWebhook from '~~/layers/pro-gsc/server/api/webhooks/gscdump.post'
+import { addLogSink, removeLogSink } from '~~/shared/logging'
 import { migratedDatabase, proDatabase } from '~~/tests/support/migrated-d1'
 import { createUserWithPersonalTeam } from '#layers/pro-saas/server/utils/create-user-with-personal-team'
 
@@ -133,5 +135,26 @@ describe('pOST /api/webhooks/gscdump', () => {
 
     expect(retried.body).not.toMatchObject({ deduped: true })
     expect(await syncStatus(site)).toBe('synced')
+  })
+
+  // gscdump sends `userId: null` when its Site row has no owning user.
+  it('names the gscdump site of a delivery that carries no user', async () => {
+    await linkedSite(await teamOf('Ada', 'u_ada'))
+    const reports: LogSinkEntry[] = []
+    const record = (entry: LogSinkEntry) => reports.push(entry)
+    addLogSink(record)
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const response = await deliver({
+      ...analyticsReady('whd_44444444-4444-4444-8444-444444444444'),
+      event: 'site.lifecycle.changed',
+      userId: null,
+    }).finally(() => removeLogSink(record))
+
+    expect(response.body).toMatchObject({ ok: true, unknownUser: true })
+    expect(reports).toMatchObject([{
+      name: 'webhook.delivery_unknown_user',
+      ctx: { gscdumpUserId: null, gscdumpSiteId: GSCDUMP_SITE_ID, linkedSites: 1, event: 'site.lifecycle.changed' },
+    }])
   })
 })

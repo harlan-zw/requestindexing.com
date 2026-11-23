@@ -4,11 +4,19 @@ import { alias } from 'drizzle-orm/sqlite-core'
 import { createError } from 'h3'
 import { logWarn } from '~~/shared/logging'
 import { sites, teamMemberships, teams, users } from '#layers/pro-saas/server/database'
+import { markCapturedBySentry } from '#layers/pro-saas/server/utils/sentry-captured'
 import { registeredHost } from '../../shared/registered-site-host'
 
 interface Registration { identity: { siteId: string, requestedUrl: string, userId: string, teamId: string } }
 interface LinkedSite { localSiteId: string, domain: string | null, property: string, principalIds: readonly string[], upstreamTeamId: string | null }
 export type RegisteredSiteAdmission = { _tag: 'Registered' } | { _tag: 'Absent' }
+
+/** gscdump's own account of a refused identity read: a pending catalog, an outage, or a missing Site. */
+function engineRefusal(error: unknown): Record<string, unknown> {
+  if (!isGscdumpV1Error(error))
+    return {}
+  return { status: error.status, code: error.code, reason: error.details?.reason, retryable: error.retryable, requestId: error.requestId }
+}
 
 /** Current Team memberships establish account scope without remote lifecycle fanout. */
 export async function registeredSiteTeamPrincipals(db: ReturnType<typeof useDrizzle>, teamId: number): Promise<string[]> {
@@ -58,8 +66,8 @@ export async function assertRegisteredGscSiteScope(
   const registration = await readIdentity(siteId).catch((error: unknown) => {
     if (operation === 'delete' && isGscdumpV1Error(error) && error.code === 'site_not_found' && error.status === 404)
       return null
-    logWarn('gscdump.site_access.read_failed', error, { gscdumpSiteId: siteId })
-    throw createError({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable', cause: error })
+    logWarn('gscdump.site_access.read_failed', error, { gscdumpSiteId: siteId, ...engineRefusal(error) })
+    throw createError({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable', cause: markCapturedBySentry(error) })
   })
   if (!registration)
     return { _tag: 'Absent' }

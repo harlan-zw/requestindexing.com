@@ -124,6 +124,8 @@ export function useGscdumpClient(options: GscdumpClientOptions = {}) {
           requestId: err.requestId,
           retryable: err.retryable,
         },
+        // Sentry's transient rule reads the deadline's TimeoutError down this chain.
+        cause: err,
       })
     }
     throw err

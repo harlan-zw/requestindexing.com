@@ -1,7 +1,24 @@
+import type { ReportPolicy } from '@harlan-zw/nuxt-sentry/server'
+import { decideReport } from '@harlan-zw/nuxt-sentry/server'
 import { createError } from 'h3'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { reportPolicy } from '~~/shared/sentry'
 import { RENDER_PATH_TIMEOUT_MS, useGscdumpClient } from './gscdump-client'
 import { assertRegisteredGscSiteScope } from './registered-site-scope'
+
+// The server Report Policy this site builds. `dropTransient` keeps the module
+// default, which `nuxt.config.ts` does not override.
+const serverPolicy: ReportPolicy = {
+  scope: 'server',
+  dataCollection: 'scrubbed',
+  dropStatus: reportPolicy.dropServerStatus.map(status => ({ from: status, to: status })),
+  dropTransient: true,
+  ignoreErrors: reportPolicy.ignoreErrors.map(value => ({ _tag: 'literal', value })),
+  dropStacklessErrors: [],
+  dropBreadcrumbMessages: [],
+  denyUrls: [],
+  secretKeys: [],
+}
 
 // A deadline covers the request. Start the hung transport before advancing time,
 // so cold SDK initialization cannot consume a real 20 ms test deadline.
@@ -71,6 +88,19 @@ describe('useGscdumpClient', () => {
     await expectDeadline(() => client.getUserLifecycle('u_1'))
     await expectDeadline(() => client.getUserLifecycle('u_1'))
     expect(hungFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('leaves a call it aborted at its own deadline to the transient report rule', async () => {
+    const started = new Promise<void>((resolve) => {
+      notifyFetchStarted = resolve
+    })
+    const failure = useGscdumpClient({ timeoutMs: 20 }).getIndexingUrls('s_engine', { limit: 500, offset: 1000 }).catch((error: unknown) => error)
+    await started
+    await vi.advanceTimersByTimeAsync(20)
+    const error = await failure
+
+    expect(error).toMatchObject({ statusCode: 504, data: { code: 'aborted' } })
+    expect(decideReport({ message: (error as Error).message }, error, serverPolicy)).toEqual({ _tag: 'drop', rule: 'transient' })
   })
 
   it('admits a fresh identity that takes longer than the optional-render budget', async () => {

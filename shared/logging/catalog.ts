@@ -40,6 +40,7 @@ export const LOG_CATALOG = {
   // Webhooks
   'webhook.side_effect_failed': 'post-success side effect inside an already-acknowledged webhook',
   'webhook.allowance_notice_unknown_user': 'a user.allowance.notice named a gscdump user with no local account; no email was sent',
+  'webhook.delivery_unknown_user': 'a gscdump delivery named no user, or a user with no local account; it was acknowledged and changed nothing',
 
   // Tasks
   'task.batch_item_failed': 'a single item in a cron-task batch raised',

@@ -143,12 +143,13 @@ async function applyDelivery(event: H3Event, envelope: CanonicalWebhookEnvelope)
     : undefined
 
   if (!localUser) {
-    // A delivery for a user we do not know is not an error on our side; ack it
-    // so gscdump stops retrying, but leave a trail because it usually means a
-    // stale registration pointing at us.
-    logWarn('gscdump.proxy.failed', new Error('unknown gscdump user'), {
-      stage: 'webhook_unknown_user',
+    // Not an error on our side: ack so gscdump stops retrying. It usually means a
+    // stale registration pointing at us, and gscdump sends no user for a Site it
+    // holds without one, so the trail names that Site and its local links.
+    logWarn('webhook.delivery_unknown_user', new Error('unknown gscdump user'), {
       gscdumpUserId: envelope.userId,
+      gscdumpSiteId: envelope.siteId ?? null,
+      linkedSites: linkedSiteIds.length,
       event: envelope.event,
     })
     return { ok: true, unknownUser: true }

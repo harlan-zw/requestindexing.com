@@ -86,8 +86,15 @@ it('does not report a settings read that outlives the budget', async () => {
   expect(reports).toEqual([])
 })
 
-it('reports a settings read that gscdump refused', async () => {
-  upstream.mockRejectedValue(new Error('Database not provisioned'))
+// A new account reads settings before gscdump finishes provisioning it.
+it('does not report a settings read while gscdump provisions the account', async () => {
+  upstream.mockRejectedValue(Object.assign(new Error('Database not provisioned'), { statusCode: 400 }))
+  expect(await loadGscdumpSettings(event, 7, 'test-key')).toEqual({ browserAnalyzerEnabled: false })
+  expect(reports).toEqual([])
+})
+
+it('reports a settings read that gscdump failed', async () => {
+  upstream.mockRejectedValue(Object.assign(new Error('Internal server error'), { statusCode: 500 }))
   expect(await loadGscdumpSettings(event, 7, 'test-key')).toEqual({ browserAnalyzerEnabled: false })
   expect(reports).toMatchObject([{ name: 'gscdump.proxy.failed', ctx: { reason: 'read' } }])
 })
