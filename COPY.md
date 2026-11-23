@@ -592,8 +592,10 @@ prompt sits above the direct action. The direct action works without an agent.
 
 **Each Setup prompt follows the same order.** The agent signs in through the browser and stops
 for the reader's approval. It confirms the account. It never connects a Site on gscdump.com: if
-the Site list is empty, it sends the reader back to this tab. It reads saved URL Inspection
-verdicts by Site ID and never requests a fresh inspection. If a step fails twice, it reports a
+the Site list is empty, it sends the reader back to this tab. It shows the Site list and waits
+for the reader to choose a Site, even from a list of one: gscdump can hold its own Site for the
+same property. It reads saved URL Inspection verdicts by Site ID and never requests a fresh
+inspection. If a step fails twice, it reports a
 paper cut to gscdump (`gscdump papercut` or the `submit-feedback` tool), then says what blocked.
 
 ## Connect Google assets

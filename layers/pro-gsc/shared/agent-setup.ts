@@ -89,6 +89,11 @@ export const CODING_AGENT_COMMANDS: readonly { command: string, note?: string }[
 
 const EMPTY_SITES = `If the list is empty, stop. Tell me to finish Connect Google and Connect Sites at ${ONBOARDING_SETUP_URL}, then wait for me. My Sites live in Request Indexing. Never connect a Site on gscdump.com.`
 
+// gscdump can hold a Site of its own for the same property, for example one
+// its agent entry connected at sign-in. So the agent never picks a Site, even
+// from a list of one: the reader chooses.
+const CHOOSE_SITE = 'Show me each Site with its URL. Ask me which Site to read, and wait for my answer. Never choose a Site for me, even when the list has one Site.'
+
 const SAVED_VERDICTS = 'These are saved URL Inspection verdicts, not Google\'s live index. Say when gscdump counted them. Say how many URLs have an indexed verdict, how many do not, and where they stopped.'
 
 const PAPERCUT_RULES = 'Start the comment with "Agent report for Request Indexing". Give the expected and actual behavior, and any workaround. Keep personal data, private URLs, and secrets out of it.'
@@ -112,7 +117,8 @@ function buildCodingAgentPrompt(): string {
 5. List my Sites:
    gscdump sites --json
    ${EMPTY_SITES}
-6. Use the Site I name, or the only Site. Read its saved verdicts with its Site ID from step 5:
+   ${CHOOSE_SITE}
+6. Read the saved verdicts for the Site I chose, with its Site ID from step 5:
    gscdump indexing summary --site <site-id> --json
    ${SAVED_VERDICTS}
    Never run \`gscdump indexing inspect\`. It uses my Free allowance and Google's daily URL Inspection quota.
@@ -125,11 +131,13 @@ ${PAPERCUT_RULES}`
 function buildHostedAgentPrompt(): string {
   return `Use the gscdump tools to read my Request Indexing Sites. Then tell me what Google's saved verdicts show for my Site.
 
-1. Call list-sites. If the gscdump tools are missing, or they ask me to sign in, stop. Tell me to add gscdump and sign in with the Google account that owns my Search Console property.
-2. ${EMPTY_SITES} Never call connect-site.
-3. Use the Site I name, or the only Site. Call get-indexing with its Site ID.
+1. Ask me to confirm that I signed in to gscdump with the Google account that owns my Search Console property. Wait for my answer. If I used another account, stop.
+2. Call list-sites. If the gscdump tools are missing, or they ask me to sign in, stop. Tell me to add gscdump and sign in with that Google account.
+3. ${EMPTY_SITES} Never call connect-site.
+   ${CHOOSE_SITE}
+4. Call get-indexing with the Site ID of the Site I chose.
    ${SAVED_VERDICTS}
-4. For saved evidence on one URL, use get-indexing-urls or get-url-inspection. Never call inspect-url. It uses my Free allowance and Google's daily URL Inspection quota.
+5. For saved evidence on one URL, use get-indexing-urls or get-url-inspection. Never call inspect-url. It uses my Free allowance and Google's daily URL Inspection quota.
 
 If a tool call fails twice, report it once with submit-feedback, if you have that tool. Then tell me what blocked you.
 ${PAPERCUT_RULES}`
@@ -138,8 +146,9 @@ ${PAPERCUT_RULES}`
 /**
  * The Setup prompt for one route. It signs in through the browser and stops
  * for approval, confirms the account, hands an empty Site list back to this
- * app, reads saved verdicts only, and reports a step that fails twice
- * through gscdump's paper cut intake, the one an agent can reach.
+ * app, lets the reader choose the Site, and reads saved verdicts only. A step
+ * that fails twice goes to gscdump's paper cut intake, the one an agent can
+ * reach.
  */
 export function buildAgentSetupPrompt(route: AgentSetupRoute): string {
   return route === 'coding-agent' ? buildCodingAgentPrompt() : buildHostedAgentPrompt()

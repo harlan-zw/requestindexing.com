@@ -27,6 +27,13 @@ describe('buildAgentSetupPrompt', () => {
     expect(buildAgentSetupPrompt(route)).not.toMatch(/GSCDUMP_API_KEY|x-api-key|--api-key/)
   })
 
+  it.each(AGENT_SETUP_ROUTES)('lets the reader choose the Site on the %s route', (route) => {
+    // gscdump can hold its own Site for the same property, so a list of one
+    // may still be the wrong Site.
+    expect(buildAgentSetupPrompt(route)).toContain('Ask me which Site to read')
+    expect(buildAgentSetupPrompt(route)).not.toContain('the only Site')
+  })
+
   it('signs the coding agent in through the browser', () => {
     expect(buildAgentSetupPrompt('coding-agent')).toContain('gscdump auth login --mode hosted')
   })
