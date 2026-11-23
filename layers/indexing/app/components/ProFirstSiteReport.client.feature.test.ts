@@ -44,6 +44,7 @@ async function mount() {
 beforeEach(() => {
   vi.clearAllMocks()
   session.value = { user: { id: 7 }, team: { teamId: 1 } }
+  sessionStorage.clear()
   Object.assign(globalThis, { onMounted, onScopeDispose, nextTick: () => io.rendered(), useUserSession: () => ({ session }) })
   io.rendered.mockImplementation(() => nextTick())
   io.saved.mockResolvedValue(verdicts)
@@ -92,6 +93,7 @@ it('shows the cost before a fresh URL Inspection when the engine is not inspecti
   await page.click('Preview URLs')
   expect(page.host.textContent).toContain('Sitemap URLs captured on Nov 8, 2026')
   expect(page.host.textContent).toContain('Each completed URL Inspection uses one from your Free allowance.')
+  expect(page.host.textContent).toContain('This sample covers only the URLs listed here.')
   expect(inspections()).toEqual([])
   await page.click('Inspect these URLs')
   expect(inspections()).toHaveLength(1)
@@ -188,4 +190,30 @@ it('announces the saved verdicts through a status region mounted before the read
   await flush()
   expect(page.host.querySelector('[role="status"]')).toBe(status)
   expect(status.textContent?.trim()).toBe('1 saved Google verdict loaded.')
+})
+
+it('keeps an unknown outcome through a remount, so a Site switch offers no second approval', async () => {
+  io.saved.mockResolvedValueOnce({ _tag: 'NoVerdicts' })
+  const first = await mount()
+  await first.click('Preview URLs')
+  io.fetch.mockImplementationOnce(async () => {
+    throw new Error('connection closed')
+  })
+  await first.click('Inspect these URLs')
+  first.app.unmount()
+  mounted.pop()
+  io.saved.mockResolvedValueOnce({ _tag: 'NoVerdicts' })
+  const again = await mount()
+  expect(again.host.textContent).toContain('We could not confirm what happened.')
+  expect(again.buttons()).toEqual(['Read saved results'])
+})
+
+it('offers Refresh preview after a batch that returned no verdict', async () => {
+  io.saved.mockResolvedValueOnce({ _tag: 'NoVerdicts' })
+  const page = await mount()
+  await page.click('Preview URLs')
+  io.fetch.mockImplementationOnce(async () => ({ _tag: 'Results', rows: [{ _tag: 'NoResult', url: urls[0] }] }))
+  await page.click('Inspect these URLs')
+  expect(page.host.textContent).toContain('Google returned no inspection result for this URL.')
+  expect(page.buttons()).toEqual(['Refresh preview'])
 })

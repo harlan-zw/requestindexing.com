@@ -84,7 +84,8 @@ export async function readSavedFirstReport(
       if (!hasGoogleEvidence(row))
         continue
       sawEvidence = true
-      if (covers(row.url) && rows.length < limit)
+      // A new capture can move a URL onto the next page; it fills one slot only.
+      if (covers(row.url) && rows.length < limit && !rows.some(kept => kept.url === row.url))
         rows.push(evidence(row, row.lastCheckedAt))
     }
     if (rows.length === limit || !response.pagination.hasMore || !response.urls.length)

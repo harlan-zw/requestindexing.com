@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FirstReportHold, FirstReportPreview, FirstReportResult, FirstReportSaved } from '#layers/indexing/shared/first-report'
+import { useSessionStorage } from '@vueuse/core'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { FIRST_REPORT_COPY as copy, formatReportDate, verdictStatus } from '#layers/indexing/shared/first-report'
 
@@ -21,8 +22,13 @@ let request = 0
 onScopeDispose(() => {
   request++
 })
+// An unknown URL Inspection outcome outlives this component. A Site change
+// or a reload must not offer a second approval while that request may still
+// finish. After 15 minutes the batch has finished or failed, so the hold ends.
+const UNRESOLVED_FOR_MS = 15 * 60 * 1000
+const unresolved = useSessionStorage<Record<string, number>>('first-report-unresolved', {})
 const ready = computed(() => fresh.value._tag === 'Ready' ? fresh.value : null)
-const canPreview = computed(() => ['Idle', 'Ready', 'Empty', 'Incomplete', 'Unavailable', 'Changed'].includes(fresh.value._tag))
+const canPreview = computed(() => ['Idle', 'Ready', 'Empty', 'Incomplete', 'Unavailable', 'Changed', 'Results'].includes(fresh.value._tag))
 const rows = computed<Row[]>(() => {
   if (saved.value._tag === 'Verdicts')
     return saved.value.rows.map(evidence => ({ _tag: 'Evidence', evidence }))
@@ -76,9 +82,17 @@ async function readSaved(read: 'load' | 'again' = 'load') {
     return
   rereading.value = false
   saved.value = result
+  const since = unresolved.value[siteId]
   if (result._tag === 'Verdicts') {
     fresh.value = { _tag: 'Idle' }
+    if (since !== undefined) {
+      const { [siteId]: _resolved, ...rest } = unresolved.value
+      unresolved.value = rest
+    }
     await recordView(result.token, current)
+  }
+  else if (read === 'load' && since !== undefined && Date.now() - since < UNRESOLVED_FOR_MS) {
+    fresh.value = { _tag: 'Uncertain' }
   }
 }
 
@@ -111,10 +125,13 @@ async function inspect() {
   if (!ready.value?.canInspect || inspecting.value)
     return
   const current = claim()
+  const id = siteId
   const token = ready.value.token
   inspecting.value = true
   const result = await getAppFetch()<FirstReportResult>(`/api/sites/${siteId}/onboarding/first-report`, { method: 'POST', body: { token }, retry: 0 })
     .catch((error: { statusCode?: number }) => ({ _tag: error.statusCode === 409 ? 'Changed' as const : 'Uncertain' as const }))
+  if (result._tag === 'Uncertain')
+    unresolved.value = { ...unresolved.value, [id]: Date.now() }
   if (current()) {
     settle(result)
     if (result._tag === 'Results' && result.rows.some(row => row._tag === 'Evidence'))
@@ -193,6 +210,9 @@ watch([() => siteId, () => session.value?.team?.teamId], () => {
                 {{ url }}
               </li>
             </ol>
+            <p class="text-sm text-muted">
+              {{ copy.sampleLimit }}
+            </p>
             <p v-if="ready.canInspect" class="text-sm">
               {{ copy.selected(ready.urls.length) }} {{ copy.cost }}
             </p>

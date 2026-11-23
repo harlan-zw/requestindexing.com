@@ -80,6 +80,12 @@ describe('the saved First Site report', () => {
     expect(read.mock.calls.map(([offset]) => offset)).toEqual([0, 2])
   })
 
+  it('counts a URL once when a new capture moves it onto the next page', async () => {
+    const read = vi.fn(async (offset: number) => ({ urls: offset === 0 ? [row('a')] : [row('a'), row('b')], pagination: { hasMore: offset === 0 } }))
+    const result = await readSavedFirstReport(covers, 5, 4, read)
+    expect(result._tag === 'Verdicts' && result.rows.map(kept => kept.url)).toEqual(['https://example.com/docs/a', 'https://example.com/docs/b'])
+  })
+
   it('stops at the page budget without claiming the Site has no verdict', async () => {
     const read = vi.fn(async () => ({ urls: [row('a', { coverageState: null, verdict: null })], pagination: { hasMore: true } }))
     expect(await readSavedFirstReport(covers, 5, 4, read)).toEqual({ _tag: 'Unknown' })
