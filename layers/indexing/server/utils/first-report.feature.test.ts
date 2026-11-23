@@ -4,6 +4,7 @@ import { Socket } from 'node:net'
 import { GscdumpV1Error } from '@gscdump/sdk/v1'
 import { createError, createEvent } from 'h3'
 import { beforeEach, expect, it, vi } from 'vitest'
+import savedRoute from '../api/sites/[siteId]/onboarding/first-report-saved.get'
 import viewedRoute from '../api/sites/[siteId]/onboarding/first-report-view.post'
 import previewRoute from '../api/sites/[siteId]/onboarding/first-report.get'
 import inspectRoute from '../api/sites/[siteId]/onboarding/first-report.post'
@@ -137,5 +138,46 @@ it('keeps metadata-only rows out of actual evidence viewing metrics', async () =
   expect(h.event).not.toHaveBeenCalled()
   h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: [{ url: plan.urls[0], coverageState: 'Crawled - currently not indexed', lastCheckedAt: new Date().toISOString() }], pagination: { hasMore: false } } })
   expect(await viewedRoute(event('POST', { token: plan.token }))).toEqual({ recorded: true })
-  expect(h.event).toHaveBeenCalledExactlyOnceWith(h.access.db, 7, 'first_report_evidence_viewed', { siteId: 'site-a', count: 1 })
+  expect(h.event).toHaveBeenCalledExactlyOnceWith(h.access.db, 7, 'first_report_evidence_viewed', { siteId: 'site-a', count: 1, source: 'inspection' })
+})
+
+const savedRows = [
+  { url: 'https://example.com/docs/a', coverageState: 'Crawled - currently not indexed', verdict: 'NEUTRAL', lastCheckedAt: '2026-11-24T06:12:00Z' },
+  { url: 'https://example.com/other', coverageState: 'Submitted and indexed', verdict: 'PASS', lastCheckedAt: '2026-11-24T06:11:00Z' },
+]
+
+async function savedReport() {
+  h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: savedRows, pagination: { hasMore: false } } })
+  const report = await savedRoute(event('GET'))
+  if (report._tag !== 'Verdicts')
+    throw new Error('Saved report fixture is invalid.')
+  return report
+}
+
+it('opens on saved Google verdicts inside the property, without spending quota', async () => {
+  const report = await savedReport()
+  expect(report.rows).toEqual([expect.objectContaining({ url: 'https://example.com/docs/a', coverage: 'Crawled - currently not indexed', capturedAt: '2026-11-24T06:12:00Z' })])
+  expect(h.client.listSiteIndexingUrls).toHaveBeenCalledWith(expect.objectContaining({ params: { siteId: 'engine-a' } }))
+  expect(h.client.inspectSiteUrls).not.toHaveBeenCalled()
+})
+
+it('shows the engine URL Inspection phase when a new Site has no saved verdict', async () => {
+  h.client.getUserLifecycle.mockResolvedValue({ data: { sites: [{ siteId: 'engine-a', gscPropertyUrl: 'https://example.com/docs/', indexing: { status: 'checking', reason: null } }] } })
+  h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: [], pagination: { hasMore: false } } })
+  expect(await savedRoute(event('GET'))).toEqual({ _tag: 'Collecting', phase: 'checking' })
+  expect(h.client.inspectSiteUrls).not.toHaveBeenCalled()
+})
+
+it('never starts a URL Inspection from a saved-verdict plan', async () => {
+  const report = await savedReport()
+  await expect(inspectRoute(event('POST', { token: report.token }))).rejects.toMatchObject({ statusCode: 409 })
+  expect(h.client.inspectSiteUrls).not.toHaveBeenCalled()
+})
+
+it('records a saved-verdict view from its signed plan without a second read', async () => {
+  const report = await savedReport()
+  h.client.listSiteIndexingUrls.mockClear()
+  expect(await viewedRoute(event('POST', { token: report.token }))).toEqual({ recorded: true })
+  expect(h.event).toHaveBeenCalledExactlyOnceWith(h.access.db, 7, 'first_report_evidence_viewed', { siteId: 'site-a', count: 1, source: 'saved' })
+  expect(h.client.listSiteIndexingUrls).not.toHaveBeenCalled()
 })

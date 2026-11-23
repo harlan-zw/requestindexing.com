@@ -30,6 +30,10 @@ vi.mock('#components', () => {
 vi.mock('~~/layers/core/app/composables/fetch', () => ({
   fetchSites: async () => ({ data: ref({ sites: [{ siteId: 'ri_1', domain: 'example.com', property: 'sc-domain:example.com', syncStatus: 'synced' }] }) }),
 }))
+// The First Site report's saved read. A new Site is still being inspected.
+vi.mock('~~/layers/core/app/utils/app-fetch', () => ({
+  getAppFetch: () => async () => ({ _tag: 'Collecting', phase: 'discovering' }),
+}))
 
 const session = ref({ hasSites: true, gscdumpConnected: true })
 Object.assign(globalThis, {
@@ -58,7 +62,7 @@ async function mount() {
       return () => h(Suspense, null, { default: () => h(Onboarding) })
     },
   })
-  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'UFormField', 'USelect', 'UiStatusBadge', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
+  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'UFormField', 'USelect', 'UiStatusBadge', 'UiFavicon', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
     app.component(name, defineComponent({ render: () => null }))
   app.component('UiWizardProgress', defineComponent({ render: () => null }))
   app.component('ProOnboardingAgentStep', ProOnboardingAgentStep)
@@ -106,12 +110,13 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-it('resumes a connected account without claiming a new sync', async () => {
+it('opens the last step on the First Site report, with no setup claim before a result', async () => {
   session.value = { hasSites: true, gscdumpConnected: true }
   const host = await mount()
   await nextTick()
-  expect(host.textContent).toContain('Open the dashboard to see what Google has reported about your Sites.')
-  expect(host.querySelector('[data-testid="first-site-report"]')).not.toBeNull()
+  expect(host.querySelector('h1')?.textContent).toBe('Check which pages Google indexed')
+  expect(host.textContent).not.toContain('You\'re set up')
+  expect(host.querySelector('[data-testid="first-site-report"]')?.textContent).toContain('Finding URLs to inspect')
   expect(host.textContent).not.toContain('First sync started')
   expect(host.textContent).not.toContain('pulling your Search Console history now')
   expect(host.querySelector('button')?.disabled).toBe(false)

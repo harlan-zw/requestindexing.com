@@ -10,6 +10,6 @@ export default defineProApiHandler(async (event) => {
   const preview = await access.readCandidates()
   if (preview._tag !== 'Ready')
     return preview
-  const token = await signFirstReportPlan({ userId: access.caller.user.id, teamId: access.teamId, siteId: access.site.id, remoteSiteId: access.remoteSiteId, property: access.property, generationId: preview.generationId, urls: preview.urls, expiresAt: Date.now() + 10 * 60 * 1000 }, firstReportSecret(event))
+  const token = await signFirstReportPlan({ _tag: 'Inspect', userId: access.caller.user.id, teamId: access.teamId, siteId: access.site.id, remoteSiteId: access.remoteSiteId, property: access.property, generationId: preview.generationId, urls: preview.urls, expiresAt: Date.now() + 10 * 60 * 1000 }, firstReportSecret(event))
   return { _tag: 'Ready' as const, urls: preview.urls, token, observedAt: preview.observedAt, canInspect: can(access, 'write-data') }
 })

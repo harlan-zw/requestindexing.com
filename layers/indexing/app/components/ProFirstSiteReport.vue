@@ -1,141 +1,230 @@
 <script setup lang="ts">
-import type { FirstReportPreview, FirstReportResult } from '#layers/indexing/shared/first-report'
+import type { FirstReportPreview, FirstReportResult, FirstReportSaved } from '#layers/indexing/shared/first-report'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
-import { FIRST_REPORT_COPY as copy } from '#layers/indexing/shared/first-report'
-import { PAGE_SETUP_COPY } from '#layers/pro-saas/shared/page-task'
+import { FIRST_REPORT_COPY as copy, formatReportDate, verdictStatus } from '#layers/indexing/shared/first-report'
 
+// The First Site report. It opens on the Site's saved Google verdicts, which
+// spend no URL Inspection. gscdump inspects a new Site's sitemap URLs by
+// itself, so a Site with no verdict yet shows the engine's URL Inspection
+// phase. A fresh URL Inspection is offered only when the engine is not
+// inspecting the Site, and only after the reader reviews the URLs and the cost.
 const { siteId } = defineProps<{ siteId: string }>()
 const { session } = useUserSession()
-type State = { _tag: 'Idle' | 'Loading' | 'Unavailable' | 'Changed' } | FirstReportPreview | FirstReportResult
-const state = ref<State>({ _tag: 'Idle' })
+type Saved = { _tag: 'Loading' | 'Unavailable' } | FirstReportSaved
+type Fresh = { _tag: 'Idle' | 'Loading' | 'Unavailable' | 'Changed' } | FirstReportPreview | FirstReportResult
+type Row = Extract<FirstReportResult, { _tag: 'Results' }>['rows'][number]
+const saved = ref<Saved>({ _tag: 'Loading' })
+const fresh = ref<Fresh>({ _tag: 'Idle' })
 const inspecting = ref(false)
 let request = 0
 onScopeDispose(() => {
   request++
 })
-const ready = computed(() => state.value._tag === 'Ready' ? state.value : null)
-const results = computed(() => state.value._tag === 'Results' ? state.value.rows : [])
+const ready = computed(() => fresh.value._tag === 'Ready' ? fresh.value : null)
+const canPreview = computed(() => ['Idle', 'Ready', 'Empty', 'Incomplete', 'Unavailable', 'Changed'].includes(fresh.value._tag))
+const rows = computed<Row[]>(() => {
+  if (saved.value._tag === 'Verdicts')
+    return saved.value.rows.map(evidence => ({ _tag: 'Evidence', evidence }))
+  return fresh.value._tag === 'Results' ? fresh.value.rows : []
+})
 
-async function preview() {
+// A response applies only to the request, Site and Team that sent it.
+function claim() {
+  const serial = ++request
   const id = siteId
   const team = session.value?.team?.teamId
-  const serial = ++request
-  state.value = { _tag: 'Loading' }
-  const result = await getAppFetch()<FirstReportPreview>(`/api/sites/${id}/onboarding/first-report`, { retry: 0 })
+  return () => serial === request && id === siteId && team === session.value?.team?.teamId
+}
+
+// The evidence view counts only after the rows render, for the same claim.
+async function recordView(token: string, current: () => boolean) {
+  await nextTick()
+  if (!current())
+    return
+  await getAppFetch()<{ recorded: boolean }>(`/api/sites/${siteId}/onboarding/first-report-view`, { method: 'POST', body: { token }, retry: 0 })
+    .catch(() => console.warn('First report evidence viewing could not be recorded.'))
+}
+
+async function readSaved() {
+  const current = claim()
+  saved.value = { _tag: 'Loading' }
+  fresh.value = { _tag: 'Idle' }
+  const result = await getAppFetch()<FirstReportSaved>(`/api/sites/${siteId}/onboarding/first-report-saved`, { retry: 0 })
     .catch(() => ({ _tag: 'Unavailable' as const }))
-  if (serial === request && id === siteId && team === session.value?.team?.teamId)
-    state.value = result
+  if (!current())
+    return
+  saved.value = result
+  if (result._tag === 'Verdicts')
+    await recordView(result.token, current)
+}
+
+async function preview() {
+  const current = claim()
+  fresh.value = { _tag: 'Loading' }
+  const result = await getAppFetch()<FirstReportPreview>(`/api/sites/${siteId}/onboarding/first-report`, { retry: 0 })
+    .catch(() => ({ _tag: 'Unavailable' as const }))
+  if (current())
+    fresh.value = result
 }
 
 async function inspect() {
   if (!ready.value?.canInspect || inspecting.value)
     return
-  const id = siteId
-  const team = session.value?.team?.teamId
-  const serial = ++request
+  const current = claim()
   const token = ready.value.token
   inspecting.value = true
-  const result = await getAppFetch()<FirstReportResult>(`/api/sites/${id}/onboarding/first-report`, { method: 'POST', body: { token }, retry: 0 })
+  const result = await getAppFetch()<FirstReportResult>(`/api/sites/${siteId}/onboarding/first-report`, { method: 'POST', body: { token }, retry: 0 })
     .catch((error: { statusCode?: number }) => ({ _tag: error.statusCode === 409 ? 'Changed' as const : 'Uncertain' as const }))
-  if (serial === request && id === siteId && team === session.value?.team?.teamId) {
-    state.value = result
-    if (result._tag === 'Results' && result.rows.some(row => row._tag === 'Evidence')) {
-      await nextTick()
-      if (serial === request && id === siteId && team === session.value?.team?.teamId) {
-        await getAppFetch()<{ recorded: boolean }>(`/api/sites/${id}/onboarding/first-report-view`, { method: 'POST', body: { token }, retry: 0 })
-          .catch(() => console.warn('First report evidence viewing could not be recorded.'))
-      }
-    }
+  if (current()) {
+    fresh.value = result
+    if (result._tag === 'Results' && result.rows.some(row => row._tag === 'Evidence'))
+      await recordView(token, current)
   }
   inspecting.value = false
 }
 
+onMounted(readSaved)
 watch([() => siteId, () => session.value?.team?.teamId], () => {
-  request++
-  state.value = { _tag: 'Idle' }
+  void readSaved()
 })
 </script>
 
 <template>
-  <section class="space-y-4 border-y border-default py-5" aria-labelledby="first-report-heading" data-testid="first-site-report">
-    <h2 id="first-report-heading" class="text-lg font-semibold text-highlighted">
-      {{ state._tag === 'Results' ? copy.result : copy.heading }}
-    </h2>
-    <p v-if="state._tag === 'Idle'">
-      {{ copy.help }}
-    </p>
-    <p v-if="state._tag === 'Loading'" role="status">
-      {{ copy.loading }}
-    </p>
-    <template v-if="ready">
-      <p class="text-sm text-muted">
-        {{ copy.source }} <time :datetime="ready.observedAt">{{ ready.observedAt }}</time>
+  <!-- The body of the First Site report panel. Saved verdicts are rows under
+       the Site header. Every other state is one block with its next action. -->
+  <div class="divide-y divide-default dark:divide-accented" data-testid="first-site-report">
+    <div v-if="saved._tag !== 'Verdicts'" class="space-y-3 p-4">
+      <p v-if="saved._tag === 'Loading'" role="status" class="text-sm text-muted">
+        {{ copy.loadingSaved }}
       </p>
-      <ol class="list-decimal space-y-2 pl-5 text-sm">
-        <li v-for="url in ready.urls" :key="url" class="break-all font-mono">
-          {{ url }}
-        </li>
-      </ol>
-      <p class="text-sm">
-        {{ copy.selected(ready.urls.length) }} {{ copy.cost }}
-      </p>
-      <p class="text-sm text-muted">
-        {{ copy.limit }}
-      </p>
-      <UButton v-if="ready.canInspect" color="primary" :label="copy.inspect" :loading="inspecting" class="min-h-11" @click="inspect" />
-      <p v-if="inspecting" class="text-sm text-muted" role="status">
-        {{ copy.pending }}
-      </p>
-      <p v-if="!ready.canInspect" class="text-sm text-muted">
-        {{ copy.viewOnly }}
-      </p>
-    </template>
-    <div v-if="state._tag === 'Results'" class="space-y-5" aria-live="polite">
-      <div v-for="row in results" :key="row._tag === 'Evidence' ? row.evidence.url : row.url" class="space-y-2">
-        <p class="break-all font-mono text-sm">
-          {{ row._tag === 'Evidence' ? row.evidence.url : row.url }}
+
+      <template v-else-if="saved._tag === 'Collecting'">
+        <p role="status" class="flex items-center gap-2 text-sm font-medium text-highlighted">
+          <span
+            class="size-1.5 shrink-0 rounded-full"
+            :class="saved.phase === 'waiting_for_sitemaps' ? 'bg-warning' : 'bg-primary motion-safe:animate-pulse'"
+            aria-hidden="true"
+          />
+          {{ copy.phase[saved.phase] }}
         </p>
-        <template v-if="row._tag === 'Evidence'">
-          <UiStatusBadge :status="row.evidence.verdict === 'PASS' ? 'success' : row.evidence.verdict === 'FAIL' ? 'warning' : 'neutral'" readable>
-            <span class="whitespace-normal">{{ row.evidence.coverage ?? row.evidence.verdict ?? PAGE_SETUP_COPY.notReported }}</span>
-          </UiStatusBadge>
+        <p class="text-sm text-muted">
+          {{ copy.collecting }}
+        </p>
+        <UButton color="neutral" variant="outline" :label="copy.retry" class="min-h-11" @click="readSaved" />
+      </template>
+
+      <p v-else-if="saved._tag === 'Limited'" role="status" class="text-sm">
+        {{ copy.limit[saved.limit] }}
+      </p>
+
+      <p v-else-if="saved._tag === 'Blocked'" role="alert" class="text-sm">
+        {{ copy.blocked[saved.reason] }}
+      </p>
+
+      <template v-else-if="saved._tag === 'Unavailable' || saved._tag === 'Unknown'">
+        <p role="alert" class="text-sm">
+          {{ copy.savedUnavailable }}
+        </p>
+        <UButton color="neutral" variant="outline" :label="copy.retry" class="min-h-11" @click="readSaved" />
+      </template>
+
+      <!-- No saved verdict, and the engine is not inspecting: the reader may
+           review up to ten Sitemap URLs, then approve one fresh URL Inspection. -->
+      <template v-else-if="saved._tag === 'NoVerdicts'">
+        <p v-if="fresh._tag !== 'Results'" class="text-sm font-medium text-highlighted">
+          {{ copy.noVerdicts }}
+        </p>
+        <p v-if="fresh._tag === 'Idle'" class="text-sm text-muted">
+          {{ copy.help }}
+        </p>
+        <p v-if="fresh._tag === 'Loading'" role="status" class="text-sm text-muted">
+          {{ copy.loading }}
+        </p>
+        <template v-if="ready">
           <p class="text-sm text-muted">
-            {{ PAGE_SETUP_COPY.source }} · {{ PAGE_SETUP_COPY.captured }} <time :datetime="row.evidence.capturedAt">{{ row.evidence.capturedAt }}</time>
+            {{ copy.sitemapDate }} <time :datetime="ready.observedAt">{{ formatReportDate(ready.observedAt) }}</time>
+          </p>
+          <ol class="space-y-1.5 rounded-lg border border-default bg-muted px-3 py-2.5">
+            <li v-for="url in ready.urls" :key="url" class="font-mono text-sm wrap-anywhere">
+              {{ url }}
+            </li>
+          </ol>
+          <p v-if="ready.canInspect" class="text-sm">
+            {{ copy.selected(ready.urls.length) }} {{ copy.cost }}
+          </p>
+          <p v-else class="text-sm text-muted">
+            {{ copy.viewOnly }}
           </p>
         </template>
+        <h2 v-if="fresh._tag === 'Results'" class="text-sm font-medium text-highlighted">
+          {{ copy.result }}
+        </h2>
+        <p v-if="fresh._tag === 'Empty'" role="status" class="text-sm">
+          {{ copy.empty }}
+        </p>
+        <p v-if="fresh._tag === 'Incomplete'" role="status" class="text-sm">
+          {{ copy.incomplete }}
+        </p>
+        <p v-if="fresh._tag === 'Unavailable'" role="alert" class="text-sm">
+          {{ copy.unavailable }}
+        </p>
+        <p v-if="fresh._tag === 'Changed'" role="alert" class="text-sm">
+          {{ copy.changed }}
+        </p>
+        <p v-if="fresh._tag === 'DailyQuota'" role="alert" class="text-sm">
+          {{ copy.limit.daily }}
+        </p>
+        <p v-if="fresh._tag === 'Refused'" role="alert" class="text-sm">
+          {{ fresh.message }}
+        </p>
+        <template v-if="fresh._tag === 'Uncertain'">
+          <p role="alert" class="text-sm">
+            {{ copy.uncertain }}
+          </p>
+          <UButton color="neutral" variant="outline" :label="copy.saved" class="min-h-11" @click="readSaved" />
+        </template>
+        <!-- The approval leads, under the cost line it answers. -->
+        <div v-if="ready?.canInspect || canPreview" class="flex flex-wrap items-center gap-2">
+          <UButton v-if="ready?.canInspect" color="primary" :label="copy.inspect" :loading="inspecting" class="min-h-11" @click="inspect" />
+          <UButton
+            v-if="canPreview"
+            :label="fresh._tag === 'Idle' ? copy.preview : copy.refresh"
+            :disabled="inspecting"
+            color="neutral"
+            variant="outline"
+            class="min-h-11"
+            @click="preview"
+          />
+        </div>
+        <p v-if="inspecting" class="text-sm text-muted" role="status">
+          {{ copy.pending }}
+        </p>
+      </template>
+    </div>
+
+    <ul v-if="rows.length" class="divide-y divide-default dark:divide-accented" aria-live="polite">
+      <li v-for="row in rows" :key="row._tag === 'Evidence' ? row.evidence.url : row.url" class="space-y-1 px-4 py-3">
+        <p class="font-mono text-sm text-default wrap-anywhere">
+          {{ row._tag === 'Evidence' ? row.evidence.url : row.url }}
+        </p>
+        <div v-if="row._tag === 'Evidence'" class="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <UiStatusBadge :status="verdictStatus(row.evidence.verdict)" readable>
+            <span class="whitespace-normal">{{ row.evidence.coverage ?? row.evidence.verdict ?? copy.notReported }}</span>
+          </UiStatusBadge>
+          <span class="text-sm text-muted">
+            {{ copy.captured }} <time :datetime="row.evidence.capturedAt">{{ formatReportDate(row.evidence.capturedAt) }}</time>
+          </span>
+        </div>
         <p v-else-if="row._tag === 'NoResult'" class="text-sm text-muted">
           {{ copy.noResult }}
         </p>
         <p v-else class="text-sm text-muted">
           {{ row._tag === 'Error' ? copy.error : copy.skipped }}: {{ row.reason }}
         </p>
-      </div>
-      <p class="text-sm text-muted">
-        {{ copy.limit }}
-      </p>
-    </div>
-    <p v-if="state._tag === 'Empty'" role="status">
-      {{ copy.empty }}
+      </li>
+    </ul>
+    <p v-if="rows.length" class="bg-muted/60 px-4 py-2.5 text-sm text-muted">
+      {{ copy.sampleLimit }}
     </p>
-    <p v-if="state._tag === 'Incomplete'" role="status">
-      {{ copy.incomplete }}
-    </p>
-    <p v-if="state._tag === 'Unavailable'" role="alert">
-      {{ copy.unavailable }}
-    </p>
-    <p v-if="state._tag === 'Changed'" role="alert">
-      {{ copy.changed }}
-    </p>
-    <p v-if="state._tag === 'DailyQuota'" role="alert">
-      {{ PAGE_SETUP_COPY.dailyQuota }}
-    </p>
-    <p v-if="state._tag === 'Refused'" role="alert">
-      {{ state.message }}
-    </p>
-    <p v-if="state._tag === 'Uncertain'" role="alert">
-      {{ copy.uncertain }}
-    </p>
-    <UButton v-if="state._tag === 'Uncertain'" :to="`/pro/dashboard/sites/${siteId}/indexing/urls`" color="primary" :label="copy.saved" class="min-h-11" />
-    <UButton v-if="!['Loading', 'Uncertain', 'DailyQuota', 'Refused'].includes(state._tag)" :label="state._tag === 'Idle' ? copy.preview : copy.refresh" :disabled="inspecting" color="neutral" variant="outline" class="min-h-11" @click="preview" />
-  </section>
+  </div>
 </template>

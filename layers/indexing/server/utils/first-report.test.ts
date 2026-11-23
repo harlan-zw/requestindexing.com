@@ -20,7 +20,7 @@ describe('first report boundary', () => {
   })
 
   it('rejects tampering and expired authorization without exposing the signing secret', async () => {
-    const plan = { userId: 1, teamId: 2, siteId: 'local', remoteSiteId: 'remote', property: 'https://example.com/', generationId: 'g1', urls: ['https://example.com/'], expiresAt: 2000 }
+    const plan = { _tag: 'Inspect' as const, userId: 1, teamId: 2, siteId: 'local', remoteSiteId: 'remote', property: 'https://example.com/', generationId: 'g1', urls: ['https://example.com/'], expiresAt: 2000 }
     const token = await signFirstReportPlan(plan, 'a'.repeat(40))
     expect(await verifyFirstReportPlan(token, 'a'.repeat(40), 1000)).toEqual(plan)
     expect(await verifyFirstReportPlan(`${token.slice(0, -4)}AAAA`, 'a'.repeat(40), 1000)).toBeNull()

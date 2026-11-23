@@ -1,31 +1,49 @@
 <script setup lang="ts">
+import type { SiteFleetRow } from '~~/layers/core/app/types'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
-import { FIRST_REPORT_COPY as copy } from '#layers/indexing/shared/first-report'
+import { FIRST_REPORT_COPY as copy, defaultReportSite } from '#layers/indexing/shared/first-report'
 import { SITE_SYNC_LABELS } from '#layers/pro-saas/shared/site-sync'
 import ProFirstSiteReport from './ProFirstSiteReport.vue'
 
 const { data } = await fetchSites()
 const sites = computed(() => data.value?.sites ?? [])
-const selectedSiteId = ref<string>()
-const selectedSite = computed(() => sites.value.length === 1
-  ? sites.value[0]
-  : sites.value.find(site => site.siteId === selectedSiteId.value))
-const selectedHost = computed(() => selectedSite.value?.domain || selectedSite.value?.property.replace(/^sc-domain:/, ''))
-const siteOptions = computed(() => sites.value.map(site => ({
-  value: site.siteId,
-  label: site.domain || site.property.replace(/^sc-domain:/, ''),
-})))
+// The reader's choice holds while that Site is listed. Otherwise the report
+// opens on the Site most likely to have saved verdicts.
+const chosenSiteId = ref<string>()
+const selectedSite = computed(() => sites.value.find(site => site.siteId === chosenSiteId.value) ?? defaultReportSite(sites.value))
+const selectedSiteId = computed({
+  get: () => selectedSite.value?.siteId,
+  set: (siteId) => {
+    chosenSiteId.value = siteId
+  },
+})
+const siteHost = (site: Pick<SiteFleetRow, 'domain' | 'property'>) => site.domain || site.property.replace(/^sc-domain:/, '')
+const siteOptions = computed(() => sites.value.map(site => ({ value: site.siteId, label: siteHost(site) })))
 </script>
 
 <template>
-  <div v-if="sites.length" class="space-y-4">
-    <UFormField v-if="sites.length > 1" :label="copy.site" :description="selectedSite ? undefined : copy.siteHelp">
-      <USelect v-model="selectedSiteId" :items="siteOptions" :placeholder="copy.chooseSite" class="min-h-11 w-full" />
-    </UFormField>
-    <div v-if="selectedSite" class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-      <span v-if="sites.length === 1" class="break-all font-medium text-highlighted">{{ selectedHost }}</span>
-      <span class="text-muted">{{ SITE_SYNC_LABELS[selectedSite.syncStatus] }}</span>
+  <!-- One panel, as nuxtseo.com shows its first Next Action and this app shows
+       Agent setup. The header names the Site, and holds the Site choice when
+       the Team has several. In dark mode the default border is the elevated
+       surface's colour, so the panel takes the accented border. -->
+  <div
+    v-if="selectedSite"
+    class="overflow-hidden rounded-(--ui-radius) border border-default bg-elevated shadow-(--elevation-raised) dark:border-accented"
+  >
+    <div class="flex min-h-12 items-center gap-2.5 border-b border-default px-4 py-1.5 dark:border-accented">
+      <UiFavicon :domain="siteHost(selectedSite)" :size="16" decorative class="shrink-0 rounded-sm" />
+      <div v-if="sites.length > 1" class="min-w-0 flex-1">
+        <USelect
+          v-model="selectedSiteId"
+          :items="siteOptions"
+          :aria-label="copy.site"
+          variant="ghost"
+          class="-ml-2.5 min-h-11 max-w-full font-medium text-highlighted"
+        />
+      </div>
+      <span v-else class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ siteHost(selectedSite) }}</span>
+      <span class="shrink-0 text-sm text-muted">{{ SITE_SYNC_LABELS[selectedSite.syncStatus] }}</span>
     </div>
-    <ProFirstSiteReport v-if="selectedSite" :key="selectedSite.siteId" :site-id="selectedSite.siteId" />
+    <ProFirstSiteReport :key="selectedSite.siteId" :site-id="selectedSite.siteId" />
   </div>
 </template>

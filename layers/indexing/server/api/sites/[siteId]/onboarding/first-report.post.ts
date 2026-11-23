@@ -18,7 +18,8 @@ export default defineProApiHandler(async (event) => {
   const body = await readValidatedBody(event, schema.parse)
   const plan = await verifyFirstReportPlan(body.token, firstReportSecret(event), Date.now())
   const changed = () => createError({ statusCode: 409, message: FIRST_REPORT_COPY.changed })
-  if (!plan || !firstReportPlanMatches(plan, { userId: access.caller.user.id, teamId: access.teamId, siteId: access.site.id, remoteSiteId: access.remoteSiteId, property: access.property }))
+  // A saved-verdict plan never starts a URL Inspection. Only an approved preview does.
+  if (plan?._tag !== 'Inspect' || !firstReportPlanMatches(plan, { userId: access.caller.user.id, teamId: access.teamId, siteId: access.site.id, remoteSiteId: access.remoteSiteId, property: access.property }))
     throw changed()
   const preview = await access.readCandidates(plan.generationId)
   if (preview._tag !== 'Ready' || JSON.stringify(preview.urls) !== JSON.stringify(plan.urls))

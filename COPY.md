@@ -672,20 +672,44 @@ They never describe the reader's Site. Feedback never blocks leaving setup.
 
 ## First Site report
 
-The preview reads known Sitemap URLs. It spends no URL Inspections.
-The explicit inspection uses at most ten matching URLs. This sample is not Site-wide coverage.
+The last setup step shows the selected Site's First Site report. Its heading is the step heading.
+`layers/indexing/shared/first-report.ts` holds these strings.
+
+The report reads saved Google verdicts first. That read spends no URL Inspection.
+gscdump inspects the sitemap URLs of a new Site by itself after its sitemaps sync, within the Free allowance.
+So a new Site often has no saved verdict yet. The report then shows the URL Inspection phase that the engine reports.
+It shows at most five saved verdicts, in the engine's order: not indexed first, then the newest capture.
+
+A fresh URL Inspection runs only when the reader approves it, and only when the engine is not inspecting the Site.
+The preview reads known Sitemap URLs and spends no URL Inspection. The approval uses at most ten matching URLs.
+The cost line sits beside the approve button. Neither list is Site-wide coverage.
+
+Dates render as a month, a day, and a year in UTC, such as Nov 24, 2026. Never show a raw ISO timestamp.
+
+With several Sites, the report opens on the first Site whose URL Inspection is ready.
+If no Site is ready, it opens on the first Site that gscdump is inspecting, then on the first Site in the list.
+The reader can choose another Site.
 
 | Asset | String |
 | --- | --- |
 | First report heading | Check which pages Google indexed |
 | First report Site selector | Site |
-| First report Site selector placeholder | Choose a Site |
-| First report Site selector help | Choose a Site to preview its Sitemap URLs. |
+| First report saved loading | Loading saved Google verdicts |
+| First report capture label | Captured, then the capture date |
+| First report sample limit | This sample covers only the URLs listed here. |
+| First report collecting | Google's verdicts appear here when the first URL Inspections finish. |
+| First report phase | the URL Inspection phase in Live work bar assets, verbatim |
+| First report daily limit | the Saved-page daily quota string, verbatim |
+| First report other limits | Monthly URL Inspection allowance reached · URL Inspection limit reached, from Live work bar assets |
+| First report no verdict | This Site has no saved Google verdicts yet. |
+| First report scope missing | the Connect scope missing string, verbatim |
+| First report permission | the Exit property recovery string, verbatim |
+| First report saved unavailable | Saved Google verdicts could not load. Select Check again to try again. |
+| First report check again | Check again |
 | First report help | Preview up to 10 URLs from your Sitemap. The preview uses no URL Inspections. |
 | First report preview | Preview URLs |
-| First report source | Sitemap URLs captured on |
+| First report Sitemap date | Sitemap URLs captured on, then the date |
 | First report cost | Each completed URL Inspection uses one from your Free allowance. These checks also use Google's daily quota. |
-| First report sample limit | This sample covers only the URLs listed here. |
 | First report inspect | Inspect these URLs |
 | First report refresh | Refresh preview |
 | First report empty | No matching Sitemap URLs yet. Refresh the preview later. |
@@ -694,14 +718,14 @@ The explicit inspection uses at most ten matching URLs. This sample is not Site-
 | First report changed | This Site or its Sitemap URLs changed. Select Refresh preview before inspecting. |
 | First report result | Google's evidence for these URLs |
 | First report no result | Google returned no inspection result for this URL. |
-| First report skipped | Inspection skipped |
-| First report error | Inspection failed |
-| First report loading | Loading Sitemap URLs |
+| First report skipped | URL Inspection skipped |
+| First report error | URL Inspection failed |
+| First report preview loading | Loading Sitemap URLs |
 | First report selected | {count} URL to inspect. · {count} URLs to inspect. |
 | First report pending | Leaving this page won't cancel inspections already sent. |
 | First report view changed | Refresh the preview before recording its evidence. |
 | First report uncertain | We could not confirm what happened. Check saved results before starting another inspection. |
-| First report saved action | Read saved results |
+| First report saved action | Read saved results. It reads the saved verdicts again, in place |
 | First report view only | Your Team role allows viewing only. |
 
 ## Connect a Site assets
@@ -954,18 +978,20 @@ The Markdown body is `buildIndexingPortfolioMarkdown` from `@gscdump/sdk/indexin
 
 ## Setup completion
 
-The final setup step confirms a connected Site. It does not read or start an engine sync.
+The final setup step shows the First Site report for a connected Site. It does not start an engine sync.
 Never show a spinner or claim that history is importing without a live engine lifecycle read.
+Never claim that setup is done before the report shows a result.
 The dashboard shows the current indexing evidence.
 
 While authoritative first collection runs with no inspected URLs, show the existing neutral waiting state.
 An empty discovery snapshot does not establish a missing sitemap.
 
+The About you card follows the step's buttons, so it never pushes the report or Go to dashboard down.
+
 | Asset | String |
 | --- | --- |
 | Final step label | Finish setup |
-| Connected heading | You're set up |
-| Connected detail | Open the dashboard to see what Google has reported about your Sites. |
+| Connected heading | the First report heading, verbatim, with no detail line |
 | Missing Site heading | Connect a Site to finish setup |
 | Missing Site detail | Go back to Connect Sites and choose a Search Console property. |
 

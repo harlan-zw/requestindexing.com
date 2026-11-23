@@ -3,8 +3,11 @@ import { createError } from 'h3'
 import { createGscdumpPublicV1Client } from '#layers/pro-gsc/server/utils/gscdump-origin'
 import { assertLocalRegisteredGscSiteScope } from '#layers/pro-gsc/server/utils/registered-site-scope'
 import { requireSiteAccess } from '#layers/pro-saas/server/utils/require-site-access'
+import { pagePropertyCoversUrl, savedPageMatchesHost } from '#layers/pro-saas/shared/page-task'
 import { connectedSiteDomain } from '#layers/pro-saas/shared/site-url'
+import { FIRST_REPORT_SAVED_LIMIT } from '../../shared/first-report'
 import { isNoSitemapGeneration, readFirstReportCandidates } from './first-report'
+import { readSavedFirstReport } from './page-evidence'
 
 export async function requireFirstReportSite(event: H3Event, write = false) {
   const access = await requireSiteAccess(event, write ? { ability: 'write-data' } : undefined)
@@ -33,6 +36,14 @@ export async function requireFirstReportSite(event: H3Event, write = false) {
     client,
     remoteSiteId,
     property,
+    // Read live with the property, never from the `sites` mirror.
+    indexing: remote.indexing,
+    // Saved verdicts only. `count: 0` skips gscdump's total; it still reports `hasMore`.
+    readSaved: () => readSavedFirstReport(
+      url => savedPageMatchesHost(url, host) && pagePropertyCoversUrl(url, property),
+      FIRST_REPORT_SAVED_LIMIT,
+      () => client.listSiteIndexingUrls({ params: { siteId: remoteSiteId }, query: { limit: 25, count: 0 } }).then(response => response.data),
+    ),
     // A new Site has no published Sitemap yet, so its preview is empty.
     readCandidates: (generationId?: string) => readFirstReportCandidates(host, property, query => client.listSitemapUrls({ params: { siteId: remoteSiteId }, query }).then(response => response.data), generationId)
       .catch((error: unknown) => {

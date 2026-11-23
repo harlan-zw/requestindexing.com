@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { inspectFirstReport, inspectSavedPage, readSavedPageEvidence } from './page-evidence'
+import { inspectFirstReport, inspectSavedPage, readSavedFirstReport, readSavedPageEvidence } from './page-evidence'
 
 const url = 'https://www.example.com/Case'
 const evidence = { url, coverageState: 'Discovered - currently not indexed', verdict: 'NEUTRAL', lastCheckedAt: '2026-11-07T00:00:00Z', lastCrawlTime: null }
@@ -50,5 +50,25 @@ describe('the original page evidence', () => {
     expect(await readSavedPageEvidence(url, read, report)).toEqual({ _tag: 'Unavailable', operation: 'read' })
     expect(read).toHaveBeenCalledTimes(10)
     expect(report).toHaveBeenCalledOnce()
+  })
+})
+
+describe('the saved First Site report', () => {
+  const covers = (page: string) => page.startsWith('https://example.com/docs/')
+  const row = (path: string, fields: Record<string, unknown> = {}) => ({ ...evidence, url: `https://example.com/docs/${path}`, ...fields })
+
+  it('keeps gscdump order and only in-scope rows with Google evidence, up to the limit', async () => {
+    const read = vi.fn(async () => ({
+      urls: [row('a'), row('b', { coverageState: null, verdict: null }), row('c', { url: 'https://example.com/other' }), row('d', { coverageState: 'Submitted and indexed', verdict: 'PASS' }), row('e'), row('f')],
+      pagination: { hasMore: true },
+    }))
+    const result = await readSavedFirstReport(covers, 3, read)
+    expect(result).toMatchObject({ _tag: 'Verdicts', rows: [{ url: 'https://example.com/docs/a', capturedAt: evidence.lastCheckedAt }, { url: 'https://example.com/docs/d', verdict: 'PASS' }, { url: 'https://example.com/docs/e' }] })
+    expect(read).toHaveBeenCalledOnce()
+  })
+
+  it('reports no saved verdict only when gscdump has no more rows', async () => {
+    expect(await readSavedFirstReport(covers, 5, async () => ({ urls: [], pagination: { hasMore: false } }))).toEqual({ _tag: 'None' })
+    expect(await readSavedFirstReport(covers, 5, async () => ({ urls: [row('a', { coverageState: null, verdict: null })], pagination: { hasMore: true } }))).toEqual({ _tag: 'Unknown' })
   })
 })
