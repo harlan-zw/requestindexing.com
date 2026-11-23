@@ -24,6 +24,7 @@ function mount() {
     props: ['label', 'disabled', 'loading'],
     setup: (props, { attrs }) => () => h('button', { ...attrs, disabled: props.disabled || props.loading }, props.label),
   }))
+  app.component('UiStatusBadge', defineComponent({ setup: (_, { slots }) => () => h('span', slots.default?.()) }))
   app.mount(host)
   mounted.push(app)
   return { app, host, click: (label: string) => [...host.querySelectorAll('button')].find(button => button.textContent === label)!.click() }
@@ -48,7 +49,7 @@ it('records evidence after it renders in the current mounted report', async () =
   const page = mount()
   page.click('Preview URLs')
   await flush()
-  page.click('Inspect selected URLs')
+  page.click('Inspect these URLs')
   await flush()
   expect(page.host.textContent).toContain('Crawled - currently not indexed')
   expect(views()).toHaveLength(1)
@@ -60,7 +61,7 @@ it('does not record evidence when its inspection finishes after unmount', async 
   page.click('Preview URLs')
   await flush()
   io.fetch.mockImplementationOnce(() => inspection.promise)
-  page.click('Inspect selected URLs')
+  page.click('Inspect these URLs')
   page.app.unmount()
   mounted.pop()
   inspection.resolve(result)
@@ -74,7 +75,7 @@ it.each(['unmount', 'Team'] as const)('rechecks ownership after rendering when %
   const page = mount()
   page.click('Preview URLs')
   await flush()
-  page.click('Inspect selected URLs')
+  page.click('Inspect these URLs')
   await flush()
   expect(page.host.textContent).toContain('Crawled - currently not indexed')
   if (change === 'unmount') {

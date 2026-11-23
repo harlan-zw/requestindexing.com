@@ -28,7 +28,7 @@ vi.mock('#components', () => {
 })
 
 vi.mock('~~/layers/core/app/composables/fetch', () => ({
-  fetchSites: async () => ({ data: ref({ sites: [{ siteId: 'ri_1' }] }) }),
+  fetchSites: async () => ({ data: ref({ sites: [{ siteId: 'ri_1', domain: 'example.com', property: 'sc-domain:example.com', syncStatus: 'synced' }] }) }),
 }))
 
 const session = ref({ hasSites: true, gscdumpConnected: true })
@@ -57,7 +57,7 @@ async function mount() {
       return () => h(Suspense, null, { default: () => h(Onboarding) })
     },
   })
-  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
+  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'UFormField', 'USelect', 'UiStatusBadge', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
     app.component(name, defineComponent({ render: () => null }))
   app.component('UiWizardProgress', defineComponent({ render: () => null }))
   // The Connect action is the step's only way forward, so the stub keeps its
@@ -105,7 +105,7 @@ it('resumes a connected account without claiming a new sync', async () => {
   session.value = { hasSites: true, gscdumpConnected: true }
   const host = await mount()
   await nextTick()
-  expect(host.textContent).toContain('indexing evidence for your connected Sites')
+  expect(host.textContent).toContain('Open the dashboard to see what Google has reported about your Sites.')
   expect(host.querySelector('[data-testid="first-site-report"]')).not.toBeNull()
   expect(host.textContent).not.toContain('First sync started')
   expect(host.textContent).not.toContain('pulling your Search Console history now')

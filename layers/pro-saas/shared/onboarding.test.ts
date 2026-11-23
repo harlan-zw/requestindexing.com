@@ -266,7 +266,7 @@ describe('resolveOnboardingCompletion', () => {
     expect(resolveOnboardingCompletion({ completedAt: null, hasSites: false, skipSites: true, googleGrant: 'Unknown', now })).toEqual({
       _tag: 'Blocked',
       reason: 'google_unverified',
-      message: 'Request Indexing could not check your Google connection. Try again in a moment.',
+      message: 'Request Indexing could not check your Google connection. Try finishing setup again in a moment.',
     })
   })
 

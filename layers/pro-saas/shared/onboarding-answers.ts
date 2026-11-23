@@ -76,11 +76,11 @@ export function parseStoredOnboardingAnswers(value: unknown): OnboardingAnswers 
 /** COPY.md: About you card. */
 export const ONBOARDING_ANSWERS_COPY = {
   heading: 'About you',
-  description: 'Optional. Your answers help us improve Request Indexing. Setup does not wait for them.',
+  description: 'Optional. Your answers help us improve Request Indexing.',
   otherLabel: 'Anything else? Optional',
   otherPlaceholder: 'Tell us what you want to get indexed',
   done: 'Save answers',
   skip: 'Skip',
-  saved: 'Thanks. Your answers are saved.',
-  failed: 'Your answer could not save. Setup continues without it.',
+  saved: 'Answers saved.',
+  failed: 'Your answer could not save. You can still finish setup.',
 } as const

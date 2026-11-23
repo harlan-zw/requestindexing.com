@@ -136,7 +136,7 @@ const failure = computed(() => {
   if (read.value._tag === 'Failed')
     return copy.inspectFailed
   if (read.value._tag === 'Unavailable')
-    return read.value.operation === 'inspect' ? copy.inspectUnavailable : copy.unavailable
+    return read.value.operation === 'inspect' ? copy.inspectUnavailable : copy.evidenceUnavailable
   return ''
 })
 </script>

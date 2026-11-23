@@ -499,25 +499,26 @@ Keep the exact URL and host through sign-in, consent, connection, and recovery.
 | Saved-page heading | Keep checking your page |
 | Saved-page introduction | Connect the Site that contains this page. Your selected URL stays with you through setup. |
 | Saved-page target | The page you checked |
-| Saved-page sign-in help | First, sign in. Then allow Search Console access to read Google's evidence for this page. |
+| Saved-page sign-in help | Sign in, then allow Search Console access to see what Google reports for this page. |
 | Saved-page expired | Your saved page has expired. Check the page again to continue. |
 | Saved-page missing | Check a page to start, or connect a Site from your dashboard. |
 | Saved-page invalid URL | Enter an http or https page URL without a username or password. |
 | Saved-page URL too long | Use a page URL with at most 1024 characters. |
-| Saved-page load failed | Your saved page could not load. Retry this read. |
-| Saved-page review | Review the property covering this host before you connect the Site. |
+| Saved-page load failed | Your saved page could not load. Select Retry to load it again. |
+| Saved-page evidence load failed | Your saved URL Inspection result could not load. Select Retry to try again. |
+| Saved-page review | Check that the Search Console property covers this page before you connect the Site. |
 | Saved-page host | Site host |
 | Saved-page property | Matching property |
 | Saved-page connect | Connect Site |
 | Saved-page resume | Resume this page |
 | Saved-page skip | Continue later |
 | Saved-page no evidence | This page has no saved URL Inspection result. |
-| Saved-page inspection heading | Check this URL with Google's record |
-| Saved-page inspection help | Inspect this URL now. Your full history can continue syncing. |
+| Saved-page inspection heading | Check Google's indexing status for this URL |
+| Saved-page inspection help | You can inspect this URL while your history syncs. |
 | Saved-page inspection cost | One accepted check uses one URL Inspection from your Free allowance and Google's daily quota. |
 | Saved-page inspection action | Inspect URL |
 | Saved-page inspection failed | Google returned no inspection result for this page. Retry the check later. |
-| Saved-page inspection unavailable | The inspection could not run. Your page stays selected. Retry the check later. |
+| Saved-page inspection unavailable | We could not confirm the inspection. Select Retry to check for a saved result. |
 | Saved-page daily quota | This Site has used its daily URL Inspection quota. Return when the quota resets. |
 | Saved-page result heading | Google's evidence for your page |
 | Saved-page result source | Google URL Inspection |
@@ -540,23 +541,26 @@ Keep the exact URL and host through sign-in, consent, connection, and recovery.
 ## Connect Google assets
 
 The Connect Google step, the signup page, and the return from Google's consent screen.
-Every reader sees these before they give Google access. Say what Google asks for, what
-Request Indexing can change, and how to take the access back. Strings live in
+Show the read scope before Google access. The access disclosure explains later changes
+and how to remove access. Strings live in
 `layers/pro-saas/shared/gsc-connect-copy.ts`.
 
 | Asset | String |
 | --- | --- |
-| Benefits | Read your queries, pages and coverage. · Keep your data past Google's 16-month window. |
-| Access heading | What Google asks for |
-| Search Console read access | Setup asks for read-only Search Console access. Extra permissions appear with the actions that need them. |
+| Signup description | See which pages Google indexed and why others are missing. Free during beta. |
+| Access heading | What Request Indexing can access |
+| Search Console read access | Setup asks for read-only Search Console access. If an action needs more access, we ask then. |
 | Access changes | the Search Console access sentence in Truth rules, verbatim |
 | Access removal | You can remove this access at any time in your Google Account. |
 | Access removal action | Open Google Account connections, a link to `https://myaccount.google.com/connections` |
-| Signup access note | the Search Console read access string, then the Search Console access sentence in Truth rules, both verbatim. On `/pro/onboarding` below the provider buttons |
+| Signup access note | the Search Console read access string, verbatim. On `/pro/onboarding` below the provider buttons |
+| Signup scope missing | Sign in again and tick the Search Console box on Google's screen so we can check your pages. |
+| Connect scope missing | Connect again and tick the Search Console box on Google's screen so we can check your pages. |
+| GitHub sign-in note | Connect a Google account to read Search Console. You can still sign in with GitHub. |
 | Cancelled, title | Search Console is not connected |
-| Cancelled, detail | Google returned without Search Console access, so Request Indexing cannot read your data yet. Connect again when you are ready. |
+| Cancelled, detail | Google did not grant access. Connect again so Request Indexing can check your pages. |
 | Failed, title | The Google connection did not finish |
-| Failed, detail | Google returned an error, so Request Indexing cannot read your Search Console data yet. Connect again. |
+| Failed, detail | Google returned an error. Connect again so Request Indexing can check your pages. |
 
 **Never list the Indexing API as a Connect Google benefit.** Connect Google does not grant it.
 Submit to Google asks for its own grant on the Account page.
@@ -570,7 +574,7 @@ account.
 | Asset | String |
 | --- | --- |
 | Finish refused, Google required | Connect Google Search Console before you finish setup. |
-| Finish refused, Google unverified | Request Indexing could not check your Google connection. Try again in a moment. |
+| Finish refused, Google unverified | Request Indexing could not check your Google connection. Try finishing setup again in a moment. |
 
 ## Setup examples and optional feedback
 
@@ -579,20 +583,19 @@ They never describe the reader's Site. Feedback never blocks leaving setup.
 
 | Asset | String |
 | --- | --- |
-| Example heading | See an example before you connect |
+| Example heading | See an example URL Inspection |
 | Example label | Example from nuxtseo.com |
-| Example help | This public example shows a saved Google URL Inspection result. Your Site needs its own check. |
 | Example source link | View the public example |
-| Exit question | What would help you continue? Optional |
-| Exit permission | Understand Google access |
+| Exit question | Need help with setup? |
+| Exit permission | See what Google shares |
 | Exit property | Find my Search Console property |
-| Exit value | See what I get |
+| Exit value | See an example result |
 | Exit time | Come back later |
 | Exit permission recovery | URL Inspection reads Search Console data. It does not submit a page to Google. |
 | Exit property recovery | Use the Google account that owns a verified Search Console property for this Site. |
 | Exit time recovery | Your saved page stays available for seven days. Resume it from your dashboard. |
 | Exit generic time recovery | Return to setup from your dashboard when you are ready. |
-| Exit recorded | Thanks. You can continue setup or leave when you are ready. |
+| Exit recorded | Feedback saved. |
 | Exit record failed | Your answer could not save. You can still continue later. |
 | Exit property action | Open Search Console |
 
@@ -603,27 +606,30 @@ The explicit inspection uses at most ten matching URLs. This sample is not Site-
 
 | Asset | String |
 | --- | --- |
-| First report heading | Check your first Sitemap URLs |
-| First report help | Preview up to 10 known Sitemap URLs. Then choose whether to inspect them with Google. |
+| First report heading | Check which pages Google indexed |
+| First report Site selector | Site |
+| First report Site selector placeholder | Choose a Site |
+| First report Site selector help | Choose a Site to preview its Sitemap URLs. |
+| First report help | Preview up to 10 URLs from your Sitemap. The preview uses no URL Inspections. |
 | First report preview | Preview URLs |
-| First report source | Source: saved Sitemap membership |
-| First report cost | Each accepted URL uses one URL Inspection from your Free allowance and Google's daily quota. |
-| First report sample limit | These selected URLs do not measure indexing across your whole Site. |
-| First report inspect | Inspect selected URLs |
+| First report source | Sitemap URLs captured on |
+| First report cost | Each completed URL Inspection uses one from your Free allowance. These checks also use Google's daily quota. |
+| First report sample limit | This sample covers only the URLs listed here. |
+| First report inspect | Inspect these URLs |
 | First report refresh | Refresh preview |
-| First report empty | No matching Sitemap URLs are available yet. Your history can keep syncing. |
-| First report incomplete | Matching URLs could not be found in this preview. Review your Sitemaps or refresh later. |
-| First report unavailable | The preview could not load. Refresh it before you inspect URLs. |
-| First report changed | This Site or its Sitemap URLs changed. Refresh the preview before you inspect URLs. |
-| First report result | Google's evidence for selected URLs |
+| First report empty | No matching Sitemap URLs yet. Refresh the preview later. |
+| First report incomplete | We found no matching URLs in the part we checked. Check your Sitemaps or refresh the preview later. |
+| First report unavailable | The preview could not load. Select Refresh preview to try again. |
+| First report changed | This Site or its Sitemap URLs changed. Select Refresh preview before inspecting. |
+| First report result | Google's evidence for these URLs |
 | First report no result | Google returned no inspection result for this URL. |
 | First report skipped | Inspection skipped |
 | First report error | Inspection failed |
 | First report loading | Loading Sitemap URLs |
-| First report selected | {count} URLs selected. |
-| First report pending | Leaving this page does not cancel an inspection already sent. |
+| First report selected | {count} URL to inspect. · {count} URLs to inspect. |
+| First report pending | Leaving this page won't cancel inspections already sent. |
 | First report view changed | Refresh the preview before recording its evidence. |
-| First report uncertain | The request outcome is unknown. Read saved results before you choose another inspection. |
+| First report uncertain | We could not confirm what happened. Check saved results before starting another inspection. |
 | First report saved action | Read saved results |
 | First report view only | Your Team role allows viewing only. |
 
@@ -645,16 +651,16 @@ These surfaces show the no-property state, each with the same title and the same
 
 | Asset | String |
 | --- | --- |
-| Step and page description | Choose a property from your Search Console. Request Indexing reads each Site from its property. |
+| Step and page description | Choose the Search Console property for the Site you want to connect. |
 | List heading | Your Search Console properties |
 | Refresh action | Refresh list |
-| No Google connection | Request Indexing lists your Search Console properties here after you connect Google. |
+| No Google connection | Connect Google to see your Search Console properties. |
 | No property, title | {email} has no Search Console property |
 | No property, detail | Add and verify your site here, or add it in Search Console and refresh this list. If a different Google account owns the property, connect that account. |
 | No property, detail outside the list | Add and verify your site here or in Search Console. If a different Google account owns the property, connect that account. |
 | No property, actions | Add and verify a property · Open Search Console · Connect another Google account · How to verify a site |
 | Every property connected | Every property in this Google account is already connected. Add and verify another site here, or add it in Search Console and refresh this list. |
-| Unverified property | Not verified for this Google account. Select Verify, or verify it in Search Console and refresh this list. |
+| Unverified property | Unverified for this Google account. Select Verify here, or verify it in Search Console and refresh the list. |
 | Unverified property, action | Verify |
 | Address field help | For a subdomain of one of your properties, type its address. |
 | Refused, not connected | Connect Google Search Console before you connect a Site. Request Indexing reads each Site from its Search Console property. |
@@ -727,7 +733,7 @@ The goals question and its options are Request Indexing's own, in `layers/pro-sa
 | Asset | String |
 | --- | --- |
 | Card heading | About you |
-| Card detail | Optional. Your answers help us improve Request Indexing. Setup does not wait for them. |
+| Card detail | Optional. Your answers help us improve Request Indexing. |
 | Role question | What best describes you? |
 | Role options | Solo developer, Agency or freelancer, In-house team, Building an SEO tool, Something else |
 | Site count question | How many websites do you look after? |
@@ -740,8 +746,8 @@ The goals question and its options are Request Indexing's own, in `layers/pro-sa
 | Free text placeholder | Tell us what you want to get indexed |
 | Save action | Save answers |
 | Skip action | Skip |
-| Saved | Thanks. Your answers are saved. |
-| Save failed | Your answer could not save. Setup continues without it. |
+| Saved | Answers saved. |
+| Save failed | Your answer could not save. You can still finish setup. |
 | Admin heading | Onboarding Answers |
 | Admin explanation | Self-reported answers from the optional About you card. Unanswered questions are not counted. |
 | Admin free text | Anything else |
@@ -798,8 +804,8 @@ Onboarding Step words, under `proShell.copy.onboarding.steps`:
 
 | Step | Rail label | Heading | Description | Action |
 | --- | --- | --- | --- | --- |
-| `connect` | Connect Google | Connect Google Search Console | Request Indexing reads your Search Console data to find pages Google has missed, and the reason Google gives for each. | Continue (shell default) |
-| `sites` | Connect Sites | Connect your Sites | Choose a property from your Search Console. Request Indexing reads each Site from its property. | Continue (shell default) |
+| `connect` | Connect Google | Connect Google Search Console | See which pages Google indexed and the reasons it gives for pages it left out. | Continue (shell default) |
+| `sites` | Connect Sites | Connect your Sites | Choose the Search Console property for the Site you want to connect. | Continue (shell default) |
 | `sync` | Finish setup | Setup completion assets | Setup completion assets | Go to dashboard |
 | `connect-site` (dashboard card) | | Connect your first Site | Connect a Site to see which of its pages Google has indexed, and why the rest are not. | Connect a Site |
 | `connect-search-console` (dashboard card) | | Connect Google Search Console | Indexing status and coverage for your Sites come from Search Console. We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify. | The Connect Search Console button |
@@ -887,7 +893,7 @@ An empty discovery snapshot does not establish a missing sitemap.
 | --- | --- |
 | Final step label | Finish setup |
 | Connected heading | You're set up |
-| Connected detail | Open the dashboard to see the indexing evidence for your connected Sites. |
+| Connected detail | Open the dashboard to see what Google has reported about your Sites. |
 | Missing Site heading | Connect a Site to finish setup |
 | Missing Site detail | Go back to Connect Sites and choose a Search Console property. |
 

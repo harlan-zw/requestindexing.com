@@ -85,7 +85,7 @@ async function mount() {
   host = document.createElement('div')
   document.body.appendChild(host)
   app = createApp(defineComponent({ setup: () => () => h(Suspense, null, { default: () => h(Page) }) }))
-  for (const name of ['ProSetupExample', 'ProSetupExitFeedback'])
+  for (const name of ['ProSetupExample', 'ProSetupExitFeedback', 'UiStatusBadge'])
     app.component(name, defineComponent({ render: () => null }))
   app.component('ProGscConnectReturnAlert', defineComponent({
     props: ['result'],
@@ -147,7 +147,7 @@ it('does not infer a missing verdict from an unavailable stored read', async () 
   await mount()
   expect(button('Inspect URL')).toBeUndefined()
   expect(checks()).toEqual([])
-  expect(host.textContent).toContain('Your saved page could not load')
+  expect(host.textContent).toContain('Your saved URL Inspection result could not load')
 })
 
 it('lets a viewer read their saved page without offering an inspection', async () => {

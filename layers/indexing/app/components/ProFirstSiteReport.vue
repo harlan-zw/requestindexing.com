@@ -61,13 +61,15 @@ watch([() => siteId, () => session.value?.team?.teamId], () => {
     <h2 id="first-report-heading" class="text-lg font-semibold text-highlighted">
       {{ state._tag === 'Results' ? copy.result : copy.heading }}
     </h2>
-    <p>{{ copy.help }}</p>
+    <p v-if="state._tag === 'Idle'">
+      {{ copy.help }}
+    </p>
     <p v-if="state._tag === 'Loading'" role="status">
       {{ copy.loading }}
     </p>
     <template v-if="ready">
       <p class="text-sm text-muted">
-        {{ copy.source }} · <time :datetime="ready.observedAt">{{ ready.observedAt }}</time>
+        {{ copy.source }} <time :datetime="ready.observedAt">{{ ready.observedAt }}</time>
       </p>
       <ol class="list-decimal space-y-2 pl-5 text-sm">
         <li v-for="url in ready.urls" :key="url" class="break-all font-mono">
@@ -94,7 +96,9 @@ watch([() => siteId, () => session.value?.team?.teamId], () => {
           {{ row._tag === 'Evidence' ? row.evidence.url : row.url }}
         </p>
         <template v-if="row._tag === 'Evidence'">
-          <p>{{ row.evidence.coverage ?? row.evidence.verdict ?? PAGE_SETUP_COPY.notReported }}</p>
+          <UiStatusBadge :status="row.evidence.verdict === 'PASS' ? 'success' : row.evidence.verdict === 'FAIL' ? 'warning' : 'neutral'" readable>
+            <span class="whitespace-normal">{{ row.evidence.coverage ?? row.evidence.verdict ?? PAGE_SETUP_COPY.notReported }}</span>
+          </UiStatusBadge>
           <p class="text-sm text-muted">
             {{ PAGE_SETUP_COPY.source }} · {{ PAGE_SETUP_COPY.captured }} <time :datetime="row.evidence.capturedAt">{{ row.evidence.capturedAt }}</time>
           </p>
