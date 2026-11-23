@@ -14,6 +14,7 @@ import { ProError } from '../../shared/errors'
 import { getCaller, requireCaller } from './get-caller'
 import { requireCurrentTeam } from './require-current-team'
 import { requireSiteAccess } from './require-site-access'
+import { markCapturedBySentry } from './sentry-captured'
 
 declare module 'h3' {
   interface H3EventContext {
@@ -78,29 +79,6 @@ function isH3StyleError(error: unknown): error is H3StyleError {
 
 function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? value as Record<string, unknown> : {}
-}
-
-// Returns the cause for the thrown unhandled 500, marked the way Sentry marks
-// captured exceptions (non-enumerable `__sentry_captured__`, read with `in` by
-// @sentry/nuxt captureErrorHook.js). The `handler.unhandled_error` sink has
-// already reported the failure to Sentry, so the Nitro `error` hook must skip
-// its own auto-capture of the thrown 500. The hook only inspects an object
-// cause, so primitive throws are wrapped in an `Error` before marking.
-function markCapturedBySentry(error: unknown): unknown {
-  const cause = typeof error === 'object' && error !== null ? error : new Error(String(error))
-  try {
-    Object.defineProperty(cause, '__sentry_captured__', {
-      value: true,
-      enumerable: false,
-      configurable: true,
-      writable: true,
-    })
-  }
-  catch {
-    // Genuinely ignorable: a frozen/sealed cause cannot carry the mark, so
-    // the hook adds a second capture instead of losing the 500 entirely.
-  }
-  return cause
 }
 
 // Options-bag form of defineProApiHandler. Absorbs the per-route prelude

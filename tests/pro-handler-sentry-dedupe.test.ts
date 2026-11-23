@@ -1,6 +1,8 @@
 import type { H3Event } from 'h3'
 import { createError, defineEventHandler, H3Error } from 'h3'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { useGscdumpClient } from '../layers/pro-gsc/server/utils/gscdump-client'
+import { assertRegisteredGscSiteScope } from '../layers/pro-gsc/server/utils/registered-site-scope'
 import { defineProApiHandler } from '../layers/pro-saas/server/utils/handler'
 
 vi.mock('../layers/pro-saas/server/utils/get-caller', () => ({
@@ -110,5 +112,47 @@ describe('unhandled 500 Sentry dedupe', () => {
     // message seam; the nitro hook adds no second capture.
     const sinkReports = captureException.mock.calls.length + captureMessage.mock.calls.length
     expect(sinkReports).toBe(1)
+  })
+})
+
+// gscdump answers its registered-host read with this while a new Team catalog
+// waits for its first read cutover (gscdump.com registered-host.get.ts).
+function catalogPending(): Response {
+  return Response.json({
+    error: {
+      code: 'service_unavailable',
+      message: 'Registered host identity is unavailable.',
+      requestId: 'req_catalog_pending',
+      retryable: true,
+      details: { reason: 'catalog-pending', retryAfterSeconds: 120 },
+    },
+  }, { status: 503 })
+}
+
+describe('registered host identity Sentry dedupe', () => {
+  it('reports a refused identity read once, with the engine reason', async () => {
+    captureException.mockClear()
+    scopeSpies.setContext.mockClear()
+    nitroErrorHookCapture.mockClear()
+    vi.stubGlobal('useRuntimeConfig', () => ({ gscdump: { apiKey: 'gsd_test', apiUrl: 'https://gscdump.test/api' } }))
+    vi.stubGlobal('fetch', async () => catalogPending())
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const linkedSites = [{ localSiteId: 'local', domain: 'example.com', property: 'sc-domain:example.com', principalIds: ['u_owner'], upstreamTeamId: null }]
+    const gscdump = useGscdumpClient({ attempts: 1 })
+
+    const thrown = await assertRegisteredGscSiteScope('s_engine', linkedSites, id => gscdump.getRegisteredHostIdentity(id)).catch((e: unknown) => e)
+
+    expect(thrown).toMatchObject({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable' })
+    await sentryCaptureErrorHook(thrown)
+    expect(nitroErrorHookCapture).not.toHaveBeenCalled()
+    expect(captureException).toHaveBeenCalledTimes(1)
+    expect(scopeSpies.setContext).toHaveBeenCalledWith('ctx', {
+      gscdumpSiteId: 's_engine',
+      status: 503,
+      code: 'service_unavailable',
+      reason: 'catalog-pending',
+      retryable: true,
+      requestId: 'req_catalog_pending',
+    })
   })
 })

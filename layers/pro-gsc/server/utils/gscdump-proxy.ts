@@ -2,13 +2,15 @@
 //
 // Integration metadata reads one valid preference and caches it for 60 seconds.
 // Optional reads share an 800 ms budget. A failure never becomes a cached opt-in.
-// A read over budget is a log line, not a Sentry report: the fallback is safe
-// and the next read asks again. Other failures still report.
+// A read over budget, or a read for an account gscdump is still provisioning,
+// is a log line, not a Sentry report: the fallback is safe and the next read
+// asks again. Other failures still report.
 
 import type { GscdumpUserSettings } from '@gscdump/contracts'
 import type { PartnerFetch } from '@gscdump/sdk/partner'
 import type { H3Event } from 'h3'
 import { createPartnerClient } from '@gscdump/sdk/partner'
+import { toPartnerError } from '@gscdump/sdk/partner-errors'
 import { createError } from 'h3'
 import { logWarn } from '~~/shared/logging'
 import { logger } from '~~/shared/server/logger'
@@ -21,7 +23,7 @@ const cacheKey = (userId: number): string => `gsc:settings:${userId}`
 type ParsedSettings = { _tag: 'Parsed', settings: GscdumpUserSettings } | { _tag: 'Invalid', cause: unknown }
 type SettingsRead
   = | { _tag: 'Available', settings: GscdumpUserSettings, source: 'cache' | 'upstream' }
-    | { _tag: 'Unavailable', cause: unknown, reason: 'timeout' | 'read' | 'malformed' }
+    | { _tag: 'Unavailable', cause: unknown, reason: 'timeout' | 'provisioning' | 'read' | 'malformed' }
 
 function parseSettings(value: unknown): ParsedSettings {
   if (typeof value === 'object' && value !== null && 'browserAnalyzerEnabled' in value && typeof value.browserAnalyzerEnabled === 'boolean')
@@ -91,12 +93,14 @@ export async function loadGscdumpSettings(
     }, SETTINGS_READ_TIMEOUT_MS)
   })
   const read = readSettings(event, userId, apiKey, kv, controller.signal)
-    .catch((cause): SettingsRead => ({ _tag: 'Unavailable', cause, reason: 'read' }))
+    .catch((cause): SettingsRead => ({ _tag: 'Unavailable', cause, reason: toPartnerError(cause).kind === 'provisioning' ? 'provisioning' : 'read' }))
   const result = await Promise.race([read, deadline]).finally(() => clearTimeout(timer))
 
   if (result._tag === 'Unavailable') {
     if (result.reason === 'timeout')
       logger.warn(`[gscdump settings] read exceeded ${SETTINGS_READ_TIMEOUT_MS} ms; browser analyzer falls back to off`, { userId })
+    else if (result.reason === 'provisioning')
+      logger.warn('[gscdump settings] account still provisioning; browser analyzer falls back to off', { userId })
     else
       logWarn('gscdump.proxy.failed', result.cause, { stage: 'settings.get', reason: result.reason, userId })
     return { browserAnalyzerEnabled: false }
