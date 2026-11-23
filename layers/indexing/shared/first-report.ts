@@ -77,6 +77,8 @@ export type FirstReportSaved
     | { _tag: 'Unknown' }
 
 export type FirstReportWithoutVerdicts = Exclude<FirstReportSaved, { _tag: 'Verdicts' | 'Unknown' }>
+/** An engine state that rules out a fresh URL Inspection: collecting, limited, or blocked. */
+export type FirstReportHold = Exclude<FirstReportWithoutVerdicts, { _tag: 'NoVerdicts' }>
 
 /** What an empty saved read means, from the engine's live URL Inspection status. */
 export function firstReportWithoutVerdicts(indexing: { status: IndexingStatus, reason: string | null }): FirstReportWithoutVerdicts {
@@ -97,6 +99,16 @@ export function firstReportWithoutVerdicts(indexing: { status: IndexingStatus, r
     case 'failed':
       return { _tag: 'NoVerdicts' }
   }
+}
+
+/**
+ * The live engine state that holds a fresh URL Inspection, or null when the
+ * reader may preview and approve one. The preview and the approval both ask
+ * again, because gscdump can start inspecting after the report loads.
+ */
+export function firstReportHold(indexing: { status: IndexingStatus, reason: string | null }): FirstReportHold | null {
+  const state = firstReportWithoutVerdicts(indexing)
+  return state._tag === 'NoVerdicts' ? null : state
 }
 
 /** Indexed is the outcome the reader wants, so it is the only success. Every other verdict is a page Google did not index. */
@@ -128,9 +140,11 @@ export function defaultReportSite<TSite extends { processing?: { indexing: Index
 export type FirstReportPreview
   = | { _tag: 'Ready', urls: string[], token: string, observedAt: string, canInspect: boolean }
     | { _tag: 'Empty' | 'Incomplete' }
+    | FirstReportHold
 
 export type FirstReportResult
   = | { _tag: 'Results', rows: ({ _tag: 'Evidence', evidence: PageEvidence } | { _tag: 'NoResult', url: string } | { _tag: 'Error' | 'Skipped', url: string, reason: string })[] }
+    | FirstReportHold
     | { _tag: 'DailyQuota' }
     | { _tag: 'Refused', message: string }
     | { _tag: 'Uncertain' }

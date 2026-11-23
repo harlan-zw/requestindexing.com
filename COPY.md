@@ -690,6 +690,7 @@ So a new Site often has no saved verdict yet. The report then shows the URL Insp
 It shows at most five saved verdicts, in the engine's order: not indexed first, then the newest capture.
 
 A fresh URL Inspection runs only when the reader approves it, and only when the engine is not inspecting the Site.
+The preview and the approval each read the engine status again. If gscdump started inspecting or reached a limit, the report shows that state instead.
 The preview reads known Sitemap URLs and spends no URL Inspection. The approval uses at most ten matching URLs.
 The cost line sits beside the approve button. Neither list is Site-wide coverage.
 

@@ -139,3 +139,14 @@ it('rechecks ownership after rendering when the Team changes before the view is 
   expect(savedReads()).toHaveLength(2)
   expect(page.host.textContent).toContain('Finding URLs to inspect')
 })
+
+it('shows the engine phase when gscdump starts inspecting before the approval', async () => {
+  io.saved.mockResolvedValueOnce({ _tag: 'NoVerdicts' })
+  const page = await mount()
+  await page.click('Preview URLs')
+  io.fetch.mockImplementationOnce(async () => ({ _tag: 'Collecting', phase: 'checking' }))
+  await page.click('Inspect these URLs')
+  expect(page.host.textContent).toContain('Inspecting URLs')
+  expect(page.buttons()).toEqual(['Check again'])
+  expect(views()).toEqual([])
+})

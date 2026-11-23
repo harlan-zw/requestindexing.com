@@ -1,12 +1,17 @@
 import { setHeader } from 'h3'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 import { can } from '#layers/pro-saas/shared/policies/team-policy'
+import { firstReportHold } from '../../../../../shared/first-report'
 import { signFirstReportPlan } from '../../../../utils/first-report'
 import { firstReportSecret, requireFirstReportSite } from '../../../../utils/first-report-site'
 
 export default defineProApiHandler(async (event) => {
   setHeader(event, 'Cache-Control', 'private, no-store')
   const access = await requireFirstReportSite(event)
+  // gscdump may have started inspecting since the saved read. Then it signs no plan.
+  const hold = firstReportHold(access.indexing)
+  if (hold)
+    return hold
   const preview = await access.readCandidates()
   if (preview._tag !== 'Ready')
     return preview

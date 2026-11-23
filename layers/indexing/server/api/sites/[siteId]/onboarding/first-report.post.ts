@@ -4,7 +4,7 @@ import { logger } from '~~/shared/server/logger'
 import { assertGscdumpBrowserUnsafeMethodOrigin } from '#layers/pro-gsc/server/utils/gscdump-browser-origin'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
 import { emitFirstProEvent } from '#layers/pro-saas/server/utils/pro-events'
-import { FIRST_REPORT_COPY } from '../../../../../shared/first-report'
+import { FIRST_REPORT_COPY, firstReportHold } from '../../../../../shared/first-report'
 import { firstReportPlanMatches, verifyFirstReportPlan } from '../../../../utils/first-report'
 import { firstReportSecret, requireFirstReportSite } from '../../../../utils/first-report-site'
 import { inspectFirstReport } from '../../../../utils/page-evidence'
@@ -21,6 +21,10 @@ export default defineProApiHandler(async (event) => {
   // A saved-verdict plan never starts a URL Inspection. Only an approved preview does.
   if (plan?._tag !== 'Inspect' || !firstReportPlanMatches(plan, { userId: access.caller.user.id, teamId: access.teamId, siteId: access.site.id, remoteSiteId: access.remoteSiteId, property: access.property }))
     throw changed()
+  // An approved plan still waits while gscdump inspects the Site, so the two never spend the allowance together.
+  const hold = firstReportHold(access.indexing)
+  if (hold)
+    return hold
   const preview = await access.readCandidates(plan.generationId)
   if (preview._tag !== 'Ready' || JSON.stringify(preview.urls) !== JSON.stringify(plan.urls))
     throw changed()

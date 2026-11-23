@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FirstReportPreview, FirstReportResult, FirstReportSaved } from '#layers/indexing/shared/first-report'
+import type { FirstReportHold, FirstReportPreview, FirstReportResult, FirstReportSaved } from '#layers/indexing/shared/first-report'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { FIRST_REPORT_COPY as copy, formatReportDate, verdictStatus } from '#layers/indexing/shared/first-report'
 
@@ -11,7 +11,7 @@ import { FIRST_REPORT_COPY as copy, formatReportDate, verdictStatus } from '#lay
 const { siteId } = defineProps<{ siteId: string }>()
 const { session } = useUserSession()
 type Saved = { _tag: 'Loading' | 'Unavailable' } | FirstReportSaved
-type Fresh = { _tag: 'Idle' | 'Loading' | 'Unavailable' | 'Changed' } | FirstReportPreview | FirstReportResult
+type Fresh = { _tag: 'Idle' | 'Loading' | 'Unavailable' | 'Changed' } | Exclude<FirstReportPreview | FirstReportResult, FirstReportHold>
 type Row = Extract<FirstReportResult, { _tag: 'Results' }>['rows'][number]
 const saved = ref<Saved>({ _tag: 'Loading' })
 const fresh = ref<Fresh>({ _tag: 'Idle' })
@@ -58,13 +58,29 @@ async function readSaved() {
     await recordView(result.token, current)
 }
 
+// gscdump can start inspecting, or reach a limit, after the report loads.
+// The server then refuses the preview or the approval with that state, and
+// the report shows it in place of the fresh URL Inspection flow.
+function isHold(result: { _tag: string }): result is FirstReportHold {
+  return result._tag === 'Collecting' || result._tag === 'Limited' || result._tag === 'Blocked'
+}
+
+function settle(result: Fresh | FirstReportHold) {
+  if (isHold(result)) {
+    saved.value = result
+    fresh.value = { _tag: 'Idle' }
+    return
+  }
+  fresh.value = result
+}
+
 async function preview() {
   const current = claim()
   fresh.value = { _tag: 'Loading' }
   const result = await getAppFetch()<FirstReportPreview>(`/api/sites/${siteId}/onboarding/first-report`, { retry: 0 })
     .catch(() => ({ _tag: 'Unavailable' as const }))
   if (current())
-    fresh.value = result
+    settle(result)
 }
 
 async function inspect() {
@@ -76,7 +92,7 @@ async function inspect() {
   const result = await getAppFetch()<FirstReportResult>(`/api/sites/${siteId}/onboarding/first-report`, { method: 'POST', body: { token }, retry: 0 })
     .catch((error: { statusCode?: number }) => ({ _tag: error.statusCode === 409 ? 'Changed' as const : 'Uncertain' as const }))
   if (current()) {
-    fresh.value = result
+    settle(result)
     if (result._tag === 'Results' && result.rows.some(row => row._tag === 'Evidence'))
       await recordView(token, current)
   }

@@ -52,7 +52,7 @@ beforeEach(() => {
     await readIdentity(engineId)
   })
   h.client.getRegisteredHostIdentity.mockResolvedValue({ data: { identity: { siteId: 'engine-a', requestedUrl: 'example.com', userId: 'principal-a', teamId: 'team-a' } } })
-  h.client.getUserLifecycle.mockResolvedValue({ data: { sites: [{ siteId: 'engine-a', gscPropertyUrl: 'https://example.com/docs/' }] } })
+  h.client.getUserLifecycle.mockResolvedValue({ data: { sites: [{ siteId: 'engine-a', gscPropertyUrl: 'https://example.com/docs/', indexing: { status: 'ready', reason: null } }] } })
   h.client.listSitemapUrls.mockResolvedValue({ data: { generation: { id: 'g1', observedAt: Date.now() }, items: [{ url: 'https://example.com/docs/a' }, { url: 'https://www.example.com/docs/b' }, { url: 'https://example.com/other' }], page: { nextCursor: null } } })
   h.client.inspectSiteUrls.mockResolvedValue({ data: { results: [{ url: 'https://example.com/docs/a', coverageState: 'Discovered - currently not indexed', verdict: 'NEUTRAL' }], errors: [], skipped: [] } })
   h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: [{ url: 'https://example.com/docs/a', coverageState: null, verdict: null, lastCheckedAt: new Date().toISOString() }], pagination: { hasMore: false } } })
@@ -187,4 +187,20 @@ it('keeps the www pages of a domain property in the saved report', async () => {
   h.client.getUserLifecycle.mockResolvedValue({ data: { sites: [{ siteId: 'engine-a', gscPropertyUrl: 'sc-domain:example.com' }] } })
   h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: [{ url: 'https://www.example.com/docs/a', coverageState: 'Submitted and indexed', verdict: 'PASS', lastCheckedAt: '2026-11-24T06:12:00Z' }], pagination: { hasMore: false } } })
   expect(await savedRoute(event('GET'))).toMatchObject({ _tag: 'Verdicts', rows: [{ url: 'https://www.example.com/docs/a' }] })
+})
+
+const inspecting = { data: { sites: [{ siteId: 'engine-a', gscPropertyUrl: 'https://example.com/docs/', indexing: { status: 'checking', reason: null } }] } }
+
+it('signs no preview plan while gscdump inspects the Site', async () => {
+  h.client.getUserLifecycle.mockResolvedValue(inspecting)
+  expect(await previewRoute(event('GET'))).toEqual({ _tag: 'Collecting', phase: 'checking' })
+  expect(h.client.listSitemapUrls).not.toHaveBeenCalled()
+})
+
+it('holds an approved plan once gscdump starts inspecting, before spending quota', async () => {
+  const plan = await preview()
+  h.client.getUserLifecycle.mockResolvedValue(inspecting)
+  expect(await inspectRoute(event('POST', { token: plan.token }))).toEqual({ _tag: 'Collecting', phase: 'checking' })
+  expect(h.client.inspectSiteUrls).not.toHaveBeenCalled()
+  expect(h.event).not.toHaveBeenCalled()
 })
