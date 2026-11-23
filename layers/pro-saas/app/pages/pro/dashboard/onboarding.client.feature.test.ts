@@ -167,6 +167,7 @@ it.each([
   ['coding-agent', 'Copy setup prompt'],
   ['claude', 'Add to Claude'],
   ['chatgpt', 'Open setup steps'],
+  ['gemini', 'Open Gemini'],
 ])('shows one solid action on the %s route, with Continue secondary', async (agent, action) => {
   route.query = { step: 'agent', agent }
   session.value = { hasSites: false, gscdumpConnected: false }
