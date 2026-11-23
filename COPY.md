@@ -321,9 +321,6 @@ They replace older SDK and report descriptions for these two issue types.
 | Search Console queries empty period | No query data was returned for this period. Try a wider date range. | Queries without rows or active filters |
 | Search Console countries empty period | No country data was returned for this period. Try a wider date range. | Countries without rows or active filters |
 | Search Console empty period | No data was returned for this period. Try a wider date range. | Shared table fallback |
-| Search Console progress starting | Preparing Search Console data… | Status with no progress |
-| Search Console progress | Preparing Search Console data: {percent}% | Collection progress |
-| Search Console progress refresh | Refresh Search Console status | Accessible refresh button |
 
 The lifecycle adapter aliases completed jobs as `daysSynced`. Do not label that value as recorded days.
 
@@ -811,14 +808,17 @@ Onboarding Step words, under `proShell.copy.onboarding.steps`:
 
 ## Live work bar assets
 
-The bar shows a Site's first Search Console sync above every dashboard page. The counts build on `SITE_SYNC_LABELS`, so they say what the Manage Sites column says. Harlan approved them on 2026-11-20, with the button strings nuxtseo.com and gscdump.com share.
+The bar shows the selected Site’s first Search Console sync, sitemap activity and URL Inspection. All Sites groups work by Site. Each source opens that Site’s report. The monthly Free allowance belongs to the account.
 
 | Asset | String | Where it goes |
 | --- | --- | --- |
-| Syncing count | {count} syncing | Bar and floating control summary, first syncs that are running |
-| Waiting count | {count} waiting to sync | Bar and floating control summary, first syncs that have not started |
-| Close label | Hide progress | Accessible label of the bar's close button, which turns the bar into the floating control |
-| Restore action | Show at top | Floating control panel, while the bar is closed and a sync runs |
+| Syncing count | {count} syncing | Bar and header control summary, first syncs that are running |
+| Waiting count | {count} waiting to sync | Bar and header control summary, first syncs that have not started |
+| Sitemaps | Finding sitemaps · Syncing sitemaps | Phase reported by the engine |
+| URL Inspection | Waiting for sitemaps · Finding URLs to inspect · Inspecting URLs | Phase reported by the engine |
+| URL Inspection limits | Daily URL Inspection quota reached · Monthly URL Inspection allowance reached · URL Inspection limit reached | Use the named limit only when the engine identifies it |
+| Close label | Hide progress | Accessible label of the bar's close button, which moves activity to the header |
+| Restore action | Show at top | Header control, while the bar is closed and work runs |
 
 ## IndexNow setup email assets
 

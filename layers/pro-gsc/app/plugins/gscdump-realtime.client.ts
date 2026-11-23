@@ -19,8 +19,7 @@
 // Event handling:
 // - `sync.site_complete` / `sync.complete` / `enrichment.complete` →
 //   `bumpGscInvalidation(siteId)` so per-site queries refresh.
-// - `sync.progress` is high-volume and informational only; ignored here
-//   (consumed by `ProGscStatus` polling already).
+// - Progress events invalidate the live work bar only. Its reader coalesces them.
 // - `sync.failed`, `job.failed`, `auth.failed`, `needs_reauth` → telemetry
 //   only; the dashboard surfaces these through other channels.
 
@@ -28,7 +27,9 @@ import type { RealtimeV1Event } from '@gscdump/contracts/v1'
 import type { GscdumpRealtimeV1Client } from '@gscdump/sdk/v1'
 import type { GscdumpIntegration } from '../composables/useGscdumpIntegration'
 import type { CursorStorage } from '../internal/gscdump-realtime-cursor'
+import { useEventBus } from '@vueuse/core'
 import { logWarn } from '~~/shared/logging'
+import { SITE_ACTIVITY_EVENT } from '#layers/pro-saas/shared/live-work'
 import { GSCDUMP_INTEGRATION_KEY } from '../composables/useGscdumpIntegration'
 import { bumpGscInvalidation } from '../internal/composables/useGscInvalidation'
 import { createGscdumpCursorStore } from '../internal/gscdump-realtime-cursor'
@@ -54,10 +55,8 @@ export default defineNuxtPlugin({
     let stopRecoveryWatch: (() => void) | null = null
     let realtime: GscdumpRealtimeV1Client | null = null
 
+    const activity = useEventBus<ReadonlySet<string>>(SITE_ACTIVITY_EVENT)
     function invalidateAffectedSites(event: RealtimeV1Event): void {
-      if (event.name === 'site.lifecycle.progress')
-        return
-
       const siteIds = new Set(
         event.changes
           .filter(change => change.type === 'site')
@@ -66,6 +65,11 @@ export default defineNuxtPlugin({
       if (event.subject.type === 'site')
         siteIds.add(event.subject.id)
 
+      if (siteIds.size)
+        activity.emit(siteIds)
+      // Progress can be frequent. Only the activity bar needs these reads.
+      if (event.name === 'site.lifecycle.progress')
+        return
       for (const siteId of siteIds)
         bumpGscInvalidation(siteId)
     }

@@ -23,7 +23,6 @@ vi.mock('~~/layers/core/app/composables/fetch', () => ({ fetchSites: async () =>
 }) }))
 vi.mock('~~/layers/core/app/composables/events', () => ({ useJobListener: () => {} }))
 vi.mock('#layers/pro-saas/app/composables/useNoSearchConsoleProperty', () => ({ useNoSearchConsoleProperty: () => ref(false) }))
-vi.mock('#layers/pro-gsc/app/components/overview/ProLiveJobProgress.vue', () => ({ default: defineComponent(() => () => null) }))
 vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewOnboardingCard.vue', () => ({ default: defineComponent(() => () => h('aside', { 'data-onboarding': true })) }))
 vi.mock('#layers/pro-gsc/app/components/overview/ProOverviewSetupOffers.vue', () => ({ default: defineComponent(() => () => null) }))
 // The setup card runs the shell's real `dashboard-card` flow over the steps

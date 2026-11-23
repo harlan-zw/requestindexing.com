@@ -1,4 +1,4 @@
-import type { SiteHoldReason } from '@gscdump/contracts'
+import type { PartnerLifecycleSite, SiteHoldReason } from '@gscdump/contracts'
 
 export interface GscDataRow {
   clicks: number
@@ -138,6 +138,12 @@ export interface SiteFleetRow {
   gscdumpSiteId: string | null
   /** `refused`: gscdump refused to register the Site, so it has no Search Console link. */
   syncStatus: 'idle' | 'pending' | 'syncing' | 'partial' | 'synced' | 'error' | 'refused'
+  /** Activity is absent from older roster seeds and null when the engine could not confirm it. */
+  processing?: {
+    sitemaps: PartnerLifecycleSite['sitemaps']['status']
+    indexing: PartnerLifecycleSite['indexing']['status']
+    reason: string | null
+  } | null
   /** Live import percentage, or null when the lifecycle could not be read. */
   syncProgress: number | null
   /** Why gscdump holds the Site before its first import, read live from its lifecycle. */
