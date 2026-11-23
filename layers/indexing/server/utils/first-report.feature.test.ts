@@ -181,3 +181,10 @@ it('records a saved-verdict view from its signed plan without a second read', as
   expect(h.event).toHaveBeenCalledExactlyOnceWith(h.access.db, 7, 'first_report_evidence_viewed', { siteId: 'site-a', count: 1, source: 'saved' })
   expect(h.client.listSiteIndexingUrls).not.toHaveBeenCalled()
 })
+
+it('keeps the www pages of a domain property in the saved report', async () => {
+  h.access.site = { ...h.access.site, domain: 'example.com', property: 'sc-domain:example.com' }
+  h.client.getUserLifecycle.mockResolvedValue({ data: { sites: [{ siteId: 'engine-a', gscPropertyUrl: 'sc-domain:example.com' }] } })
+  h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: [{ url: 'https://www.example.com/docs/a', coverageState: 'Submitted and indexed', verdict: 'PASS', lastCheckedAt: '2026-11-24T06:12:00Z' }], pagination: { hasMore: false } } })
+  expect(await savedRoute(event('GET'))).toMatchObject({ _tag: 'Verdicts', rows: [{ url: 'https://www.example.com/docs/a' }] })
+})

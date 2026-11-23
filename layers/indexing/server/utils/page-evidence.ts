@@ -63,9 +63,9 @@ export async function readSavedPageEvidence(
 /**
  * One stored read of a Site's saved Google verdicts, in gscdump's order:
  * not-indexed URLs first, then the newest capture. It never inspects. A row
- * outside the Site's host or property is not this Site's evidence. A page
- * with no usable row cannot establish that no verdict exists when gscdump
- * has more rows.
+ * outside the Site's property is not this Site's evidence, but it still
+ * proves that the read is not empty. Only a read with no Google evidence
+ * and no more rows establishes that no saved verdict exists.
  */
 export async function readSavedFirstReport(
   covers: (url: string) => boolean,
@@ -73,13 +73,14 @@ export async function readSavedFirstReport(
   read: () => Promise<{ urls: (EvidenceFields & { lastCheckedAt: string })[], pagination: { hasMore: boolean } }>,
 ): Promise<{ _tag: 'Verdicts', rows: PageEvidence[] } | { _tag: 'None' } | { _tag: 'Unknown' }> {
   const response = await read()
-  const rows = response.urls
-    .filter(row => hasGoogleEvidence(row) && covers(row.url))
+  const withEvidence = response.urls.filter(hasGoogleEvidence)
+  const rows = withEvidence
+    .filter(row => covers(row.url))
     .slice(0, limit)
     .map(row => evidence(row, row.lastCheckedAt))
   if (rows.length)
     return { _tag: 'Verdicts', rows }
-  return response.pagination.hasMore ? { _tag: 'Unknown' } : { _tag: 'None' }
+  return withEvidence.length || response.pagination.hasMore ? { _tag: 'Unknown' } : { _tag: 'None' }
 }
 
 /** The caller authorizes one check. Refusals never become a Google verdict. */

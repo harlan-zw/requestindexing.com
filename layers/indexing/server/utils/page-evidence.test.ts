@@ -71,4 +71,9 @@ describe('the saved First Site report', () => {
     expect(await readSavedFirstReport(covers, 5, async () => ({ urls: [], pagination: { hasMore: false } }))).toEqual({ _tag: 'None' })
     expect(await readSavedFirstReport(covers, 5, async () => ({ urls: [row('a', { coverageState: null, verdict: null })], pagination: { hasMore: true } }))).toEqual({ _tag: 'Unknown' })
   })
+
+  it('does not report an empty Site when every saved verdict falls outside the property', async () => {
+    const outside = row('a', { url: 'https://example.com/other' })
+    expect(await readSavedFirstReport(covers, 5, async () => ({ urls: [outside], pagination: { hasMore: false } }))).toEqual({ _tag: 'Unknown' })
+  })
 })
