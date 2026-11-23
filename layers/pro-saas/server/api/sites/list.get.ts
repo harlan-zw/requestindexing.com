@@ -40,6 +40,7 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx, event }) 
   const lifecycle = lifecycleOf(lifecycleRead)
 
   return {
+    activityUnavailable: lifecycleRead._tag === 'Unavailable',
     sites: rows.map(({ site }): SiteFleetRow => {
       const lifecycleSite = lifecycleSiteFor(lifecycle, site.gscdumpSiteId, site.domain ?? site.property)
       return {
@@ -49,7 +50,10 @@ export default defineProApiHandler({ team: true }, async ({ team: ctx, event }) 
         sitemaps: site.sitemaps ?? [],
         gscdumpSiteId: site.gscdumpSiteId,
         syncStatus: syncStatusFor(lifecycleSite, site.gscdumpSyncStatus),
-        syncProgress: lifecycleSite?.analytics.progress.percent ?? null,
+        processing: lifecycleSite
+          ? { sitemaps: lifecycleSite.sitemaps.status, indexing: lifecycleSite.indexing.status, reason: lifecycleSite.indexing.reason }
+          : null,
+        syncProgress: lifecycleSite && lifecycleSite.analytics.progress.total > 0 ? lifecycleSite.analytics.progress.percent : null,
         // Read live from the lifecycle, never mirrored onto `sites`: the local
         // row is a cache, and a hold changes without a webhook for every step.
         hold: lifecycleSite?.hold ?? null,

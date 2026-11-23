@@ -1,61 +1,103 @@
 import type { SiteFleetRow } from '~~/layers/core/app/types'
 import { SITE_SYNC_LABELS } from './site-sync'
 
-/**
- * Live work: a Site's first Search Console sync, which blocks every Search
- * Console view of that Site until it ends. Ported from nuxtseo.com's live work
- * bar (harlan-zw/nuxtseo.com#2208): one bar above the dashboard that the user
- * can close into a floating pill.
- *
- * Only the first sync counts. The lifecycle cannot tell it from a daily sync:
- * a Site with no rows, or with a partial record, reads as syncing whenever
- * daily jobs are open. The gscdump webhook stamps `lastSynced` when any sync
- * completes, including the first one for a Site with no rows, so a Site with
- * a `lastSynced` is past its first sync.
- */
-export type LiveWorkSite = Pick<SiteFleetRow, 'siteId' | 'gscdumpSiteId' | 'syncStatus' | 'syncProgress' | 'hold' | 'lastSynced' | 'permissionLost'>
+export const SITE_ACTIVITY_EVENT = 'request-indexing:site-activity'
 
-export type LiveWork<TSite extends LiveWorkSite = LiveWorkSite>
-  = | { kind: 'first-sync', phase: 'running', site: TSite, percent: number | null }
-    /** Registered and not started, or still being measured. Never opens the bar. */
-    | { kind: 'first-sync', phase: 'waiting', site: TSite }
+export type LiveWorkSite = Pick<SiteFleetRow, 'siteId' | 'gscdumpSiteId' | 'syncStatus' | 'syncProgress' | 'processing' | 'hold' | 'lastSynced' | 'permissionLost'>
+type ActivitySource = 'inspection' | 'sitemaps' | 'search-console'
+type ActivityPhase = 'running' | 'waiting' | 'paused'
 
-/**
- * The live first sync of one Site, or null. A hold the owner must clear, lost
- * access and a failed sync need the owner, so they keep their own alerts and
- * never reach the live surfaces. A Site still being measured (`size_pending`)
- * starts by itself, so it waits.
- */
-export function resolveSiteLiveWork<TSite extends LiveWorkSite>(site: TSite): LiveWork<TSite> | null {
-  if (!site.gscdumpSiteId || site.lastSynced != null || site.permissionLost)
-    return null
-  if (site.hold && site.hold !== 'size_pending')
-    return null
-  if (site.syncStatus === 'syncing')
-    return { kind: 'first-sync', phase: 'running', site, percent: site.syncProgress }
-  if (site.syncStatus === 'pending')
-    return { kind: 'first-sync', phase: 'waiting', site }
-  return null
+export interface SiteActivity {
+  source: ActivitySource
+  phase: ActivityPhase
+  label: string
+  to: string
+  percent: number | null
+  monthly: boolean
 }
 
-/** Live work for many Sites: running syncs first, then waiting ones. Ties keep the Sites' order. */
+export interface LiveWork<TSite extends LiveWorkSite = LiveWorkSite> {
+  site: TSite
+  phase: ActivityPhase
+  activities: SiteActivity[]
+}
+
+const activityRoute: Record<ActivitySource, string> = {
+  'inspection': 'indexing',
+  'sitemaps': 'indexing/sitemaps',
+  'search-console': 'search-console',
+}
+
+const phaseRank: Record<ActivityPhase, number> = { running: 0, waiting: 1, paused: 2 }
+
+export function resolveSiteLiveWork<TSite extends LiveWorkSite>(site: TSite): LiveWork<TSite> | null {
+  if (!site.gscdumpSiteId || !site.processing || site.permissionLost || (site.hold && site.hold !== 'size_pending'))
+    return null
+
+  const { indexing, sitemaps, reason } = site.processing
+  const activities: SiteActivity[] = []
+  function add(source: ActivitySource, phase: ActivityPhase, label: string, percent: number | null = null, monthly = false) {
+    const to = `/pro/dashboard/sites/${encodeURIComponent(site.siteId)}/${activityRoute[source]}`
+    activities.push({ source, phase, label, to, percent, monthly })
+  }
+
+  // Inspection progress counts background tasks. One task can check many URLs.
+  // Only published URL Inspection results belong in the Site's coverage count.
+  switch (indexing) {
+    case 'checking':
+      add('inspection', 'running', 'Inspecting URLs')
+      break
+    case 'discovering':
+      add('inspection', 'running', 'Finding URLs to inspect')
+      break
+    case 'waiting_for_sitemaps':
+      add('inspection', 'waiting', 'Waiting for sitemaps')
+      break
+    case 'budget_exhausted':
+      if (reason === 'inspection_allowance')
+        add('inspection', 'paused', 'Monthly URL Inspection allowance reached', null, true)
+      else if (reason === 'daily_budget_exhausted')
+        add('inspection', 'paused', 'Daily URL Inspection quota reached')
+      else
+        add('inspection', 'paused', 'URL Inspection limit reached')
+  }
+
+  if (sitemaps === 'discovering')
+    add('sitemaps', 'running', 'Finding sitemaps')
+  if (sitemaps === 'syncing')
+    add('sitemaps', 'running', 'Syncing sitemaps')
+
+  // Daily analytics syncs leave reports readable. The first sync is the one
+  // that blocks Search Console until history arrives.
+  if (site.lastSynced === null) {
+    if (site.syncStatus === 'syncing')
+      add('search-console', 'running', SITE_SYNC_LABELS.syncing, site.syncProgress)
+    else if (site.syncStatus === 'pending')
+      add('search-console', 'waiting', SITE_SYNC_LABELS.pending)
+  }
+
+  activities.sort((a, b) => phaseRank[a.phase] - phaseRank[b.phase])
+  const first = activities[0]
+  return first ? { site, phase: first.phase, activities } : null
+}
+
 export function selectLiveWork<TSite extends LiveWorkSite>(sites: readonly TSite[]): LiveWork<TSite>[] {
   return sites
     .map(site => resolveSiteLiveWork(site))
     .filter((work): work is LiveWork<TSite> => !!work)
-    .sort((a, b) => (a.phase === 'running' ? 0 : 1) - (b.phase === 'running' ? 0 : 1))
+    .sort((a, b) => phaseRank[a.phase] - phaseRank[b.phase])
 }
 
-/** The summary the bar and the pill read: the number, then the Site sync label. */
 export function summarizeLiveWork(work: readonly LiveWork[]): string[] {
-  const running = work.filter(item => item.phase === 'running').length
-  const waiting = work.length - running
-  const parts: string[] = []
-  if (running)
-    parts.push(`${running} ${SITE_SYNC_LABELS.syncing.toLowerCase()}`)
-  if (waiting)
-    parts.push(`${waiting} ${SITE_SYNC_LABELS.pending.toLowerCase()}`)
-  return parts
+  const counts = new Map<string, number>()
+  for (const { activities } of work) {
+    const first = activities[0]
+    if (!first)
+      continue
+    const label = first.phase === 'paused' ? 'paused' : first.label.charAt(0).toLowerCase() + first.label.slice(1)
+    counts.set(label, (counts.get(label) ?? 0) + 1)
+  }
+  return Array.from(counts, ([label, count]) => `${count} ${label}`)
 }
 
 /**
@@ -68,22 +110,31 @@ export type LiveWorkLoad<TSite extends LiveWorkSite = LiveWorkSite>
     | { _tag: 'idle' }
     | { _tag: 'live', work: LiveWork<TSite>[] }
 
-export function readLiveWork<TSite extends LiveWorkSite>(sites: readonly TSite[] | null | undefined, readFailed: boolean): LiveWorkLoad<TSite> {
+export function readLiveWork<TSite extends LiveWorkSite>(sites: readonly TSite[] | null | undefined, readFailed: boolean, siteRef: string | null = null): LiveWorkLoad<TSite> {
   if (readFailed)
     return { _tag: 'unknown', reason: 'failed' }
   if (!sites)
     return { _tag: 'unknown', reason: 'loading' }
-  const work = selectLiveWork(sites)
+  const work = selectLiveWork(siteRef ? sites.filter(site => site.siteId === siteRef) : sites)
   return work.length ? { _tag: 'live', work } : { _tag: 'idle' }
 }
 
 /** Keep the last reading through a failed read. A loading roster holds nothing: it may be another Team's. */
-export function holdLiveWork<TSite extends LiveWorkSite>(previous: LiveWorkLoad<TSite>, next: LiveWorkLoad<TSite>): LiveWorkLoad<TSite> {
-  return next._tag === 'unknown' && next.reason === 'failed' && previous._tag !== 'unknown' ? previous : next
+export function holdLiveWork<TSite extends LiveWorkSite>(previous: LiveWorkLoad<TSite>, next: LiveWorkLoad<TSite>, roster?: readonly TSite[]): LiveWorkLoad<TSite> {
+  if (next._tag !== 'unknown' || next.reason !== 'failed' || previous._tag === 'unknown')
+    return next
+  if (!roster || previous._tag !== 'live')
+    return previous
+  // The Team roster can remove a Site even while its lifecycle read fails.
+  const available = new Set(roster.filter(site => site.gscdumpSiteId && !site.permissionLost).map(site => site.siteId))
+  const work = previous.work.filter(item => available.has(item.site.siteId))
+  return work.length ? { _tag: 'live', work } : next
 }
 
 /** How often the roster refreshes for live work, or null for never: 30s while a sync runs, 5 min while one only waits. */
 export function liveWorkRefreshMs(load: LiveWorkLoad): number | null {
+  if (load._tag === 'unknown' && load.reason === 'failed')
+    return 30_000
   if (load._tag !== 'live')
     return null
   return load.work.some(work => work.phase === 'running') ? 30_000 : 300_000

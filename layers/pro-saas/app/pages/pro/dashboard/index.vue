@@ -9,7 +9,6 @@ import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { UiTooltip } from '#components'
 import { isOverviewReadTarget, overviewFleetRows, overviewSiteLabel, soleSiteLandingPath } from '#layers/pro-gsc/app/components/overview/overview-sites'
 import { overviewReadRange, overviewSiteClicks, overviewSnapshotCards } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
-import ProLiveJobProgress from '#layers/pro-gsc/app/components/overview/ProLiveJobProgress.vue'
 import ProOverviewOnboardingCard from '#layers/pro-gsc/app/components/overview/ProOverviewOnboardingCard.vue'
 import ProOverviewSetupOffers from '#layers/pro-gsc/app/components/overview/ProOverviewSetupOffers.vue'
 import ProOverviewSnapshot from '#layers/pro-gsc/app/components/overview/ProOverviewSnapshot.vue'
@@ -138,7 +137,6 @@ useJobListener('sites/sync-finished', async ({ siteId }) => {
     <template v-else-if="sites.length">
       <ProOverviewOnboardingCard v-if="cardStep" :step="cardStep" />
       <ProOverviewSetupOffers :sites="sites" />
-      <ProLiveJobProgress :sites="sites" />
       <!-- The status is the gscdump lifecycle (overview-sites.ts). Only a state
            the owner must act on spends colour, so a calm roster paints once. -->
       <ProShellFleetSites :rows="fleetRows">

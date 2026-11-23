@@ -167,7 +167,7 @@ The brand mark always goes in a slot (`#brand-mark`, `#brand`, `#site-mark`); th
 - **Radius**: `rounded-xl` (20px) for primary surfaces (cards, hero panels). `rounded-lg` (14px) for inputs and small panels. `rounded-md` (10px, the global `--ui-radius`) for buttons and badges. `rounded-full` for avatars and pips only.
 - **Focus rings**: rely on Nuxt UI defaults (2px primary with offset). Do not override per-component.
 - **Status indicators**: `UBadge` with `color` + `variant="subtle"` for inline status. Do not invent custom pill components.
-- **Live work bar**: one bar above every dashboard page shows a Site's first Search Console sync, below the Search Console alerts. The user may close it into a floating control at the bottom right. That control is an outline `UButton` with an amber pending dot, not a pill component. A sync that has not started shows only there. A hold, lost access and a failed sync keep their own alerts and never reach the bar.
+- **Live work bar**: show Search Console's first sync, sitemap discovery and URL Inspection on the selected Site. All Sites groups activity by Site. Stack favicons in the summary. Open the bar for source links and available progress. The header control carries waiting or paused activity and restores a closed bar. Animate only running work and respect reduced motion.
 - **Hero card "preview"**: the dashboard mock card on the landing hero uses `shadow-2xl shadow-primary-500/10` (emerald-tinted shadow). Keep this pattern when showing product previews — primary-tinted shadows are a signature.
 
 ## Spatial & Motion

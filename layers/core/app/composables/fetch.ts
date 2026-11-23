@@ -5,6 +5,7 @@ import { clearNuxtData, useAsyncData, useNuxtApp, useNuxtData, useState } from '
 import { useCallerState } from '#layers/pro-saas/app/composables/useCaller'
 
 interface SiteRoster {
+  activityUnavailable?: boolean
   sites: SiteFleetRow[]
 }
 

@@ -11,6 +11,7 @@ function site(over: Partial<SiteFleetRow> = {}): SiteFleetRow {
     gscdumpSiteId: 'g_1',
     syncStatus: 'syncing',
     syncProgress: 40,
+    processing: { sitemaps: 'ready', indexing: 'ready', reason: null },
     hold: null,
     lastSynced: null,
     permissionLost: false,
@@ -82,6 +83,12 @@ describe('the live work surface', () => {
     expect(holdLiveWork(live, { _tag: 'unknown', reason: 'loading' })).toEqual({ _tag: 'unknown', reason: 'loading' })
   })
 
+  it('holds a failed lifecycle read only for Sites still in the roster', () => {
+    const failed = readLiveWork(null, true)
+    expect(holdLiveWork(live, failed, [site({ siteId: 'other' })])).toEqual(failed)
+    expect(liveWorkRefreshMs(failed)).toBe(30_000)
+  })
+
   it('refreshes every 30s while a sync runs and every 5 min while one only waits', () => {
     expect(liveWorkRefreshMs(live)).toBe(30_000)
     expect(liveWorkRefreshMs(waiting)).toBe(300_000)
@@ -91,5 +98,34 @@ describe('the live work surface', () => {
   it('summarises with the Site sync labels', () => {
     const both = readLiveWork([site(), site({ siteId: 'b', syncStatus: 'pending' }), site({ siteId: 'c' })], false)
     expect(both._tag === 'live' && summarizeLiveWork(both.work)).toEqual(['2 syncing', '1 waiting to sync'])
+  })
+})
+
+describe('scoped Site activity', () => {
+  it('does not show work from another Site on a Site route', () => {
+    expect(readLiveWork([site({ siteId: 'other' }), site({ siteId: 'selected', lastSynced: 1 })], false, 'selected')._tag).toBe('idle')
+  })
+
+  it('shows concurrent sitemap and inspection activity after the initial import', () => {
+    const row = site({ siteId: 'ri_site', lastSynced: 1, processing: { sitemaps: 'syncing', indexing: 'checking', reason: null } })
+    const load = readLiveWork([row], false)
+    expect(load._tag === 'live' && load.work[0]?.activities.map(activity => [activity.label, activity.to])).toEqual([
+      ['Inspecting URLs', '/pro/dashboard/sites/ri_site/indexing'],
+      ['Syncing sitemaps', '/pro/dashboard/sites/ri_site/indexing/sitemaps'],
+    ])
+  })
+
+  it('keeps a monthly inspection pause separate from a daily quota and an unknown limit', () => {
+    for (const [reason, monthly] of [['inspection_allowance', true], ['daily_budget_exhausted', false], [null, false]] as const) {
+      const row = site({ lastSynced: 1, processing: { sitemaps: 'ready', indexing: 'budget_exhausted', reason } })
+      const load = readLiveWork([row], false)
+      expect(load._tag === 'live' && load.work[0]?.activities[0]).toMatchObject({ phase: 'paused', monthly })
+      expect(resolveLiveWorkSurface(load, false)).toBe('pill')
+    }
+  })
+
+  it('shows waiting for sitemaps without an inspection percentage', () => {
+    const load = readLiveWork([site({ lastSynced: 1, processing: { sitemaps: 'unknown', indexing: 'waiting_for_sitemaps', reason: null } })], false)
+    expect(load._tag === 'live' && load.work[0]?.activities[0]).toMatchObject({ phase: 'waiting', label: 'Waiting for sitemaps', percent: null })
   })
 })

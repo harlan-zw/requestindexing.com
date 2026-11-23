@@ -114,6 +114,12 @@ const scopedSite = computed<ProNavSite | null>(() => {
 // nuxtseo.com's `showSiteBack`: on a Site's page, an account with more than
 // one Site gets a way back to all of them above the Site nav. An account with
 // one Site has nowhere wider to go, so it gets none.
+const liveSiteRef = computed(() => {
+  if (!routeSiteId.value)
+    return singleSite.value ? proNavSiteRef(sites.value[0]!) : null
+  const selected = site.value
+  return selected?.id === routeSiteId.value ? selected.publicId ?? routeSiteId.value : routeSiteId.value
+})
 const showSiteBack = computed(() => !!routeSiteId.value && !singleSite.value)
 const allSitesLabel = useProShellCopy().siteSwitcher.allSites
 const dashboardTo = useProShellRoute()('dashboard')
@@ -237,6 +243,9 @@ function onPageError(error: unknown) {
       :crumbs="headerAncestorCrumbs"
       :menu-groups="headerMenuGroups"
     >
+      <template #actions>
+        <span id="site-activity-control" />
+      </template>
       <template v-if="routeSiteId" #crumb>
         <ProShellSiteSwitcher />
       </template>
@@ -249,10 +258,12 @@ function onPageError(error: unknown) {
       <ProGscScopeMissingAlert v-if="gscScopeMissing" :retry-to="gscRetryTo" class="mb-6" />
       <ProGscConnectReturnAlert v-else-if="gscConnectReturn" :result="gscConnectReturn" :retry-to="gscRetryTo" class="mb-6" />
 
-      <!-- A Site's first sync, above every dashboard page (DESIGN.md "Live
-           work bar"). Client-only: it reads per-viewer storage. -->
       <ClientOnly>
-        <ProLiveWork />
+        <ProLiveWork
+          :key="JSON.stringify([session?.user?.id, session?.user?.currentTeamId, liveSiteRef])"
+          :site-ref="liveSiteRef"
+          :in-header="!!headerTitle"
+        />
       </ClientOnly>
 
       <UiEmptyState
