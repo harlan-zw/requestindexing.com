@@ -275,7 +275,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 **Use for:** that button, verbatim, and docs that name it.
 
-**Never:** Skip (bare), Skip for now, Continue without an agent.
+**Never:** a bare Skip on this button, Skip for now, Continue without an agent.
 
 **Casing:** `Skip agent setup`, exactly as written.
 

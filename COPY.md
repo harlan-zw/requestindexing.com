@@ -544,7 +544,7 @@ Agent setup is the first onboarding step, decided 2026-11-24 (MARKETING.md, Boun
 `GLOSSARY.md` defines Agent setup, Setup prompt, Coding agent, and Skip agent setup.
 The reader picks a coding agent, Claude, or ChatGPT. Each one connects to gscdump's MCP server.
 Request Indexing has no listing of its own, so no string names one.
-Every route ends on the First Site report for the selected Site.
+On every route, the first result is the First Site report for the selected Site.
 When the step joins the Step registry, add its row to the Onboarding Step words table.
 
 | Asset | String |
