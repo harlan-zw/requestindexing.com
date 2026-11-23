@@ -105,7 +105,7 @@ it('resumes a connected account without claiming a new sync', async () => {
   session.value = { hasSites: true, gscdumpConnected: true }
   const host = await mount()
   await nextTick()
-  expect(host.textContent).toContain('indexing evidence for your connected Sites')
+  expect(host.textContent).toContain('Open the dashboard to see what Google has reported about your Sites.')
   expect(host.querySelector('[data-testid="first-site-report"]')).not.toBeNull()
   expect(host.textContent).not.toContain('First sync started')
   expect(host.textContent).not.toContain('pulling your Search Console history now')

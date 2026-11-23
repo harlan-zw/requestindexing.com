@@ -61,13 +61,15 @@ watch([() => siteId, () => session.value?.team?.teamId], () => {
     <h2 id="first-report-heading" class="text-lg font-semibold text-highlighted">
       {{ state._tag === 'Results' ? copy.result : copy.heading }}
     </h2>
-    <p>{{ copy.help }}</p>
+    <p v-if="state._tag === 'Idle'">
+      {{ copy.help }}
+    </p>
     <p v-if="state._tag === 'Loading'" role="status">
       {{ copy.loading }}
     </p>
     <template v-if="ready">
       <p class="text-sm text-muted">
-        {{ copy.source }} · <time :datetime="ready.observedAt">{{ ready.observedAt }}</time>
+        {{ copy.source }} <time :datetime="ready.observedAt">{{ ready.observedAt }}</time>
       </p>
       <ol class="list-decimal space-y-2 pl-5 text-sm">
         <li v-for="url in ready.urls" :key="url" class="break-all font-mono">

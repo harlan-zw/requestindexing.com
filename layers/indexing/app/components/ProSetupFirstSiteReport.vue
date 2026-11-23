@@ -19,7 +19,7 @@ const siteOptions = computed(() => sites.value.map(site => ({
 
 <template>
   <div v-if="sites.length" class="space-y-4">
-    <UFormField v-if="sites.length > 1" :label="copy.site" :description="selectedSite ? undefined : copy.help">
+    <UFormField v-if="sites.length > 1" :label="copy.site" :description="selectedSite ? undefined : copy.siteHelp">
       <USelect v-model="selectedSiteId" :items="siteOptions" :placeholder="copy.chooseSite" class="min-h-11 w-full" />
     </UFormField>
     <div v-if="selectedSite" class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">

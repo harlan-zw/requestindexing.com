@@ -283,7 +283,7 @@ async function connect(value: string, source: 'field' | 'list') {
             Connect Google Search Console
           </p>
           <p class="text-sm text-muted">
-            Request Indexing lists your Search Console properties here after you connect Google.
+            Connect Google to see your Search Console properties.
           </p>
         </div>
         <UButton :to="gscConnectUrl" external color="primary" icon="i-simple-icons-google" class="min-h-11" label="Connect Google" />
@@ -356,7 +356,7 @@ async function connect(value: string, source: 'field' | 'list') {
               {{ property.domain }}
             </div>
             <div v-if="!property.verified" class="text-xs text-warning">
-              Not verified for this Google account. Select Verify, or verify it in Search Console and refresh this list.
+              Unverified for this Google account. Select Verify here, or verify it in Search Console and refresh the list.
             </div>
           </div>
           <ProGscAddVerify

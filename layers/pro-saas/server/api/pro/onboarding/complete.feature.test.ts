@@ -58,7 +58,7 @@ it('reads the grant fresh, since the decision closes setup for good', async () =
 
 it('refuses, with a retry, when gscdump cannot say whether the grant works', async () => {
   h.status.mockResolvedValue(null)
-  await expect(finish({ skipSites: true })).rejects.toMatchObject({ message: 'Request Indexing could not check your Google connection. Try again in a moment.' })
+  await expect(finish({ skipSites: true })).rejects.toMatchObject({ message: 'Request Indexing could not check your Google connection. Try finishing setup again in a moment.' })
   expect(completedAt()).toBeNull()
 })
 

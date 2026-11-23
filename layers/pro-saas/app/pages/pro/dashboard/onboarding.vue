@@ -134,7 +134,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
           color="warning"
           icon="i-lucide-shield-check"
           title="Search Console needs a Google account"
-          description="You signed in with GitHub. Connecting below links your Google account to this login; you keep signing in with GitHub."
+          :description="GSC_CONNECT_COPY.githubSignIn"
         />
 
         <ProGscScopeMissingAlert v-if="gsc._tag === 'ScopeMissing'" />

@@ -128,7 +128,7 @@ useSeoMeta({
       <UiAuthHeading
         v-else
         title="Get your pages indexed"
-        description="Connect Google Search Console, then see which pages Google has missed, and why. Free during the beta."
+        :description="GSC_CONNECT_COPY.signupDescription"
       />
 
       <ProAlert
@@ -136,7 +136,7 @@ useSeoMeta({
         data-testid="onboarding-missing-scope"
         color="warning"
         title="Search Console access is missing"
-        description="Request Indexing reads your data through the Google Search Console API. Sign up again and allow that access."
+        :description="GSC_CONNECT_COPY.signupMissingScope"
         class="mb-4"
       />
 

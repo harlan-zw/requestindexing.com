@@ -40,7 +40,7 @@ it('persists corrections in selection order without blocking Continue later', as
   const first = Promise.withResolvers<{ _tag: 'Recorded' }>()
   io.fetch.mockImplementationOnce(() => first.promise)
   const page = mount()
-  page.click('Understand Google access')
+  page.click('See what Google shares')
   await flush()
   page.step.value = 'sites'
   await flush()
@@ -73,7 +73,7 @@ it.each(['unmount', 'account'] as const)('discards unsent answers after the owne
     return owners.length === 1 ? first.promise : Promise.resolve({ _tag: 'Recorded' })
   })
   const page = mount()
-  page.click('Understand Google access')
+  page.click('See what Google shares')
   await flush()
   page.click('Find my Search Console property')
   await flush()

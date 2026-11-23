@@ -58,7 +58,7 @@ export type OnboardingStep = typeof ONBOARDING_STEPS[number]
 export const ONBOARDING_COMPLETION_COPY = {
   connected: {
     title: 'You\'re set up',
-    description: 'Open the dashboard to see the indexing evidence for your connected Sites.',
+    description: 'Open the dashboard to see what Google has reported about your Sites.',
   },
   missingSite: {
     title: 'Connect a Site to finish setup',
@@ -361,7 +361,7 @@ export function resolveOnboardingCompletion(input: OnboardingCompletionInput): O
     return {
       _tag: 'Blocked',
       reason: 'google_unverified',
-      message: 'Request Indexing could not check your Google connection. Try again in a moment.',
+      message: 'Request Indexing could not check your Google connection. Try finishing setup again in a moment.',
     }
   }
 
