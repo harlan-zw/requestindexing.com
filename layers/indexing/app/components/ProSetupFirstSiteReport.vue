@@ -38,7 +38,7 @@ const siteOptions = computed(() => sites.value.map(site => ({ value: site.siteId
           :items="siteOptions"
           :aria-label="copy.site"
           variant="ghost"
-          class="-ml-2.5 min-h-11 max-w-full font-medium text-highlighted"
+          class="-ml-2.5 min-h-11 max-w-full text-sm/5 font-medium text-highlighted"
         />
       </div>
       <span v-else class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ siteHost(selectedSite) }}</span>
