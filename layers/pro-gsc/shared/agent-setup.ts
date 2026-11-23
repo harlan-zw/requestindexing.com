@@ -43,49 +43,78 @@ export interface AgentSetupOption {
   icon: string
 }
 
+/** COPY.md, Agent setup assets. `terminal` is a design system icon role, so it follows the active set. */
 export const AGENT_SETUP_OPTIONS: readonly AgentSetupOption[] = [
-  { route: 'coding-agent', label: 'Coding agent', detail: 'Claude Code, Codex, or Cursor, in your terminal', icon: 'i-ph-terminal-window-duotone' },
-  { route: 'claude', label: 'Claude', detail: 'Claude.ai or Claude Desktop, through gscdump\'s listing', icon: 'i-simple-icons-claude' },
-  { route: 'chatgpt', label: 'ChatGPT', detail: 'ChatGPT, through gscdump\'s app', icon: 'i-simple-icons-openai' },
+  { route: 'coding-agent', label: 'Coding agent', detail: 'Claude Code, Codex, or Cursor, in your terminal', icon: 'terminal' },
+  { route: 'claude', label: 'Claude', detail: 'Claude on the web or desktop', icon: 'i-simple-icons-claude' },
+  { route: 'chatgpt', label: 'ChatGPT', detail: 'ChatGPT on the web', icon: 'i-simple-icons-openai' },
 ]
 
 export const AGENT_SETUP_COPY = {
   groupLabel: 'Agent',
   copyPrompt: 'Copy setup prompt',
   promptCopied: 'Setup prompt copied',
-  codingAgentHelp: 'Paste it into your coding agent. It stops at the gscdump sign-in for your approval.',
-  commandsSummary: 'Run the commands yourself',
-  signIn: 'Sign in to gscdump with the Google account that owns your Search Console property. Approve the access.',
-  pastePrompt: (label: string) => `Paste the Setup prompt into a new ${label} chat.`,
+  runCommands: 'Run the commands yourself',
+  copyCommands: 'Copy commands',
   next: 'Next, connect Google here. Your agent reads your Sites after you connect them.',
   continue: 'Continue',
   skip: 'Skip agent setup',
 } as const
 
+/** What the reader does in a step. A Link opens in a new tab. */
+export type AgentSetupAction = { _tag: 'Link', label: string, to: string } | { _tag: 'CopyPrompt' }
+
 /**
- * How the person adds gscdump to Claude or ChatGPT. Claude links gscdump's
- * directory listing. ChatGPT links gscdump's guide, because gscdump's own
- * records disagree on whether its ChatGPT app is public.
+ * One numbered step of the chosen route. A step has no state: Request
+ * Indexing cannot read whether the reader finished it, so every step keeps
+ * its number.
  */
-export const HOSTED_AGENT_ADD: Record<HostedAgentRoute, { step: string, label: string, to: string }> = {
-  claude: {
-    step: 'Add gscdump to Claude from its directory listing.',
-    label: 'Open gscdump in Claude',
-    to: 'https://claude.ai/directory/gscdump',
-  },
-  chatgpt: {
-    step: 'Add the gscdump app to ChatGPT. The guide shows each step.',
-    label: 'Read the ChatGPT guide',
-    to: 'https://gscdump.com/mcp/chatgpt',
-  },
+export interface AgentSetupStep {
+  key: 'copy' | 'add' | 'approve' | 'ask'
+  title: string
+  detail: string
+  action: AgentSetupAction | null
 }
 
-/** The coding agent route without an agent: the same commands the Setup prompt runs. */
-export const CODING_AGENT_COMMANDS: readonly { command: string, note?: string }[] = [
-  { command: `npm install -g ${GSCDUMP_CLI_PACKAGE}` },
-  { command: 'gscdump auth login --mode hosted', note: 'Then approve the sign-in in your browser.' },
-  { command: 'gscdump sites --json' },
-]
+// gscdump finds its account by Google account (header note), so both
+// approval steps name the account to use.
+const GOOGLE_ACCOUNT = 'Sign in with the Google account that owns your Search Console property.'
+
+/**
+ * How the person adds gscdump to Claude or ChatGPT. Claude links gscdump's
+ * directory listing. ChatGPT links gscdump's setup steps, because gscdump's
+ * own records disagree on whether its ChatGPT app is public.
+ */
+const HOSTED_AGENT_ADD: Record<HostedAgentRoute, { detail: string, action: string, to: string }> = {
+  claude: { detail: 'From the Claude directory.', action: 'Add to Claude', to: 'https://claude.ai/directory/gscdump' },
+  chatgpt: { detail: 'Follow the setup steps on gscdump.com.', action: 'Open setup steps', to: 'https://gscdump.com/mcp/chatgpt' },
+}
+
+const HOSTED_AGENT_LABEL: Record<HostedAgentRoute, string> = { claude: 'Claude', chatgpt: 'ChatGPT' }
+
+/** The steps of one route, in order. A coding agent runs the setup itself, so its Setup prompt comes first. */
+export function agentSetupSteps(route: AgentSetupRoute): readonly AgentSetupStep[] {
+  if (route === 'coding-agent') {
+    return [
+      { key: 'copy', title: 'Copy the Setup prompt', detail: 'Your agent installs the gscdump CLI and signs in.', action: { _tag: 'CopyPrompt' } },
+      { key: 'approve', title: 'Approve the sign-in', detail: `Your agent opens gscdump in your browser. ${GOOGLE_ACCOUNT}`, action: null },
+    ]
+  }
+  const app = HOSTED_AGENT_LABEL[route]
+  const add = HOSTED_AGENT_ADD[route]
+  return [
+    { key: 'add', title: `Add gscdump to ${app}`, detail: add.detail, action: { _tag: 'Link', label: add.action, to: add.to } },
+    { key: 'approve', title: 'Approve access', detail: `${app} opens gscdump. ${GOOGLE_ACCOUNT}`, action: null },
+    { key: 'ask', title: 'Ask your first question', detail: `Paste the Setup prompt into a new ${app} chat.`, action: { _tag: 'CopyPrompt' } },
+  ]
+}
+
+/** The coding agent route without an agent: the same commands the Setup prompt runs, one per line. */
+export const CODING_AGENT_COMMANDS = [
+  `npm install -g ${GSCDUMP_CLI_PACKAGE}`,
+  'gscdump auth login --mode hosted',
+  'gscdump sites --json',
+].join('\n')
 
 const EMPTY_SITES = `If the list is empty, stop. Tell me to finish Connect Google and Connect Sites at ${ONBOARDING_SETUP_URL}, then wait for me. My Sites live in Request Indexing. Never connect a Site on gscdump.com.`
 

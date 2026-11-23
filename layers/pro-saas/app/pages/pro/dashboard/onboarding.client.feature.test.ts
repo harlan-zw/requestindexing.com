@@ -62,8 +62,9 @@ async function mount() {
     app.component(name, defineComponent({ render: () => null }))
   app.component('UiWizardProgress', defineComponent({ render: () => null }))
   app.component('ProOnboardingAgentStep', ProOnboardingAgentStep)
-  app.component('UiCopyButton', defineComponent({ props: ['label'], setup: props => () => h('button', { 'data-testid': 'copy-setup-prompt' }, props.label) }))
-  app.component('UiButton', defineComponent({ props: ['to', 'label'], setup: props => () => h('a', { href: props.to }, props.label) }))
+  // Each action reports its purpose, so a test can count the solid buttons.
+  app.component('UiCopyButton', defineComponent({ props: ['label', 'purpose'], setup: props => () => h('button', { 'data-testid': 'copy-setup-prompt', 'data-purpose': props.purpose }, props.label) }))
+  app.component('UiButton', defineComponent({ props: ['to', 'label', 'purpose'], setup: props => () => h('a', { 'href': props.to, 'data-purpose': props.purpose }, props.label) }))
   // The Connect action is the step's only way forward, so the stub keeps its
   // test id and link for the assertions below.
   app.component('UButton', defineComponent({
@@ -75,10 +76,10 @@ async function mount() {
     setup: props => () => h('div', [h('h1', props.title), h('p', props.description)]),
   }))
   app.component('UiWizardNav', defineComponent({
-    props: { nextLabel: String, nextDisabled: Boolean, skipLabel: String, showNext: { type: Boolean, default: true } },
+    props: { nextLabel: String, nextDisabled: Boolean, skipLabel: String, showNext: { type: Boolean, default: true }, nextPurpose: { type: String, default: 'cta' } },
     setup: props => () => h('div', [
       props.skipLabel ? h('button', { 'data-testid': 'step-skip' }, props.skipLabel) : null,
-      props.showNext ? h('button', { 'disabled': props.nextDisabled, 'data-testid': 'step-next' }, props.nextLabel) : null,
+      props.showNext ? h('button', { 'disabled': props.nextDisabled, 'data-testid': 'step-next', 'data-purpose': props.nextPurpose }, props.nextLabel) : null,
     ]),
   }))
   app.mount(host)
@@ -153,7 +154,21 @@ it('opens Agent setup with Skip agent setup and no connection status', async () 
   expect(host.querySelector('[data-agent-route="claude"]')?.getAttribute('aria-pressed')).toBe('true')
   expect(host.querySelector('a[href="https://claude.ai/directory/gscdump"]')).not.toBeNull()
   // Request Indexing cannot read an agent connection, so it claims none.
-  expect(host.textContent).not.toMatch(/connected|Waiting for/i)
+  expect(host.textContent).not.toMatch(/connected|waiting/i)
+  route.query = { step: 'sync' }
+})
+
+it.each([
+  ['coding-agent', 'Copy setup prompt'],
+  ['claude', 'Add to Claude'],
+  ['chatgpt', 'Open setup steps'],
+])('shows one solid action on the %s route, with Continue secondary', async (agent, action) => {
+  route.query = { step: 'agent', agent }
+  session.value = { hasSites: false, gscdumpConnected: false }
+  const host = await mount()
+  // No read confirms the agent, so Continue never takes the solid button.
+  expect([...host.querySelectorAll('[data-purpose="cta"]')].map(node => node.textContent)).toEqual([action])
+  expect(host.querySelector('[data-testid="step-next"]')?.getAttribute('data-purpose')).toBe('secondary')
   route.query = { step: 'sync' }
 })
 

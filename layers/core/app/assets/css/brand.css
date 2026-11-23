@@ -247,3 +247,13 @@
     --pro-shell-nav-gap: 1.25rem;
   }
 }
+
+/* ═══ Script-focused headings ════════════════════════════════════════════
+   A page moves focus to its heading by script, with `tabindex="-1"`, as the
+   saved-page result does. Before any pointer or key input, the browser then
+   matches `:focus-visible` and draws its default ring. A heading is not a
+   control, so it gets no ring. Ported from gscdump.com, scoped to headings
+   so roving controls keep their ring. */
+:where(h1, h2, h3, h4, h5, h6)[tabindex="-1"]:focus {
+  outline: none;
+}

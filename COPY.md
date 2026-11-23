@@ -547,6 +547,10 @@ Request Indexing has no listing of its own, so no string names one.
 On every route, the first result is the First Site report for the selected Site.
 The step is `agent` in the Onboarding Step words table.
 `layers/pro-gsc/shared/agent-setup.ts` holds these strings and builds each Setup prompt.
+The chosen agent opens into numbered steps, as on gscdump.com and nuxtseo.com. The labels, choices,
+and step titles match theirs. This app keeps its own wording where its route differs: the
+`Setup prompt` casing, the gscdump CLI, the Google account sentence, and the next step note.
+`{app}` is Claude or ChatGPT. `{account}` is the Google account sentence.
 
 | Asset | String |
 | --- | --- |
@@ -555,24 +559,30 @@ The step is `agent` in the Onboarding Step words table.
 | Lead | Each sign-in waits for your approval. |
 | Choice group name | Agent |
 | Coding agent choice | Coding agent · Claude Code, Codex, or Cursor, in your terminal |
-| Claude choice | Claude · Claude.ai or Claude Desktop, through gscdump's listing |
-| ChatGPT choice | ChatGPT · ChatGPT, through gscdump's app |
+| Claude choice | Claude · Claude on the web or desktop |
+| ChatGPT choice | ChatGPT · ChatGPT on the web |
 | Copy action | Copy setup prompt / Setup prompt copied |
-| Coding agent help | Paste it into your coding agent. It stops at the gscdump sign-in for your approval. |
+| Coding agent, copy step | Copy the Setup prompt · Your agent installs the gscdump CLI and signs in. |
+| Coding agent, approve step | Approve the sign-in · Your agent opens gscdump in your browser. {account} |
 | Commands summary | Run the commands yourself |
-| Claude step 1 | Add gscdump to Claude from its directory listing. |
-| Claude step 1 action | Open gscdump in Claude, a link to `https://claude.ai/directory/gscdump` |
-| ChatGPT step 1 | Add the gscdump app to ChatGPT. The guide shows each step. |
-| ChatGPT step 1 action | Read the ChatGPT guide, a link to `https://gscdump.com/mcp/chatgpt` |
-| Sign-in step | Sign in to gscdump with the Google account that owns your Search Console property. Approve the access. |
-| Prompt step | Paste the Setup prompt into a new {Claude or ChatGPT} chat. |
+| Commands copy action | Copy commands, the name of an icon-only button |
+| Add step | Add gscdump to {app} |
+| Claude, add detail and action | From the Claude directory. · Add to Claude, a link to `https://claude.ai/directory/gscdump` |
+| ChatGPT, add detail and action | Follow the setup steps on gscdump.com. · Open setup steps, a link to `https://gscdump.com/mcp/chatgpt` |
+| Approve step | Approve access · {app} opens gscdump. {account} |
+| Ask step | Ask your first question · Paste the Setup prompt into a new {app} chat. |
+| Google account sentence | Sign in with the Google account that owns your Search Console property. |
 | Next step note | Next, connect Google here. Your agent reads your Sites after you connect them. |
-| Continue action | Continue, shown once the reader chooses an agent |
+| Continue action | Continue, a secondary button shown once the reader chooses an agent |
 | Skip action | Skip agent setup |
+
+**One solid button: the first step's action.** Continue stays secondary. gscdump makes Continue
+solid after its server confirms the connection. This app has no such read.
 
 **The step shows no connection status.** gscdump reports no browser sign-in or MCP grant to
 Request Indexing, so the step cannot confirm a connection. Never show "Connected" or "Waiting"
-from a copy or a click. Add a status only with a server read that confirms the connection.
+from a copy or a click. Every step keeps its number, with no done mark and no spinner. Add a
+status only with a server read that confirms the connection.
 
 **Name the Google account that owns the Search Console property.** gscdump finds its account by
 Google account. The reader signs in twice: at gscdump, and at Connect Google here. Two different
@@ -864,7 +874,7 @@ Onboarding Step words, under `proShell.copy.onboarding.steps`:
 
 | Step | Rail label | Heading | Description | Action |
 | --- | --- | --- | --- | --- |
-| `agent` | Agent setup | Choose your agent | Each sign-in waits for your approval. | Continue, once an agent is chosen. Skip agent setup |
+| `agent` | Agent setup | Choose your agent | Each sign-in waits for your approval. | Continue, secondary, once an agent is chosen. Skip agent setup |
 | `connect` | Connect Google | Connect Google Search Console | See which pages Google indexed and the reasons it gives for pages it left out. | Continue (shell default) |
 | `sites` | Connect Sites | Connect your Sites | Choose the Search Console property for the Site you want to connect. | Continue (shell default) |
 | `sync` | Finish setup | Setup completion assets | Setup completion assets | Go to dashboard |

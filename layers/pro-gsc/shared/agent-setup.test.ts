@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AGENT_SETUP_ROUTES, buildAgentSetupPrompt, ONBOARDING_SETUP_URL, parseAgentSetupRoute } from './agent-setup'
+import { AGENT_SETUP_ROUTES, agentSetupSteps, buildAgentSetupPrompt, ONBOARDING_SETUP_URL, parseAgentSetupRoute } from './agent-setup'
 
 describe('parseAgentSetupRoute', () => {
   it('reads each agent choice', () => {
@@ -36,5 +36,18 @@ describe('buildAgentSetupPrompt', () => {
 
   it('signs the coding agent in through the browser', () => {
     expect(buildAgentSetupPrompt('coding-agent')).toContain('gscdump auth login --mode hosted')
+  })
+})
+
+describe('agentSetupSteps', () => {
+  it.each(AGENT_SETUP_ROUTES)('names the Google account that owns the property on the %s approval step', (route) => {
+    // gscdump finds its account by Google account. Another account sees no Site.
+    const approve = agentSetupSteps(route).find(step => step.key === 'approve')
+    expect(approve?.detail).toContain('the Google account that owns your Search Console property')
+  })
+
+  it('links ChatGPT to the setup steps on gscdump.com, never a path on this app', () => {
+    const add = agentSetupSteps('chatgpt')[0]?.action
+    expect(add).toEqual({ _tag: 'Link', label: 'Open setup steps', to: 'https://gscdump.com/mcp/chatgpt' })
   })
 })
