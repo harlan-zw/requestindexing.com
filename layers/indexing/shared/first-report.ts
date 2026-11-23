@@ -1,29 +1,35 @@
 import type { PartnerLifecycleSite } from '@gscdump/contracts'
 import type { SemanticStatus } from '@nuxtseo/design-system/app/composables/semanticColors'
 import type { PageEvidence } from './page-evidence'
+import { GSC_CONNECT_COPY } from '#layers/pro-saas/shared/gsc-connect-copy'
+import { URL_INSPECTION_ACTIVITY_LABELS } from '#layers/pro-saas/shared/live-work'
+import { PAGE_SETUP_COPY } from '#layers/pro-saas/shared/page-task'
+import { SETUP_EXPERIMENT_COPY } from '#layers/pro-saas/shared/setup-experiments'
 
+// COPY.md, First Site report. A string that COPY.md reuses verbatim comes
+// from its own constant, so the two places cannot drift apart.
 export const FIRST_REPORT_COPY = {
   heading: 'Check which pages Google indexed',
   site: 'Site',
   loadingSaved: 'Loading saved Google verdicts',
-  captured: 'Captured',
-  notReported: 'Not reported by Google',
+  captured: PAGE_SETUP_COPY.captured,
+  notReported: PAGE_SETUP_COPY.notReported,
   sampleLimit: 'This sample covers only the URLs listed here.',
   collecting: 'Google\'s verdicts appear here when the first URL Inspections finish.',
   phase: {
-    waiting_for_sitemaps: 'Waiting for sitemaps',
-    discovering: 'Finding URLs to inspect',
-    checking: 'Inspecting URLs',
+    waiting_for_sitemaps: URL_INSPECTION_ACTIVITY_LABELS.waiting_for_sitemaps,
+    discovering: URL_INSPECTION_ACTIVITY_LABELS.discovering,
+    checking: URL_INSPECTION_ACTIVITY_LABELS.checking,
   },
   limit: {
-    daily: 'This Site has used its daily URL Inspection quota. Return when the quota resets.',
-    monthly: 'Monthly URL Inspection allowance reached',
-    other: 'URL Inspection limit reached',
+    daily: PAGE_SETUP_COPY.dailyQuota,
+    monthly: URL_INSPECTION_ACTIVITY_LABELS.monthlyLimit,
+    other: URL_INSPECTION_ACTIVITY_LABELS.otherLimit,
   },
   noVerdicts: 'This Site has no saved Google verdicts yet.',
   blocked: {
-    scope: 'Connect again and tick the Search Console box on Google\'s screen so we can check your pages.',
-    permission: 'Use the Google account that owns a verified Search Console property for this Site.',
+    scope: GSC_CONNECT_COPY.connectMissingScope,
+    permission: SETUP_EXPERIMENT_COPY.propertyRecovery,
   },
   savedUnavailable: 'Saved Google verdicts could not load. Select Check again to try again.',
   retry: 'Check again',

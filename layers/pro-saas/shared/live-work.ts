@@ -3,6 +3,16 @@ import { SITE_SYNC_LABELS } from './site-sync'
 
 export const SITE_ACTIVITY_EVENT = 'request-indexing:site-activity'
 
+/** COPY.md, Live work bar assets: the URL Inspection phases and limits the engine reports. The First Site report reuses them. */
+export const URL_INSPECTION_ACTIVITY_LABELS = {
+  checking: 'Inspecting URLs',
+  discovering: 'Finding URLs to inspect',
+  waiting_for_sitemaps: 'Waiting for sitemaps',
+  monthlyLimit: 'Monthly URL Inspection allowance reached',
+  dailyLimit: 'Daily URL Inspection quota reached',
+  otherLimit: 'URL Inspection limit reached',
+} as const
+
 export type LiveWorkSite = Pick<SiteFleetRow, 'siteId' | 'gscdumpSiteId' | 'syncStatus' | 'syncProgress' | 'processing' | 'hold' | 'lastSynced' | 'permissionLost'>
 type ActivitySource = 'inspection' | 'sitemaps' | 'search-console'
 type ActivityPhase = 'running' | 'waiting' | 'paused'
@@ -45,21 +55,21 @@ export function resolveSiteLiveWork<TSite extends LiveWorkSite>(site: TSite): Li
   // Only published URL Inspection results belong in the Site's coverage count.
   switch (indexing) {
     case 'checking':
-      add('inspection', 'running', 'Inspecting URLs')
+      add('inspection', 'running', URL_INSPECTION_ACTIVITY_LABELS.checking)
       break
     case 'discovering':
-      add('inspection', 'running', 'Finding URLs to inspect')
+      add('inspection', 'running', URL_INSPECTION_ACTIVITY_LABELS.discovering)
       break
     case 'waiting_for_sitemaps':
-      add('inspection', 'waiting', 'Waiting for sitemaps')
+      add('inspection', 'waiting', URL_INSPECTION_ACTIVITY_LABELS.waiting_for_sitemaps)
       break
     case 'budget_exhausted':
       if (reason === 'inspection_allowance')
-        add('inspection', 'paused', 'Monthly URL Inspection allowance reached', null, true)
+        add('inspection', 'paused', URL_INSPECTION_ACTIVITY_LABELS.monthlyLimit, null, true)
       else if (reason === 'daily_budget_exhausted')
-        add('inspection', 'paused', 'Daily URL Inspection quota reached')
+        add('inspection', 'paused', URL_INSPECTION_ACTIVITY_LABELS.dailyLimit)
       else
-        add('inspection', 'paused', 'URL Inspection limit reached')
+        add('inspection', 'paused', URL_INSPECTION_ACTIVITY_LABELS.otherLimit)
   }
 
   if (sitemaps === 'discovering')
