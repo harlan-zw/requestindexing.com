@@ -1,8 +1,8 @@
 // Agent setup, the first onboarding step (COPY.md, Agent setup assets). The
-// reader picks a coding agent, Claude, or ChatGPT, copies its Setup prompt,
-// and approves the gscdump sign-in. Or they select Skip agent setup and
-// continue in the web flow. The choice rides `?agent=` through the Connect
-// Google round trip.
+// reader picks Claude, ChatGPT, Gemini, or a coding agent, copies its Setup
+// prompt, and approves the gscdump sign-in. Or they select Skip agent setup
+// and continue in the web flow. The choice rides `?agent=` through the
+// Connect Google round trip.
 //
 // Every route reaches gscdump's MCP server or the gscdump CLI in Hosted mode.
 // Request Indexing has no listing of its own. gscdump finds its account by
@@ -11,17 +11,18 @@
 // app registers at Connect Google, and the agent reads the same Sites.
 //
 // A Setup prompt carries no secret. The coding agent signs in through the
-// CLI's browser login, which the person approves. Claude and ChatGPT sign in
-// through gscdump's OAuth when the person adds gscdump.
+// CLI's browser login, which the person approves. Claude, ChatGPT, and Gemini
+// sign in through gscdump's OAuth when the person adds gscdump.
 //
 // No connection status: gscdump reports no browser login or MCP grant to a
 // partner (its integration activity counts partner-issued API keys only), and
 // before Connect Google this app holds no gscdump user to ask about.
 
 import { ONBOARDING_ROUTE } from '#layers/pro-saas/shared/onboarding'
-import { GSCDUMP_CLI_PACKAGE } from './developer-setup'
+import { GSCDUMP_CLI_PACKAGE, GSCDUMP_MCP_URL } from './developer-setup'
 
-export const AGENT_SETUP_ROUTES = ['coding-agent', 'claude', 'chatgpt'] as const
+/** Each Agent setup route, in the order the step lists them, and each `?agent=` id it accepts. */
+export const AGENT_SETUP_ROUTES = ['claude', 'chatgpt', 'gemini', 'coding-agent'] as const
 
 export type AgentSetupRoute = typeof AGENT_SETUP_ROUTES[number]
 
@@ -35,19 +36,48 @@ export function parseAgentSetupRoute(value: unknown): AgentSetupRoute | null {
 /** Where the reader finishes setup. An empty Site list sends the agent's reader here, never to gscdump.com. */
 export const ONBOARDING_SETUP_URL = `https://requestindexing.com${ONBOARDING_ROUTE}`
 
-export interface AgentSetupOption {
-  route: AgentSetupRoute
+/** A product and its real mark. `invertDark` flips a near-black mark so it shows on a dark surface. */
+export interface AgentMark {
   label: string
-  detail: string
-  /** The product mark. One monochrome set, so the list never mixes styles. */
   icon: string
+  invertDark?: boolean
 }
 
-/** COPY.md, Agent setup assets. `terminal` is a design system icon role, so it follows the active set. */
+/**
+ * The coding agents the Coding agent row names, with the marks gscdump.com
+ * shows. They all take the same Setup prompt, so they share one route.
+ */
+export const CODING_AGENT_MARKS: readonly AgentMark[] = [
+  { label: 'Claude Code', icon: 'i-logos-claude-icon' },
+  { label: 'Codex', icon: 'i-logos-openai-icon', invertDark: true },
+  { label: 'Cursor', icon: 'i-simple-icons-cursor' },
+  { label: 'Copilot', icon: 'i-logos-github-copilot', invertDark: true },
+  { label: 'OpenCode', icon: 'i-simple-icons-opencode' },
+]
+
+/** What a row says under its label. The Coding agent row names its agents by their marks. */
+export type AgentSetupDetail
+  = | { _tag: 'Text', text: string }
+    | { _tag: 'Marks', marks: readonly AgentMark[], more: string }
+
+export interface AgentSetupOption extends AgentMark {
+  route: AgentSetupRoute
+  detail: AgentSetupDetail
+}
+
+/**
+ * COPY.md, Agent setup assets. The chat apps first, by the names people know,
+ * each with its plan or region limit. Then every coding agent in one row.
+ * Claude on the web, desktop, and mobile share one connector, so Claude is one
+ * row. `terminal` is a design system icon role, so it follows the active set.
+ */
 export const AGENT_SETUP_OPTIONS: readonly AgentSetupOption[] = [
-  { route: 'coding-agent', label: 'Coding agent', detail: 'Claude Code, Codex, or Cursor, through the gscdump CLI', icon: 'terminal' },
-  { route: 'claude', label: 'Claude', detail: 'Claude on the web or desktop', icon: 'i-simple-icons-claude' },
-  { route: 'chatgpt', label: 'ChatGPT', detail: 'ChatGPT on the web', icon: 'i-simple-icons-openai' },
+  { route: 'claude', label: 'Claude', detail: { _tag: 'Text', text: 'Web, desktop, and mobile share one connection.' }, icon: 'i-logos-claude-icon' },
+  // https://help.openai.com/en/articles/12584461
+  { route: 'chatgpt', label: 'ChatGPT', detail: { _tag: 'Text', text: 'On the web. Custom apps need a Business, Enterprise, or Edu plan.' }, icon: 'i-logos-openai-icon', invertDark: true },
+  // https://support.google.com/gemini/answer/17209137
+  { route: 'gemini', label: 'Gemini', detail: { _tag: 'Text', text: 'On the web. Personal Google Accounts in the US.' }, icon: 'i-logos-google-gemini-icon' },
+  { route: 'coding-agent', label: 'Coding agent', detail: { _tag: 'Marks', marks: CODING_AGENT_MARKS, more: 'and others' }, icon: 'terminal' },
 ]
 
 export const AGENT_SETUP_COPY = {
@@ -56,6 +86,7 @@ export const AGENT_SETUP_COPY = {
   promptCopied: 'Setup prompt copied',
   runCommands: 'Run the commands yourself',
   copyCommands: 'Copy commands',
+  copyServerUrl: 'Copy server URL',
   next: 'Next, connect Google here. Your agent reads your Sites after you connect them.',
   continue: 'Continue',
   skip: 'Skip agent setup',
@@ -73,24 +104,50 @@ export interface AgentSetupStep {
   key: 'copy' | 'add' | 'approve' | 'ask'
   title: string
   detail: string
+  /** A value the reader enters in another app, shown under the detail with its own copy button. */
+  paste?: string
   action: AgentSetupAction | null
 }
 
-// gscdump finds its account by Google account (header note), so both
-// approval steps name the account to use.
+// gscdump finds its account by Google account (header note), so every
+// approval step names the account to use.
 const GOOGLE_ACCOUNT = 'Sign in with the Google account that owns your Search Console property.'
 
-/**
- * How the person adds gscdump to Claude or ChatGPT. Claude links gscdump's
- * directory listing. ChatGPT links gscdump's setup steps, because gscdump's
- * own records disagree on whether its ChatGPT app is public.
- */
-const HOSTED_AGENT_ADD: Record<HostedAgentRoute, { detail: string, action: string, to: string }> = {
-  claude: { detail: 'From the Claude directory.', action: 'Add to Claude', to: 'https://claude.ai/directory/gscdump' },
-  chatgpt: { detail: 'Follow the setup steps on gscdump.com.', action: 'Open setup steps', to: 'https://gscdump.com/mcp/chatgpt' },
+interface HostedAgent {
+  label: string
+  add: { detail: string, action: string, to: string, paste?: string }
+  approve: string
 }
 
-const HOSTED_AGENT_LABEL: Record<HostedAgentRoute, string> = { claude: 'Claude', chatgpt: 'ChatGPT' }
+/**
+ * How the person adds gscdump to each chat app. Claude links gscdump's
+ * directory listing. ChatGPT links gscdump's setup steps, because gscdump's
+ * own records disagree on whether its ChatGPT app is public. Gemini adds
+ * gscdump as a custom app by its MCP URL. "Connected Apps" is Gemini's menu
+ * name, not a status.
+ */
+const HOSTED_AGENTS: Record<HostedAgentRoute, HostedAgent> = {
+  claude: {
+    label: 'Claude',
+    add: { detail: 'From the Claude directory.', action: 'Add to Claude', to: 'https://claude.ai/directory/gscdump' },
+    approve: 'Approve access',
+  },
+  chatgpt: {
+    label: 'ChatGPT',
+    add: { detail: 'Follow the setup steps on gscdump.com.', action: 'Open setup steps', to: 'https://gscdump.com/mcp/chatgpt' },
+    approve: 'Approve access',
+  },
+  gemini: {
+    label: 'Gemini',
+    add: {
+      detail: 'In Gemini, open Settings, then Connected Apps, then Add a custom app. Enter this URL.',
+      action: 'Open Gemini',
+      to: 'https://gemini.google.com/',
+      paste: GSCDUMP_MCP_URL,
+    },
+    approve: 'Sign in and approve access',
+  },
+}
 
 /** The steps of one route, in order. A coding agent runs the setup itself, so its Setup prompt comes first. */
 export function agentSetupSteps(route: AgentSetupRoute): readonly AgentSetupStep[] {
@@ -100,11 +157,10 @@ export function agentSetupSteps(route: AgentSetupRoute): readonly AgentSetupStep
       { key: 'approve', title: 'Approve the sign-in', detail: `Your agent opens gscdump in your browser. ${GOOGLE_ACCOUNT}`, action: null },
     ]
   }
-  const app = HOSTED_AGENT_LABEL[route]
-  const add = HOSTED_AGENT_ADD[route]
+  const { label: app, add, approve } = HOSTED_AGENTS[route]
   return [
-    { key: 'add', title: `Add gscdump to ${app}`, detail: add.detail, action: { _tag: 'Link', label: add.action, to: add.to } },
-    { key: 'approve', title: 'Approve access', detail: `${app} opens gscdump. ${GOOGLE_ACCOUNT}`, action: null },
+    { key: 'add', title: `Add gscdump to ${app}`, detail: add.detail, paste: add.paste, action: { _tag: 'Link', label: add.action, to: add.to } },
+    { key: 'approve', title: approve, detail: `${app} opens gscdump. ${GOOGLE_ACCOUNT}`, action: null },
     { key: 'ask', title: 'Ask your first question', detail: `Paste the Setup prompt into a new ${app} chat.`, action: { _tag: 'CopyPrompt' } },
   ]
 }

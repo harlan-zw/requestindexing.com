@@ -6,6 +6,7 @@ describe('parseAgentSetupRoute', () => {
     expect(parseAgentSetupRoute('coding-agent')).toBe('coding-agent')
     expect(parseAgentSetupRoute('claude')).toBe('claude')
     expect(parseAgentSetupRoute('chatgpt')).toBe('chatgpt')
+    expect(parseAgentSetupRoute('gemini')).toBe('gemini')
   })
 
   it('reads anything else as no choice', () => {
@@ -49,5 +50,12 @@ describe('agentSetupSteps', () => {
   it('links ChatGPT to the setup steps on gscdump.com, never a path on this app', () => {
     const add = agentSetupSteps('chatgpt')[0]?.action
     expect(add).toEqual({ _tag: 'Link', label: 'Open setup steps', to: 'https://gscdump.com/mcp/chatgpt' })
+  })
+
+  it('gives Gemini the gscdump MCP URL to enter as a custom app', () => {
+    // Gemini has no gscdump listing. The reader adds gscdump by URL.
+    const add = agentSetupSteps('gemini')[0]
+    expect(add?.paste).toBe('https://gscdump.com/mcp')
+    expect(add?.action).toEqual({ _tag: 'Link', label: 'Open Gemini', to: 'https://gemini.google.com/' })
   })
 })

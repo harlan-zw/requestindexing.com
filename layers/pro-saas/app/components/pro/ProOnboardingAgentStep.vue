@@ -47,10 +47,18 @@ const primaryStep = computed(() => steps.value.find(step => step.action)?.key ??
           class="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-100 hover:bg-accented/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
           @click="agent = option.route"
         >
-          <UIcon :name="option.icon" class="size-5 shrink-0 text-highlighted" aria-hidden="true" />
+          <UIcon :name="option.icon" class="size-5 shrink-0 text-highlighted" :class="{ 'dark:invert': option.invertDark }" aria-hidden="true" />
           <span class="min-w-0 flex-1">
             <span class="block text-base font-medium text-highlighted">{{ option.label }}</span>
-            <span class="block text-sm text-muted">{{ option.detail }}</span>
+            <!-- The Coding agent row names its agents by their marks, as gscdump.com does. -->
+            <span v-if="option.detail._tag === 'Marks'" class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+              <span v-for="mark in option.detail.marks" :key="mark.label" class="inline-flex items-center gap-1.5">
+                <UIcon :name="mark.icon" class="size-4 shrink-0" :class="{ 'dark:invert': mark.invertDark }" aria-hidden="true" />
+                {{ mark.label }}
+              </span>
+              <span>{{ option.detail.more }}</span>
+            </span>
+            <span v-else class="block text-sm text-muted">{{ option.detail.text }}</span>
           </span>
           <span
             class="size-4 shrink-0 rounded-full border transition-[border-width,border-color] duration-100"
@@ -79,6 +87,10 @@ const primaryStep = computed(() => steps.value.find(step => step.action)?.key ??
                   <p class="text-sm text-muted">
                     {{ step.detail }}
                   </p>
+                  <div v-if="step.paste" class="mt-1.5 flex min-w-0 items-center gap-1">
+                    <code class="min-w-0 break-all rounded-md bg-muted px-2 py-1 font-mono text-sm text-default">{{ step.paste }}</code>
+                    <UiCopyButton :text="step.paste" :aria-label="copy.copyServerUrl" purpose="quiet" size="xs" class="shrink-0" />
+                  </div>
                 </div>
                 <UiButton
                   v-if="step.action?._tag === 'Link'"

@@ -46,7 +46,7 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 | Onboarding Step | `@nuxtseo/pro-shell` Step registry, `FIRST_RUN_STEPS` and `DASHBOARD_CARD_STEPS` | Flow 1 to N steps, one Step state each | step |
 | Agent setup | onboarding, decided 2026-11-24; connects gscdump's MCP server (`GSCDUMP_MCP_URL`) | Onboarding 0 to 1 Agent setup; ends in one agent connection or Skip agent setup | Agent setup |
 | Setup prompt | Agent setup and each manual onboarding step | Manual step 0 to 1 Setup prompt; carries no secret | Setup prompt |
-| Coding agent | Claude Code, Codex, Cursor | One of three Agent setup choices, beside Claude and ChatGPT | coding agent |
+| Coding agent | Claude Code, Codex, Cursor, Copilot, OpenCode, and others | One of four Agent setup choices, beside Claude, ChatGPT, and Gemini | coding agent |
 | Skip agent setup | the Agent setup button | Agent setup 1 to 1 button; opens the web flow and keeps progress | Skip agent setup |
 | Feedback report | feedback table, Send feedback drawer | User 0 to N reports | feedback |
 | Indexing capability | `@nuxtseo/pro-indexing` `IndexingSource` optional field; nuxtseo.com GLOSSARY.md owns the term | Source 0 to N capabilities; a missing one hides its section | (internal) |
@@ -241,7 +241,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 ### Agent setup
 
-**Is:** the onboarding step that leads setup, decided 2026-11-24. The reader picks a coding agent, Claude, or ChatGPT, or selects Skip agent setup. Each agent connects to gscdump's MCP server, `https://gscdump.com/mcp`. Claude reaches it through gscdump's Claude listing, and ChatGPT through gscdump's ChatGPT app. Request Indexing has no listing of its own. Every route still passes Connect Google, which has no Skip.
+**Is:** the onboarding step that leads setup, decided 2026-11-24. The reader picks Claude, ChatGPT, Gemini, or a **Coding agent**, or selects Skip agent setup. Each agent connects to gscdump's MCP server, `https://gscdump.com/mcp`. Claude reaches it through gscdump's Claude listing, ChatGPT through gscdump's ChatGPT app, and Gemini as a custom app added by that URL. Request Indexing has no listing of its own. Every route still passes Connect Google, which has no Skip.
 
 The step is `agent` in `FIRST_RUN_STEPS`. Its Step state is `Optional`, so resume never lands there. A new signup opens it by URL. The chosen agent rides `?agent=` through the Connect Google round trip.
 
@@ -267,9 +267,9 @@ One concept, two places, as in nuxtseo.com. After onboarding, the Developers pag
 
 ### Coding agent
 
-**Is:** an agent that runs a terminal in the reader's workspace: Claude Code, Codex, or Cursor. It is one Agent setup choice. Claude and ChatGPT are the others, and they run in a hosted chat.
+**Is:** an agent that runs a terminal in the reader's workspace, such as Claude Code, Codex, Cursor, Copilot, or OpenCode. They all take the same Setup prompt, so they are one Agent setup choice. Claude, ChatGPT, and Gemini are the others, and they run in a hosted chat.
 
-**Use for:** the Agent setup choice, and prose about these three clients.
+**Use for:** the Agent setup choice, and prose about these clients.
 
 **Never:** terminal agent, CLI agent.
 
