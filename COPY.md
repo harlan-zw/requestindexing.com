@@ -686,7 +686,7 @@ Each setup step has one step guide: a card that says what the reader signs up fo
 It changes with the step. A wide screen shows it beside the step. A narrow screen shows it after the step's buttons.
 Each guide has a heading, a reason, and up to four facts. A fact states shipped behaviour only.
 A guide adds one example only where it shows the point better than words.
-No fact repeats a sentence that the step already shows. Never put a Free allowance number in a guide: gscdump sets the numbers.
+No fact repeats a sentence that the step shows in any state. Never put a Free allowance number in a guide: gscdump sets the numbers.
 The last step shows its guide only when the Team has a Site.
 `layers/pro-saas/shared/onboarding-step-guide.ts` holds these strings.
 
@@ -695,7 +695,7 @@ The last step shows its guide only when the Team has a Site.
 | Agent setup | Why start with an agent | Ask about your pages in the chat you already use. Your agent connects to gscdump, the engine that Request Indexing runs on. | Your agent says how many pages have an indexed verdict, and where the rest stopped. · Use one Google account for gscdump and for Connect Google. Then your agent reads the same Sites. · The Setup prompt asks for saved verdicts only. Those reads use no URL Inspections. · The Setup prompt holds no API key, cookie, or token. |
 | Connect Google | Why connect Google | Google reports its verdict for each page in Search Console. Request Indexing reads it with your own Google sign-in. | the Google account sentence in Agent setup assets, verbatim · Google shows its consent screen, then sends you back to setup. · gscdump holds the Google grant and syncs your Search Console data every day. · FAQ 5's answer in Landing page assets, verbatim |
 | Connect Sites | What a Site is | A Site is one website that Request Indexing checks for you. It comes from a verified Search Console property in your Google account. | Your Free allowance sets how many Sites your account can connect. · You can connect each property once. · gscdump then syncs the Site and inspects its sitemap URLs, within your Free allowance. · You can connect more Sites later from your dashboard. · Example, the landing page's Example card label, then one row: /pricing · Crawled - currently not indexed (VERIFIED-CLAIMS GSC-API-01) |
-| Finish setup | Saved verdicts come first | The report reads saved Google verdicts first. That read uses no URL Inspections. | gscdump inspects the sitemap URLs of a new Site after its sitemaps sync. · A fresh URL Inspection runs only when you approve it. · the First report cost string, verbatim · After setup, the Indexing page of each Site lists its saved verdicts. |
+| Finish setup | Saved verdicts come first | The report reads saved Google verdicts first. That read uses no URL Inspections. | gscdump inspects the sitemap URLs of a new Site after its sitemaps sync, within your Free allowance. · This report inspects more URLs only when you approve it. · After setup, the Indexing page of each Site lists its saved verdicts. |
 
 ## First Site report
 

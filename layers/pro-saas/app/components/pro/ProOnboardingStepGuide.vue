@@ -32,7 +32,7 @@ const headingId = computed(() => `step-guide-${step}-title`)
 
     <ul class="space-y-2.5 border-t border-default pt-4 text-sm text-muted dark:border-accented">
       <li v-for="fact in guide.facts" :key="fact" class="flex gap-2">
-        <UIcon name="i-lucide-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+        <UiIcon name="check" class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <span>{{ fact }}</span>
       </li>
     </ul>

@@ -18,11 +18,12 @@ const accountLabel = computed(() => session.value?.user?.email ?? session.value?
          1024px the account leaves the row too: it sits above the column on
          the right, so the mark stands alone. Narrower, it stays beside the
          mark, and only Sign out shows. Below 1024px the theme toggle would
-         cover it above the column. -->
+         cover it above the column. On a phone the mark shrinks, so a 320px
+         screen still fits it beside Sign out. -->
     <template #brand>
       <div class="h-11" aria-hidden="true" />
       <div class="pointer-events-none absolute inset-x-0 flex justify-center">
-        <NuxtLink to="/" class="pointer-events-auto inline-flex min-h-11 items-center rounded-md text-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+        <NuxtLink to="/" class="pointer-events-auto inline-flex min-h-11 items-center rounded-md max-sm:scale-75 text-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
           <OgBrand :size="34" wordmark semantic />
         </NuxtLink>
       </div>

@@ -1,11 +1,10 @@
 import type { OnboardingStep } from './onboarding'
-import { FIRST_REPORT_COPY } from '#layers/indexing/shared/first-report'
 import { GOOGLE_ACCOUNT_SENTENCE } from '#layers/pro-gsc/shared/agent-setup'
 
 // COPY.md, Step guide assets. Each setup step has one step guide: what the
 // reader signs up for at this step, and why. A fact states shipped behaviour
-// only. A canonical string comes from its own constant, so the two places
-// cannot drift apart. No fact repeats a sentence the step already shows.
+// only. A canonical string that has a constant comes from it, so the two
+// places cannot drift apart. No fact repeats a sentence the step can show.
 
 /** Google's coverage state for one URL, verbatim. Every example row is a URL Google left out. */
 export interface OnboardingStepGuideExampleRow {
@@ -74,15 +73,16 @@ export const ONBOARDING_STEP_GUIDES: Record<OnboardingStep, OnboardingStepGuide>
       ],
     },
   },
-  // COPY.md, First Site report: the saved read spends no URL Inspection, and
-  // a fresh one runs only on the reader's approval.
+  // COPY.md, First Site report: the saved read spends no URL Inspection.
+  // gscdump inspects a new Site's sitemap URLs by itself, within the Free
+  // allowance, so only the report's own URL Inspection waits for approval.
+  // The cost line stays beside the approve button, not here.
   sync: {
     title: 'Saved verdicts come first',
     why: 'The report reads saved Google verdicts first. That read uses no URL Inspections.',
     facts: [
-      'gscdump inspects the sitemap URLs of a new Site after its sitemaps sync.',
-      'A fresh URL Inspection runs only when you approve it.',
-      FIRST_REPORT_COPY.cost,
+      'gscdump inspects the sitemap URLs of a new Site after its sitemaps sync, within your Free allowance.',
+      'This report inspects more URLs only when you approve it.',
       'After setup, the Indexing page of each Site lists its saved verdicts.',
     ],
   },
