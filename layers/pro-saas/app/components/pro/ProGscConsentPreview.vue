@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { GOOGLE_ACCOUNT_SENTENCE } from '#layers/pro-gsc/shared/agent-setup'
 import { GSC_CONNECT_COPY as copy } from '#layers/pro-saas/shared/gsc-connect-copy'
 
 // Connect Google's consent preview (COPY.md, Connect Google assets): what
@@ -32,8 +33,13 @@ const googleUser = computed(() => {
       <span class="rounded-md border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">{{ copy.consent.readOnly }}</span>
       <span>{{ copy.consent.scope }}</span>
     </p>
-    <!-- The Read-only chip states the access, so no sentence repeats it. -->
+    <!-- The Read-only chip states the access, so no sentence repeats it.
+         Google's screen offers every signed-in Google account, so the
+         preview says which one to choose before the reader leaves. -->
     <p class="mt-2 text-sm text-muted">
+      {{ GOOGLE_ACCOUNT_SENTENCE }}
+    </p>
+    <p class="mt-1 text-sm text-muted">
       {{ copy.remove }}
       <ULink :to="copy.removeHref" external target="_blank" rel="noopener" class="font-medium text-highlighted underline">
         {{ copy.removeAction }}

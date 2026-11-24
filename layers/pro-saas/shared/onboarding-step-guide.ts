@@ -58,7 +58,8 @@ export const ONBOARDING_STEP_GUIDES: Record<OnboardingStep, OnboardingStepGuide>
   // What a Site gives: Google's reason for a URL it left out. The state is
   // one Google's URL Inspection API returned (VERIFIED-CLAIMS GSC-API-01).
   // The label is the landing page's Example card label. The property list
-  // shows the Free allowance count when gscdump caps the account.
+  // shows the Free allowance count when gscdump caps the account. The first
+  // fact says that connecting starts URL Inspections within that allowance.
   sites: {
     title: 'What a Site is',
     why: 'One website, from a verified Search Console property.',
@@ -69,6 +70,8 @@ export const ONBOARDING_STEP_GUIDES: Record<OnboardingStep, OnboardingStepGuide>
       ],
     },
     facts: [
+      // Connecting spends allowance with no further click, so the guide says so.
+      'gscdump then syncs the Site and inspects its sitemap URLs, within your Free allowance.',
       'You can connect more Sites later from your dashboard.',
     ],
   },
