@@ -5,6 +5,7 @@ import { createEvent } from 'h3'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { migratedSqlite, proDatabase } from '~~/tests/utils/pro-database'
 import { proEvents } from '#layers/pro-saas/server/database'
+import { ONBOARDING_AGENT_SETUP_PATH } from '#layers/pro-saas/shared/onboarding'
 import { createPageTask, PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 import { signInOrCreate } from './finalize'
 
@@ -61,6 +62,10 @@ it('returns a new signup to its saved page and binds that task to the created id
   expect(h.session.secure.googleOauthState).toBe('pending-grant')
 })
 
+it('opens Agent setup for a new signup with no saved page', async () => {
+  expect(await login()).toBe('/pro/dashboard/onboarding?step=agent')
+})
+
 it('preserves authenticated continuation for a returning person', async () => {
   await login()
   h.cookies['auth-redirect'] = PAGE_TASK_ROUTE
@@ -103,7 +108,7 @@ it('keeps sign-in working when optional saved-page telemetry fails', async () =>
 it('never assigns another user the prior account task or accepts an external task redirect', async () => {
   h.session = { secure: { pageTask: task(999) } }
   h.cookies['auth-redirect'] = 'https://evil.test/'
-  expect(await login()).toBe('/pro/dashboard')
+  expect(await login()).toBe(ONBOARDING_AGENT_SETUP_PATH)
   expect(h.write).not.toHaveBeenCalled()
   expect(h.session.secure.pageTask).toBeUndefined()
 })

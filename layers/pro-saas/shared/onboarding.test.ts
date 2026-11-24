@@ -1,13 +1,14 @@
 import type { GscConnection } from './onboarding'
 import { evaluateOnboardingSteps, REQUEST_HONOUR, resolveOnboarding } from '@nuxtseo/pro-shell/shared/onboarding'
 import { describe, expect, it } from 'vitest'
+import { safeAuthRedirect } from '#layers/pro-saas-auth/shared/utils/auth-redirect'
 import {
   DASHBOARD_CARD_STEPS,
   FIRST_RUN_STEPS,
   gscCallbackErrorRedirect,
   hasUsableGoogleGrant,
   ONBOARDING_ROUTE,
-  ONBOARDING_STEPS,
+  onboardingConnectReturnTo,
   parseOnboardingCompletedFlag,
   parseOnboardingStep,
   resolveGscConnection,
@@ -78,6 +79,19 @@ describe('gscCallbackErrorRedirect', () => {
   })
 })
 
+describe('onboardingConnectReturnTo', () => {
+  it('carries the chosen agent through the Google round trip', () => {
+    // The connect route stores the return page through safeAuthRedirect.
+    expect(safeAuthRedirect(onboardingConnectReturnTo('claude'))).toBe('/pro/dashboard/onboarding?step=sites&agent=claude')
+    expect(safeAuthRedirect(onboardingConnectReturnTo(null))).toBe('/pro/dashboard/onboarding?step=sites')
+  })
+
+  it('keeps the chosen agent when Google returns no grant', () => {
+    expect(gscCallbackErrorRedirect(onboardingConnectReturnTo('coding-agent'), 'gsc_connect_cancelled'))
+      .toBe('/pro/dashboard/onboarding?step=connect&agent=coding-agent&error=gsc_connect_cancelled')
+  })
+})
+
 describe('resolveOnboardingResumeStep', () => {
   it('starts at connect while nothing has been done', () => {
     expect(resolveOnboardingResumeStep({ gsc: NOT_CONNECTED, hasSites: false })).toBe('connect')
@@ -135,9 +149,27 @@ describe('first-run steps', () => {
 
   it('keeps every step in the rail and finishes from the last one', () => {
     const resolution = current({ gsc: NOT_CONNECTED, hasSites: true }, 'sync')
-    expect(resolution.steps.map(step => step.id)).toEqual([...ONBOARDING_STEPS])
+    expect(resolution.steps.map(step => step.id)).toEqual(['agent', 'connect', 'sites', 'sync'])
     expect(resolution.next).toEqual({ _tag: 'Finish' })
     expect(resolution.back).toBe('sites')
+  })
+
+  it('opens Agent setup first, and Skip agent setup goes to Connect Google', () => {
+    const resolution = current({ gsc: NOT_CONNECTED, hasSites: false }, 'agent')
+    expect(resolution.index).toBe(0)
+    expect(resolution.back).toBeNull()
+    expect(resolution.skip).toEqual({ _tag: 'Go', step: 'connect' })
+    expect(resolution.next).toEqual({ _tag: 'Go', step: 'connect' })
+  })
+
+  it('never resumes at Agent setup', () => {
+    // Agent setup is an offer. A bare URL resumes at the first owed step.
+    expect(current({ gsc: NOT_CONNECTED, hasSites: false }).current.id).toBe('connect')
+    expect(current({ gsc: CONNECTED, hasSites: false }).current.id).toBe('sites')
+  })
+
+  it('reopens Agent setup with Back from Connect Google', () => {
+    expect(current({ gsc: NOT_CONNECTED, hasSites: false }, 'connect').back).toBe('agent')
   })
 
   it('shows a requested step as asked, even one the user already finished', () => {
@@ -165,6 +197,7 @@ describe('dashboard card steps', () => {
 
 describe('parseOnboardingStep', () => {
   it('accepts every declared step', () => {
+    expect(parseOnboardingStep('agent')).toBe('agent')
     expect(parseOnboardingStep('connect')).toBe('connect')
     expect(parseOnboardingStep('sites')).toBe('sites')
     expect(parseOnboardingStep('sync')).toBe('sync')

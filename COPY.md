@@ -542,16 +542,65 @@ Keep the exact URL and host through sign-in, consent, connection, and recovery.
 
 Agent setup is the first onboarding step, decided 2026-11-24 (MARKETING.md, Boundary with gscdump).
 `GLOSSARY.md` defines Agent setup, Setup prompt, Coding agent, and Skip agent setup.
-The reader picks a coding agent, Claude, or ChatGPT. Each one connects to gscdump's MCP server.
+The reader picks Claude, ChatGPT, Gemini, or a coding agent. Each one connects to gscdump's MCP server.
 Request Indexing has no listing of its own, so no string names one.
 On every route, the first result is the First Site report for the selected Site.
-When the step joins the Step registry, add its row to the Onboarding Step words table.
+The step is `agent` in the Onboarding Step words table.
+`layers/pro-gsc/shared/agent-setup.ts` holds these strings and builds each Setup prompt.
+The agents sit as rows in one panel, and the chosen agent opens into numbered steps, as on
+gscdump.com and nuxtseo.com. The choice lines and step titles follow gscdump.com's. This app
+keeps its own wording where its route differs: the `Setup prompt` casing, the gscdump CLI, the
+Google account sentence, and the next step note.
+The rows use the names people know: the chat apps first, then one Coding agent row that names
+the agents by their marks. Each chat app row states its plan or region limit. The ChatGPT limit
+follows OpenAI's help article 12584461, and the Gemini limit follows Google's Gemini help
+article 17209137. Check both before you change either string.
+`{app}` is Claude, ChatGPT, or Gemini. `{account}` is the Google account sentence.
 
 | Asset | String |
 | --- | --- |
 | Rail label | Agent setup |
 | Heading | Choose your agent |
+| Lead | Each sign-in waits for your approval. |
+| Choice group name | Agent |
+| Claude choice | Claude · Web, desktop, and mobile share one connection. |
+| ChatGPT choice | ChatGPT · On the web. Custom apps need a Business, Enterprise, or Edu plan. |
+| Gemini choice | Gemini · On the web. Personal Google Accounts in the US. |
+| Coding agent choice | Coding agent · the marks and names Claude Code, Codex, Cursor, Copilot, OpenCode, then "and others" |
+| Copy action | Copy setup prompt / Setup prompt copied |
+| Coding agent, copy step | Copy the Setup prompt · Your agent installs the gscdump CLI and signs in. |
+| Coding agent, approve step | Approve the sign-in · Your agent opens gscdump in your browser. {account} |
+| Commands summary | Run the commands yourself |
+| Commands copy action | Copy commands, the name of an icon-only button |
+| Add step | Add gscdump to {app} |
+| Claude, add detail and action | From the Claude directory. · Add to Claude, a link to `https://claude.ai/directory/gscdump` |
+| ChatGPT, add detail and action | Follow the setup steps on gscdump.com. · Open setup steps, a link to `https://gscdump.com/mcp/chatgpt` |
+| Gemini, add detail and action | In Gemini, open Settings, then Connected Apps, then Add a custom app. Enter this URL. · `https://gscdump.com/mcp` with its copy button · Open Gemini, a link to `https://gemini.google.com/` |
+| Server URL copy action | Copy server URL, the name of an icon-only button |
+| Approve step | Approve access · {app} opens gscdump. {account} |
+| Gemini, approve step | Sign in and approve access · Gemini opens gscdump. {account} |
+| Ask step | Ask your first question · Paste the Setup prompt into a new {app} chat. |
+| Google account sentence | Sign in with the Google account that owns your Search Console property. |
+| Next step note | Next, connect Google here. Your agent reads your Sites after you connect them. |
+| Continue action | Continue, a secondary button shown once the reader chooses an agent |
 | Skip action | Skip agent setup |
+
+**One solid button: the first step's action.** Continue stays secondary. gscdump makes Continue
+solid after its server confirms the connection. This app has no such read.
+
+**The step shows no connection status.** gscdump reports no browser sign-in or MCP grant to
+Request Indexing, so the step cannot confirm a connection. Never show "Connected" or "Waiting"
+from a copy or a click. Every step keeps its number, with no done mark and no spinner. Add a
+status only with a server read that confirms the connection. "Connected Apps" in the Gemini add
+step is the name of Gemini's menu. It is not a status.
+
+**Name the Google account that owns the Search Console property.** gscdump finds its account by
+Google account. The reader signs in twice: at gscdump, and at Connect Google here. Two different
+accounts give two gscdump accounts, and the agent sees no Site.
+
+**The Coding agent route names the gscdump CLI in Hosted mode, as the Developers page does.** The
+Banned language row for the gscdump CLI covers refusal and hold copy, where the reader needs the
+next step inside this app.
 
 **Skip agent setup skips Agent setup only.** It opens the web flow and keeps the reader's
 progress. Connect Google still has no Skip (Connect Google assets). If an agent route reaches
@@ -560,6 +609,14 @@ Finish setup without Google, it shows "Finish refused, Google required".
 **A Setup prompt carries no secret.** It holds no API key, cookie, or token. It fills in only
 identifiers the reader already sees, such as the Site host. On each manual step, the Setup
 prompt sits above the direct action. The direct action works without an agent.
+
+**Each Setup prompt follows the same order.** The agent signs in through the browser and stops
+for the reader's approval. It confirms the account. It never connects a Site on gscdump.com: if
+the Site list is empty, it sends the reader back to this tab. It shows the Site list and waits
+for the reader to choose a Site, even from a list of one: gscdump can hold its own Site for the
+same property. It reads saved URL Inspection verdicts by Site ID and never requests a fresh
+inspection. If a step fails twice, it reports a
+paper cut to gscdump (`gscdump papercut` or the `submit-feedback` tool), then says what blocked.
 
 ## Connect Google assets
 
@@ -827,6 +884,7 @@ Onboarding Step words, under `proShell.copy.onboarding.steps`:
 
 | Step | Rail label | Heading | Description | Action |
 | --- | --- | --- | --- | --- |
+| `agent` | Agent setup | Choose your agent | Each sign-in waits for your approval. | Continue, secondary, once an agent is chosen. Skip agent setup |
 | `connect` | Connect Google | Connect Google Search Console | See which pages Google indexed and the reasons it gives for pages it left out. | Continue (shell default) |
 | `sites` | Connect Sites | Connect your Sites | Choose the Search Console property for the Site you want to connect. | Continue (shell default) |
 | `sync` | Finish setup | Setup completion assets | Setup completion assets | Go to dashboard |
