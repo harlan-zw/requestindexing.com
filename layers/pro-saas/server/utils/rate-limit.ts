@@ -1,4 +1,5 @@
 import type { H3Event } from 'h3'
+import { resolveCloudflareBindings } from '@harlan-zw/nuxt-cloudflare/bindings'
 import { logWarn } from '~~/shared/logging'
 // `appStorage` historically pointed at `useStorage('cache')` in nuxtseo.com.
 // We use the Nitro built-in directly to avoid a host-level shim.
@@ -69,7 +70,7 @@ export async function checkFreeToolRateLimit(event: H3Event) {
   const key = `ip:${ip}`
 
   // Per-minute check (native Cloudflare binding)
-  const cf = event.context.cloudflare?.env as Record<string, RateLimiter> | undefined
+  const cf = resolveCloudflareBindings<Record<string, RateLimiter>>(event)
   const limiter = cf?.RL_FREE_TOOLS
 
   if (limiter) {
@@ -121,7 +122,7 @@ export async function checkProToolRateLimit(
   const key = getClientKey(event, opts.userId)
 
   // Per-minute check (native Cloudflare binding)
-  const cf = event.context.cloudflare?.env as Record<string, RateLimiter> | undefined
+  const cf = resolveCloudflareBindings<Record<string, RateLimiter>>(event)
   const limiter = cf?.[MINUTE_BINDINGS[tier]]
 
   if (limiter) {

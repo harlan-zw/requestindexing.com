@@ -107,7 +107,6 @@ export default defineNuxtConfig({
     '@harlan-zw/comark-content',
     '@nuxtjs/seo',
     '@nuxt/scripts',
-    'nitro-cloudflare-dev',
     '@nuxt/fonts',
     '@sentry/nuxt/module',
     '@harlan-zw/nuxt-sentry',
@@ -267,6 +266,12 @@ export default defineNuxtConfig({
   },
 
   nitro: {
+    $development: {
+      // The Nitro 3 Miniflare runner crashes while loading this dev bundle.
+      devServer: { runner: 'node-worker' },
+      plugins: [resolve('./layers/core/server/cloudflare-dev')],
+      rolldownConfig: { external: ['wrangler'] },
+    },
     virtual: buildEmailVirtuals(resolve('./layers/pro-saas/server/emails')),
     alias: {
       '~/server': resolve('./layers/core/server'),

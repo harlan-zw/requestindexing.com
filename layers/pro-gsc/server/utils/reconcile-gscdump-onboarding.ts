@@ -261,12 +261,12 @@ export async function reconcileGscdumpOnboardingForUser(opts: ReconcileGscdumpOn
 }
 
 export function scheduleGscdumpOnboardingReconcile(event: H3Event, opts: Omit<ReconcileGscdumpOnboardingOptions, 'event'>) {
-  const waitUntil = event.context.cloudflare?.context?.waitUntil?.bind(event.context.cloudflare.context)
+  const cloudflare = event.context.cloudflare as { context?: Pick<ExecutionContext, 'waitUntil'> } | undefined
   const promise = reconcileGscdumpOnboardingForUser({ ...opts, event })
     .catch((error: unknown) => logger.error('[gscdump reconcile] failed:', error))
 
-  if (waitUntil)
-    waitUntil(promise)
+  if (cloudflare?.context?.waitUntil)
+    cloudflare.context.waitUntil(promise)
   else
     void promise
 }
