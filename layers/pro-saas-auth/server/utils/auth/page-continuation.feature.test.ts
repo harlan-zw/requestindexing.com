@@ -1,12 +1,12 @@
 import type { H3Event } from 'h3'
-import { IncomingMessage, ServerResponse } from 'node:http'
+import { IncomingMessage } from 'node:http'
 import { Socket } from 'node:net'
-import { createEvent } from 'h3'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { migratedSqlite, proDatabase } from '~~/tests/utils/pro-database'
 import { proEvents } from '#layers/pro-saas/server/database'
 import { ONBOARDING_AGENT_SETUP_PATH } from '#layers/pro-saas/shared/onboarding'
 import { createPageTask, PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
+import { mockRequestEvent } from '../../../../../tests/support/mock-request-event'
 import { signInOrCreate } from './finalize'
 
 const h = vi.hoisted(() => ({ db: null as unknown, session: {} as Record<string, any>, cookies: {} as Record<string, string>, write: vi.fn(), hook: vi.fn() }))
@@ -44,7 +44,7 @@ function login(providerUserId = 'google-user') {
   request.method = 'GET'
   request.url = '/auth/google'
   request.headers.cookie = Object.entries(h.cookies).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('; ')
-  const event: H3Event = createEvent(request, new ServerResponse(request))
+  const event: H3Event = mockRequestEvent(request)
   return signInOrCreate({ event, provider: 'google', identity: { providerUserId, email: `${providerUserId}@example.test`, emailVerified: true, name: 'Example', avatarUrl: null, raw: {} } })
 }
 

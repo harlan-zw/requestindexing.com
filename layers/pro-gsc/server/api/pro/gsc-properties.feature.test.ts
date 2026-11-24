@@ -1,6 +1,6 @@
-import type { H3Event } from 'h3'
 import type { DatabaseSync } from 'node:sqlite'
 import { createError, defineEventHandler } from 'h3'
+import { mockEvent } from 'nitro/h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { isAdminEmail } from '~~/apps/admin/server/utils/admin'
 import { d1Database, migratedSqlite, seedUser } from '~~/tests/utils/pro-database'
@@ -34,8 +34,8 @@ function lifecycle(status: string) {
   return { account: { status }, sites: [] }
 }
 
-function event(): H3Event {
-  return { context: {}, path: '/api/pro/gsc-properties' } as unknown as H3Event
+function event() {
+  return mockEvent('/api/pro/gsc-properties')
 }
 
 describe('gET /api/pro/gsc-properties', () => {

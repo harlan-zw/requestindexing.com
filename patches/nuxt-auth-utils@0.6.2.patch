@@ -1,0 +1,13 @@
+diff --git a/dist/runtime/server/utils/session.d.ts b/dist/runtime/server/utils/session.d.ts
+index 8feb03a2e65d85b575204a487ad15845f8c4d890..521e9958b9c56d36c585dbc60ed7092cc88ddb55 100644
+--- a/dist/runtime/server/utils/session.d.ts
++++ b/dist/runtime/server/utils/session.d.ts
+@@ -10,7 +10,7 @@ type UserSessionConfig = Omit<SessionConfig, 'password'>;
+ /**
+  * An event the session can be written with, WebSocket peers and upgrade requests are read-only.
+  */
+-type WritableSessionEvent = RequestEvent | LegacyH3Event;
++type WritableSessionEvent = (Omit<RequestEvent, 'req'> & { readonly req: Pick<Request, 'headers'> }) | LegacyH3Event;
+ export interface SessionHooks {
+     /**
+      * Called when fetching the session from the API

@@ -51,6 +51,7 @@ jobs:
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      NUXT_APP_SECRET: ${{ secrets.NUXT_APP_SECRET || secrets.NUXT_SESSION_PASSWORD }}
       NUXT_DATAFORSEO_LOGIN: ${{ secrets.NUXT_DATAFORSEO_LOGIN }}
       NUXT_DATAFORSEO_PASSWORD: ${{ secrets.NUXT_DATAFORSEO_PASSWORD }}
       NUXT_GSCDUMP_API_KEY: ${{ secrets.NUXT_GSCDUMP_API_KEY }}
@@ -61,10 +62,22 @@ jobs:
       NUXT_GOOGLE_INDEXING_CLIENT_ID: ${{ secrets.NUXT_GOOGLE_INDEXING_CLIENT_ID }}
       NUXT_GOOGLE_INDEXING_CLIENT_SECRET: ${{ secrets.NUXT_GOOGLE_INDEXING_CLIENT_SECRET }}
       NUXT_POSTMARK_API_KEY: ${{ secrets.NUXT_POSTMARK_API_KEY }}
-      NUXT_SESSION_PASSWORD: ${{ secrets.NUXT_SESSION_PASSWORD }}
+      # Preserve signatures in existing first-report and unsubscribe links.
+      NUXT_SERVICE_SIGNING_SECRET: ${{ secrets.NUXT_SESSION_PASSWORD }}
       NUXT_UI_PRO_LICENSE: ${{ secrets.NUXT_UI_PRO_LICENSE }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
     steps:
+      - name: Validate signing secrets
+        run: |
+          if [ "${#NUXT_APP_SECRET}" -lt 32 ]; then
+            echo '::error::NUXT_APP_SECRET requires at least 32 characters.'
+            exit 1
+          fi
+          if [ "${#NUXT_SERVICE_SIGNING_SECRET}" -lt 32 ]; then
+            echo '::error::NUXT_SERVICE_SIGNING_SECRET requires at least 32 characters.'
+            exit 1
+          fi
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}

@@ -1,4 +1,3 @@
-import type { H3Event } from 'h3'
 import type { AuthProviderId, NormalizedIdentity } from '../../../shared/types/auth'
 import { z } from 'zod'
 import { logError } from '~~/shared/logging'
@@ -34,7 +33,7 @@ export interface AuthProvider {
   // identity without a second consent? Only true where we already hold a live
   // OAuth grant with email+profile coverage (Google via the GSC flow).
   canPromoteFromIntegration?: boolean
-  resolveIdentity: (event: H3Event, ctx: unknown) => Promise<NormalizedIdentity>
+  resolveIdentity: (context: unknown) => Promise<NormalizedIdentity>
 }
 
 const githubProvider: AuthProvider = {
@@ -43,7 +42,7 @@ const githubProvider: AuthProvider = {
   icon: 'i-simple-icons-github',
   scope: ['read:user', 'user:email'],
   canPromoteFromIntegration: false,
-  async resolveIdentity(_event, context) {
+  async resolveIdentity(context) {
     const { tokens, user } = githubContextSchema.parse(context)
     interface GhEmail { email: string, primary: boolean, verified: boolean }
     // A failed lookup is not an unverified email. The provider was unreachable,
@@ -91,7 +90,7 @@ const googleProvider: AuthProvider = {
   scope: ['openid', 'email', 'profile'],
   authorizationParams: { prompt: 'select_account' },
   canPromoteFromIntegration: true,
-  async resolveIdentity(_event, context) {
+  async resolveIdentity(context) {
     const { user } = googleContextSchema.parse(context)
     // userinfo v3 response: sub, email, email_verified, name, picture, ...
     const email = user.email ?? null

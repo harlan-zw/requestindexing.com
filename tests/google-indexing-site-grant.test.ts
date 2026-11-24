@@ -1,7 +1,7 @@
-import { IncomingMessage, ServerResponse } from 'node:http'
+import { IncomingMessage } from 'node:http'
 import { Socket } from 'node:net'
-import { createEvent } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mockRequestEvent } from './support/mock-request-event'
 
 // gscdump sends a Site's Submissions with the grant of the account that linked
 // the Site, not the caller's. A Team member can hold a grant of their own while
@@ -37,7 +37,7 @@ const { default: handler } = await import('../layers/indexing/server/api/sites/[
 
 function readSiteGrant() {
   const req = new IncomingMessage(new Socket())
-  return handler(createEvent(req, new ServerResponse(req)))
+  return handler(mockRequestEvent(req))
 }
 
 beforeEach(() => {

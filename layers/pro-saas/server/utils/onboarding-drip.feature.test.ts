@@ -74,7 +74,7 @@ beforeEach(() => {
   sqlite.prepare('UPDATE users SET name = ? WHERE user_id = 1').run('Ada Lovelace')
   sent = []
   vi.stubGlobal('useDrizzle', () => db)
-  vi.stubGlobal('useRuntimeConfig', () => ({ session: { password: SECRET } }))
+  vi.stubGlobal('useRuntimeConfig', () => ({ serviceSigningSecret: SECRET }))
 })
 
 describe('enrolment', () => {

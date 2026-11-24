@@ -1,7 +1,7 @@
-import { IncomingMessage, ServerResponse } from 'node:http'
+import { IncomingMessage } from 'node:http'
 import { Socket } from 'node:net'
-import { createEvent } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mockRequestEvent } from './support/mock-request-event'
 
 // gscdump stores the grant (gscdump.com ADR-0016). This app hands it over and
 // keeps no copy, so these tests watch the handover, never a local row.
@@ -53,9 +53,8 @@ async function visit(path: string, headers: Record<string, string> = {}): Promis
   req.method = 'GET'
   req.url = path
   req.headers = { host: 'requestindexing.com', ...headers }
-  const res = new ServerResponse(req)
-  await handler(createEvent(req, res))
-  return String(res.getHeader('location'))
+  const response = await handler(mockRequestEvent(req))
+  return String(new Headers(response.headers).get('location'))
 }
 
 // Starts the grant, then returns from Google with `callback`, the query Google

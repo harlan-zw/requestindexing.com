@@ -210,7 +210,7 @@ function createProHandler<O extends ProHandlerOptions, T>(mode: HandlerMode<O, T
         ...(caller ? { userId: caller.user.id, teamId: caller.currentTeamId } : {}),
       })
       const cause = markCapturedBySentry(e)
-      throw createError({
+      const responseError = createError({
         statusCode: 500,
         statusMessage: 'internal_error',
         data: {
@@ -218,8 +218,8 @@ function createProHandler<O extends ProHandlerOptions, T>(mode: HandlerMode<O, T
           message: 'Internal error',
           requestId,
         } satisfies ProErrorEnvelope,
-        cause,
       })
+      throw Object.assign(responseError, { cause })
     }
   })
 }

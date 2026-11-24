@@ -125,10 +125,10 @@ function fire(color: 'success' | 'warning' | 'error' | 'info') {
           </KitRow>
           <KitRow label="UProgress · linear">
             <div class="w-full max-w-md space-y-3">
-              <UProgress :value="32" />
-              <UProgress :value="68" color="success" />
-              <UProgress :value="84" color="warning" size="sm" />
-              <UProgress :value="40" indeterminate />
+              <UProgress :model-value="32" />
+              <UProgress :model-value="68" color="success" />
+              <UProgress :model-value="84" color="warning" size="sm" />
+              <UProgress :model-value="null" />
             </div>
           </KitRow>
         </div>

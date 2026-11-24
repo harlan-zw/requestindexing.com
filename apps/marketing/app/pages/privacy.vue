@@ -18,7 +18,7 @@ useSeoMeta({
 
         <h2>Cookies</h2>
         <p>Yes, we use cookies. You can manage them in your browser settings if you like.</p>
-        <p>When you sign in, Request Indexing sets the <code>nuxt-session</code> cookie to keep you signed in. It lasts up to 90 days.</p>
+        <p>When you sign in, Request Indexing sets the <code>nuxt-auth-session</code> cookie to keep you signed in. It lasts up to 90 days.</p>
         <p>The <code>pro-first-touch</code> cookie records how you first reached Request Indexing: the kind of page you landed on, such as the home page, a tool, or a guide, the time, the domain of the site that linked you, and any campaign tags (<code>utm_</code> values) in the link. It holds no URL you checked, no full referrer address, and no other part of the query string. It lasts up to 30 days. Request Indexing reads it only when a sign-in creates your account, and saves its values with your signup record. Each sign-in deletes the cookie. A later visit can set it again.</p>
 
         <h2>Analytics</h2>

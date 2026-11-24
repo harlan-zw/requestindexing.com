@@ -6,10 +6,10 @@
 // The hook fires once per Nitro app, on the first admin request, so resource
 // modules cost nothing on a request that is not an admin one.
 
-import type { NitroApp } from 'nitropack/types'
+import type { NitroApp } from 'nitro/types'
 import type { AdminListQuery, AdminPanelDef, AdminRegistry, AdminResourceDef } from './admin-shell'
 
-declare module 'nitropack/types' {
+declare module 'nitro/types' {
   interface NitroRuntimeHooks {
     'admin:resources': (registry: AdminRegistry) => void | Promise<void>
   }
@@ -34,6 +34,8 @@ export function loadAdminRegistry(nitroApp: NitroApp): Promise<AdminRegistry> {
   const existing = loaded.get(nitroApp)
   if (existing)
     return existing
+  if (!nitroApp.hooks)
+    throw new Error('Nitro hooks are unavailable.')
   const registry = createAdminRegistry()
   // hookable answers synchronously when every listener is synchronous, so the
   // result is wrapped before it is chained.

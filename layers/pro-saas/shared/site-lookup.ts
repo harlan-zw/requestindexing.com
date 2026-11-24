@@ -22,6 +22,10 @@ export const SITES_ROUTE = '/pro/dashboard/sites'
  */
 export const MISSING_SITE_PATH = SITES_ROUTE
 
+export function readSiteRouteId(params: Record<string, unknown>): string | null {
+  return typeof params.id === 'string' ? params.id : null
+}
+
 /** The `/api/pro/sites/:id` projection the dashboard pages read. */
 export interface SiteResource {
   id?: string

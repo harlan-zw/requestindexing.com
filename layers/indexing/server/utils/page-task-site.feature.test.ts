@@ -1,9 +1,10 @@
 import type { H3Event } from 'h3'
-import { IncomingMessage, ServerResponse } from 'node:http'
+import { IncomingMessage } from 'node:http'
 import { Socket } from 'node:net'
-import { createError, createEvent, defineEventHandler } from 'h3'
+import { createError, defineEventHandler } from 'h3'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { createPageTask } from '#layers/pro-saas/shared/page-task'
+import { mockRequestEvent } from '../../../../tests/support/mock-request-event'
 import { requirePageTaskSite } from './page-task-site'
 
 const h = vi.hoisted(() => ({
@@ -43,7 +44,7 @@ function event(method: string, origin?: string, fetchSite?: string, url = 'https
     request.push(body)
     request.push(null)
   }
-  return createEvent(request, new ServerResponse(request))
+  return mockRequestEvent(request)
 }
 
 beforeEach(() => {

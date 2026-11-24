@@ -133,7 +133,7 @@ export async function signInOrCreate({ event, provider, identity }: SignInOrCrea
   )
 
   if (isNewUser) {
-    await enrolOnboardingDrip({ db, onboardingDripEnabled: useRuntimeConfig(event).onboardingDripEnabled, now: new Date() }, dbUserId!)
+    await enrolOnboardingDrip({ db, onboardingDripEnabled: useRuntimeConfig().onboardingDripEnabled, now: new Date() }, dbUserId!)
       .catch(() => logger.warn('The existing onboarding sequence could not be enrolled.'))
   }
 

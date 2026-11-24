@@ -63,6 +63,9 @@ export default defineEventHandler(async (event) => {
   // never reached Google and one who left on Google's screen read the same.
   // Every attempt records, and the callback's outcome names the same attempt.
   // No email.
+  const { clientId } = useRuntimeConfig().oauth?.google ?? {}
+  if (!clientId)
+    throw createError({ statusCode: 503, message: 'Google sign-in is unavailable.' })
   const attempt = randomUUID()
   event.waitUntil(recordGoogleConnectEvent(useDrizzle(event), session.user.id, 'gsc_connect_started', attempt, { scope: requestedScope }))
 
@@ -77,7 +80,6 @@ export default defineEventHandler(async (event) => {
     },
   })
 
-  const config = useRuntimeConfig(event)
   const host = getRequestHeader(event, 'host')
   const protocol = host?.includes('localhost') ? 'http' : 'https'
   const redirectUri = `${protocol}://${host}/auth/integrations/gsc/callback`
@@ -85,7 +87,7 @@ export default defineEventHandler(async (event) => {
   return sendRedirect(
     event,
     withQuery('https://accounts.google.com/o/oauth2/v2/auth', {
-      client_id: config.oauth.google.clientId,
+      client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
       scope: scopes.join(' '),

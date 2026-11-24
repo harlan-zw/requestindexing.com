@@ -6,6 +6,7 @@
 // to the requested site, then forwards upstream with the caller's own stored
 // gscdump credential. The credential never round-trips back to the browser.
 import type { HttpV1OperationDefinition } from '@gscdump/contracts/v1/http'
+import type { H3Event } from 'nitro/h3'
 import type { GscdumpV1ProxyOperation } from '../../../../internal/gscdump-v1-browser-proxy'
 import process from 'node:process'
 import { AGENT_REQUEST_HEADERS } from '@gscdump/contracts'
@@ -65,7 +66,7 @@ function proxyQuery(
 }
 
 async function proxyBody(
-  event: Parameters<typeof getRequestURL>[0],
+  event: H3Event,
   operation: GscdumpV1ProxyOperation,
   descriptor: HttpV1OperationDefinition,
 ): Promise<string | undefined> {
@@ -120,7 +121,7 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
 
   // Same flag the sidebar reads for the two Bing rows. A surface that is not
   // shipped does not get a relay.
-  const flags = readProFeatureFlags(useRuntimeConfig(event).public)
+  const flags = readProFeatureFlags(useRuntimeConfig().public)
   const operation = resolveGscdumpV1ProxyOperation(event.method.toUpperCase(), surface, path, flags)
   if (!operation)
     throw createError({ statusCode: 404, statusMessage: 'not_found' })

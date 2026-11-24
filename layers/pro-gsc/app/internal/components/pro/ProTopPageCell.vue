@@ -3,12 +3,13 @@ import { getPath } from '@nuxtseo/design-system/app/composables/formatting'
 import { useRoute } from 'nuxt/app'
 import { computed } from 'vue'
 import { NuxtLink } from '#components'
+import { readSiteRouteId } from '#layers/pro-saas/shared/site-lookup'
 import { searchConsoleLink } from '../../../utils/search-console-link'
 
 // Presentational cell for the keyword table's "Top Page" column. The value is
 // resolved in bulk by `useProTopAssociations` (one scan for the whole page),
 // so this component just renders the resolved page or a placeholder.
-defineProps<{
+const { siteId } = defineProps<{
   siteId: string
   page: string | null
   pending: boolean
@@ -17,7 +18,7 @@ defineProps<{
 // `siteId` prop is the UUID; link uses the URL param so it preserves whichever
 // id the user is on (publicId `s_…` or uuid).
 const linkRoute = useRoute()
-const linkSiteId = computed(() => linkRoute.params.id as string)
+const linkSiteId = computed(() => readSiteRouteId(linkRoute.params) ?? siteId)
 </script>
 
 <template>

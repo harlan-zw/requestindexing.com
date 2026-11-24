@@ -12,13 +12,13 @@ interface GscdumpConfig {
   webhookSecret?: string
 }
 
-function gscdumpConfig(event?: H3Event): GscdumpConfig {
-  const config = event ? useRuntimeConfig(event) : useRuntimeConfig()
+function gscdumpConfig(): GscdumpConfig {
+  const config = useRuntimeConfig()
   return (config.gscdump ?? {}) as GscdumpConfig
 }
 
-export function getGscdumpApiUrl(event?: H3Event): string {
-  return normalizeGscdumpApiUrl(gscdumpConfig(event).apiUrl)
+export function getGscdumpApiUrl(_event?: H3Event): string {
+  return normalizeGscdumpApiUrl(gscdumpConfig().apiUrl)
 }
 
 /**
@@ -26,13 +26,13 @@ export function getGscdumpApiUrl(event?: H3Event): string {
  * registration. Override with `NUXT_GSCDUMP_WEBHOOK_URL` in dev/preview so the
  * webhook path is testable outside production.
  */
-export function getGscdumpWebhookUrl(event?: H3Event): string {
-  return normalizeGscdumpWebhookUrl(gscdumpConfig(event).webhookUrl)
+export function getGscdumpWebhookUrl(_event?: H3Event): string {
+  return normalizeGscdumpWebhookUrl(gscdumpConfig().webhookUrl)
 }
 
 /** Public v1 client for operations in the frozen registry. */
 export function createGscdumpPublicV1Client(event?: H3Event, options?: { attempts?: number }) {
-  const config = event ? useRuntimeConfig(event) : useRuntimeConfig()
+  const config = useRuntimeConfig()
   const apiKey = config.gscdump?.apiKey
   if (!apiKey)
     throw createError({ statusCode: 500, message: 'GSCDUMP_API_KEY not configured' })

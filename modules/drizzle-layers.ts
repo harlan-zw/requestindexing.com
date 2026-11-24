@@ -48,9 +48,9 @@ export default defineNuxtModule<ModuleOptions>({
     // The emitted barrel re-exports `.ts` sources by absolute path. Nitro
     // externalises build-dir files in dev and loads them through native ESM,
     // which cannot resolve a `.ts`. Inlining keeps them on the bundler path.
-    nuxt.options.nitro.externals ||= {}
-    nuxt.options.nitro.externals.inline ||= []
-    nuxt.options.nitro.externals.inline.push(resolve(nuxt.options.buildDir, 'drizzle-layers'))
+    const noExternals = nuxt.options.nitro.noExternals
+    if (noExternals !== true)
+      nuxt.options.nitro.noExternals = [...(noExternals || []), resolve(nuxt.options.buildDir, 'drizzle-layers')]
 
     const aliasPaths: Record<string, string> = {}
     const flushers: Array<() => void> = []

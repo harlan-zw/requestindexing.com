@@ -5,11 +5,11 @@ import { indexingUrlsQueryKey } from '#layers/pro-gsc/app/composables/useProGscd
 const payload = { data: {} as Record<string, unknown> }
 let upstream: () => Promise<Response>
 
-// The composable reaches these as Nuxt auto-imports. `event.fetch` stands in
-// for Nitro's in-process fetch, which drops the abort signal it is given.
+// The in-process fetch can drop the abort signal it is given.
 Object.assign(globalThis as Record<string, unknown>, {
   useNuxtApp: () => ({ payload }),
-  useRequestEvent: () => ({ fetch: () => upstream() }),
+  useRequestEvent: () => ({}),
+  useRequestFetch: () => ({ raw: () => upstream() }),
 })
 
 const { useIndexingUrlsFirstPageSeed } = await import('./useIndexingUrlsFirstPageSeed')

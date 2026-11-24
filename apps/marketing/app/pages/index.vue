@@ -748,7 +748,7 @@ const linkClass = 'underline decoration-primary/30 underline-offset-4 hover:deco
         title="Questions?"
         :ui="{ container: 'max-w-3xl', title: 'font-title' }"
       >
-        <UAccordion :items="faqItems" multiple />
+        <UAccordion :items="faqItems" type="multiple" />
       </UPageSection>
 
       <!-- CTA -->

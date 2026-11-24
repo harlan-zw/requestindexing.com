@@ -1,5 +1,7 @@
-import type { H3Event } from 'h3'
+import type { RequestEvent } from 'nuxt/server'
 import type { ProSaasFeatures } from '#layers/pro-saas/shared/features'
+import { isEvent } from 'nitro/h3'
+import { createError, defineHandler, deleteCookie, getCookie, getQuery, getRouterParam, sendRedirect, setCookie, useAppConfig } from 'nuxt/server'
 import { logger } from '~~/shared/server/logger'
 import { proSaasFeatureEnabled } from '#layers/pro-saas/shared/features'
 import { safeAuthRedirect } from '../../../shared/utils/auth-redirect'
@@ -16,7 +18,7 @@ function buildHandler(providerId: string) {
   if (!provider)
     return null
 
-  const sharedOnError = (event: H3Event, error: unknown) => {
+  const sharedOnError = (event: RequestEvent, error: unknown) => {
     logger.error(`[auth/${providerId}] OAuth error:`, error)
     const message = error instanceof Error ? error.message : 'auth_failed'
     // `/login` renders the error UI; `/pro` does not exist in this app and
@@ -24,8 +26,10 @@ function buildHandler(providerId: string) {
     return sendRedirect(event, `/login?error=${encodeURIComponent(message)}`)
   }
 
-  const sharedOnSuccess = async (event: H3Event, context: unknown) => {
-    const identity = await provider.resolveIdentity(event, context)
+  const sharedOnSuccess = async (event: RequestEvent, context: unknown) => {
+    if (!isEvent(event))
+      throw createError({ status: 500, message: 'The OAuth callback needs an H3 request.' })
+    const identity = await provider.resolveIdentity(context)
     const refusal = `&provider=${encodeURIComponent(providerId)}`
     // The provider was unreachable, so verification is unknown. That is a
     // retryable failure, not an unverified email.
@@ -66,7 +70,7 @@ function buildHandler(providerId: string) {
   return null
 }
 
-export default defineEventHandler(async (event) => {
+export default defineHandler(async (event) => {
   if (import.meta.prerender)
     throw new Error('Should not be prerendering auth endpoints')
 
@@ -129,7 +133,7 @@ export default defineEventHandler(async (event) => {
   if (!query.code && !query.state && stateCookie) {
     logger.log(`[auth/${providerId}] clearing stale state cookie`)
     deleteCookie(event, 'nuxt-auth-state')
-    return sendRedirect(event, event.path)
+    return sendRedirect(event, event.url.pathname)
   }
 
   return handler(event)

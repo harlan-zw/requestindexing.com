@@ -1,9 +1,10 @@
 import type { DatabaseSync } from 'node:sqlite'
-import { IncomingMessage, ServerResponse } from 'node:http'
+import { IncomingMessage } from 'node:http'
 import { Socket } from 'node:net'
-import { createEvent, getResponseHeader } from 'h3'
+import { getResponseHeader } from 'h3'
 import { afterEach, expect, it } from 'vitest'
 import { migratedDatabase, proDatabase } from '~~/tests/support/migrated-d1'
+import { mockRequestEvent } from '../../../../tests/support/mock-request-event'
 import { createUserWithPersonalTeam } from './create-user-with-personal-team'
 import { emitFirstProEvent } from './pro-events'
 import { captureFirstSignupTouch, clearSignupAttribution, readSignupAttribution } from './signup-attribution'
@@ -18,7 +19,7 @@ function event(url: string, cookie?: string, referrer?: string) {
   request.url = url
   request.method = 'GET'
   request.headers = { 'host': 'requestindexing.com', 'x-forwarded-proto': 'https', ...(cookie ? { cookie } : {}), ...(referrer ? { referer: referrer } : {}) }
-  return createEvent(request, new ServerResponse(request))
+  return mockRequestEvent(request)
 }
 function responseCookie(value: string | number | string[] | undefined) {
   const text = Array.isArray(value) ? value[0] : value
