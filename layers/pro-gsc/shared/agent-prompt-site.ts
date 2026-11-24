@@ -1,7 +1,12 @@
 import type { SiteHoldReason } from '@gscdump/contracts'
-import type { AgentPromptSite } from './developer-setup'
 
-/** The fields of a Sites list row that decide whether the prompt can read it. */
+/** A Site an agent or the HTTP example can read. `gscdumpSiteId` addresses the engine. */
+export interface AgentPromptSite {
+  gscdumpSiteId: string
+  host: string
+}
+
+/** The fields of a Sites list row that decide whether an agent can read it. */
 export interface AgentPromptCandidate {
   domain: string | null
   property: string
@@ -12,13 +17,12 @@ export interface AgentPromptCandidate {
 }
 
 /**
- * The first Site the agent setup prompt can read, or null when there is none.
+ * The first Site an agent can read, or null when there is none.
  *
- * The prompt ends on a read of one Site's indexing record. A Site without a
- * gscdump link has no record, and gscdump imports nothing for a held Site.
- * With no such Site the prompt can only come back empty, so the Developers
- * page names the next step instead of offering the prompt (UX replay A7).
- * nuxtseo.com's prompt has no such gate: its accounts always have a Site.
+ * A Site without a gscdump link has no record, and gscdump imports nothing
+ * for a held Site. With no such Site an agent can only come back empty, so
+ * the Developers page names the next step above the agents (UX replay A7).
+ * nuxtseo.com has no such notice: its accounts always have a Site.
  */
 export function agentPromptSite(sites: readonly AgentPromptCandidate[]): AgentPromptSite | null {
   const site = sites.find(candidate => !!candidate.gscdumpSiteId && candidate.syncStatus !== 'refused' && !candidate.hold)
@@ -28,12 +32,12 @@ export function agentPromptSite(sites: readonly AgentPromptCandidate[]): AgentPr
 export type AgentPromptGate
   /** Search Console is not connected, so gscdump holds nothing to read. */
   = | { _tag: 'SearchConsoleRequired' }
-  /** Connected, with no Site the prompt can read. */
+  /** Connected, with no Site an agent can read. */
     | { _tag: 'SiteRequired' }
     | { _tag: 'Ready', site: AgentPromptSite }
 
 /**
- * Whether the Developers page offers the agent setup prompt.
+ * Which step the Developers page names above the agents, if any.
  *
  * `gscConnected` is the session's Search Console connection, the one value
  * Integrations, the sidebar, and the feature locks read. The page adds no

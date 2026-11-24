@@ -53,7 +53,7 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 
 Collisions: the product's submission history and Google's indexing state are different evidence. Never imply one proves the other. When a page shows Google's verdict after a Submission, "afterwards" shows order in time, never cause, and never a timeframe.
 
-Agent setup is one concept in two places: the onboarding step, and the Agent setup section on the Developers page after onboarding. The Developers section keeps its name, its API key label, and its "Copy agent setup prompt" button. That prompt carries an API key, so it is not a Setup prompt (Setup prompt, exception).
+Agent setup is one concept in two places: the onboarding step, and the Agent setup section on the Developers page after onboarding. Both render one agent panel, with the same rows, steps, and Setup prompts. Developers adds a Connect action on each row, and the API keys below the panel. Neither place shows a connection status.
 
 The Google Indexing API and IndexNow are separate channels. The Indexing API notifies Google only. IndexNow notifies Bing and other participating search engines, and Google is not one of them. Never call one channel by the other's name. Never imply that an IndexNow receipt says anything about Google.
 
@@ -99,6 +99,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 ### Connect
 **Is:** the act of attaching a Site to a Team. Every control in the product says Connect.
+**Agent rows:** on the Developers page, Connect on an agent row opens that agent's Agent setup steps, as on gscdump.com. It names the agent's own sign-in to gscdump, the way Connect Bing names a grant.
 **Use for:** prose and labels about attaching a Site.
 **Never:** add, create, or register a Site in prose or in a label. Code keeps `registerSite` and the `site_added` value.
 **Add and verify** is Google's own step for a Search Console property, so "Add and verify a property" is correct. It never names a Site: the reader adds and verifies the property, then connects the Site.
@@ -209,7 +210,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 **Is:** a revocable gscdump user credential, prefix `gsd_user_`, that signs in the gscdump CLI, MCP clients, and the API as one person. This app creates, lists, and revokes keys through gscdump's `partner.users.api_keys.*` operations and never stores a raw key. Borrowed from the gscdump glossary, which owns the term.
 
-**Use for:** the keys on the Developers page, including the key named Agent setup that the agent setup prompt carries.
+**Use for:** the keys on the Developers page, for scripts and SDKs. No Agent setup route needs one. A key named Agent setup came from the earlier Developers prompt, which carried a key.
 
 **Never:** token, secret, or personal access token as a name for the key. "Bearer token" stays, because it names the HTTP scheme. Never use the term for the partner credential in `users.gscdumpApiKey`; no reader sees that credential.
 
@@ -219,7 +220,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 **Is:** the gscdump CLI access mode that reads the record gscdump.com keeps for the account. It does not call Google. The other mode is Local. Borrowed from the gscdump glossary, which owns the term.
 
-**Use for:** CLI setup steps and the agent setup prompt.
+**Use for:** CLI setup steps and the Coding agent Setup prompt.
 
 **Never:** Cloud, cloud mode, the cloud. Since `@gscdump/cli` 4.3.0 the CLI rejects `--mode cloud`.
 
@@ -245,7 +246,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 The step is `agent` in `FIRST_RUN_STEPS`. Its Step state is `Optional`, so resume never lands there. A new signup opens it by URL. The chosen agent rides `?agent=` through the Connect Google round trip.
 
-One concept, two places, as in nuxtseo.com. After onboarding, the Developers page holds the same setup in its Agent setup section, for the CLI with an API key. Settled 2026-11-24.
+One concept, two places, as in gscdump.com and nuxtseo.com. After onboarding, the Developers page holds the same agent panel in its Agent setup section. Settled 2026-11-24.
 
 **Use for:** the onboarding step, its rail label, the Developers section, and docs about them.
 
@@ -257,11 +258,9 @@ One concept, two places, as in nuxtseo.com. After onboarding, the Developers pag
 
 **Is:** the copyable prompt on an onboarding step that needs manual work. It tells the agent what to do, what to verify, and when to hand back to the reader. It sits above the direct action, and the direct action works without it. It fills in only identifiers the reader already sees, such as the Site host. It carries no secret: no API key, cookie, or token.
 
-**Use for:** the prompt on Agent setup and on each manual onboarding step, and its copy control.
+**Use for:** the prompt on Agent setup, on the Developers page, and on each manual onboarding step, and its copy control.
 
-**Never:** agent prompt. Never for a prompt that carries an API key, such as the Developers page prompt.
-
-**Exception:** the Developers page shipped first. Its toast says "Setup prompt copied" for a prompt that carries an API key. It stays until that prompt drops the key.
+**Never:** agent prompt. Never for a prompt that carries an API key.
 
 **Casing:** `Setup prompt`, capital S, in prose and labels.
 

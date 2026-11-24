@@ -619,6 +619,41 @@ same property. It reads saved URL Inspection verdicts by Site ID and never reque
 inspection. If a step fails twice, it reports a
 paper cut to gscdump (`gscdump papercut` or the `submit-feedback` tool), then says what blocked.
 
+## Developers assets
+
+After onboarding, the Developers page shows Agent setup's agent panel, then the API keys
+(`GLOSSARY.md`, Agent setup: one concept, two places). The rows, the steps, and the Setup
+prompts are the Agent setup assets above, verbatim. The guide card beside the panel is the
+Agent setup step guide with its own heading. The lead, the Connect action, and the API keys hint
+match gscdump.com's Developers page. `layers/pro-saas/shared/developers-copy.ts` holds these
+strings.
+
+| Asset | String |
+| --- | --- |
+| Agents heading | Agent setup, for screen readers only. The page title is Developers |
+| Lead | You can connect more than one agent. Each one signs in on its own. |
+| Row action | Connect, a secondary button on each closed row. It opens the row's steps. Its accessible name adds the agent: Connect {app} |
+| Guide heading | Why use an agent. The reason, the questions, and the facts are the Agent setup step guide's, verbatim |
+| Empty Site list, in the Setup prompt | If the list is empty, stop. Tell me to connect a Site at https://requestindexing.com/pro/dashboard/sites/connect, then wait for me. My Sites live in Request Indexing. Never connect a Site on gscdump.com. |
+| API keys heading | API keys |
+| API keys hint | For scripts and SDKs. Agents do not need a key. |
+| Key name placeholder | Deploy script |
+| New key note | The HTTP example below includes this key. |
+| HTTP example summary | HTTP example |
+| HTTP example copy action | Copy HTTP example, the name of an icon-only button |
+| API guide link | Read the API guide |
+
+**The Developers Setup prompt sends an empty Site list to Connect a Site.** Only a reader who
+finished setup reaches Developers, and the wizard is closed to them. Every other line of the
+prompt is Agent setup's.
+
+**No row shows a status.** gscdump reports no agent sign-in to Request Indexing (Agent setup
+assets). So the rows show no Connected state, approval date, or Disconnect, and the Coding agent
+row lists no CLI sessions, all of which gscdump.com shows. Add them only with a server read.
+
+**No Local mode line.** gscdump.com's Coding agent row links Local mode. Banned language forbids
+it here.
+
 ## Connect Google assets
 
 The Connect Google step, the signup page, and the return from Google's consent screen.

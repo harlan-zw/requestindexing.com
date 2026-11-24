@@ -20,6 +20,7 @@ import {
   parseOnboardingStep,
   resolveGscConnection,
 } from '#layers/pro-saas/shared/onboarding'
+import { ONBOARDING_STEP_GUIDES } from '#layers/pro-saas/shared/onboarding-step-guide'
 import { PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 
 // First-run setup, four steps, the step in the URL. Agent setup leads, and a
@@ -288,7 +289,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         v-if="currentStep !== 'sync' || hasSites"
         class="min-[1420px]:absolute min-[1420px]:inset-y-0 min-[1420px]:left-full min-[1420px]:ml-8 min-[1420px]:w-80"
       >
-        <ProOnboardingStepGuide :step="currentStep" class="min-[1420px]:sticky min-[1420px]:top-6" />
+        <ProOnboardingStepGuide :guide="ONBOARDING_STEP_GUIDES[currentStep]" :name="currentStep" class="min-[1420px]:sticky min-[1420px]:top-6" />
       </div>
       <ProOnboardingAnswers v-if="currentStep === 'sync'" />
       <ProSetupExitFeedback v-if="feedbackStep" :step="feedbackStep" />

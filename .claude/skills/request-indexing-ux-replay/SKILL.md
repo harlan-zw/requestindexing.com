@@ -6,7 +6,7 @@ description: Replay Request Indexing onboarding as a new user on the web dashboa
 # Request Indexing UX replay
 
 Ported from gscdump's `gscdump-ux-replay` and nuxtseo.com's `agent-dogfood`.
-This app hosts no CLI, MCP server, or agent skill. The agent path is gscdump's CLI, skill, and MCP server, signed in with a key this app issues. `VISION.md` and `docs/arch/README.md` say why.
+This app hosts no CLI, MCP server, or agent skill. The agent path is gscdump's CLI, skill, and MCP server. The agent signs in to gscdump through the browser. `VISION.md` and `docs/arch/README.md` say why.
 
 Run the product as a new user. Record what they see before you read the code.
 A command that exits zero does not pass the test. A useful result passes it.
@@ -14,7 +14,7 @@ A command that exits zero does not pass the test. A useful result passes it.
 ## Start each replay
 
 1. Read `AGENTS.md`, `VISION.md`, `GLOSSARY.md`, and `COPY.md`. Read `DESIGN.md` before a UI fix.
-2. Read `layers/pro-gsc/shared/developer-setup.ts`. It holds the agent setup prompt and the Developers page steps.
+2. Read `layers/pro-gsc/shared/agent-setup.ts`. It holds each Setup prompt and the Agent setup steps that onboarding and the Developers page share.
 3. Record the production commit from `gh run list --workflow "Deploy to Cloudflare" --branch main --limit 1`.
 4. Record the gscdump CLI version from `pnpm dlx @gscdump/cli@latest --version`.
 5. Confirm 4 facts with the user: the test Google identity, the browser profile signed in to it, the inbox that gets its mail, and whether another replay uses that identity now.
@@ -49,14 +49,15 @@ Goal: a new person signs up, completes onboarding, connects a Site, and learns w
 
 Goal: the same person gets an indexing answer inside a coding agent, with no docs.
 
-1. Sign in, open Developers, and click **Copy agent setup prompt**. Capture the page before and after.
+1. Sign in, open Developers, open the Coding agent row, and click **Copy setup prompt**. Capture the page before and after.
 2. Check that every command in the copied prompt exists in the current CLI. Use `--help`, never memory.
 3. Give the prompt to a sub-agent with an isolated `HOME` under `~/scratch/ri-replay/agent-home`. The sub-agent follows the prompt only. It does not read this repository or the gscdump source.
+   The prompt stops at the browser sign-in. Approve it in the browser profile of the test identity.
 4. Record each command, its exit code, and its duration. The run passes only when it ends with an indexing summary for a connected Site.
    If the identity has no Site, the run passes when the agent says so clearly and names the next step.
 5. Check the MCP path once. Add `https://gscdump.com/mcp` with the key in the `x-api-key` header, list the tools, and call one read tool.
 6. Check the Claude.ai connector path once. It signs in at gscdump.com with the same Google account. Confirm that it shows the same Sites. If it shows a waitlist or no Sites, record a finding.
-7. Revoke the key on Developers. Confirm that the CLI and MCP now fail with a clear error.
+7. Revoke the key from step 5 on Developers. Confirm that MCP now fails with a clear error.
 
 ## Mail
 
