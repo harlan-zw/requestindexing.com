@@ -275,21 +275,24 @@ useSeoMeta({ title: 'Set up Request Indexing' })
 
     <!-- The step guide follows the step's buttons, so on a narrow screen it
          never pushes the step's way forward down. The frame's class makes
-         the step section its anchor, so from 1420px the guide hangs to the
-         right of the step, top-aligned with the heading, and the column keeps
-         its width. The 672px column stays centred, so the 32px gap and the
-         320px card need that width again on the left: 1376px, plus the
-         scrollbar and a margin. The hanging card leaves the page's flow, and
-         the surface clips what overflows it, so from 1420px the section holds
-         at least 30rem, the tallest guide. A short step, such as Connect Sites
-         before Google connects, then cannot cut the card off. The last step's
-         guide describes the report, so it waits for a Site. -->
+         the step section its anchor, so from 1420px the guide's column hangs
+         to the right of the step and runs the section's full height. The card
+         starts level with the heading and sticks 24px from the top while the
+         reader scrolls a long step. The column keeps its width. The 672px
+         column stays centred, so the 32px gap and the 320px card need that
+         width again on the left: 1376px, plus the scrollbar and a margin.
+         The hanging column leaves the page's flow, and the surface clips what
+         overflows it, so from 1420px the section holds at least 30rem, the
+         tallest guide. A short step, such as Connect Sites before Google
+         connects, then cannot cut the card off. The last step's guide
+         describes the report, so it waits for a Site. -->
     <template #after>
-      <ProOnboardingStepGuide
+      <div
         v-if="currentStep !== 'sync' || hasSites"
-        :step="currentStep"
-        class="min-[1420px]:absolute min-[1420px]:top-0 min-[1420px]:left-full min-[1420px]:ml-8 min-[1420px]:w-80"
-      />
+        class="min-[1420px]:absolute min-[1420px]:inset-y-0 min-[1420px]:left-full min-[1420px]:ml-8 min-[1420px]:w-80"
+      >
+        <ProOnboardingStepGuide :step="currentStep" class="min-[1420px]:sticky min-[1420px]:top-6" />
+      </div>
       <ProOnboardingAnswers v-if="currentStep === 'sync'" />
       <ProSetupExitFeedback v-if="feedbackStep" :step="feedbackStep" />
     </template>

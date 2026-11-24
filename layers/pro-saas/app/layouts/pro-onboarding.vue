@@ -5,13 +5,17 @@ import ProShellOnboardingSurface from '@nuxtseo/pro-shell/app/components/ProShel
 // `@nuxtseo/pro-shell`'s surface draws it; the brand mark is this app's own.
 // The account row is the only way out, so a user who signed in with the wrong
 // account is never trapped.
+//
+// The surface clips its backdrop with `overflow: hidden`, which makes it a
+// scroll container, so the sticky step guide inside would never stick.
+// `overflow-clip` keeps the same visual cut without one.
 const { session } = useUserSession()
 const logout = createLogoutHandler()
 const accountLabel = computed(() => session.value?.user?.email ?? session.value?.user?.name ?? 'Account')
 </script>
 
 <template>
-  <ProShellOnboardingSurface class="min-h-screen" :show-exit="false">
+  <ProShellOnboardingSurface class="min-h-screen overflow-clip!" :show-exit="false">
     <!-- The mark sits centred and larger above the step, as on gscdump.com.
          It centres on the column, not in the space the account leaves, so it
          leaves the row's flow, and a spacer keeps the row's height. From
