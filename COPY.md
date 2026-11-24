@@ -1146,6 +1146,6 @@ Live Google query rows show individual spellings. Only recorded reports supply c
 
 ## Approval log
 
-Each entry records which pull requests' new strings Harlan approved, and when. A string added after an entry needs its own approval.
+Each entry records which pull requests' new strings Harlan approved, and the UTC date he approved them. A string added after an entry needs its own approval.
 
-- 2026-11-25: every new string in [#463](https://github.com/harlan-zw/requestindexing.com/pull/463) (Step guides and Connect Google), [#466](https://github.com/harlan-zw/requestindexing.com/pull/466) (step guide cut), and [#467](https://github.com/harlan-zw/requestindexing.com/pull/467) (Developers agent panel), as merged.
+- 2026-11-24 (UTC): every new string in [#463](https://github.com/harlan-zw/requestindexing.com/pull/463) (Step guides and Connect Google), [#466](https://github.com/harlan-zw/requestindexing.com/pull/466) (step guide cut), and [#467](https://github.com/harlan-zw/requestindexing.com/pull/467) (Developers agent panel), as merged.
