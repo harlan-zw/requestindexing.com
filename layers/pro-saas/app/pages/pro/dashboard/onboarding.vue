@@ -186,33 +186,29 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         </div>
 
         <template v-else>
-          <p class="text-sm text-muted">
-            {{ GSC_CONNECT_COPY.readAccess }}
-          </p>
+          <!-- Variant F of the gscdump.com Google access lab: what Google will
+               ask for, then the one action, then the data it leads to, open
+               in the column. The access facts live in the consent preview and
+               the step guide, so the step has no disclosure rows. -->
+          <ProGscConsentPreview />
+          <!-- Google's sign-in branding: the full-colour G sits on white, so it
+               keeps its colours on the primary button. -->
           <UButton
             :to="gscConnectUrl"
             external
             size="lg"
-            class="min-h-11"
-            icon="i-simple-icons-google"
+            block
+            class="min-h-12"
             label="Connect Google Search Console"
             data-testid="connect-gsc-btn"
-          />
-          <ProSetupExample />
-          <details class="text-sm text-muted" data-testid="gsc-access">
-            <summary class="list-item min-h-11 cursor-pointer content-center font-medium text-highlighted">
-              {{ GSC_CONNECT_COPY.accessHeading }}
-            </summary>
-            <div class="space-y-2 pb-2">
-              <p>{{ GSC_CONNECT_COPY.changes }}</p>
-              <p>
-                {{ GSC_CONNECT_COPY.remove }}
-                <ULink :to="GSC_CONNECT_COPY.removeHref" external target="_blank" rel="noopener" class="font-medium text-highlighted underline">
-                  {{ GSC_CONNECT_COPY.removeAction }}
-                </ULink>
-              </p>
-            </div>
-          </details>
+          >
+            <template #leading>
+              <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-white" aria-hidden="true">
+                <UIcon name="i-logos-google-icon" class="size-4" />
+              </span>
+            </template>
+          </UButton>
+          <ProSetupExample layout="panel" :record-view="false" />
         </template>
       </div>
 
@@ -223,6 +219,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
            reopens Agent setup. -->
       <UiWizardNav
         can-back
+        :divider="false"
         :show-next="gscConnected || hasSites"
         :next-label="frameCopy.next"
         @back="controls.back()"

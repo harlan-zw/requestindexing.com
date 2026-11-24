@@ -44,8 +44,10 @@ async function answer(value: SetupExitReason) {
 </script>
 
 <template>
-  <details class="border-t border-default pt-3" data-testid="setup-exit-feedback">
-    <summary class="flex min-h-11 cursor-pointer items-center text-sm text-muted">
+  <details data-testid="setup-exit-feedback">
+    <!-- A quiet link under the step's buttons, with no rule of its own, so
+         the bottom of a step reads as one row of actions and one question. -->
+    <summary class="inline-flex min-h-11 cursor-pointer list-none items-center rounded-sm text-sm text-muted underline underline-offset-2 transition-colors hover:text-default focus-visible:outline-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
       {{ copy.question }}
     </summary>
     <div class="space-y-3 pt-3">

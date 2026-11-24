@@ -1,5 +1,6 @@
 import type { OnboardingStep } from './onboarding'
 import { GOOGLE_ACCOUNT_SENTENCE } from '#layers/pro-gsc/shared/agent-setup'
+import { GSC_CONNECT_COPY } from './gsc-connect-copy'
 
 // COPY.md, Step guide assets. Each setup step has one step guide: what the
 // reader signs up for at this step, and why. A fact states shipped behaviour
@@ -18,6 +19,8 @@ export interface OnboardingStepGuide {
   facts: readonly string[]
   /** One real artifact, only where it shows the point better than words. */
   example?: { label: string, rows: readonly OnboardingStepGuideExampleRow[] }
+  /** What follows the step, in order, where the step hands off to work the reader cannot see. */
+  next?: { title: string, steps: readonly string[] }
 }
 
 export const ONBOARDING_STEP_GUIDES: Record<OnboardingStep, OnboardingStepGuide> = {
@@ -36,20 +39,32 @@ export const ONBOARDING_STEP_GUIDES: Record<OnboardingStep, OnboardingStepGuide>
       'The Setup prompt holds no API key, cookie, or token.',
     ],
   },
-  // The step itself shows the read-only scope and the access disclosure, so
-  // the guide states the account, the round trip, who holds the grant, and
-  // the terms. gscdump holds the Search Console token and runs the daily sync
-  // (COPY.md, Truth rules). The grant returns to the Sites step.
+  // The step's consent preview shows the read-only scope and how to remove
+  // access, so the guide states the account, what Request Indexing changes,
+  // who holds the grant, and the terms. gscdump holds the Search Console
+  // token (COPY.md, Truth rules); its sync is the next list's second step.
   connect: {
     title: 'Why connect Google',
     why: 'Google reports its verdict for each page in Search Console. Request Indexing reads it with your own Google sign-in.',
     facts: [
       GOOGLE_ACCOUNT_SENTENCE,
-      'Google shows its consent screen, then sends you back to setup.',
-      'gscdump holds the Google grant and syncs your Search Console data every day.',
+      // COPY.md, Truth rules, the Search Console access sentence, verbatim.
+      GSC_CONNECT_COPY.changes,
+      'gscdump holds the Google grant.',
       // COPY.md, Landing page assets, FAQ 5, verbatim.
       'Free, with a Free allowance. No card needed.',
     ],
+    // The grant returns to Connect Sites (`onboardingConnectReturnTo`).
+    // gscdump syncs a new Site and inspects its sitemap URLs by itself, and
+    // the last step reads the saved verdicts (COPY.md, First Site report).
+    next: {
+      title: 'What happens next',
+      steps: [
+        'You choose the Sites to connect.',
+        'gscdump syncs each Site and inspects its sitemap URLs, within your Free allowance.',
+        'Your First Site report reads Google\'s saved verdicts for the Site.',
+      ],
+    },
   },
   // gscdump sets the Free allowance numbers, so no number appears here. The
   // property list shows the count when gscdump caps the account.

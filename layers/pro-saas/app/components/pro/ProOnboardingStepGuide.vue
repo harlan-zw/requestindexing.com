@@ -4,10 +4,11 @@ import { ONBOARDING_STEP_GUIDES } from '#layers/pro-saas/shared/onboarding-step-
 
 // The step guide: one card per setup step that says what the reader signs up
 // for at this step, and why (COPY.md, Step guide assets). The page places it;
-// this component only draws the card. It uses the onboarding panel's surface,
-// so it reads as the same material as the Agent setup panel and the First Site
-// report. In dark mode the default border is the elevated surface's colour, so
-// the card takes the accented border.
+// this component only draws the card. The fill is the dashboard card's: the
+// elevated tone at 35% over the page, mixed solid so the setup backdrop does
+// not show through. The full elevated tone reads as a muddy olive in dark
+// mode. In dark mode the default border matches the fill, so the card takes
+// the accented border.
 const { step } = defineProps<{ step: OnboardingStep }>()
 
 const guide = computed(() => ONBOARDING_STEP_GUIDES[step])
@@ -19,7 +20,7 @@ const headingId = computed(() => `step-guide-${step}-title`)
   <aside
     :aria-labelledby="headingId"
     :data-step-guide="step"
-    class="space-y-4 rounded-(--ui-radius) border border-default bg-elevated p-5 shadow-(--elevation-raised) dark:border-accented"
+    class="space-y-4 rounded-(--ui-radius) border border-default bg-[color-mix(in_oklab,var(--ui-bg-elevated)_35%,var(--ui-bg))] p-5 shadow-(--elevation-raised) dark:border-accented"
   >
     <div class="space-y-1.5">
       <h2 :id="headingId" class="text-base font-medium text-highlighted">
@@ -36,6 +37,18 @@ const headingId = computed(() => `step-guide-${step}-title`)
         <span>{{ fact }}</span>
       </li>
     </ul>
+
+    <div v-if="guide.next" class="border-t border-default pt-4 dark:border-accented">
+      <h3 class="text-sm font-medium text-highlighted">
+        {{ guide.next.title }}
+      </h3>
+      <ol class="mt-2 space-y-2.5 text-sm text-muted">
+        <li v-for="(nextStep, index) in guide.next.steps" :key="nextStep" class="flex gap-2">
+          <span class="mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full border border-accented text-xs font-medium tabular-nums" aria-hidden="true">{{ index + 1 }}</span>
+          <span>{{ nextStep }}</span>
+        </li>
+      </ol>
+    </div>
 
     <!-- The rows match the First Site report's: the URL in mono, then an
          amber dot with Google's coverage state, because none is indexed. -->

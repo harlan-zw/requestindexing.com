@@ -51,6 +51,7 @@ Object.assign(globalThis, {
 
 const { default: Onboarding } = await import('./onboarding.vue')
 const { default: ProOnboardingAgentStep } = await import('../../../components/pro/ProOnboardingAgentStep.vue')
+const { default: ProGscConsentPreview } = await import('../../../components/pro/ProGscConsentPreview.vue')
 const apps: ReturnType<typeof createApp>[] = []
 
 async function mount() {
@@ -62,10 +63,11 @@ async function mount() {
       return () => h(Suspense, null, { default: () => h(Onboarding) })
     },
   })
-  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'UiIcon', 'UFormField', 'USelect', 'UiStatusBadge', 'UiFavicon', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
+  for (const name of ['ProAlert', 'ProGscScopeMissingAlert', 'ProGscConnectReturnAlert', 'ULink', 'UIcon', 'UiIcon', 'UAvatar', 'UFormField', 'USelect', 'UiStatusBadge', 'UiFavicon', 'ProSiteAddForm', 'ProSetupExample', 'ProSetupExitFeedback', 'ProOnboardingAnswers'])
     app.component(name, defineComponent({ render: () => null }))
   app.component('UiWizardProgress', defineComponent({ render: () => null }))
   app.component('ProOnboardingAgentStep', ProOnboardingAgentStep)
+  app.component('ProGscConsentPreview', ProGscConsentPreview)
   // Each action reports its purpose, so a test can count the solid buttons.
   app.component('UiCopyButton', defineComponent({ props: ['label', 'purpose'], setup: props => () => h('button', { 'data-testid': 'copy-setup-prompt', 'data-purpose': props.purpose }, props.label) }))
   app.component('UiButton', defineComponent({ props: ['to', 'label', 'purpose'], setup: props => () => h('a', { 'href': props.to, 'data-purpose': props.purpose }, props.label) }))
@@ -158,6 +160,27 @@ it('offers no Skip on Connect Google, so a new account can only connect', async 
     .toBe('/auth/integrations/gsc/connect?scope=read&returnTo=%2Fpro%2Fdashboard%2Fonboarding%3Fstep%3Dsites')
   expect(host.querySelector('[data-testid="step-skip"]')).toBeNull()
   expect(host.querySelector('[data-testid="step-next"]')).toBeNull()
+  route.query = { step: 'sync' }
+})
+
+it('previews the Google consent before Connect Google, with the signed-in Google account', async () => {
+  route.query = { step: 'connect' }
+  session.value = { hasSites: false, gscdumpConnected: false, user: { id: 1, authProvider: 'google', email: 'ada@example.com', name: 'Ada', avatarUrl: null } } as typeof session.value
+  const host = await mount()
+  const preview = host.querySelector('[data-testid="gsc-consent-preview"]')
+  expect(preview?.textContent).toContain('View Search Console data for your verified sites')
+  expect(host.querySelector('[data-testid="gsc-consent-account"]')?.textContent).toContain('ada@example.com')
+  // The access facts moved into the preview and the step guide: no disclosure rows.
+  expect(host.querySelector('[data-testid="gsc-access"]')).toBeNull()
+  route.query = { step: 'sync' }
+})
+
+it('names no Google account in the consent preview for a GitHub sign-in', async () => {
+  route.query = { step: 'connect' }
+  session.value = { hasSites: false, gscdumpConnected: false, user: { id: 1, authProvider: 'github', email: 'ada@example.com', name: 'Ada', avatarUrl: null } } as typeof session.value
+  const host = await mount()
+  expect(host.querySelector('[data-testid="gsc-consent-preview"]')).not.toBeNull()
+  expect(host.querySelector('[data-testid="gsc-consent-account"]')).toBeNull()
   route.query = { step: 'sync' }
 })
 
