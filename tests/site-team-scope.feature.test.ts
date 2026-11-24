@@ -1,8 +1,8 @@
-import type { H3Event } from 'h3'
 import type { DatabaseSync } from 'node:sqlite'
 import type { CurrentTeamContext } from '../layers/pro-saas/server/utils/require-current-team'
 import type { Caller } from '../layers/pro-saas/shared/caller'
-import { createError, defineEventHandler } from 'h3'
+import { createError, defineEventHandler, readBody } from 'h3'
+import { mockEvent } from 'nitro/h3'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { isAdminEmail } from '../apps/admin/server/utils/admin'
 import { migratedSqlite, proDatabase, seedMembership, seedSite, seedUser, siteRow } from './utils/pro-database'
@@ -25,7 +25,7 @@ vi.stubGlobal('defineEventHandler', defineEventHandler)
 vi.stubGlobal('createError', createError)
 vi.stubGlobal('setResponseHeader', vi.fn())
 vi.stubGlobal('useDrizzle', () => h.db)
-vi.stubGlobal('readBody', async (event: { body: unknown }) => event.body)
+vi.stubGlobal('readBody', readBody)
 vi.stubGlobal('getRouterParam', () => undefined)
 vi.stubGlobal('getUserSession', async () => h.session)
 vi.stubGlobal('clearUserSession', vi.fn())
@@ -46,8 +46,10 @@ function callerOf(userId: number, memberships: Caller['memberships'], currentTea
   }
 }
 
-function event(body?: unknown): H3Event {
-  return { context: {}, body } as unknown as H3Event
+function event(body?: unknown) {
+  return body === undefined
+    ? mockEvent('/api/pro/gsc-properties')
+    : mockEvent('/api/teams/currentTeam', { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' } })
 }
 
 function currentTeamOf(userId: number) {

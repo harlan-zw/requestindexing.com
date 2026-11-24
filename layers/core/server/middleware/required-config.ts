@@ -1,11 +1,10 @@
 import type { ResolvedRequiredConfig } from '~~/shared/server/required-config'
+import { createError, defineHandler, useRuntimeConfig } from 'nuxt/server'
 /**
  * Runtime-secret guard: the last check a misconfigured deploy cannot skip.
  *
  * `scripts/deploy-cloudflare.ts` validates the secrets for a scripted deploy.
- * A deploy that bypasses the script ships the build's empty defaults, and the
- * Worker then boots fine while every signed-in request dies inside
- * iron-webcrypto with `Empty password` (REQUEST-INDEXING-C).
+ * A deploy that omits a secret fails the first dynamic request with its name.
  *
  * This handler runs before any route, once per Worker isolate, and fails the
  * request with a message naming every missing secret. It is a middleware
@@ -22,7 +21,7 @@ import { readConfigSecrets, REQUIRED_CONFIG_SECRETS, resolveRequiredConfig } fro
 
 let check: ResolvedRequiredConfig | undefined
 
-export default defineEventHandler((event) => {
+export default defineHandler((event) => {
   if (import.meta.prerender)
     return
 
@@ -34,7 +33,7 @@ export default defineEventHandler((event) => {
   if (check._tag === 'ok')
     return
 
-  const names = check.secrets.map(({ env }) => env).join(', ')
+  const names = check.secrets.map(({ env, minLength }) => minLength ? `${env} (${minLength}+ characters)` : env).join(', ')
 
   if (import.meta.dev) {
     logger.info(`Missing required config: ${names}. Set each value, then restart the dev server.`)

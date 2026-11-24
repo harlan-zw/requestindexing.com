@@ -2,7 +2,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { Caller } from '#layers/pro-saas/shared/caller'
 import { Readable } from 'node:stream'
 import { GscdumpV1Error } from '@gscdump/sdk/v1'
-import { createError, createEvent, getQuery, getRouterParam, getValidatedQuery, readBody, setResponseHeader } from 'h3'
+import { createError, getQuery, getRouterParam, getValidatedQuery, readBody, setResponseHeader } from 'h3'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { migratedDatabase, proDatabase } from '~~/tests/support/migrated-d1'
 import proxy from '#layers/pro-gsc/server/api/_gscdump/[surface]/v1/[...path]'
@@ -12,6 +12,7 @@ import { autoLinkGsc } from '#layers/pro-gsc/server/utils/auto-link-gsc'
 import { releaseGscdumpSite } from '#layers/pro-gsc/server/utils/release-gscdump-site'
 import { requireCurrentTeam } from '#layers/pro-saas/server/utils/require-current-team'
 import { requireTeamSite } from '#layers/pro-saas/server/utils/require-team-site'
+import { mockRequestEvent } from '../../../../tests/support/mock-request-event'
 import cohorts from '../api/pro/sites/[id]/indexing/cohorts.get'
 import cohortUrls from '../api/pro/sites/[id]/indexing/cohorts/urls.get'
 import grant from '../api/sites/[siteId]/indexing/google-grant.get'
@@ -108,7 +109,7 @@ function request(test: { route: unknown, method: string, query: string }, input 
     method: test.method,
     headers: { host: 'request.test', ...(test.method === 'POST' ? { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(body)) } : {}) },
   })
-  const event = createEvent(req as never, { setHeader: () => {} } as never)
+  const event = mockRequestEvent(req)
   event.context.params = params
   return (test.route as unknown as (event: unknown) => Promise<unknown>)(event)
 }

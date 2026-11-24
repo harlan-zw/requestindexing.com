@@ -1,4 +1,5 @@
 import { useProGscStatus } from '#layers/pro-gsc/app/composables/useProGscStatus'
+import { readSiteRouteId } from '../../shared/site-lookup'
 import { useProSiteInjection } from './useProSiteInjection'
 
 /**
@@ -15,7 +16,7 @@ import { useProSiteInjection } from './useProSiteInjection'
  */
 export function useSite(pageTitle?: string) {
   const route = useRoute()
-  const siteId = computed(() => route.params.id as string)
+  const siteId = computed(() => readSiteRouteId(route.params) ?? '')
 
   const { site, siteStatus } = useProSiteInjection(siteId)
 

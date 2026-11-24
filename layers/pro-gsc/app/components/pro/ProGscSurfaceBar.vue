@@ -3,6 +3,7 @@ import { navigateTo, useRoute } from 'nuxt/app'
 import { computed, watch } from 'vue'
 import { UiIcon } from '#components'
 import { useSite } from '#layers/pro-saas/app/composables/useSite'
+import { readSiteRouteId } from '#layers/pro-saas/shared/site-lookup'
 import { getSearchTypeLabel, useProGscFilters } from '../../composables/useProGscFilters'
 import ProGscControlBar from './ProGscControlBar.vue'
 
@@ -50,8 +51,9 @@ const gateNote = computed(() => supportsQueries.value
 watch([supportsQueries, supportsDimensions], () => {
   const stranded = (surface === 'queries' && !supportsQueries.value)
     || (surface === 'countries' && !supportsDimensions.value)
-  if (stranded)
-    navigateTo(`/pro/dashboard/sites/${route.params.id}/search-console`)
+  const id = readSiteRouteId(route.params)
+  if (stranded && id)
+    navigateTo(`/pro/dashboard/sites/${id}/search-console`)
 }, { immediate: true, flush: 'post' })
 </script>
 

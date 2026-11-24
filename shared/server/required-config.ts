@@ -3,18 +3,18 @@
  *
  * `scripts/deploy-cloudflare.ts` checks the same set before a scripted deploy,
  * but a deploy that bypasses the script ships whatever the build baked in.
- * When `NUXT_SESSION_PASSWORD` is missing, the Worker boots fine and then
- * every signed-in request dies inside iron-webcrypto with `Empty password`,
- * an error that names neither the cause nor the fix.
+ * Without a signing secret, the Worker cannot read sessions or signed links.
  */
 export interface RequiredConfigSecret {
-  /** Dot path on the runtime config object, e.g. `session.password`. */
+  /** Dot path on the runtime config object, e.g. `oauth.google.clientSecret`. */
   path: string
   /** Environment variable (or Worker secret) that overrides the path. */
   env: string
+  minLength?: number
 }
 
 export const REQUIRED_CONFIG_SECRETS: readonly RequiredConfigSecret[] = [
+  { env: 'NUXT_APP_SECRET', path: 'appSecret', minLength: 32 },
   { env: 'NUXT_DATAFORSEO_LOGIN', path: 'dataforseo.login' },
   { env: 'NUXT_DATAFORSEO_PASSWORD', path: 'dataforseo.password' },
   { env: 'NUXT_GSCDUMP_API_KEY', path: 'gscdump.apiKey' },
@@ -22,7 +22,7 @@ export const REQUIRED_CONFIG_SECRETS: readonly RequiredConfigSecret[] = [
   { env: 'NUXT_KEY', path: 'key' },
   { env: 'NUXT_OAUTH_GOOGLE_CLIENT_SECRET', path: 'oauth.google.clientSecret' },
   { env: 'NUXT_POSTMARK_API_KEY', path: 'postmark.apiKey' },
-  { env: 'NUXT_SESSION_PASSWORD', path: 'session.password' },
+  { env: 'NUXT_SERVICE_SIGNING_SECRET', path: 'serviceSigningSecret', minLength: 32 },
 ]
 
 /**
@@ -70,9 +70,9 @@ export function resolveRequiredConfig(
   required: readonly RequiredConfigSecret[],
   values: Record<string, unknown>,
 ): ResolvedRequiredConfig {
-  const missing = required.filter(({ env }) => {
+  const missing = required.filter(({ env, minLength }) => {
     const value = values[env]
-    return value === undefined || value === null || value === ''
+    return typeof value !== 'string' || value.length < (minLength ?? 1)
   })
 
   return missing.length > 0 ? { _tag: 'missing', secrets: missing } : { _tag: 'ok' }

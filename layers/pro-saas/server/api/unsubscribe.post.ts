@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   const token = typeof query.token === 'string' ? query.token : ''
   const browser = query.browser === '1'
   const now = new Date()
-  const parsed = await parseUnsubscribeToken(token, { secret: useRuntimeConfig(event).session.password, now })
+  const parsed = await parseUnsubscribeToken(token, { secret: useRuntimeConfig().serviceSigningSecret, now })
 
   setResponseHeader(event, 'Cache-Control', 'no-store')
 

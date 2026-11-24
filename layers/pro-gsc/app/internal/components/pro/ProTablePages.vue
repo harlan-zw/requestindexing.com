@@ -7,6 +7,7 @@ import { getPath } from '@nuxtseo/design-system/app/composables/formatting'
 import { useRoute } from 'nuxt/app'
 import { computed, h, watchEffect } from 'vue'
 import { NuxtLink, UiIcon, UiProgressPercent } from '#components'
+import { readSiteRouteId } from '#layers/pro-saas/shared/site-lookup'
 import { tableAvailability } from '../../../../shared/table-availability'
 import ProGscTableShell from '../../../components/pro/ProGscTableShell.vue'
 import { periodToDateRange } from '../../../composables/useGscPeriod'
@@ -54,7 +55,7 @@ const emit = defineEmits<{ available: [value: boolean] }>()
 
 const gscFilters = useProGscFilters()
 const route = useRoute()
-const linkSiteId = computed(() => (route.params.id as string) || siteId)
+const linkSiteId = computed(() => readSiteRouteId(route.params) || siteId)
 
 // Clamp to the same window the breakdown asked for, so the sparkline and the
 // top-keyword reads do not pad their tails with unstable days that have no data.

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig, defineProject } from 'vitest/config'
@@ -22,6 +23,8 @@ const ROOT = fileURLToPath(new URL('.', import.meta.url))
 const nuxtAsyncData = createRequire(createRequire(import.meta.url).resolve('nuxt/package.json')).resolve('./dist/app/composables/asyncData.js')
 const nuxtState = createRequire(createRequire(import.meta.url).resolve('nuxt/package.json')).resolve('./dist/app/composables/state.js')
 const nuxtOfetch = createRequire(createRequire(import.meta.url).resolve('nuxt/package.json')).resolve('ofetch')
+const vueRouter = createRequire(import.meta.url).resolve('vue-router')
+const nitroDir = dirname(createRequire(import.meta.url).resolve('nitro/package.json'))
 
 // `useIndexingPortfolio` reads each Site in the browser only, so the fleet
 // Indexing page tests need the same switch as the roster read.
@@ -76,7 +79,10 @@ function alias() {
     { find: '#test/nuxt-async-data', replacement: nuxtAsyncData },
     { find: '#test/nuxt-state', replacement: nuxtState },
     { find: '#test/nuxt-ofetch', replacement: nuxtOfetch },
+    { find: '#test/nitro-cloudflare-durable', replacement: join(nitroDir, 'dist/presets/cloudflare/runtime/_durable.mjs') },
+    { find: 'cloudflare:workers', replacement: `${ROOT}tests/setup/cloudflare-durable.ts` },
     { find: '#build/nuxt.config.mjs', replacement: fileURLToPath(new URL('./tests/setup/nuxt-build-config.ts', import.meta.url)) },
+    { find: '#build/pages', replacement: vueRouter },
     { find: /^#layers\/(.*)$/, replacement: `${ROOT}layers/$1` },
     { find: /^#emails\/(.*)$/, replacement: `${ROOT}layers/pro-saas/server/emails/$1.md` },
     { find: '~~', replacement: ROOT },
@@ -94,6 +100,7 @@ export default defineConfig({
           include: [UNIT],
           exclude: [...EXCLUDE, FEATURE, CLIENT_FEATURE],
           globals: true,
+          server: { deps: { inline: [/nuxt\/dist\/server\//] } },
         },
         resolve: { alias: alias() },
       }),
@@ -104,13 +111,14 @@ export default defineConfig({
         // `cloudflare:workers` and `#nitro-internal-*` imports. Nitro's build
         // sets `import.meta._websocket`, so the define stands in for it.
         define: { 'import.meta._websocket': 'true' },
+        ssr: { noExternal: ['nitro'] },
         test: {
           name: 'feature',
           environment: 'node',
           include: [FEATURE],
           exclude: [...EXCLUDE, CLIENT_FEATURE],
           globals: true,
-          server: { deps: { inline: [/nitropack\/dist\/presets\/cloudflare\/runtime\//, /nuxt-auth-utils\/dist\/runtime\/server\//] } },
+          server: { deps: { inline: [/nitro\/dist\/(?:presets\/cloudflare\/runtime|runtime)\//, /nuxt\/dist\/server\//, /nuxt-auth-utils\/dist\/runtime\/server\//] } },
         },
         resolve: { alias: alias() },
       }),

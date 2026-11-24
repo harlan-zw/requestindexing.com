@@ -1,19 +1,12 @@
 import { eq } from 'drizzle-orm'
+import { defineWebSocketHandler } from 'nitro/h3'
 import { users } from '~~/layers/core/server/db/schema'
 import { userTopic } from '~~/layers/core/server/utils/realtime'
 
 export default defineWebSocketHandler({
-  // Refuse the upgrade without a signed-in user. `requireUserSession` cannot:
-  // an upgrade request is not an H3Event, so h3 refuses to start a session for
-  // it and throws a plain Error before nuxt-auth-utils reaches its 401. crossws
-  // ends the upgrade only on a Response, so that Error surfaced as a 500.
-  // crossws sets `context` before this hook runs, but its type marks it optional.
   async upgrade(request) {
-    const session = await getUserSession({ headers: request.headers, context: request.context ?? {} })
-      // h3 throws only when it has no session to read: no cookie, or one that
-      // failed to unseal. Both mean nobody is signed in, which the 401 says.
-      .catch(() => null)
-    if (!session?.user)
+    const session = await getUserSession(request)
+    if (!session.user)
       return new Response('Unauthorized', { status: 401 })
   },
 

@@ -67,7 +67,8 @@ export async function assertRegisteredGscSiteScope(
     if (operation === 'delete' && isGscdumpV1Error(error) && error.code === 'site_not_found' && error.status === 404)
       return null
     logWarn('gscdump.site_access.read_failed', error, { gscdumpSiteId: siteId, ...engineRefusal(error) })
-    throw createError({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable', cause: markCapturedBySentry(error) })
+    const responseError = createError({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable' })
+    throw Object.assign(responseError, { cause: markCapturedBySentry(error) })
   })
   if (!registration)
     return { _tag: 'Absent' }

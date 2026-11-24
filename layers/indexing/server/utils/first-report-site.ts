@@ -58,7 +58,7 @@ export async function requireFirstReportSite(event: H3Event, write = false) {
   }
 }
 
-export function firstReportSecret(event: H3Event): string {
-  const config = useRuntimeConfig(event)
-  return config.session.password
+export function firstReportSecret(_event: H3Event): string {
+  const config = useRuntimeConfig()
+  return config.serviceSigningSecret
 }

@@ -46,7 +46,7 @@ useSchemaOrg([
         v-bind="page"
         :ui="{ title: 'text-center text-balance xl:leading-normal min-w-full', description: 'text-center' }"
       />
-      <UPageBody prose class="pb-0">
+      <UPageBody class="prose pb-0">
         <ContentRenderer v-if="page?.body" :value="page" />
       </UPageBody>
     </div>

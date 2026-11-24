@@ -21,12 +21,14 @@ export interface EventContextMap {
 
 export type AppEventName = keyof EventContextMap
 
-export function emitAppEvent<E extends AppEventName>(
+export async function emitAppEvent<E extends AppEventName>(
   event: E,
   ctx: EventContextMap[E],
 ): Promise<void> {
-  const nitro = useNitroApp()
-  return (nitro.hooks.callHook as (event: string, ctx: unknown) => Promise<void>)(event, ctx)
+  const { hooks } = useNitroApp()
+  if (!hooks)
+    throw new Error('Nitro hooks are unavailable.')
+  await (hooks.callHook as (event: string, ctx: unknown) => void | Promise<void>)(event, ctx)
 }
 
 // ============================================

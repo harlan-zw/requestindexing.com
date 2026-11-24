@@ -5,7 +5,7 @@ import { normalizeEmailAddress, parseEmailOptoutCategory } from '../../shared/em
 // The token carries the address and the category, so the one-click route
 // needs no session and no lookup to know what to change.
 //
-// The key is the session password, as on nuxtseo.com. The signature covers a
+// The key is the service signing secret. The signature covers a
 // purpose prefix, so this token never verifies as anything else that key signs.
 
 const VERSION = 'v1'
@@ -54,7 +54,7 @@ function base64UrlDecode(value: string): Uint8Array<ArrayBuffer> | null {
 
 async function hmacKey(secret: string): Promise<CryptoKey> {
   if (secret.length < MIN_SECRET_LENGTH)
-    throw new Error('The unsubscribe signing secret is shorter than 32 characters. Set NUXT_SESSION_PASSWORD.')
+    throw new Error('Set NUXT_SERVICE_SIGNING_SECRET to at least 32 characters.')
   return crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify'])
 }
 

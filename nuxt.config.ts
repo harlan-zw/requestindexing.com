@@ -1,6 +1,7 @@
-import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import process from 'node:process'
 import { resolve } from 'path'
+import { readAuthoredWranglerConfig } from '@harlan-zw/nuxt-cloudflare/wrangler'
 import { globbySync } from 'globby'
 import { externalCheckin } from './shared/checkin-external'
 import { CLOUDFLARE_REQUIRED_SECRETS } from './shared/cloudflare'
@@ -34,13 +35,13 @@ function buildEmailVirtuals(emailsDir: string): Record<string, string> {
 }
 
 export default defineNuxtConfig({
+  future: { compatibilityVersion: 5 },
+  // The installed modules still register Nitro 2 hooks.
+  nitroLegacy: true,
   features: {
     inlineStyles: true,
   },
   checkin: { external: externalCheckin },
-  alias: {
-    h3: realpathSync(resolve('./node_modules/h3/dist/index.mjs')),
-  },
   extends: [
     './apps/marketing',
     './apps/admin',
@@ -80,6 +81,18 @@ export default defineNuxtConfig({
   },
 
   modules: [
+    (_, nuxt) => {
+      // Nitro 3 merges wrangler.toml again when it writes the deployment config.
+      const authored = readAuthoredWranglerConfig(nuxt.options.rootDir)
+      const authoredFlags = authored._tag === 'authored' ? authored.config.compatibility_flags : undefined
+      if (!authoredFlags?.length)
+        return
+      nuxt.hook('nitro:init', (nitro) => {
+        const wrangler = nitro.options.cloudflare?.wrangler
+        if (wrangler?.compatibility_flags)
+          wrangler.compatibility_flags = wrangler.compatibility_flags.filter(flag => !authoredFlags.includes(flag))
+      })
+    },
     './modules/drizzle-layers',
     '@harlan-zw/nuxt-domain-events',
     '@harlan-zw/nuxt-use-query',
@@ -256,7 +269,6 @@ export default defineNuxtConfig({
   nitro: {
     virtual: buildEmailVirtuals(resolve('./layers/pro-saas/server/emails')),
     alias: {
-      'h3': realpathSync(resolve('./node_modules/h3/dist/index.mjs')),
       '~/server': resolve('./layers/core/server'),
       // `#schema` aggregates pro-saas's typed drizzle surface. `#schema/pro`
       // and `#db/pro` come from `modules/drizzle-layers` instead.
@@ -267,6 +279,7 @@ export default defineNuxtConfig({
       routes: ['/'],
       failOnError: true,
     },
+    // Skew protection 2.0.6 requires this Nitro 3 alias for WebSocket updates.
     preset: 'cloudflare-durable',
     cloudflare: {
       deployConfig: true,
@@ -335,7 +348,7 @@ export default defineNuxtConfig({
       'cache': { driver: 'memory' },
       'gscdump-rollout': { driver: 'fs', base: './.data/gscdump-rollout' },
     },
-    sourceMap: false,
+    sourcemap: false,
     experimental: {
       asyncContext: true,
       websocket: true,
@@ -357,9 +370,6 @@ export default defineNuxtConfig({
       // off for the whole graph, so the server side re-asserts it too.
       autoImport: true,
       dirs: recursiveServerAppFolders,
-    },
-    externals: {
-      inline: ['drizzle-orm'],
     },
   },
 
@@ -429,6 +439,7 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    appSecret: '',
     checkinToken: '',
     // Gates the daily sync fan-out. The Free allowance email always sends.
     // Override with NUXT_NOTIFICATIONS_ENABLED.
@@ -437,8 +448,8 @@ export default defineNuxtConfig({
     // unless NUXT_ONBOARDING_DRIP_ENABLED turns it on.
     onboardingDripEnabled: false,
     key: '', // .env NUXT_KEY
+    serviceSigningSecret: '',
     session: {
-      password: '',
       maxAge: 60 * 60 * 24 * 90, // 3mo
     },
     postmark: {

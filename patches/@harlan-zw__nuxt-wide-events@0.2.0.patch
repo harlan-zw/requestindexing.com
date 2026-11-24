@@ -1,0 +1,40 @@
+diff --git a/dist/module.mjs b/dist/module.mjs
+index f91a1679eb39eb780bb40f51cc4558be1768c336..fa82d5b4c62f2aca0d909e7c9e42ef6b36bcfeab 100644
+--- a/dist/module.mjs
++++ b/dist/module.mjs
+@@ -126,7 +126,7 @@ ${formatWideEventFieldIssues(resolvedFields.issues)}`);
+     nitro.alias["#wide-events/config"] = configTemplate.dst;
+     nitro.rollupConfig ||= {};
+     nitro.rollupConfig.plugins ||= [];
+-    nitro.rollupConfig.plugins.push(createWideEventValidationPlugin(nuxt.options.rootDir, fields));
++    nitro.rollupConfig.plugins.push(createWideEventValidationPlugin(nuxt.options.rootDir, fields, nuxt.options.typesDir || nuxt.options.buildDir));
+     if (enabled && (options.request ?? true)) {
+       addNitroPlugin(resolver.resolve(nuxt.options.dev ? "./runtime/server/development-plugin" : runtimeConfig.exclude || runtimeConfig.sampling ? "./runtime/server/production-policy-plugin" : "./runtime/server/production-plugin"));
+     }
+diff --git a/dist/shared/nuxt-wide-events.DjpbebjW.mjs b/dist/shared/nuxt-wide-events.DjpbebjW.mjs
+index 1ac0682c37621d5914b20797ea6735f03f7bd1d0..54823989109daf8c37e94eeaa01ffcd0ecbcaf08 100644
+--- a/dist/shared/nuxt-wide-events.DjpbebjW.mjs
++++ b/dist/shared/nuxt-wide-events.DjpbebjW.mjs
+@@ -1,4 +1,4 @@
+-import { normalize, relative } from 'pathe';
++import { normalize, relative, resolve } from 'pathe';
+ import { parseSync } from 'vite';
+ 
+ function createWideEventFieldRegistry() {
+@@ -505,13 +505,14 @@ function lineAt(source, offset = 0) {
+ }
+ 
+ const SOURCE_PATTERN = /\.[cm]?[jt]sx?$/i;
+-function createWideEventValidationPlugin(rootDir, fields) {
++function createWideEventValidationPlugin(rootDir, fields, typesDir) {
++  const serverImports = resolve(typesDir, 'types/server-imports.mjs');
+   return {
+     name: "nuxt-wide-events:validate-fields",
+     enforce: "pre",
+     transform(source, id) {
+       const file = sourceFile(id);
+-      if (!file)
++      if (!file || file === serverImports)
+         return null;
+       const displayFile = normalize(relative(rootDir, file));
+       const result = transformWideEventSource(source, displayFile, fields);

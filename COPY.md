@@ -1045,7 +1045,7 @@ today, with the file that shows it. The page makes no promise that the code cann
 
 | Asset | String | Evidence |
 | --- | --- | --- |
-| Session cookie | When you sign in, Request Indexing sets the `nuxt-session` cookie to keep you signed in. It lasts up to 90 days. | `runtimeConfig.session.maxAge` in `nuxt.config.ts`; `nuxt-auth-utils` names the cookie |
+| Session cookie | When you sign in, Request Indexing sets the `nuxt-auth-session` cookie to keep you signed in. It lasts up to 90 days. | `runtimeConfig.session.maxAge` in `nuxt.config.ts`; `nuxt-auth-utils` names the cookie |
 | First-touch cookie | The `pro-first-touch` cookie records how you first reached Request Indexing: the kind of page you landed on, such as the home page, a tool, or a guide, the time, the domain of the site that linked you, and any campaign tags (`utm_` values) in the link. It holds no URL you checked, no full referrer address, and no other part of the query string. It lasts up to 30 days. Request Indexing reads it only when a sign-in creates your account, and saves its values with your signup record. Each sign-in deletes the cookie. A later visit can set it again. | `layers/pro-saas/shared/signup-attribution.ts`; `docs/runbooks/signup-funnel.md`; `layers/pro-saas-auth/server/utils/auth/finalize.ts` |
 | Services heading | Services that receive data | |
 | gscdump.com | Request Indexing runs on gscdump.com. When you connect Google Search Console, Request Indexing sends gscdump.com your Google account ID, email address, and name, and the Google access you gave. gscdump.com reads and stores your Search Console data, and runs URL Inspection, sitemap, and IndexNow work for your Sites. | `layers/pro-gsc/server/routes/auth/integrations/gsc/callback.get.ts`; Truth rules |

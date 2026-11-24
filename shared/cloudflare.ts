@@ -5,6 +5,7 @@
 // Stripe is deliberately absent. Billing was removed for the free-only beta;
 // there is no paid tier and no Stripe keys to require.
 export const CLOUDFLARE_REQUIRED_SECRETS = [
+  'NUXT_APP_SECRET',
   'NUXT_DATAFORSEO_LOGIN',
   'NUXT_DATAFORSEO_PASSWORD',
   'NUXT_GSCDUMP_API_KEY',
@@ -12,7 +13,7 @@ export const CLOUDFLARE_REQUIRED_SECRETS = [
   'NUXT_KEY',
   'NUXT_OAUTH_GOOGLE_CLIENT_SECRET',
   'NUXT_POSTMARK_API_KEY',
-  'NUXT_SESSION_PASSWORD',
+  'NUXT_SERVICE_SIGNING_SECRET',
 ]
 
 // Secrets the deploy uploads only when they are set. The Worker boots without

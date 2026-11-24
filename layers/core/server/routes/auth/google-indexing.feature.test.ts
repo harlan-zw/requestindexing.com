@@ -1,5 +1,5 @@
-import { createEvent } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mockRequestEvent } from '../../../../../tests/support/mock-request-event'
 import route from './google-indexing.get'
 
 const state = vi.hoisted(() => ({
@@ -21,7 +21,7 @@ vi.mock('~~/layers/indexing/server/utils/google-indexing', () => ({
 vi.mock('#layers/pro-gsc/server/utils/gscdump-origin', () => ({ createGscdumpPublicV1Client: () => ({ updateUserIndexingApiGrant: state.grant }) }))
 
 function request(query: string) {
-  const event = createEvent({ url: `/auth/google-indexing${query}`, method: 'GET', headers: { host: 'request.test' } } as never, {} as never)
+  const event = mockRequestEvent({ url: `/auth/google-indexing${query}`, method: 'GET', headers: { host: 'request.test' } })
   return (route as unknown as (event: unknown) => Promise<string>)(event)
 }
 

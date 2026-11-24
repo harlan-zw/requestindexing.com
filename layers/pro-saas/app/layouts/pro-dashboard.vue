@@ -28,7 +28,7 @@ import { useProShellRoute } from '@nuxtseo/pro-shell/app/composables/useProShell
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { parseGscConnectReturn } from '#layers/pro-gsc/shared/gsc-grant'
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
-import { MISSING_SITE_PATH, readSiteLookup, siteLookupKey } from '#layers/pro-saas/shared/site-lookup'
+import { MISSING_SITE_PATH, readSiteLookup, readSiteRouteId, siteLookupKey } from '#layers/pro-saas/shared/site-lookup'
 import { useProFeedback } from '../composables/useProFeedback'
 import { useProHeaderMenu } from '../composables/useProHeaderMenu'
 import { provideProNavSource } from '../composables/useProNavSource'
@@ -67,7 +67,7 @@ const gscRetryTo = computed(() => {
   return router.resolve({ path: route.path, query, hash: route.hash }).fullPath
 })
 
-const routeSiteId = computed(() => typeof route.params.id === 'string' ? route.params.id : null)
+const routeSiteId = computed(() => readSiteRouteId(route.params))
 
 // Site scope, nuxtseo.com's `pro-site-dashboard` shape (ADR-0012): the layout
 // is the one place that derives the Site from the route. It reads it once,
@@ -118,7 +118,7 @@ const liveSiteRef = computed(() => {
   if (!routeSiteId.value)
     return singleSite.value ? proNavSiteRef(sites.value[0]!) : null
   const selected = site.value
-  return selected?.id === routeSiteId.value ? selected.publicId ?? routeSiteId.value : routeSiteId.value
+  return selected && selected.id === routeSiteId.value ? selected.publicId ?? routeSiteId.value : routeSiteId.value
 })
 const showSiteBack = computed(() => !!routeSiteId.value && !singleSite.value)
 const allSitesLabel = useProShellCopy().siteSwitcher.allSites

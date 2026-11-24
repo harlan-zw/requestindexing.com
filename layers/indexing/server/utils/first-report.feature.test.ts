@@ -1,9 +1,10 @@
 import type { H3Event } from 'h3'
-import { IncomingMessage, ServerResponse } from 'node:http'
+import { IncomingMessage } from 'node:http'
 import { Socket } from 'node:net'
 import { GscdumpV1Error } from '@gscdump/sdk/v1'
-import { createError, createEvent } from 'h3'
+import { createError } from 'h3'
 import { beforeEach, expect, it, vi } from 'vitest'
+import { mockRequestEvent } from '../../../../tests/support/mock-request-event'
 import savedRoute from '../api/sites/[siteId]/onboarding/first-report-saved.get'
 import viewedRoute from '../api/sites/[siteId]/onboarding/first-report-view.post'
 import previewRoute from '../api/sites/[siteId]/onboarding/first-report.get'
@@ -28,7 +29,7 @@ vi.mock('#layers/pro-gsc/server/utils/gscdump-origin', () => ({ createGscdumpPub
 vi.mock('#layers/pro-gsc/server/utils/registered-site-scope', () => ({ assertLocalRegisteredGscSiteScope: h.scope }))
 vi.mock('#layers/pro-saas/server/utils/handler', () => ({ defineProApiHandler: (handler: unknown) => handler }))
 vi.mock('#layers/pro-saas/server/utils/pro-events', () => ({ emitFirstProEvent: h.event }))
-vi.stubGlobal('useRuntimeConfig', () => ({ session: { password: 'test-secret-'.repeat(4) } }))
+vi.stubGlobal('useRuntimeConfig', () => ({ serviceSigningSecret: 'test-secret-'.repeat(4) }))
 
 function event(method: string, body?: unknown, origin = 'https://requestindexing.com'): H3Event {
   const request = new IncomingMessage(new Socket())
@@ -42,7 +43,7 @@ function event(method: string, body?: unknown, origin = 'https://requestindexing
     request.push(json)
     request.push(null)
   }
-  return createEvent(request, new ServerResponse(request))
+  return mockRequestEvent(request)
 }
 
 beforeEach(() => {

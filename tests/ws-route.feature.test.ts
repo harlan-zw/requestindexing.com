@@ -1,10 +1,11 @@
-import type { SessionConfig } from 'h3'
 import type { DatabaseSync } from 'node:sqlite'
-import { createRequire } from 'node:module'
+import { createRequire, registerHooks } from 'node:module'
 import { dirname, join } from 'node:path'
 import { parse } from 'devalue'
-import { sealSession, useSession } from 'h3'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mockEvent } from 'nitro/h3'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+// eslint-disable-next-line antfu/no-import-dist, antfu/no-import-node-modules-by-path -- auth-utils exports its Nuxt module only
+import { getUserSession, setUserSession, USER_SESSION_COOKIE_NAME } from '../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session.js'
 import { migratedSqlite, proDatabase, seedUser } from './utils/pro-database'
 
 // `/_ws` pushes a user's Site sync events. Its sockets live in Nitro's one
@@ -13,23 +14,22 @@ import { migratedSqlite, proDatabase, seedUser } from './utils/pro-database'
 // and crossws's real adapter over a fake runtime that keeps only what
 // Cloudflare keeps, each open socket and its attachment.
 
-const NITROPACK = dirname(createRequire(createRequire(import.meta.url).resolve('nuxt/package.json')).resolve('nitropack/package.json'))
-const CLOUDFLARE_RUNTIME = join(NITROPACK, 'dist/presets/cloudflare/runtime')
-
-const SESSION: SessionConfig = { name: 'nuxt-session', password: 'a-test-password-that-is-32-chars!' }
+const NITRO = dirname(createRequire(import.meta.url).resolve('nitro/package.json'))
 
 const h = vi.hoisted(() => ({ db: null as unknown }))
 
-// nuxt-auth-utils reads the session through h3, so this is its reader over the
-// real h3 session code. h3 cannot start a session on an upgrade request, which
-// is not an H3Event, so a request without a cookie throws.
-async function getUserSession(event: { headers?: Headers, request?: Request, context?: Record<string, unknown> }) {
-  const session = await useSession(event as never, SESSION)
-  return { ...session.data, id: session.id }
-}
+vi.mock('nuxt/internal/server-runtime-config', () => ({ useRuntimeConfig: () => ({ appSecret: 'websocket-test-secret-32-characters-long' }) }))
 vi.stubGlobal('getUserSession', getUserSession)
-vi.stubGlobal('defineWebSocketHandler', (hooks: unknown) => hooks)
 vi.stubGlobal('useDrizzle', () => h.db)
+
+const nativeHooks = registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier === 'cloudflare:workers')
+      return { url: new URL('./setup/cloudflare-durable.ts', import.meta.url).href, shortCircuit: true }
+    return nextResolve(specifier, context)
+  },
+})
+afterAll(() => nativeHooks.deregister())
 
 // workerd answers an accepted upgrade with a 101 that carries the client
 // socket. Node's Response refuses a status under 200.
@@ -100,22 +100,16 @@ function runtime() {
   async function wake(): Promise<Durable> {
     vi.resetModules()
     awake = connections.map(socketOf)
-    const { default: hooks } = await import('../layers/core/server/routes/_ws')
-    vi.doMock('cloudflare:workers', () => ({
-      DurableObject: class {
-        constructor(public ctx: unknown, public env: unknown) {}
+    const { default: socketHandler } = await import('../layers/core/server/routes/_ws')
+    vi.doMock(join(NITRO, 'dist/runtime/internal/app.mjs'), () => ({
+      useNitroApp: () => ({ fetch: () => new Response(null, { status: 404 }) }),
+      useNitroHooks: () => ({ callHook: () => undefined }),
+      async resolveWebsocketHooks(request: Request) {
+        return (await socketHandler(mockEvent(request)) as Response & { crossws: unknown }).crossws
       },
     }))
-    vi.doMock('#nitro-internal-pollyfills', () => ({}))
-    vi.doMock('#nitro-internal-virtual/public-assets', () => ({ isPublicAssetURL: () => false }))
-    vi.doMock(join(NITROPACK, 'dist/runtime/index.mjs'), () => ({
-      useNitroApp: () => ({ hooks: { callHook: async () => {} }, h3App: { websocket: { hooks } } }),
-    }))
-    vi.doMock(join(CLOUDFLARE_RUNTIME, '_module-handler.mjs'), () => ({
-      createHandler: () => ({}),
-      fetchHandler: () => new Response(null, { status: 404 }),
-    }))
-    const { $DurableObject } = await import(join(CLOUDFLARE_RUNTIME, 'cloudflare-durable.mjs'))
+    vi.doMock(join(NITRO, 'dist/runtime/internal/task.mjs'), () => ({ runCronTasks: () => Promise.resolve() }))
+    const { $DurableObject } = await import('#test/nitro-cloudflare-durable')
     const state = {
       waitUntil: () => {},
       acceptWebSocket: (socket: Socket) => awake.push(socket),
@@ -132,8 +126,10 @@ function upgradeRequest(url: string, cookie: string): Request {
 }
 
 async function cookieFor(data: Record<string, unknown>): Promise<string> {
-  const sealed = await sealSession({ context: { sessions: { [SESSION.name!]: { id: 'sid', createdAt: Date.now(), data } } } } as never, SESSION)
-  return `${SESSION.name}=${sealed}`
+  const event = mockEvent('https://requestindexing.com/_ws')
+  await setUserSession(event, data)
+  const cookie = event.res.headers.getSetCookie().findLast(value => value.startsWith(`${USER_SESSION_COOKIE_NAME}=`))!
+  return cookie.split(';')[0]!
 }
 
 // A queue job runs in its own isolate and reaches the Durable Object through

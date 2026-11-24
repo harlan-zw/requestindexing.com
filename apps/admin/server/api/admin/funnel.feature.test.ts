@@ -1,10 +1,11 @@
 import type { DatabaseSync } from 'node:sqlite'
-import { IncomingMessage, ServerResponse } from 'node:http'
+import { IncomingMessage } from 'node:http'
 import { Socket } from 'node:net'
 import { drizzle } from 'drizzle-orm/d1'
-import { createError, createEvent } from 'h3'
+import { createError } from 'h3'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { migratedDatabase } from '~~/tests/support/migrated-d1'
+import { mockRequestEvent } from '../../../../../tests/support/mock-request-event'
 
 let sqlite: DatabaseSync
 let query: Record<string, unknown>
@@ -40,7 +41,7 @@ afterEach(() => {
 async function read() {
   const handler = (await import('./funnel.get')).default
   const request = new IncomingMessage(new Socket())
-  const result = await handler(createEvent(request, new ServerResponse(request)))
+  const result = await handler(mockRequestEvent(request))
   if (typeof result === 'string')
     throw new Error('Expected JSON report')
   return result
@@ -96,7 +97,7 @@ describe('admin funnel endpoint', () => {
     query.format = 'csv'
     const handler = (await import('./funnel.get')).default
     const request = new IncomingMessage(new Socket())
-    const csv = await handler(createEvent(request, new ServerResponse(request)))
+    const csv = await handler(mockRequestEvent(request))
     expect(csv).toContain('utm:newsletter')
     expect(csv).not.toContain('must-not-leak')
     expect(csv).not.toContain('changed-current-source')
@@ -107,7 +108,7 @@ describe('admin funnel endpoint', () => {
     await expect(read()).rejects.toMatchObject({ statusCode: 403 })
     const handler = (await import('./analytics/customer-insights.get')).default
     const request = new IncomingMessage(new Socket())
-    await expect(handler(createEvent(request, new ServerResponse(request)))).rejects.toMatchObject({ statusCode: 403 })
+    await expect(handler(mockRequestEvent(request))).rejects.toMatchObject({ statusCode: 403 })
     expect(useDrizzle).not.toHaveBeenCalled()
   })
   it('serves shared customer insights with local milestones and explicit hosted-use gaps', async () => {
@@ -119,7 +120,7 @@ describe('admin funnel endpoint', () => {
     query = { userId: '1', source: 'utm:newsletter', timeRange: '1d' }
     const handler = (await import('./analytics/customer-insights.get')).default
     const request = new IncomingMessage(new Socket())
-    const event = createEvent(request, new ServerResponse(request))
+    const event = mockRequestEvent(request)
     const result = await handler(event)
     expect(result.pagination.total).toBe(1)
     expect(result.coverage).toMatchObject({ signupEvents: 1, accountDateFallbacks: 0 })
@@ -127,7 +128,7 @@ describe('admin funnel endpoint', () => {
     expect(result.users[0]).toMatchObject({ source: { label: 'utm:newsletter', basis: 'captured' }, goals: [], feedback: [{ step: 'page', reason: 'time', recordedAt: '2026-10-04T00:00:00.000Z' }] })
     expect(result.users[0]?.journey.stageTimes).toMatchObject({ siteConnected: '2026-10-02T00:00:00.000Z', evidenceViewed: '2026-10-03T00:00:00.000Z' })
     expect(result.integrations.every(row => row.successfulCalls === null && row.configuredUsers === null && row.coverage === 'unavailable')).toBe(true)
-    expect(event.node.res.getHeader('Cache-Control')).toBe('private, no-store')
+    expect(event.res.headers.get('Cache-Control')).toBe('private, no-store')
     expect(JSON.stringify(result)).not.toContain('must-not-leak')
   })
   it('reports Onboarding Answers in the funnel and in shared customer insights, ignoring a malformed row', async () => {
@@ -148,7 +149,7 @@ describe('admin funnel endpoint', () => {
     query = { userId: '1', timeRange: '366d' }
     const handler = (await import('./analytics/customer-insights.get')).default
     const request = new IncomingMessage(new Socket())
-    const insights = await handler(createEvent(request, new ServerResponse(request)))
+    const insights = await handler(mockRequestEvent(request))
     expect(insights.capabilities.goals).toBe(true)
     expect(insights.coverage.goalAnswers).toBe(1)
     expect(insights.users[0]).toMatchObject({ goals: ['why-not', 'launch'], other: 'bulk sitemaps' })

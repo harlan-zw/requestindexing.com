@@ -2,13 +2,12 @@ import { stringify } from 'devalue'
 import { logWarn } from '~~/shared/logging'
 
 // Every `/_ws` socket lives in one Durable Object. Nitro's `cloudflare-durable`
-// preset fixes its binding and instance names in
-// `nitropack/dist/presets/cloudflare/runtime/cloudflare-durable.mjs`.
+// preset uses these binding and instance names.
 const DURABLE_BINDING = '$DurableObject'
 const DURABLE_INSTANCE = 'server'
 
 // The part of the binding this module calls. `publish` is an RPC method on
-// Nitro's Durable Object class, which the nitropack patch changes
+// Nitro's Durable Object class, which the Nitro patch restores
 // to read each socket's topics from its attachment.
 interface SocketNamespace {
   idFromName: (name: string) => unknown

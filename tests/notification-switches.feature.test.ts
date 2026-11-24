@@ -52,7 +52,7 @@ function runtimeConfig(switches: Switches) {
     ...switches,
     postmark: { apiKey: 'pm-test' },
     gscdump: { webhookSecret: SECRET },
-    session: { password: 'a-session-password-at-least-32-characters-long' },
+    serviceSigningSecret: 'a-signing-secret-at-least-32-characters-long',
     public: { baseUrl: 'https://requestindexing.com' },
   }
 }

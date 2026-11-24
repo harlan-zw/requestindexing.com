@@ -1,7 +1,6 @@
 import type { H3Event } from 'h3'
-import { IncomingMessage, ServerResponse } from 'node:http'
-import { Socket } from 'node:net'
-import * as h3 from 'h3'
+import { mockEvent } from 'nitro/h3'
+import { getQuery, sendRedirect, setCookie } from 'nuxt/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const boundary = vi.hoisted(() => ({ provider: vi.fn() }))
@@ -10,19 +9,13 @@ vi.mock('../../utils/auth/finalize', () => ({
   attachIdentityToCurrentSession: vi.fn(),
 }))
 
-for (const name of ['defineEventHandler', 'createError', 'getRouterParam', 'getQuery', 'getCookie', 'setCookie', 'deleteCookie', 'sendRedirect'] as const)
-  vi.stubGlobal(name, h3[name])
-vi.stubGlobal('useAppConfig', () => ({ proSaas: { features: { googleSignIn: true, githubSignIn: true } } }))
+vi.mock('nuxt/internal/server-app-config', () => ({ default: { proSaas: { features: { googleSignIn: true, githubSignIn: true } } } }))
 vi.stubGlobal('defineOAuthGitHubEventHandler', () => boundary.provider)
 vi.stubGlobal('defineOAuthGoogleEventHandler', () => boundary.provider)
 
 function request(provider: string, query: string, cookie?: string) {
-  const req = new IncomingMessage(new Socket())
-  req.method = 'GET'
-  req.url = `/auth/${provider}${query}`
-  if (cookie !== undefined)
-    req.headers.cookie = `nuxt-auth-state=${cookie}`
-  const event = h3.createEvent(req, new ServerResponse(req))
+  const headers = cookie === undefined ? undefined : { cookie: `nuxt-auth-state=${cookie}` }
+  const event = mockEvent(`/auth/${provider}${query}`, { headers })
   event.context.params = { provider }
   return event
 }
@@ -31,10 +24,10 @@ function request(provider: string, query: string, cookie?: string) {
 // an invalid browser transaction before that boundary sees the event.
 beforeEach(() => {
   boundary.provider.mockReset().mockImplementation((event: H3Event) => {
-    if (h3.getQuery(event).code)
+    if (getQuery(event).code)
       return 'provider-callback'
-    h3.setCookie(event, 'nuxt-auth-state', 'new-state', { httpOnly: true, path: '/' })
-    return h3.sendRedirect(event, 'https://provider.example.test/authorize?state=new-state')
+    setCookie(event, 'nuxt-auth-state', 'new-state', { httpOnly: true, path: '/' })
+    return sendRedirect(event, 'https://provider.example.test/authorize?state=new-state')
   })
 })
 
@@ -54,7 +47,7 @@ describe.each(['google', 'github'])('%s browser OAuth transaction', (provider) =
 
     await expect(route(event)).rejects.toMatchObject({ statusCode: 401 })
     expect(boundary.provider).not.toHaveBeenCalled()
-    expect(String(event.node.res.getHeader('set-cookie'))).toContain('nuxt-auth-state=;')
+    expect(event.res.headers.get('set-cookie')).toContain('nuxt-auth-state=;')
   })
 
   it('passes a matching browser transaction to the provider', async () => {
@@ -70,8 +63,8 @@ describe.each(['google', 'github'])('%s browser OAuth transaction', (provider) =
     const event = request(provider, '')
 
     await route(event)
-    expect(event.node.res.getHeader('location')).toBe('https://provider.example.test/authorize?state=new-state')
-    expect(String(event.node.res.getHeader('set-cookie'))).toContain('nuxt-auth-state=new-state;')
+    expect(event.res.headers.get('location')).toBe('https://provider.example.test/authorize?state=new-state')
+    expect(event.res.headers.get('set-cookie')).toContain('nuxt-auth-state=new-state;')
   })
 
   it('keeps a provider error without code on the provider error path', async () => {
