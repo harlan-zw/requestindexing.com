@@ -6,6 +6,7 @@ import { REQUEST_HONOUR } from '@nuxtseo/pro-shell/shared/onboarding'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProSetupFirstSiteReport from '~~/layers/indexing/app/components/ProSetupFirstSiteReport.vue'
 
+import { FIRST_REPORT_COPY } from '#layers/indexing/shared/first-report'
 import { parseAgentSetupRoute } from '#layers/pro-gsc/shared/agent-setup'
 import { parseGscConnectReturn } from '#layers/pro-gsc/shared/gsc-grant'
 import { readProErrorMessage } from '#layers/pro-saas/shared/errors'
@@ -254,19 +255,24 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       />
     </template>
 
+    <!-- The First Site report is the step's result, so it comes straight
+         after the heading. About you follows the step's buttons: it is
+         optional, and it must not push the result or Go to dashboard down. -->
     <template #step-sync>
-      <div class="space-y-5">
-        <UiAuthHeading
-          size="md"
-          :title="hasSites ? ONBOARDING_COMPLETION_COPY.connected.title : ONBOARDING_COMPLETION_COPY.missingSite.title"
-          :description="hasSites ? ONBOARDING_COMPLETION_COPY.connected.description : ONBOARDING_COMPLETION_COPY.missingSite.description"
-        />
-        <ProSetupFirstSiteReport v-if="hasSites" />
-        <ProOnboardingAnswers />
+      <div v-if="hasSites" class="space-y-5">
+        <UiAuthHeading size="md" :title="FIRST_REPORT_COPY.heading" />
+        <ProSetupFirstSiteReport />
       </div>
+      <UiAuthHeading
+        v-else
+        size="md"
+        :title="ONBOARDING_COMPLETION_COPY.missingSite.title"
+        :description="ONBOARDING_COMPLETION_COPY.missingSite.description"
+      />
     </template>
 
     <template #after>
+      <ProOnboardingAnswers v-if="currentStep === 'sync'" />
       <ProSetupExitFeedback v-if="feedbackStep" :step="feedbackStep" />
     </template>
   </ProShellOnboardingFrame>

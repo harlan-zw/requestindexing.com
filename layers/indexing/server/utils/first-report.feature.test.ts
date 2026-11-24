@@ -4,6 +4,7 @@ import { Socket } from 'node:net'
 import { GscdumpV1Error } from '@gscdump/sdk/v1'
 import { createError, createEvent } from 'h3'
 import { beforeEach, expect, it, vi } from 'vitest'
+import savedRoute from '../api/sites/[siteId]/onboarding/first-report-saved.get'
 import viewedRoute from '../api/sites/[siteId]/onboarding/first-report-view.post'
 import previewRoute from '../api/sites/[siteId]/onboarding/first-report.get'
 import inspectRoute from '../api/sites/[siteId]/onboarding/first-report.post'
@@ -51,7 +52,7 @@ beforeEach(() => {
     await readIdentity(engineId)
   })
   h.client.getRegisteredHostIdentity.mockResolvedValue({ data: { identity: { siteId: 'engine-a', requestedUrl: 'example.com', userId: 'principal-a', teamId: 'team-a' } } })
-  h.client.getUserLifecycle.mockResolvedValue({ data: { sites: [{ siteId: 'engine-a', gscPropertyUrl: 'https://example.com/docs/' }] } })
+  h.client.getUserLifecycle.mockResolvedValue({ data: { sites: [{ siteId: 'engine-a', gscPropertyUrl: 'https://example.com/docs/', indexing: { status: 'ready', reason: null } }] } })
   h.client.listSitemapUrls.mockResolvedValue({ data: { generation: { id: 'g1', observedAt: Date.now() }, items: [{ url: 'https://example.com/docs/a' }, { url: 'https://www.example.com/docs/b' }, { url: 'https://example.com/other' }], page: { nextCursor: null } } })
   h.client.inspectSiteUrls.mockResolvedValue({ data: { results: [{ url: 'https://example.com/docs/a', coverageState: 'Discovered - currently not indexed', verdict: 'NEUTRAL' }], errors: [], skipped: [] } })
   h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: [{ url: 'https://example.com/docs/a', coverageState: null, verdict: null, lastCheckedAt: new Date().toISOString() }], pagination: { hasMore: false } } })
@@ -137,5 +138,78 @@ it('keeps metadata-only rows out of actual evidence viewing metrics', async () =
   expect(h.event).not.toHaveBeenCalled()
   h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: [{ url: plan.urls[0], coverageState: 'Crawled - currently not indexed', lastCheckedAt: new Date().toISOString() }], pagination: { hasMore: false } } })
   expect(await viewedRoute(event('POST', { token: plan.token }))).toEqual({ recorded: true })
-  expect(h.event).toHaveBeenCalledExactlyOnceWith(h.access.db, 7, 'first_report_evidence_viewed', { siteId: 'site-a', count: 1 })
+  expect(h.event).toHaveBeenCalledExactlyOnceWith(h.access.db, 7, 'first_report_evidence_viewed', { siteId: 'site-a', count: 1, source: 'inspection' })
+})
+
+const savedRows = [
+  { url: 'https://example.com/docs/a', coverageState: 'Crawled - currently not indexed', verdict: 'NEUTRAL', lastCheckedAt: '2026-11-24T06:12:00Z' },
+  { url: 'https://example.com/other', coverageState: 'Submitted and indexed', verdict: 'PASS', lastCheckedAt: '2026-11-24T06:11:00Z' },
+]
+
+async function savedReport() {
+  h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: savedRows, pagination: { hasMore: false } } })
+  const report = await savedRoute(event('GET'))
+  if (report._tag !== 'Verdicts')
+    throw new Error('Saved report fixture is invalid.')
+  return report
+}
+
+it('opens on saved Google verdicts inside the property, without spending quota', async () => {
+  const report = await savedReport()
+  expect(report.rows).toEqual([expect.objectContaining({ url: 'https://example.com/docs/a', coverage: 'Crawled - currently not indexed', capturedAt: '2026-11-24T06:12:00Z' })])
+  expect(h.client.listSiteIndexingUrls).toHaveBeenCalledWith(expect.objectContaining({ params: { siteId: 'engine-a' } }))
+  expect(h.client.inspectSiteUrls).not.toHaveBeenCalled()
+})
+
+it('shows the engine URL Inspection phase when a new Site has no saved verdict', async () => {
+  h.client.getUserLifecycle.mockResolvedValue({ data: { sites: [{ siteId: 'engine-a', gscPropertyUrl: 'https://example.com/docs/', indexing: { status: 'checking', reason: null } }] } })
+  h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: [], pagination: { hasMore: false } } })
+  expect(await savedRoute(event('GET'))).toEqual({ _tag: 'Collecting', phase: 'checking' })
+  expect(h.client.inspectSiteUrls).not.toHaveBeenCalled()
+})
+
+it('never starts a URL Inspection from a saved-verdict plan', async () => {
+  const report = await savedReport()
+  await expect(inspectRoute(event('POST', { token: report.token }))).rejects.toMatchObject({ statusCode: 409 })
+  expect(h.client.inspectSiteUrls).not.toHaveBeenCalled()
+})
+
+it('records a saved-verdict view from its signed plan without a second read', async () => {
+  const report = await savedReport()
+  h.client.listSiteIndexingUrls.mockClear()
+  expect(await viewedRoute(event('POST', { token: report.token }))).toEqual({ recorded: true })
+  expect(h.event).toHaveBeenCalledExactlyOnceWith(h.access.db, 7, 'first_report_evidence_viewed', { siteId: 'site-a', count: 1, source: 'saved' })
+  expect(h.client.listSiteIndexingUrls).not.toHaveBeenCalled()
+})
+
+it('keeps the www pages of a domain property in the saved report', async () => {
+  h.access.site = { ...h.access.site, domain: 'example.com', property: 'sc-domain:example.com' }
+  h.client.getUserLifecycle.mockResolvedValue({ data: { sites: [{ siteId: 'engine-a', gscPropertyUrl: 'sc-domain:example.com' }] } })
+  h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: [{ url: 'https://www.example.com/docs/a', coverageState: 'Submitted and indexed', verdict: 'PASS', lastCheckedAt: '2026-11-24T06:12:00Z' }], pagination: { hasMore: false } } })
+  expect(await savedRoute(event('GET'))).toMatchObject({ _tag: 'Verdicts', rows: [{ url: 'https://www.example.com/docs/a' }] })
+})
+
+const inspecting = { data: { sites: [{ siteId: 'engine-a', gscPropertyUrl: 'https://example.com/docs/', indexing: { status: 'checking', reason: null } }] } }
+
+it('signs no preview plan while gscdump inspects the Site', async () => {
+  h.client.getUserLifecycle.mockResolvedValue(inspecting)
+  expect(await previewRoute(event('GET'))).toEqual({ _tag: 'Collecting', phase: 'checking' })
+  expect(h.client.listSitemapUrls).not.toHaveBeenCalled()
+})
+
+it('holds an approved plan once gscdump starts inspecting, before spending quota', async () => {
+  const plan = await preview()
+  h.client.getUserLifecycle.mockResolvedValue(inspecting)
+  expect(await inspectRoute(event('POST', { token: plan.token }))).toEqual({ _tag: 'Collecting', phase: 'checking' })
+  expect(h.client.inspectSiteUrls).not.toHaveBeenCalled()
+  expect(h.event).not.toHaveBeenCalled()
+})
+
+it('records a saved-verdict view even when a saved URL is longer than a plan allows', async () => {
+  const long = `https://example.com/docs/${'a'.repeat(2100)}`
+  h.client.listSiteIndexingUrls.mockResolvedValue({ data: { urls: [{ url: long, coverageState: 'Submitted and indexed', verdict: 'PASS', lastCheckedAt: '2026-11-24T06:12:00Z' }], pagination: { hasMore: false } } })
+  const report = await savedRoute(event('GET'))
+  if (report._tag !== 'Verdicts')
+    throw new Error('Saved report fixture is invalid.')
+  expect(await viewedRoute(event('POST', { token: report.token }))).toEqual({ recorded: true })
 })

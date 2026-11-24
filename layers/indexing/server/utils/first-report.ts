@@ -50,16 +50,24 @@ export async function readFirstReportCandidates(
     : { _tag: 'Incomplete' as const }
 }
 
-const planSchema = z.object({
+const planScope = {
   userId: z.number().int(),
   teamId: z.number().int(),
   siteId: z.string(),
   remoteSiteId: z.string(),
   property: z.string(),
-  generationId: z.string(),
-  urls: z.array(z.string().max(2048)).min(1).max(10),
   expiresAt: z.number(),
-}).strict()
+}
+/**
+ * `Inspect` lists the previewed URLs the reader may approve. It holds no
+ * evidence yet. `Saved` counts the saved Google verdicts the server read
+ * before it signed, so a long URL cannot make it invalid. Only `Inspect`
+ * can start a URL Inspection.
+ */
+const planSchema = z.discriminatedUnion('_tag', [
+  z.object({ _tag: z.literal('Inspect'), generationId: z.string(), urls: z.array(z.string().max(2048)).min(1).max(10), ...planScope }).strict(),
+  z.object({ _tag: z.literal('Saved'), count: z.number().int().min(1).max(10), ...planScope }).strict(),
+])
 export type FirstReportPlan = z.infer<typeof planSchema>
 
 export function firstReportPlanMatches(plan: FirstReportPlan, current: Pick<FirstReportPlan, 'userId' | 'teamId' | 'siteId' | 'remoteSiteId' | 'property'>) {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { inspectFirstReport, inspectSavedPage, readSavedPageEvidence } from './page-evidence'
+import { inspectFirstReport, inspectSavedPage, readSavedFirstReport, readSavedPageEvidence } from './page-evidence'
 
 const url = 'https://www.example.com/Case'
 const evidence = { url, coverageState: 'Discovered - currently not indexed', verdict: 'NEUTRAL', lastCheckedAt: '2026-11-07T00:00:00Z', lastCrawlTime: null }
@@ -50,5 +50,50 @@ describe('the original page evidence', () => {
     expect(await readSavedPageEvidence(url, read, report)).toEqual({ _tag: 'Unavailable', operation: 'read' })
     expect(read).toHaveBeenCalledTimes(10)
     expect(report).toHaveBeenCalledOnce()
+  })
+})
+
+describe('the saved First Site report', () => {
+  const covers = (page: string) => page.startsWith('https://example.com/docs/')
+  const row = (path: string, fields: Record<string, unknown> = {}) => ({ ...evidence, url: `https://example.com/docs/${path}`, ...fields })
+
+  it('keeps gscdump order and only in-scope rows with Google evidence, up to the limit', async () => {
+    const read = vi.fn(async () => ({
+      urls: [row('a'), row('b', { coverageState: null, verdict: null }), row('c', { url: 'https://example.com/other' }), row('d', { coverageState: 'Submitted and indexed', verdict: 'PASS' }), row('e'), row('f')],
+      pagination: { hasMore: true },
+    }))
+    const result = await readSavedFirstReport(covers, 3, 4, read)
+    expect(result).toMatchObject({ _tag: 'Verdicts', rows: [{ url: 'https://example.com/docs/a', capturedAt: evidence.lastCheckedAt }, { url: 'https://example.com/docs/d', verdict: 'PASS' }, { url: 'https://example.com/docs/e' }] })
+    expect(read).toHaveBeenCalledOnce()
+  })
+
+  it('reports no saved verdict only when gscdump has no more rows', async () => {
+    expect(await readSavedFirstReport(covers, 5, 4, async () => ({ urls: [], pagination: { hasMore: false } }))).toEqual({ _tag: 'None' })
+    expect(await readSavedFirstReport(covers, 5, 4, async () => ({ urls: [row('a', { coverageState: null, verdict: null })], pagination: { hasMore: true } }))).toEqual({ _tag: 'Unknown' })
+  })
+
+  it('reads later engine pages until it finds verdicts inside the property', async () => {
+    const read = vi.fn(async (offset: number) => offset === 0
+      ? { urls: [row('a', { coverageState: null, verdict: null }), row('b', { url: 'https://example.com/other' })], pagination: { hasMore: true } }
+      : { urls: [row('c')], pagination: { hasMore: false } })
+    expect(await readSavedFirstReport(covers, 5, 4, read)).toMatchObject({ _tag: 'Verdicts', rows: [{ url: 'https://example.com/docs/c' }] })
+    expect(read.mock.calls.map(([offset]) => offset)).toEqual([0, 2])
+  })
+
+  it('counts a URL once when a new capture moves it onto the next page', async () => {
+    const read = vi.fn(async (offset: number) => ({ urls: offset === 0 ? [row('a')] : [row('a'), row('b')], pagination: { hasMore: offset === 0 } }))
+    const result = await readSavedFirstReport(covers, 5, 4, read)
+    expect(result._tag === 'Verdicts' && result.rows.map(kept => kept.url)).toEqual(['https://example.com/docs/a', 'https://example.com/docs/b'])
+  })
+
+  it('stops at the page budget without claiming the Site has no verdict', async () => {
+    const read = vi.fn(async () => ({ urls: [row('a', { coverageState: null, verdict: null })], pagination: { hasMore: true } }))
+    expect(await readSavedFirstReport(covers, 5, 4, read)).toEqual({ _tag: 'Unknown' })
+    expect(read).toHaveBeenCalledTimes(4)
+  })
+
+  it('does not report an empty Site when every saved verdict falls outside the property', async () => {
+    const outside = row('a', { url: 'https://example.com/other' })
+    expect(await readSavedFirstReport(covers, 5, 4, async () => ({ urls: [outside], pagination: { hasMore: false } }))).toEqual({ _tag: 'Unknown' })
   })
 })

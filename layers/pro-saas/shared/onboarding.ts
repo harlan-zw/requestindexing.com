@@ -62,12 +62,12 @@ export const ONBOARDING_STEPS = ['agent', 'connect', 'sites', 'sync'] as const
 
 export type OnboardingStep = typeof ONBOARDING_STEPS[number]
 
-/** COPY.md: setup completion describes the setup, never an unread sync lifecycle. */
+/**
+ * COPY.md: setup completion describes the setup, never an unread sync
+ * lifecycle. With a Site, the step heading is the First Site report's, from
+ * `FIRST_REPORT_COPY`, because the report is the step's result.
+ */
 export const ONBOARDING_COMPLETION_COPY = {
-  connected: {
-    title: 'You\'re set up',
-    description: 'Open the dashboard to see what Google has reported about your Sites.',
-  },
   missingSite: {
     title: 'Connect a Site to finish setup',
     description: 'Go back to Connect Sites and choose a Search Console property.',

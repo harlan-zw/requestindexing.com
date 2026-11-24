@@ -60,6 +60,42 @@ export async function readSavedPageEvidence(
   })
 }
 
+/**
+ * A bounded stored read of a Site's saved Google verdicts, in gscdump's
+ * order: not-indexed URLs first, then the newest capture. It never inspects.
+ * It reads page after page until it holds `limit` verdicts, gscdump has no
+ * more rows, or `pages` run out. A row outside the Site's property is not
+ * this Site's evidence, but it still proves that the read is not empty. Only
+ * a read with no Google evidence and no more rows establishes that no saved
+ * verdict exists.
+ */
+export async function readSavedFirstReport(
+  covers: (url: string) => boolean,
+  limit: number,
+  pages: number,
+  read: (offset: number) => Promise<{ urls: (EvidenceFields & { lastCheckedAt: string })[], pagination: { hasMore: boolean } }>,
+): Promise<{ _tag: 'Verdicts', rows: PageEvidence[] } | { _tag: 'None' } | { _tag: 'Unknown' }> {
+  const rows: PageEvidence[] = []
+  let sawEvidence = false
+  let offset = 0
+  for (let page = 0; page < pages; page++) {
+    const response = await read(offset)
+    for (const row of response.urls) {
+      if (!hasGoogleEvidence(row))
+        continue
+      sawEvidence = true
+      // A new capture can move a URL onto the next page; it fills one slot only.
+      if (covers(row.url) && rows.length < limit && !rows.some(kept => kept.url === row.url))
+        rows.push(evidence(row, row.lastCheckedAt))
+    }
+    if (rows.length === limit || !response.pagination.hasMore || !response.urls.length)
+      return rows.length ? { _tag: 'Verdicts', rows } : sawEvidence || response.pagination.hasMore ? { _tag: 'Unknown' } : { _tag: 'None' }
+    offset += response.urls.length
+  }
+  // The page budget ran out with more rows left, so absence is unproven.
+  return rows.length ? { _tag: 'Verdicts', rows } : { _tag: 'Unknown' }
+}
+
 /** The caller authorizes one check. Refusals never become a Google verdict. */
 export async function inspectSavedPage(
   url: string,
