@@ -32,14 +32,12 @@ const googleUser = computed(() => {
       <span class="rounded-md border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">{{ copy.consent.readOnly }}</span>
       <span>{{ copy.consent.scope }}</span>
     </p>
+    <!-- The Read-only chip states the access, so no sentence repeats it. -->
     <p class="mt-2 text-sm text-muted">
-      {{ copy.readAccess }}
-    </p>
-    <p class="mt-1 text-sm text-muted">
       {{ copy.remove }}
       <ULink :to="copy.removeHref" external target="_blank" rel="noopener" class="font-medium text-highlighted underline">
         {{ copy.removeAction }}
-      </ULink>
+      </ULink>.
     </p>
     <div v-if="googleUser" class="mt-3 flex min-w-0 items-center gap-2.5 border-t border-default pt-3 text-sm text-muted dark:border-accented" data-testid="gsc-consent-account">
       <UAvatar :src="googleUser.avatarUrl || undefined" :alt="googleUser.name || googleUser.email" size="xs" />

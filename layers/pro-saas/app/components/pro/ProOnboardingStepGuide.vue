@@ -31,32 +31,25 @@ const headingId = computed(() => `step-guide-${step}-title`)
       </p>
     </div>
 
-    <ul class="space-y-2.5 border-t border-default pt-4 text-sm text-muted dark:border-accented">
-      <li v-for="fact in guide.facts" :key="fact" class="flex gap-2">
-        <UiIcon name="check" class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        <span>{{ fact }}</span>
+    <!-- The artifact comes before the facts: show, then tell. Questions
+         are what the reader can ask their agent, drawn as chat bubbles. -->
+    <ul v-if="guide.questions" class="space-y-2">
+      <li
+        v-for="question in guide.questions"
+        :key="question"
+        class="w-fit max-w-full rounded-lg rounded-bl-sm border border-primary/25 bg-primary/5 px-3 py-2 text-sm text-highlighted"
+      >
+        {{ question }}
       </li>
     </ul>
 
-    <div v-if="guide.next" class="border-t border-default pt-4 dark:border-accented">
-      <h3 class="text-sm font-medium text-highlighted">
-        {{ guide.next.title }}
-      </h3>
-      <ol class="mt-2 space-y-2.5 text-sm text-muted">
-        <li v-for="(nextStep, index) in guide.next.steps" :key="nextStep" class="flex gap-2">
-          <span class="mt-px inline-flex size-5 shrink-0 items-center justify-center rounded-full border border-accented text-xs font-medium tabular-nums" aria-hidden="true">{{ index + 1 }}</span>
-          <span>{{ nextStep }}</span>
-        </li>
-      </ol>
-    </div>
-
     <!-- The rows match the First Site report's: the URL in mono, then an
          amber dot with Google's coverage state, because none is indexed. -->
-    <div v-if="guide.example" class="border-t border-default pt-4 dark:border-accented">
+    <div v-if="guide.example" class="rounded-md border border-default bg-default/60 px-3 py-2.5 dark:border-accented">
       <p class="text-xs font-medium text-muted">
         {{ guide.example.label }}
       </p>
-      <ul class="mt-2 space-y-2">
+      <ul class="mt-1.5 space-y-2">
         <li v-for="row in guide.example.rows" :key="row.path" class="min-w-0">
           <p class="truncate font-mono text-sm text-default">
             {{ row.path }}
@@ -68,5 +61,12 @@ const headingId = computed(() => `step-guide-${step}-title`)
         </li>
       </ul>
     </div>
+
+    <ul class="space-y-2.5 border-t border-default pt-4 text-sm text-muted dark:border-accented">
+      <li v-for="fact in guide.facts" :key="fact" class="flex gap-2">
+        <UiIcon name="check" class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <span>{{ fact }}</span>
+      </li>
+    </ul>
   </aside>
 </template>

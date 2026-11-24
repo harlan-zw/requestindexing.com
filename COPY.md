@@ -623,9 +623,9 @@ paper cut to gscdump (`gscdump papercut` or the `submit-feedback` tool), then sa
 
 The Connect Google step, the signup page, and the return from Google's consent screen.
 Show the read scope before Google access. On the Connect Google step, a consent preview card
-shows what Google will ask for, the read access note, and how to remove access, above the
-Connect button. The step guide states what Request Indexing changes. The step has no
-disclosure rows. Strings live in `layers/pro-saas/shared/gsc-connect-copy.ts`.
+shows what Google will ask for and how to remove access, above the Connect button. Its Read-only
+chip states the access, so no sentence repeats it. The step guide states what Request Indexing
+changes. The step has no disclosure rows. Strings live in `layers/pro-saas/shared/gsc-connect-copy.ts`.
 
 | Asset | String |
 | --- | --- |
@@ -636,8 +636,8 @@ disclosure rows. Strings live in `layers/pro-saas/shared/gsc-connect-copy.ts`.
 | Consent preview account | Signed in as {email}. Only for a Google sign-in, with the Google avatar or its initial |
 | Search Console read access | Setup asks for read-only Search Console access. If an action needs more access, we ask then. |
 | Access changes | the Search Console access sentence in Truth rules, verbatim. A fact in the Connect Google step guide |
-| Access removal | You can remove this access at any time in your Google Account. In the consent preview |
-| Access removal action | Open Google Account connections, a link to `https://myaccount.google.com/connections` |
+| Access removal | Remove this access at any time in your Google Account. In the consent preview. "your Google Account" is the link |
+| Access removal action | your Google Account, a link to `https://myaccount.google.com/connections` |
 | Signup access note | the Search Console read access string, verbatim. On `/pro/onboarding` below the provider buttons |
 | Signup scope missing | Sign in again and tick the Search Console box on Google's screen so we can check your pages. |
 | Connect scope missing | Connect again and tick the Search Console box on Google's screen so we can check your pages. |
@@ -690,18 +690,18 @@ The exit question is a quiet underlined link under the step's buttons.
 
 Each setup step has one step guide: a card that says what the reader signs up for at this step, and why.
 It changes with the step. A wide screen shows it beside the step. A narrow screen shows it after the step's buttons.
-Each guide has a heading, a reason, and up to four facts. A fact states shipped behaviour only.
-A guide adds one example only where it shows the point better than words. Connect Google adds a numbered What happens next list, because Google's consent screen hands off to work the reader cannot see.
-No fact repeats a sentence that the step shows in any state. Never put a Free allowance number in a guide: gscdump sets the numbers.
+Show, then tell (Harlan, 2026-11-24: "too text heavy, show don't tell"). Each guide has a heading, a one-line reason, one artifact where one makes the point, and at most two facts.
+The artifact comes before the facts: example questions for an agent, drawn as chat bubbles, or one example row. A fact states shipped behaviour only.
+No fact repeats what the step or the progress rail shows in any state. The rail shows the steps that follow, so no guide lists them. Never put a Free allowance number in a guide: gscdump sets the numbers.
 The last step shows its guide only when the Team has a Site.
 `layers/pro-saas/shared/onboarding-step-guide.ts` holds these strings.
 
-| Step | Heading | Reason | Facts |
-| --- | --- | --- | --- |
-| Agent setup | Why start with an agent | Ask about your pages in the chat you already use. Your agent connects to gscdump, the engine that Request Indexing runs on. | Your agent says how many pages have an indexed verdict, and where the rest stopped. · Use one Google account for gscdump and for Connect Google. Then your agent reads the same Sites. · The Setup prompt asks for saved verdicts only. Those reads use no URL Inspections. · The Setup prompt holds no API key, cookie, or token. |
-| Connect Google | Why connect Google | Google reports its verdict for each page in Search Console. Request Indexing reads it with your own Google sign-in. | the Google account sentence in Agent setup assets, verbatim · the Search Console access sentence in Truth rules, verbatim · gscdump holds the Google grant. · FAQ 5's answer in Landing page assets, verbatim · What happens next: 1. You choose the Sites to connect. 2. gscdump syncs each Site and inspects its sitemap URLs, within your Free allowance. 3. Your First Site report reads Google's saved verdicts for the Site. |
-| Connect Sites | What a Site is | A Site is one website that Request Indexing checks for you. It comes from a verified Search Console property in your Google account. | Your Free allowance sets how many Sites your account can connect. · You can connect each property once. · gscdump then syncs the Site and inspects its sitemap URLs, within your Free allowance. · You can connect more Sites later from your dashboard. · Example, the landing page's Example card label, then one row: /pricing · Crawled - currently not indexed (VERIFIED-CLAIMS GSC-API-01) |
-| Finish setup | Saved verdicts come first | The report reads saved Google verdicts first. That read uses no URL Inspections. | gscdump inspects the sitemap URLs of a new Site after its sitemaps sync, within your Free allowance. · This report inspects more URLs only when you approve it. · After setup, the Indexing page of each Site lists its saved verdicts. |
+| Step | Heading | Reason | Artifact | Facts |
+| --- | --- | --- | --- | --- |
+| Agent setup | Why start with an agent | Ask about your pages in the chat you already use. | Two questions: How many of my pages has Google indexed? · Which pages did Google leave out, and why? | Your agent signs in to gscdump, the engine behind Request Indexing. Use the same Google account for both. · The Setup prompt holds no API key, cookie, or token. |
+| Connect Google | Why connect Google | Google reports its verdict for each page in Search Console. | none: the consent preview and the example sit in the step | the Search Console access sentence in Truth rules, verbatim · FAQ 5's answer in Landing page assets, verbatim |
+| Connect Sites | What a Site is | One website, from a verified Search Console property. | Example, the landing page's Example card label, then one row: /pricing · Crawled - currently not indexed (VERIFIED-CLAIMS GSC-API-01) | You can connect more Sites later from your dashboard. |
+| Finish setup | Saved verdicts come first | The report reads saved Google verdicts first. That read uses no URL Inspections. | none: the First Site report is the step | This report inspects more URLs only when you approve it. · After setup, the Indexing page of each Site lists its saved verdicts. |
 
 ## First Site report
 
