@@ -1,7 +1,7 @@
 minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
   - nuxt@4.7.0
-  - '@harlan-zw/nuxt-cloudflare@0.5.2'
+  - '@harlan-zw/nuxt-cloudflare@0.5.3'
   - '@nuxt/kit@4.7.0'
   - '@nuxt/nitro-server@4.7.0'
   - '@nuxt/nitro-v3-server@4.7.0'
@@ -148,7 +148,7 @@ catalog:
   '@gscdump/sdk': 7.18.0
   '@harlan-zw/comark-content': 0.2.0
   '@harlan-zw/nuxt-checkin': 0.4.1
-  '@harlan-zw/nuxt-cloudflare': 0.5.2
+  '@harlan-zw/nuxt-cloudflare': 0.5.3
   '@harlan-zw/nuxt-domain-events': 0.2.1
   '@harlan-zw/nuxt-dx': 0.3.0
   '@harlan-zw/nuxt-sentry': 0.3.0
