@@ -41,7 +41,7 @@ function routeFromQuery(): AgentSetupRoute | null {
   return parseAgentSetupRoute(route.query.agent) ?? (route.query.setup === 'cli' ? 'coding-agent' : null)
 }
 const openRoute = ref<AgentSetupRoute | null>(routeFromQuery())
-watch(() => [route.query.agent, route.query.setup], () => {
+watch([() => route.query.agent, () => route.query.setup], () => {
   openRoute.value = routeFromQuery()
 })
 function toggleRow(next: AgentSetupRoute) {

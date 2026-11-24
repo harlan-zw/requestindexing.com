@@ -53,7 +53,7 @@ const primaryStep = computed(() => steps.value.find(step => step.action)?.key ??
       v-for="option in AGENT_SETUP_OPTIONS"
       :key="option.route"
       :data-agent-row="option.route"
-      :class="{ 'bg-muted/50 dark:bg-accented/20': place === 'developers' && route === option.route }"
+      :class="{ 'bg-elevated dark:bg-accented/20': place === 'developers' && route === option.route }"
     >
       <!-- On a narrow panel, Developers puts the action under the agent's
            name, so the detail keeps its width. -->
