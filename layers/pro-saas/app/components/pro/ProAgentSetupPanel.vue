@@ -38,13 +38,16 @@ const primaryStep = computed(() => steps.value.find(step => step.action)?.key ??
 
 <template>
   <!-- In dark mode the default border is the elevated surface's colour, so
-       the panel takes the accented border to keep its edge and rules. The
-       panel's own width decides where Developers puts a row's action, because
-       the page sets it beside a guide card. -->
+       the panel takes the accented border to keep its edge and rules. On
+       onboarding the panel takes the onboarding card surface; on Developers it
+       takes the dashboard card's fill, the elevated tone at 35% over the page,
+       as ProCard does. The panel's own width decides where Developers puts a
+       row's action, because the page sets it beside a guide card. -->
   <div
     role="group"
     :aria-label="copy.groupLabel"
-    class="@container divide-y divide-default overflow-hidden rounded-(--ui-radius) border border-default bg-elevated shadow-(--elevation-raised) dark:divide-accented dark:border-accented"
+    class="@container divide-y divide-default overflow-hidden rounded-(--ui-radius) border border-default shadow-(--elevation-raised) dark:divide-accented dark:border-accented"
+    :class="place === 'developers' ? 'bg-[color-mix(in_oklab,var(--ui-bg-elevated)_35%,var(--ui-bg))]' : 'bg-elevated'"
   >
     <div
       v-for="option in AGENT_SETUP_OPTIONS"

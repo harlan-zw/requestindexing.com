@@ -167,7 +167,7 @@ onMounted(() => {
     <section
       v-if="promptGate._tag === 'SearchConsoleRequired'"
       aria-labelledby="developers-first-step"
-      class="flex flex-col items-start gap-3 rounded-(--ui-radius) border border-default bg-elevated p-4 shadow-(--elevation-raised) sm:flex-row sm:items-center sm:justify-between sm:gap-6 dark:border-accented"
+      class="flex flex-col items-start gap-3 rounded-(--ui-radius) border border-default bg-[color-mix(in_oklab,var(--ui-bg-elevated)_35%,var(--ui-bg))] p-4 shadow-(--elevation-raised) sm:flex-row sm:items-center sm:justify-between sm:gap-6 dark:border-accented"
     >
       <div class="min-w-0 space-y-0.5">
         <h2 id="developers-first-step" class="text-sm font-medium text-highlighted">
@@ -182,14 +182,14 @@ onMounted(() => {
     <section
       v-else-if="noProperty"
       aria-label="No Search Console property"
-      class="rounded-(--ui-radius) border border-default bg-elevated p-4 shadow-(--elevation-raised) dark:border-accented"
+      class="rounded-(--ui-radius) border border-default bg-[color-mix(in_oklab,var(--ui-bg-elevated)_35%,var(--ui-bg))] p-4 shadow-(--elevation-raised) dark:border-accented"
     >
       <ProNoPropertyNotice :email="session?.gscEmail ?? null" gsc-return-to="/pro/dashboard/developers" heading-tag="h2" />
     </section>
     <section
       v-else-if="promptGate._tag === 'SiteRequired'"
       aria-labelledby="developers-first-step"
-      class="flex flex-col items-start gap-3 rounded-(--ui-radius) border border-default bg-elevated p-4 shadow-(--elevation-raised) sm:flex-row sm:items-center sm:justify-between sm:gap-6 dark:border-accented"
+      class="flex flex-col items-start gap-3 rounded-(--ui-radius) border border-default bg-[color-mix(in_oklab,var(--ui-bg-elevated)_35%,var(--ui-bg))] p-4 shadow-(--elevation-raised) sm:flex-row sm:items-center sm:justify-between sm:gap-6 dark:border-accented"
     >
       <div class="min-w-0 space-y-0.5">
         <h2 id="developers-first-step" class="text-sm font-medium text-highlighted">
@@ -273,7 +273,7 @@ onMounted(() => {
                then the HTTP example, split by hairlines with no box inside. -->
           <div
             v-else-if="keysState?._tag === 'Ready'"
-            class="divide-y divide-default overflow-hidden rounded-(--ui-radius) border border-default bg-elevated shadow-(--elevation-raised) dark:divide-accented dark:border-accented"
+            class="divide-y divide-default overflow-hidden rounded-(--ui-radius) border border-default bg-[color-mix(in_oklab,var(--ui-bg-elevated)_35%,var(--ui-bg))] shadow-(--elevation-raised) dark:divide-accented dark:border-accented"
           >
             <form class="p-4" @submit.prevent="createKey()">
               <UFormField label="Key name" :error="createError || undefined" help="Use a name that tells you where the key is used.">
@@ -316,8 +316,10 @@ onMounted(() => {
               You have no API keys.
             </p>
             <ul v-else class="divide-y divide-default dark:divide-accented" aria-label="Your API keys">
+              <!-- On a phone the name and preview take the first line, so neither
+                   wraps; the dates and Revoke follow on the second. -->
               <li v-for="key in keys" :key="key.keyId" class="flex min-h-16 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
-                <div class="min-w-0 flex-1">
+                <div class="min-w-0 basis-full sm:basis-0 sm:flex-1">
                   <p class="truncate text-sm font-medium text-highlighted">
                     {{ key.label }}
                   </p>
@@ -325,7 +327,7 @@ onMounted(() => {
                     {{ key.preview }}
                   </p>
                 </div>
-                <dl class="flex gap-4 text-sm text-muted">
+                <dl class="flex flex-1 gap-4 text-sm text-muted sm:flex-none">
                   <div>
                     <dt class="text-xs text-dimmed">
                       Created
