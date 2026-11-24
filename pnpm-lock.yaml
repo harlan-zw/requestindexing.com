@@ -186,8 +186,8 @@ catalogs:
       specifier: 0.4.1
       version: 0.4.1
     '@harlan-zw/nuxt-cloudflare':
-      specifier: 0.5.2
-      version: 0.5.2
+      specifier: 0.5.3
+      version: 0.5.3
     '@harlan-zw/nuxt-domain-events':
       specifier: 0.2.1
       version: 0.2.1
@@ -677,7 +677,7 @@ importers:
         version: 5.20260929.1
       '@harlan-zw/nuxt-cloudflare':
         specifier: 'catalog:'
-        version: 0.5.2(7b21b53782708f9f4f33501e60006be2)
+        version: 0.5.3(7b21b53782708f9f4f33501e60006be2)
       '@harlan-zw/nuxt-dx':
         specifier: 'catalog:'
         version: 0.3.0(@nuxt/schema@4.7.0)(confbox@0.3.1)(dotenv@17.4.2)(giget@3.3.1)(jiti@2.7.0)(magic-string@1.4.2)(mlly@1.8.2)(nuxt@4.7.0(26320d03e541143ca891894acab9cda4))(oxc-parser@0.151.0)(rolldown@1.2.19)(unplugin@3.4.0(esbuild@0.28.1)(rolldown@1.2.19)(rollup@4.62.4)(vite@8.3.8(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1)))(vite@8.3.8(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1))(vue@3.5.46(typescript@6.0.3))
@@ -2087,8 +2087,8 @@ packages:
     peerDependencies:
       nuxt: ^4.6.0 || ^5.0.0
 
-  '@harlan-zw/nuxt-cloudflare@0.5.2':
-    resolution: {integrity: sha512-81/oDjhHkPeNw5tX9nP7aw5mQI7Rdd1gPaBwqI2Dvd0W7KWKVNOuuxEa214RI3L4+Ftf7y9VvRqHaEp9NFZmdA==}
+  '@harlan-zw/nuxt-cloudflare@0.5.3':
+    resolution: {integrity: sha512-4wOzeOcTHRmxnjza9QP8inIrWifDMaaAb43JZOB7FFlsguDJy74SxmLhXdbX+fY+g6xmQeRNc5oipRXHI4MACg==}
     engines: {node: ^22.22.3 || ^24.15.0 || >=26.0.0}
     hasBin: true
     peerDependencies:
@@ -11493,7 +11493,7 @@ snapshots:
       - rolldown
       - unplugin
 
-  '@harlan-zw/nuxt-cloudflare@0.5.2(7b21b53782708f9f4f33501e60006be2)':
+  '@harlan-zw/nuxt-cloudflare@0.5.3(7b21b53782708f9f4f33501e60006be2)':
     dependencies:
       '@nuxt/kit': 4.7.0(@nuxt/schema@4.7.0)(confbox@0.2.4)(dotenv@17.4.2)(giget@3.3.1)(jiti@2.7.0)(magic-string@1.4.2)(mlly@1.8.2)(oxc-parser@0.151.0)(rolldown@1.2.19)(unplugin@3.4.0(esbuild@0.28.1)(rolldown@1.2.19)(rollup@4.62.4)(vite@8.3.8(@types/node@26.6.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.11)(yaml@2.9.1)))
       citty: 0.2.2
