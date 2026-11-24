@@ -1143,3 +1143,9 @@ Live Google query rows show individual spellings. Only recorded reports supply c
 | Google classification entity read unavailable | Query details and trends are unavailable with Google classification. Clear Google classification to view them. |
 | Search Console comparison read failed | Comparison data could not load. Growth values are hidden. Reload to try again. |
 | Search Console refresh failed with retained data | Search Console data could not refresh. Previous values remain visible. Retry to read them again. |
+
+## Approval log
+
+Each entry records which pull requests' new strings Harlan approved, and the UTC date he approved them. A string added after an entry needs its own approval.
+
+- 2026-11-24 (UTC): every new string in [#463](https://github.com/harlan-zw/requestindexing.com/pull/463) (Step guides and Connect Google), [#466](https://github.com/harlan-zw/requestindexing.com/pull/466) (step guide cut), and [#467](https://github.com/harlan-zw/requestindexing.com/pull/467) (Developers agent panel), as merged.
