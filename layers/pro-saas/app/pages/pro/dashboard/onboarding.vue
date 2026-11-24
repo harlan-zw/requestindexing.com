@@ -5,6 +5,7 @@ import { useProShellOnboardingFlow, useProShellOnboardingSteps } from '@nuxtseo/
 import { REQUEST_HONOUR } from '@nuxtseo/pro-shell/shared/onboarding'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProSetupFirstSiteReport from '~~/layers/indexing/app/components/ProSetupFirstSiteReport.vue'
+import ProOnboardingStepGuide from '~~/layers/pro-saas/app/components/pro/ProOnboardingStepGuide.vue'
 
 import { FIRST_REPORT_COPY } from '#layers/indexing/shared/first-report'
 import { parseAgentSetupRoute } from '#layers/pro-gsc/shared/agent-setup'
@@ -142,6 +143,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
 
 <template>
   <ProShellOnboardingFrame
+    class="[&_[data-onboarding-step]]:relative min-[1420px]:[&_[data-onboarding-step]]:min-h-[30rem]"
     :flow="flow"
     :next-disabled="currentStep === 'sync' && !hasSites"
     :next-loading="finishing"
@@ -184,33 +186,29 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         </div>
 
         <template v-else>
-          <p class="text-sm text-muted">
-            {{ GSC_CONNECT_COPY.readAccess }}
-          </p>
+          <!-- Variant F of the gscdump.com Google access lab: what Google will
+               ask for, then the one action, then the data it leads to, open
+               in the column. The access facts live in the consent preview and
+               the step guide, so the step has no disclosure rows. -->
+          <ProGscConsentPreview />
+          <!-- Google's sign-in branding: the full-colour G sits on white, so it
+               keeps its colours on the primary button. -->
           <UButton
             :to="gscConnectUrl"
             external
             size="lg"
-            class="min-h-11"
-            icon="i-simple-icons-google"
+            block
+            class="min-h-12"
             label="Connect Google Search Console"
             data-testid="connect-gsc-btn"
-          />
-          <ProSetupExample />
-          <details class="text-sm text-muted" data-testid="gsc-access">
-            <summary class="list-item min-h-11 cursor-pointer content-center font-medium text-highlighted">
-              {{ GSC_CONNECT_COPY.accessHeading }}
-            </summary>
-            <div class="space-y-2 pb-2">
-              <p>{{ GSC_CONNECT_COPY.changes }}</p>
-              <p>
-                {{ GSC_CONNECT_COPY.remove }}
-                <ULink :to="GSC_CONNECT_COPY.removeHref" external target="_blank" rel="noopener" class="font-medium text-highlighted underline">
-                  {{ GSC_CONNECT_COPY.removeAction }}
-                </ULink>
-              </p>
-            </div>
-          </details>
+          >
+            <template #leading>
+              <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-white" aria-hidden="true">
+                <UIcon name="i-logos-google-icon" class="size-4" />
+              </span>
+            </template>
+          </UButton>
+          <ProSetupExample layout="panel" :record-view="false" />
         </template>
       </div>
 
@@ -221,6 +219,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
            reopens Agent setup. -->
       <UiWizardNav
         can-back
+        :divider="false"
         :show-next="gscConnected || hasSites"
         :next-label="frameCopy.next"
         @back="controls.back()"
@@ -271,7 +270,26 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       />
     </template>
 
+    <!-- The step guide follows the step's buttons, so on a narrow screen it
+         never pushes the step's way forward down. The frame's class makes
+         the step section its anchor, so from 1420px the guide's column hangs
+         to the right of the step and runs the section's full height. The card
+         starts level with the heading and sticks 24px from the top while the
+         reader scrolls a long step. The column keeps its width. The 672px
+         column stays centred, so the 32px gap and the 320px card need that
+         width again on the left: 1376px, plus the scrollbar and a margin.
+         The hanging column leaves the page's flow, and the surface clips what
+         overflows it, so from 1420px the section holds at least 30rem, the
+         tallest guide. A short step, such as Connect Sites before Google
+         connects, then cannot cut the card off. The last step's guide
+         describes the report, so it waits for a Site. -->
     <template #after>
+      <div
+        v-if="currentStep !== 'sync' || hasSites"
+        class="min-[1420px]:absolute min-[1420px]:inset-y-0 min-[1420px]:left-full min-[1420px]:ml-8 min-[1420px]:w-80"
+      >
+        <ProOnboardingStepGuide :step="currentStep" class="min-[1420px]:sticky min-[1420px]:top-6" />
+      </div>
       <ProOnboardingAnswers v-if="currentStep === 'sync'" />
       <ProSetupExitFeedback v-if="feedbackStep" :step="feedbackStep" />
     </template>

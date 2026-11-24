@@ -125,6 +125,7 @@ overrides:
 patchedDependencies:
   '@harlan-zw/nuxt-wide-events@0.2.0': patches/@harlan-zw__nuxt-wide-events@0.2.0.patch
   '@nuxt/ui@4.11.2': patches/@nuxt__ui@4.11.2.patch
+  '@nuxtseo/design-system@0.1.12': patches/@nuxtseo__design-system@0.1.12.patch
   nitro@3.0.261103-rc: patches/nitro@3.0.261103-rc.patch
   nitropack@2.13.6: patches/nitropack@2.13.6.patch
   nuxt-auth-utils@0.6.2: patches/nuxt-auth-utils@0.6.2.patch

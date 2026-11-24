@@ -6,7 +6,6 @@
  */
 export const GSC_CONNECT_COPY = {
   signupDescription: 'See which pages Google indexed and why others are missing. Free during beta.',
-  accessHeading: 'What Request Indexing can access',
   /** COPY.md "Search Console read access". The saved-page setup uses it too. */
   readAccess: 'Setup asks for read-only Search Console access. If an action needs more access, we ask then.',
   /** COPY.md Truth rules, the Search Console access sentence, verbatim. */
@@ -14,6 +13,17 @@ export const GSC_CONNECT_COPY = {
   remove: 'You can remove this access at any time in your Google Account.',
   removeAction: 'Open Google Account connections',
   removeHref: 'https://myaccount.google.com/connections',
+  /** The consent preview on Connect Google: what Google's screen asks for, before the reader leaves. */
+  consent: {
+    ask: 'Google will ask you to allow',
+    readOnly: 'Read-only',
+    /**
+     * Google's own description of the `webmasters.readonly` scope, verbatim, from
+     * https://developers.google.com/identity/protocols/oauth2/scopes (Google Search Console API).
+     */
+    scope: 'View Search Console data for your verified sites',
+    signedInAs: 'Signed in as',
+  },
   signupMissingScope: 'Sign in again and tick the Search Console box on Google\'s screen so we can check your pages.',
   connectMissingScope: 'Connect again and tick the Search Console box on Google\'s screen so we can check your pages.',
   githubSignIn: 'Connect a Google account to read Search Console. You can still sign in with GitHub.',

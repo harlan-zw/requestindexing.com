@@ -89,6 +89,8 @@ export const AGENT_SETUP_COPY = {
   copyServerUrl: 'Copy server URL',
   next: 'Next, connect Google here. Your agent reads your Sites after you connect them.',
   continue: 'Continue',
+  /** The skip line under the heading. Harlan's words, 2026-11-24. */
+  skipLead: 'You can set up agents later, and connect more than one.',
   skip: 'Skip agent setup',
 } as const
 
@@ -109,9 +111,12 @@ export interface AgentSetupStep {
   action: AgentSetupAction | null
 }
 
-// gscdump finds its account by Google account (header note), so every
-// approval step names the account to use.
-const GOOGLE_ACCOUNT = 'Sign in with the Google account that owns your Search Console property.'
+/**
+ * COPY.md, Agent setup assets, the Google account sentence. gscdump finds its
+ * account by Google account (header note), so every approval step names the
+ * account to use, and the Connect Google step guide repeats it.
+ */
+export const GOOGLE_ACCOUNT_SENTENCE = 'Sign in with the Google account that owns your Search Console property.'
 
 interface HostedAgent {
   label: string
@@ -154,13 +159,13 @@ export function agentSetupSteps(route: AgentSetupRoute): readonly AgentSetupStep
   if (route === 'coding-agent') {
     return [
       { key: 'copy', title: 'Copy the Setup prompt', detail: 'Your agent installs the gscdump CLI and signs in.', action: { _tag: 'CopyPrompt' } },
-      { key: 'approve', title: 'Approve the sign-in', detail: `Your agent opens gscdump in your browser. ${GOOGLE_ACCOUNT}`, action: null },
+      { key: 'approve', title: 'Approve the sign-in', detail: `Your agent opens gscdump in your browser. ${GOOGLE_ACCOUNT_SENTENCE}`, action: null },
     ]
   }
   const { label: app, add, approve } = HOSTED_AGENTS[route]
   return [
     { key: 'add', title: `Add gscdump to ${app}`, detail: add.detail, paste: add.paste, action: { _tag: 'Link', label: add.action, to: add.to } },
-    { key: 'approve', title: approve, detail: `${app} opens gscdump. ${GOOGLE_ACCOUNT}`, action: null },
+    { key: 'approve', title: approve, detail: `${app} opens gscdump. ${GOOGLE_ACCOUNT_SENTENCE}`, action: null },
     { key: 'ask', title: 'Ask your first question', detail: `Paste the Setup prompt into a new ${app} chat.`, action: { _tag: 'CopyPrompt' } },
   ]
 }
