@@ -143,7 +143,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
 
 <template>
   <ProShellOnboardingFrame
-    class="[&_[data-onboarding-step]]:relative"
+    class="[&_[data-onboarding-step]]:relative min-[1420px]:[&_[data-onboarding-step]]:min-h-[30rem]"
     :flow="flow"
     :next-disabled="currentStep === 'sync' && !hasSites"
     :next-loading="finishing"
@@ -279,8 +279,11 @@ useSeoMeta({ title: 'Set up Request Indexing' })
          right of the step, top-aligned with the heading, and the column keeps
          its width. The 672px column stays centred, so the 32px gap and the
          320px card need that width again on the left: 1376px, plus the
-         scrollbar and a margin. The last step's guide describes the report,
-         so it waits for a Site. -->
+         scrollbar and a margin. The hanging card leaves the page's flow, and
+         the surface clips what overflows it, so from 1420px the section holds
+         at least 30rem, the tallest guide. A short step, such as Connect Sites
+         before Google connects, then cannot cut the card off. The last step's
+         guide describes the report, so it waits for a Site. -->
     <template #after>
       <ProOnboardingStepGuide
         v-if="currentStep !== 'sync' || hasSites"
