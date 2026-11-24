@@ -10,8 +10,9 @@ export const GSC_CONNECT_COPY = {
   readAccess: 'Setup asks for read-only Search Console access. If an action needs more access, we ask then.',
   /** COPY.md Truth rules, the Search Console access sentence, verbatim. */
   changes: 'We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify.',
-  remove: 'You can remove this access at any time in your Google Account.',
-  removeAction: 'Open Google Account connections',
+  /** Ends in the removal link: Remove this access at any time in your Google Account. */
+  remove: 'Remove this access at any time in',
+  removeAction: 'your Google Account',
   removeHref: 'https://myaccount.google.com/connections',
   /** The consent preview on Connect Google: what Google's screen asks for, before the reader leaves. */
   consent: {
