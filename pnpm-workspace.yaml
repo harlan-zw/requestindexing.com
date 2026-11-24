@@ -202,7 +202,7 @@ catalog:
   googlethis: ^1.8.0
   gscdump: 7.18.0
   h3: 2.0.8
-  happy-dom: ^20.0.0
+  happy-dom: ^21.0.4
   hookable: ^6.1.2
   jsonc-parser: 3.3.1
   klona: ^2.0.6
