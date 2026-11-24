@@ -11,6 +11,7 @@ import type { PartnerFetch } from '@gscdump/sdk/partner'
 import type { H3Event } from 'h3'
 import { createPartnerClient } from '@gscdump/sdk/partner'
 import { toPartnerError } from '@gscdump/sdk/partner-errors'
+import { resolveCloudflareBindings } from '@harlan-zw/nuxt-cloudflare/bindings'
 import { createError } from 'h3'
 import { logWarn } from '~~/shared/logging'
 import { logger } from '~~/shared/server/logger'
@@ -41,7 +42,7 @@ function parseCachedSettings(raw: string): ParsedSettings {
 }
 
 function getKV(event: H3Event): KVNamespace | null {
-  const env = event.context.cloudflare?.env as { KV?: KVNamespace } | undefined
+  const env = resolveCloudflareBindings<{ KV?: KVNamespace }>(event)
   return env?.KV ?? null
 }
 
