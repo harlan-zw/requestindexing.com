@@ -100,7 +100,7 @@ const humanUpdatedDate = computed(() => formatGuideDate(page.value?.updatedAt))
           </span>
         </div>
       </UPageHeader>
-      <UPageBody prose class="pb-0">
+      <UPageBody class="prose pb-0">
         <ContentRenderer v-if="page?.body" :value="page" />
         <USeparator v-if="surround?.length || page?.relatedPages?.length" class="my-8" />
         <ContentNext :surround="surround" :related-pages="page?.relatedPages" />

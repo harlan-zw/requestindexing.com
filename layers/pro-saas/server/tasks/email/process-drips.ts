@@ -20,7 +20,7 @@ export default defineTask({
       onboardingDripEnabled: config.onboardingDripEnabled,
       send: sendEmail,
       baseUrl: config.public.baseUrl,
-      secret: config.session.password,
+      secret: config.serviceSigningSecret,
     })
     return { result }
   },

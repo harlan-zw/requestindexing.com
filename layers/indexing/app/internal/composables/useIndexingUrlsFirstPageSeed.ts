@@ -24,6 +24,7 @@ const FIRST_PAGE_TIMEOUT_MS = 800
 export function useIndexingUrlsFirstPageSeed() {
   const nuxtApp = useNuxtApp()
   const event = useRequestEvent()
+  const fetchForRequest = useRequestFetch()
 
   return async (siteId: string, pageSize: number): Promise<void> => {
     if (!event)
@@ -33,14 +34,19 @@ export function useIndexingUrlsFirstPageSeed() {
       apiRoot: '/api/_gscdump',
       credential: 'session-proxy',
       retry: { maxAttempts: 1 },
-      // `event.fetch` routes the relative proxy path through Nitro in-process
-      // and forwards the incoming request's cookie. It returns a plain
-      // `Response`, which the SDK reads itself. The in-process fetch drops an
-      // abort signal, so the timeout below races the read instead.
+      // Forward the current session cookie and leave the body for the SDK.
+      // The in-process fetch can drop aborts, so the timeout races it.
       fetch: (request, init) => {
         const headers = new Headers(init?.headers)
         headers.delete('authorization')
-        return event.fetch(String(request), { ...init, headers: Object.fromEntries(headers) })
+        return fetchForRequest.raw(String(request), {
+          ...init,
+          method: 'GET',
+          headers,
+          responseType: 'stream',
+          ignoreResponseError: true,
+          retry: 0,
+        })
       },
     })
 

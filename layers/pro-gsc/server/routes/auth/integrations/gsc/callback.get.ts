@@ -78,15 +78,17 @@ export default defineEventHandler(async (event) => {
   if (!code)
     return stop(GSC_CONNECT_FAILED_ERROR, 'gsc_connect_failed', { reason: 'missing_code' })
 
-  const config = useRuntimeConfig(event)
+  const { clientId, clientSecret } = useRuntimeConfig().oauth?.google ?? {}
+  if (!clientId || !clientSecret)
+    return stop(GSC_CONNECT_FAILED_ERROR, 'gsc_connect_failed', { reason: 'missing_oauth_config' })
   const host = getRequestHeader(event, 'host')
   const protocol = host?.includes('localhost') ? 'http' : 'https'
   const redirectUri = `${protocol}://${host}/auth/integrations/gsc/callback`
 
   const tokenResult = await exchangeAuthCodeResult(
     String(code),
-    config.oauth.google.clientId,
-    config.oauth.google.clientSecret,
+    clientId,
+    clientSecret,
     redirectUri,
   )
   if (!tokenResult.ok) {

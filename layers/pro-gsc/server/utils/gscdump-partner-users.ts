@@ -16,7 +16,7 @@ export interface PartnerDeleteResult {
 }
 
 export async function deletePartnerUser(event: H3Event, gscdumpUserId: string): Promise<PartnerDeleteResult> {
-  const config = useRuntimeConfig(event)
+  const config = useRuntimeConfig()
   const apiKey = config.gscdump?.apiKey
   if (!apiKey)
     return { ok: false, message: 'NUXT_GSCDUMP_API_KEY not configured' }

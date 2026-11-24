@@ -1,5 +1,5 @@
-import { createEvent } from 'h3'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { mockRequestEvent } from '../../../../../tests/support/mock-request-event'
 import { useGscdumpClient } from '../../utils/gscdump-client'
 import proxy from './[surface]/v1/[...path]'
 
@@ -44,7 +44,7 @@ function request(method: 'GET' | 'POST') {
     },
   }
   const path = method === 'GET' ? 'sites/s_engine/indexing' : 'sites/s_engine/sitemaps/submission'
-  const event = createEvent({ url: `/api/_gscdump/partner/v1/${path}`, method, headers: { 'host': 'request.test', 'sec-fetch-site': 'same-origin' } } as never, {} as never)
+  const event = mockRequestEvent({ url: `/api/_gscdump/partner/v1/${path}`, method, headers: { 'host': 'request.test', 'sec-fetch-site': 'same-origin' } })
   event.context.params = { surface: 'partner', path }
   const caller = { user: { id: 1 }, isAdmin: false, memberships: [{ teamId: 1, role: 'owner', isOwner: true }], currentTeamId: 1 }
   return (proxy as unknown as (context: unknown) => Promise<Response>)({ event, db, caller })

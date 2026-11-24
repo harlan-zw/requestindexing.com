@@ -1,7 +1,5 @@
 import type { H3Event } from 'h3'
-import { IncomingMessage, ServerResponse } from 'node:http'
-import { Socket } from 'node:net'
-import * as h3 from 'h3'
+import { mockEvent } from 'nitro/h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Sign-in trusts the provider's email further on: invitations match on it and
@@ -22,9 +20,7 @@ vi.mock('../layers/pro-saas-auth/server/utils/auth/finalize', () => ({
 
 type OnSuccess = (event: H3Event, context: unknown) => unknown
 
-for (const name of ['defineEventHandler', 'createError', 'getRouterParam', 'getQuery', 'getCookie', 'setCookie', 'deleteCookie', 'sendRedirect'] as const)
-  vi.stubGlobal(name, h3[name])
-vi.stubGlobal('useAppConfig', () => ({ proSaas: { features: { googleSignIn: true, githubSignIn: true } } }))
+vi.mock('nuxt/internal/server-app-config', () => ({ default: { proSaas: { features: { googleSignIn: true, githubSignIn: true } } } }))
 vi.stubGlobal('$fetch', h.githubEmails)
 vi.stubGlobal('defineOAuthGitHubEventHandler', ({ onSuccess }: { onSuccess: OnSuccess }) =>
   (event: H3Event) => onSuccess(event, { tokens: { access_token: 'gho_test' }, user: h.githubUser }))
@@ -32,11 +28,7 @@ vi.stubGlobal('defineOAuthGoogleEventHandler', ({ onSuccess }: { onSuccess: OnSu
   (event: H3Event) => onSuccess(event, { user: h.googleUser }))
 
 function callbackEvent(provider: string, query: string): H3Event {
-  const req = new IncomingMessage(new Socket())
-  req.method = 'GET'
-  req.url = `/auth/${provider}?${query}`
-  req.headers.cookie = 'nuxt-auth-state=xyz'
-  const event = h3.createEvent(req, new ServerResponse(req))
+  const event = mockEvent(`/auth/${provider}?${query}`, { headers: { cookie: 'nuxt-auth-state=xyz' } })
   event.context.params = { provider }
   return event
 }
@@ -46,7 +38,7 @@ async function completeSignIn(provider: string, query = 'code=abc&state=xyz') {
   const { default: handler } = await import('../layers/pro-saas-auth/server/routes/auth/[provider].get')
   const event = callbackEvent(provider, query)
   await handler(event)
-  return { location: event.node.res.getHeader('location') }
+  return { location: event.res.headers.get('location') }
 }
 
 beforeEach(() => {

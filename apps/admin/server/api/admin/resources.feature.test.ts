@@ -1,10 +1,11 @@
 import type { DatabaseSync } from 'node:sqlite'
-import { IncomingMessage, ServerResponse } from 'node:http'
+import { IncomingMessage } from 'node:http'
 import { Socket } from 'node:net'
-import { createError, createEvent } from 'h3'
+import { createError } from 'h3'
 import { createHooks } from 'hookable'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { migratedDatabase, proDatabase } from '~~/tests/support/migrated-d1'
+import { mockRequestEvent } from '../../../../../tests/support/mock-request-event'
 
 let sqlite: DatabaseSync
 let routeKey: string
@@ -47,9 +48,9 @@ async function nitroAppWithResources() {
 
 async function list() {
   await nitroAppWithResources()
-  const handler = (await import('./resources/[key].get')).default as unknown as (event: ReturnType<typeof createEvent>) => Promise<{ rows: Array<Record<string, unknown>>, total: number, relations: { users: Record<string, { email: string }> } }>
+  const handler = (await import('./resources/[key].get')).default as unknown as (event: ReturnType<typeof mockRequestEvent>) => Promise<{ rows: Array<Record<string, unknown>>, total: number, relations: { users: Record<string, { email: string }> } }>
   const request = new IncomingMessage(new Socket())
-  return handler(createEvent(request, new ServerResponse(request)))
+  return handler(mockRequestEvent(request))
 }
 
 describe('admin resource route', () => {

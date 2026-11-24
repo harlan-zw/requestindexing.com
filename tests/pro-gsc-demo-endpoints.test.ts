@@ -1,12 +1,9 @@
-import type { H3Event } from 'h3'
+import { mockEvent } from 'nitro/h3'
 import { describe, expect, it } from 'vitest'
 import dataHandler from '../layers/pro-gsc/server/api/pro/public/demo/data.get'
 import datesHandler from '../layers/pro-gsc/server/api/pro/public/demo/dates.get'
 
-// `getQuery` reads `event.path` only, so a path is the whole request here.
-function eventFor(path: string): H3Event {
-  return { path, context: {} } as unknown as H3Event
-}
+const eventFor = mockEvent
 
 describe('gET /api/pro/public/demo/dates', () => {
   it('answers the shape the sample data card reads', async () => {

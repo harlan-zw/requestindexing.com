@@ -6,11 +6,12 @@
 // these must never throw on a malformed param.
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import type { ProHeaderPageMeta } from '#layers/pro-saas/app/utils/pro-header-meta'
+import { readSiteRouteId, SITES_ROUTE } from '#layers/pro-saas/shared/site-lookup'
 import { decodeRouteParam } from '../../shared/route-params'
 import { searchConsoleLink } from './search-console-link'
 
 function pagePathOf(route: RouteLocationNormalizedLoaded): string {
-  const raw = decodeRouteParam(route.params.page) ?? ''
+  const raw = decodeRouteParam('page' in route.params ? route.params.page : undefined) ?? ''
   if (!raw.startsWith('http'))
     return raw
   try {
@@ -23,11 +24,12 @@ function pagePathOf(route: RouteLocationNormalizedLoaded): string {
 }
 
 function queryLabelOf(route: RouteLocationNormalizedLoaded): string {
-  return `“${String(route.params.keyword)}”`
+  return `“${'keyword' in route.params ? route.params.keyword : ''}”`
 }
 
 function searchConsolePath(route: RouteLocationNormalizedLoaded, list: 'pages' | 'queries'): string {
-  return searchConsoleLink(`/pro/dashboard/sites/${String(route.params.id)}/search-console/${list}`, route.query)
+  const siteId = readSiteRouteId(route.params)
+  return siteId ? searchConsoleLink(`/pro/dashboard/sites/${siteId}/search-console/${list}`, route.query) : SITES_ROUTE
 }
 
 export const pageDetailHeader: ProHeaderPageMeta = {

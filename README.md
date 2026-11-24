@@ -60,7 +60,8 @@ Configure a Google OAuth client at the [Google Developer Console](https://consol
 NUXT_OAUTH_GOOGLE_CLIENT_ID=<clientId>
 NUXT_OAUTH_GOOGLE_CLIENT_SECRET=<clientSecret>
 NUXT_KEY=<must be 32 chars>
-NUXT_SESSION_PASSWORD=<secret>
+NUXT_APP_SECRET=<at-least-32-characters>
+NUXT_SERVICE_SIGNING_SECRET=<at-least-32-characters>
 ```
 
 Talking to the hosted engine also needs a gscdump partner key (`NUXT_GSCDUMP_API_KEY`) and webhook secret (`NUXT_GSCDUMP_WEBHOOK_SECRET`). See `.dev.vars.example` for the full list.

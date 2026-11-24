@@ -1,0 +1,25 @@
+diff --git a/dist/presets/cloudflare/runtime/_durable.mjs b/dist/presets/cloudflare/runtime/_durable.mjs
+--- a/dist/presets/cloudflare/runtime/_durable.mjs
++++ b/dist/presets/cloudflare/runtime/_durable.mjs
+@@ -30,6 +30,21 @@
+ 		if (import.meta._websocket && request.headers.get("upgrade") === "websocket") return ws.handleDurableUpgrade(this, request);
+ 		return nitroApp.fetch(request);
+ 	}
++	publish(topic, data) {
++		if (!ws) throw new Error("WebSocket not available");
++		// CrossWS restores topic subscriptions from socket attachments after hibernation.
++		for (const socket of this.ctx.getWebSockets()) {
++			if (socket.readyState !== 1) continue;
++			const topics = socket.deserializeAttachment()?.t;
++			if (topics instanceof Set && topics.has(topic)) {
++				try {
++					socket.send(data);
++				} catch (error) {
++					console.warn(error);
++				}
++			}
++		}
++	}
+ 	alarm() {
+ 		this.ctx.waitUntil(afterNitroReady(nitroApp, () => nitroHooks.callHook("cloudflare:durable:alarm", this)) || Promise.resolve());
+ 	}

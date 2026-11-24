@@ -48,11 +48,13 @@ export default defineEventHandler(async (event) => {
   // Refresh the access token via Google. We re-mint short-lived access tokens
   // here rather than reusing the stored one (the stored access token may have
   // expired; refresh tokens last longer).
-  const config = useRuntimeConfig(event)
+  const { clientId, clientSecret } = useRuntimeConfig().oauth?.google ?? {}
+  if (!clientId || !clientSecret)
+    throw createError({ statusCode: 503, message: 'Google sign-in is unavailable.' })
   const tokenRes = await refreshAccessToken(
     refreshToken,
-    config.oauth.google.clientId,
-    config.oauth.google.clientSecret,
+    clientId,
+    clientSecret,
   ).catch((error) => {
     logger.error('[promote-google] refresh failed:', error)
     return null

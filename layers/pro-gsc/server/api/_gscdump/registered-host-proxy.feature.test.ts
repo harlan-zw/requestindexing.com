@@ -1,5 +1,5 @@
-import { createEvent } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mockRequestEvent } from '../../../../../tests/support/mock-request-event'
 import proxy from './[surface]/v1/[...path]'
 
 const state = vi.hoisted(() => ({
@@ -31,7 +31,7 @@ function request() {
       return query
     },
   }
-  const event = createEvent({ url: '/api/_gscdump/partner/v1/sites/s_engine/indexing', method: 'GET', headers: { host: 'request.test' } } as never, {} as never)
+  const event = mockRequestEvent({ url: '/api/_gscdump/partner/v1/sites/s_engine/indexing', method: 'GET', headers: { host: 'request.test' } })
   event.context.params = { surface: 'partner', path: 'sites/s_engine/indexing' }
   const caller = { user: { id: 1 }, isAdmin: false, memberships: [{ teamId: 1, role: 'viewer' }], currentTeamId: 1 }
   return (proxy as unknown as (context: unknown) => Promise<Response>)({ event, db, caller })

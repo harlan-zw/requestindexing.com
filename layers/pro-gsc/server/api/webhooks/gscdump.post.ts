@@ -53,7 +53,7 @@ function cacheClaims(storage: ReturnType<typeof useStorage>): DeliveryClaims {
 }
 
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig(event)
+  const config = useRuntimeConfig()
   const secret = config.gscdump?.webhookSecret
   if (!secret) {
     // Fail closed. Accepting unsigned deliveries would let anyone who learns

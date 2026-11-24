@@ -168,8 +168,10 @@ async function dataforseoFetch<T>(endpoint: string, body: Record<string, unknown
         ctx,
       )
     }
-    if (isTransientDataForSeoFailure(err))
-      throw createError({ statusCode: 503, message: DATAFORSEO_UNAVAILABLE_MESSAGE, cause: err })
+    if (isTransientDataForSeoFailure(err)) {
+      const failure = createError({ statusCode: 503, message: DATAFORSEO_UNAVAILABLE_MESSAGE })
+      throw Object.assign(failure, { cause: err })
+    }
     throw err
   }
 }
@@ -193,11 +195,12 @@ async function siteSearch(target: string, depth: number, ctx?: DataForSeoCallCon
 
   const task = parseSerpTask(response)
   if (task._tag === 'TaskError') {
-    throw createError({
+    const failure = createError({
       statusCode: 503,
       message: DATAFORSEO_UNAVAILABLE_MESSAGE,
-      cause: new Error(`DataForSEO ran no search for site:${target}: task status ${task.statusCode ?? 'missing'} ${task.statusMessage}`),
     })
+    const cause = new Error(`DataForSEO ran no search for site:${target}: task status ${task.statusCode ?? 'missing'} ${task.statusMessage}`)
+    throw Object.assign(failure, { cause })
   }
   return task.serp
 }

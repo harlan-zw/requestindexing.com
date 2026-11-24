@@ -5,7 +5,7 @@ import checks from '#checkin/checks'
 import { resolveCheckinDeployment } from './checkin-deployment'
 
 export function runDailyCheckin(event: H3Event) {
-  const config = useRuntimeConfig(event)
+  const config = useRuntimeConfig()
   const bindings = resolveCloudflareBindings<{ CF_VERSION_METADATA?: { id?: string, tag?: string } }>(event)
   // Preserve the event context so public Cloudflare checks read the existing bindings.
   const context = {

@@ -6,8 +6,8 @@ import { createError } from 'h3'
 import { users } from '~~/layers/core/server/db/schema'
 
 /** The dedicated Indexing API client (gscdump.com ADR-0016), or null before it is configured. */
-export function googleIndexingClient(event: H3Event): { clientId: string, clientSecret: string } | null {
-  const { clientId, clientSecret } = useRuntimeConfig(event).googleIndexing ?? {}
+export function googleIndexingClient(_event: H3Event): { clientId: string, clientSecret: string } | null {
+  const { clientId, clientSecret } = useRuntimeConfig().googleIndexing ?? {}
   return clientId && clientSecret ? { clientId, clientSecret } : null
 }
 

@@ -6,6 +6,7 @@ import type { Period } from '../../../composables/useGscPeriod'
 import { useRoute } from 'nuxt/app'
 import { computed, h, watchEffect } from 'vue'
 import { UiProgressPercent } from '#components'
+import { readSiteRouteId } from '#layers/pro-saas/shared/site-lookup'
 import { deriveUrlBrandKeywords } from '../../../../shared/brand-queries'
 import { canonicalQueryKey } from '../../../../shared/canonical-query'
 import { isBrandTerm } from '../../../../shared/query-display'
@@ -70,7 +71,7 @@ const gscFilters = useProGscFilters()
 const classified = computed(() => !!gscFilters.googleSlice.value?.googleBrand)
 const rawQueries = computed(() => !!pageFilter || !!gscFilters.googleSlice.value)
 const route = useRoute()
-const linkSiteId = computed(() => (route.params.id as string) || siteId)
+const linkSiteId = computed(() => readSiteRouteId(route.params) || siteId)
 const dateRange = computed(() => periodToDateRange(period, gscFilters.stableData.value))
 
 // No keyword profile exists yet, so brand terms fall back to what the site URL

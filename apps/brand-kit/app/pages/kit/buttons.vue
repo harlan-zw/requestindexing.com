@@ -149,13 +149,13 @@ useHead({ title: 'Buttons & Motion · Brand Kit' })
     </KitSection>
 
     <KitSection title="Button group">
-      <UButtonGroup>
+      <UFieldGroup>
         <UButton color="neutral" variant="outline" icon="i-lucide-chevron-left" />
         <UButton color="neutral" variant="outline">
           Page 1 of 12
         </UButton>
         <UButton color="neutral" variant="outline" icon="i-lucide-chevron-right" />
-      </UButtonGroup>
+      </UFieldGroup>
     </KitSection>
   </div>
 </template>

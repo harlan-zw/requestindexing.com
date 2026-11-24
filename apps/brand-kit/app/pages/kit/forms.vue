@@ -5,7 +5,7 @@ useHead({ title: 'Forms · Brand Kit' })
 const radioValue = ref('email')
 const switchValue = ref(true)
 const checkValues = ref(['indexed'])
-const sliderValue = ref([25])
+const sliderValue = ref<number[] | undefined>([25])
 const selectValue = ref()
 const selectMenuValue = ref()
 const inputValue = ref('')
@@ -105,7 +105,7 @@ const inputValue = ref('')
           <UFormField label="USlider">
             <USlider v-model="sliderValue" :min="0" :max="100" />
             <template #help>
-              {{ sliderValue[0] }} pages / day
+              {{ sliderValue?.[0] ?? 25 }} pages / day
             </template>
           </UFormField>
         </div>

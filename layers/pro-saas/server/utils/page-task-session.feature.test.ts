@@ -1,19 +1,17 @@
 import type { H3Event } from 'h3'
 import type { AuthIdentityRow } from '#layers/pro-saas-auth/shared/types/auth'
-import { IncomingMessage, ServerResponse } from 'node:http'
-import { Socket } from 'node:net'
-import { createEvent } from 'h3'
+import { mockEvent } from 'h3'
 import { expect, it, vi } from 'vitest'
 import { setAuthSession } from '#layers/pro-saas-auth/server/utils/auth/session'
 // Exercise the installed sealed-session runtime. The package only exports its Nuxt module.
 // eslint-disable-next-line antfu/no-import-dist, antfu/no-import-node-modules-by-path
 import publicSession from '../../../../node_modules/nuxt-auth-utils/dist/runtime/server/api/session.get.js'
 // eslint-disable-next-line antfu/no-import-dist, antfu/no-import-node-modules-by-path
-import { getUserSession, replaceUserSession, setUserSession } from '../../../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session.js'
+import { getUserSession, replaceUserSession, setUserSession, USER_SESSION_COOKIE_NAME } from '../../../../node_modules/nuxt-auth-utils/dist/runtime/server/utils/session.js'
 import { createPageTask } from '../../shared/page-task'
 import { claimPageTask, savePageTask } from './page-task'
 
-vi.mock('#imports', () => ({ useRuntimeConfig: () => ({ session: { name: 'nuxt-session', password: 'page-session-test-password-32-characters-long' } }) }))
+vi.mock('nuxt/internal/server-runtime-config', () => ({ useRuntimeConfig: () => ({ appSecret: 'page-session-test-secret-32-characters-long' }) }))
 vi.mock('./pro-events', () => ({ emitFirstProEvent: vi.fn(async () => true) }))
 vi.stubGlobal('getUserSession', getUserSession)
 vi.stubGlobal('setUserSession', setUserSession)
@@ -22,16 +20,12 @@ vi.stubGlobal('useStorage', () => ({ setItem: async () => {} }))
 vi.stubGlobal('useDrizzle', () => ({}))
 
 function event(previous?: H3Event) {
-  const request = new IncomingMessage(new Socket())
-  request.method = 'GET'
-  request.url = '/auth/google'
-  if (previous) {
-    const headers = previous.node.res.getHeader('set-cookie')
-    const cookie = (Array.isArray(headers) ? headers : [String(headers)]).findLast(value => value.startsWith('nuxt-session=') && !value.startsWith('nuxt-session=;'))!
-    expect(cookie.length).toBeLessThan(4096)
-    request.headers.cookie = cookie.split(';')[0]
-  }
-  return createEvent(request, new ServerResponse(request))
+  if (!previous)
+    return mockEvent('/auth/google')
+  const prefix = `${USER_SESSION_COOKIE_NAME}=`
+  const cookie = previous.res.headers.getSetCookie().findLast(value => value.startsWith(prefix) && !value.startsWith(`${prefix};`))!
+  expect(cookie.length).toBeLessThan(4096)
+  return mockEvent('/auth/google', { headers: { cookie: cookie.split(';')[0]! } })
 }
 
 it('preserves a maximum-size page privately through sign-in, Google integration and session refresh', async () => {

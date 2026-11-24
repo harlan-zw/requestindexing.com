@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { jobs } from '~~/layers/core/server/db/schema'
+
 definePageMeta({
   layout: 'admin',
   title: 'Admin Dashboard',
@@ -6,7 +8,8 @@ definePageMeta({
 
 const { data: users, status: usersStatus } = useLazyFetch('/api/admin/users')
 const { data: sites, status: sitesStatus } = useLazyFetch('/api/admin/sites')
-const { data: jobsData, status: jobsStatus } = useLazyFetch('/api/admin/jobs')
+type JobStatus = Pick<typeof jobs.$inferSelect, 'completedAt' | 'failedAt'>
+const { data: jobsData, status: jobsStatus } = useLazyFetch<{ jobs: JobStatus[] }>('/api/admin/jobs')
 
 const userCount = computed(() => users.value?.length ?? 0)
 const siteCount = computed(() => sites.value?.length ?? 0)

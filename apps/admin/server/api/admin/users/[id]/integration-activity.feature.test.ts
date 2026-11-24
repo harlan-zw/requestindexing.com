@@ -1,10 +1,11 @@
 import type { DatabaseSync } from 'node:sqlite'
-import { IncomingMessage, ServerResponse } from 'node:http'
+import { IncomingMessage } from 'node:http'
 import { Socket } from 'node:net'
 import { drizzle } from 'drizzle-orm/d1'
-import { createError, createEvent } from 'h3'
+import { createError } from 'h3'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { migratedDatabase } from '~~/tests/support/migrated-d1'
+import { mockRequestEvent } from '../../../../../../../tests/support/mock-request-event'
 
 const fixture = vi.hoisted(() => ({ read: vi.fn() }))
 vi.mock('#layers/pro-gsc/server/utils/gscdump-origin', () => ({ createGscdumpPublicV1Client: () => ({ getUserIntegrationActivity: fixture.read }) }))
@@ -38,7 +39,7 @@ async function read(id = '1', query = '') {
   const handler = (await import('./integration-activity.get')).default
   const request = new IncomingMessage(new Socket())
   request.url = `/api/admin/users/${id}/integration-activity${query}`
-  const event = createEvent(request, new ServerResponse(request))
+  const event = mockRequestEvent(request)
   event.context.params = { id }
   return handler(event)
 }

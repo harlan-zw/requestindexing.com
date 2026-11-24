@@ -1,10 +1,10 @@
-import { IncomingMessage, ServerResponse } from 'node:http'
+import { IncomingMessage } from 'node:http'
 import { Socket } from 'node:net'
-import { createEvent } from 'h3'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import grant from '../layers/indexing/server/api/sites/[siteId]/indexing/google-grant.get'
 import submit from '../layers/indexing/server/api/sites/[siteId]/indexing/google-submissions.post'
 import { DEFAULT_PARTNER_TIMEOUT_MS } from '../layers/pro-gsc/server/utils/gscdump-client'
+import { mockRequestEvent } from './support/mock-request-event'
 
 vi.mock('#layers/pro-saas/server/utils/handler', () => ({ defineProApiHandler: (handler: unknown) => handler }))
 // Keep the production body validator, replacing only request-stream I/O while
@@ -44,7 +44,7 @@ function visit(kind: 'grant' | 'submit') {
   const req = new IncomingMessage(new Socket())
   req.method = kind === 'grant' ? 'GET' : 'POST'
   req.url = `/api/sites/local/indexing/google-${kind}`
-  const event = createEvent(req, new ServerResponse(req))
+  const event = mockRequestEvent(req)
   return kind === 'grant' ? grant(event) : submit(event)
 }
 
