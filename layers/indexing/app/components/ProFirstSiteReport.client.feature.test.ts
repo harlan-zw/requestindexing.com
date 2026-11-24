@@ -217,3 +217,47 @@ it('offers Refresh preview after a batch that returned no verdict', async () => 
   expect(page.host.textContent).toContain('Google returned no inspection result for this URL.')
   expect(page.buttons()).toEqual(['Refresh preview'])
 })
+
+it('holds a second approval when the report remounts while an inspection runs', async () => {
+  io.saved.mockResolvedValueOnce({ _tag: 'NoVerdicts' })
+  const first = await mount()
+  await first.click('Preview URLs')
+  const pending = Promise.withResolvers<object>()
+  io.fetch.mockImplementationOnce(() => pending.promise)
+  await first.click('Inspect these URLs')
+  first.app.unmount()
+  mounted.pop()
+  io.saved.mockResolvedValueOnce({ _tag: 'NoVerdicts' })
+  const again = await mount()
+  expect(again.host.textContent).toContain('We could not confirm what happened.')
+  expect(again.buttons()).toEqual(['Read saved results'])
+})
+
+it('ends the hold in place once 15 minutes have passed', async () => {
+  const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+  try {
+    io.saved.mockResolvedValueOnce({ _tag: 'NoVerdicts' }).mockResolvedValueOnce({ _tag: 'NoVerdicts' })
+    const page = await mount()
+    await page.click('Preview URLs')
+    io.fetch.mockImplementationOnce(async () => {
+      throw new Error('connection closed')
+    })
+    await page.click('Inspect these URLs')
+    now.mockReturnValue(1_000_000 + 16 * 60 * 1000)
+    await page.click('Read saved results')
+    expect(page.buttons()).toEqual(['Preview URLs'])
+  }
+  finally {
+    now.mockRestore()
+  }
+})
+
+it('keeps focus on Check again when the read turns into an error', async () => {
+  io.saved.mockResolvedValueOnce({ _tag: 'Collecting', phase: 'checking' })
+  const page = await mount()
+  const button = page.host.querySelector('button')!
+  io.saved.mockRejectedValueOnce(new Error('offline'))
+  await page.click('Check again')
+  expect(page.host.textContent).toContain('Saved Google verdicts could not load.')
+  expect(page.host.contains(button)).toBe(true)
+})
