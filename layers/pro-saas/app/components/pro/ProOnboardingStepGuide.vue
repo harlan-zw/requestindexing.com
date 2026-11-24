@@ -1,25 +1,27 @@
 <script setup lang="ts">
-import type { OnboardingStep } from '#layers/pro-saas/shared/onboarding'
-import { ONBOARDING_STEP_GUIDES } from '#layers/pro-saas/shared/onboarding-step-guide'
+import type { OnboardingStepGuide } from '#layers/pro-saas/shared/onboarding-step-guide'
 
 // The step guide: one card per setup step that says what the reader signs up
-// for at this step, and why (COPY.md, Step guide assets). The page places it;
-// this component only draws the card. The fill is the dashboard card's: the
-// elevated tone at 35% over the page, mixed solid so the setup backdrop does
-// not show through. The full elevated tone reads as a muddy olive in dark
-// mode. In dark mode the default border matches the fill, so the card takes
-// the accented border.
-const { step } = defineProps<{ step: OnboardingStep }>()
+// for at this step, and why (COPY.md, Step guide assets). Developers shows the
+// Agent setup guide in the same card. The page places it; this component only
+// draws the card. The fill is the dashboard card's: the elevated tone at 35%
+// over the page, mixed solid so the setup backdrop does not show through. The
+// full elevated tone reads as a muddy olive in dark mode. In dark mode the
+// default border matches the fill, so the card takes the accented border.
+const { guide, name } = defineProps<{
+  guide: OnboardingStepGuide
+  /** The step, or the page, that shows this guide. It names the heading. */
+  name: string
+}>()
 
-const guide = computed(() => ONBOARDING_STEP_GUIDES[step])
-// One step guide shows at a time, so the step names its heading.
-const headingId = computed(() => `step-guide-${step}-title`)
+// One step guide shows at a time, so its name names the heading.
+const headingId = computed(() => `step-guide-${name}-title`)
 </script>
 
 <template>
   <aside
     :aria-labelledby="headingId"
-    :data-step-guide="step"
+    :data-step-guide="name"
     class="space-y-4 rounded-(--ui-radius) border border-default bg-[color-mix(in_oklab,var(--ui-bg-elevated)_35%,var(--ui-bg))] p-5 shadow-(--elevation-raised) dark:border-accented"
   >
     <div class="space-y-1.5">

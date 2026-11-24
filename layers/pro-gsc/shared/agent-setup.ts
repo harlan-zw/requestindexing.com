@@ -2,7 +2,8 @@
 // reader picks Claude, ChatGPT, Gemini, or a coding agent, copies its Setup
 // prompt, and approves the gscdump sign-in. Or they select Skip agent setup
 // and continue in the web flow. The choice rides `?agent=` through the
-// Connect Google round trip.
+// Connect Google round trip. After setup, the Developers page shows the same
+// panel (`ProAgentSetupPanel`), so the two places never drift apart.
 //
 // Every route reaches gscdump's MCP server or the gscdump CLI in Hosted mode.
 // Request Indexing has no listing of its own. gscdump finds its account by
@@ -14,12 +15,13 @@
 // CLI's browser login, which the person approves. Claude, ChatGPT, and Gemini
 // sign in through gscdump's OAuth when the person adds gscdump.
 //
-// No connection status: gscdump reports no browser login or MCP grant to a
-// partner (its integration activity counts partner-issued API keys only), and
-// before Connect Google this app holds no gscdump user to ask about.
+// No connection status, in either place: gscdump reports no browser login or
+// MCP grant to a partner (its integration activity counts partner-issued API
+// keys only), and before Connect Google this app holds no gscdump user to ask
+// about.
 
 import { ONBOARDING_ROUTE } from '#layers/pro-saas/shared/onboarding'
-import { GSCDUMP_CLI_PACKAGE, GSCDUMP_MCP_URL } from './developer-setup'
+import { CONNECT_SITE_URL, GSCDUMP_CLI_PACKAGE, GSCDUMP_MCP_URL } from './developer-setup'
 
 /** Each Agent setup route, in the order the step lists them, and each `?agent=` id it accepts. */
 export const AGENT_SETUP_ROUTES = ['claude', 'chatgpt', 'gemini', 'coding-agent'] as const
@@ -35,6 +37,14 @@ export function parseAgentSetupRoute(value: unknown): AgentSetupRoute | null {
 
 /** Where the reader finishes setup. An empty Site list sends the agent's reader here, never to gscdump.com. */
 export const ONBOARDING_SETUP_URL = `https://requestindexing.com${ONBOARDING_ROUTE}`
+
+/**
+ * Where the agent panel sits. Onboarding draws a choice mark in each row;
+ * Developers draws each row's action instead. Only a reader who finished
+ * setup reaches Developers, and the wizard is closed to them, so its Setup
+ * prompt sends an empty Site list to Connect a Site.
+ */
+export type AgentSetupPlace = 'onboarding' | 'developers'
 
 /** A product and its real mark. `invertDark` flips a near-black mark so it shows on a dark surface. */
 export interface AgentMark {
@@ -177,7 +187,13 @@ export const CODING_AGENT_COMMANDS = [
   'gscdump sites --json',
 ].join('\n')
 
-const EMPTY_SITES = `If the list is empty, stop. Tell me to finish Connect Google and Connect Sites at ${ONBOARDING_SETUP_URL}, then wait for me. My Sites live in Request Indexing. Never connect a Site on gscdump.com.`
+// An empty Site list goes back to this app, never to gscdump.com. During
+// setup the reader finishes the wizard. After setup the wizard is closed, so
+// the reader connects a Site.
+const EMPTY_SITES: Record<AgentSetupPlace, string> = {
+  onboarding: `If the list is empty, stop. Tell me to finish Connect Google and Connect Sites at ${ONBOARDING_SETUP_URL}, then wait for me. My Sites live in Request Indexing. Never connect a Site on gscdump.com.`,
+  developers: `If the list is empty, stop. Tell me to connect a Site at ${CONNECT_SITE_URL}, then wait for me. My Sites live in Request Indexing. Never connect a Site on gscdump.com.`,
+}
 
 // gscdump can hold a Site of its own for the same property, for example one
 // its agent entry connected at sign-in. So the agent never picks a Site, even
@@ -188,7 +204,7 @@ const SAVED_VERDICTS = 'These are saved URL Inspection verdicts, not Google\'s l
 
 const PAPERCUT_RULES = 'Start the comment with "Agent report for Request Indexing". Give the expected and actual behavior, and any workaround. Keep personal data, private URLs, and secrets out of it.'
 
-function buildCodingAgentPrompt(): string {
+function buildCodingAgentPrompt(place: AgentSetupPlace): string {
   return `Connect this environment to my Request Indexing account through the gscdump CLI. Then tell me what Google's saved verdicts show for my Site.
 
 1. Install the CLI. It needs Node.js 22.13 or later:
@@ -206,7 +222,7 @@ function buildCodingAgentPrompt(): string {
    Tell me the account it shows. If it is not the Google account that owns my Search Console property, stop and tell me.
 5. List my Sites:
    gscdump sites --json
-   ${EMPTY_SITES}
+   ${EMPTY_SITES[place]}
    ${CHOOSE_SITE}
 6. Read the saved verdicts for the Site I chose, with its Site ID from step 5:
    gscdump indexing summary --site <site-id> --json
@@ -218,12 +234,12 @@ If a command fails twice, report it once, then tell me what blocked you:
 ${PAPERCUT_RULES}`
 }
 
-function buildHostedAgentPrompt(): string {
+function buildHostedAgentPrompt(place: AgentSetupPlace): string {
   return `Use the gscdump tools to read my Request Indexing Sites. Then tell me what Google's saved verdicts show for my Site.
 
 1. Ask me to confirm that I signed in to gscdump with the Google account that owns my Search Console property. Wait for my answer. If I used another account, stop.
 2. Call list-sites. If the gscdump tools are missing, or they ask me to sign in, stop. Tell me to add gscdump and sign in with that Google account.
-3. ${EMPTY_SITES} Never call connect-site.
+3. ${EMPTY_SITES[place]} Never call connect-site.
    ${CHOOSE_SITE}
 4. Call get-indexing with the Site ID of the Site I chose.
    ${SAVED_VERDICTS}
@@ -238,8 +254,8 @@ ${PAPERCUT_RULES}`
  * for approval, confirms the account, hands an empty Site list back to this
  * app, lets the reader choose the Site, and reads saved verdicts only. A step
  * that fails twice goes to gscdump's paper cut intake, the one an agent can
- * reach.
+ * reach. The place decides only where an empty Site list sends the reader.
  */
-export function buildAgentSetupPrompt(route: AgentSetupRoute): string {
-  return route === 'coding-agent' ? buildCodingAgentPrompt() : buildHostedAgentPrompt()
+export function buildAgentSetupPrompt(route: AgentSetupRoute, place: AgentSetupPlace): string {
+  return route === 'coding-agent' ? buildCodingAgentPrompt(place) : buildHostedAgentPrompt(place)
 }

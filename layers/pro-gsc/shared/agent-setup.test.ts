@@ -18,25 +18,35 @@ describe('parseAgentSetupRoute', () => {
 })
 
 describe('buildAgentSetupPrompt', () => {
-  it.each(AGENT_SETUP_ROUTES)('sends an empty Site list back to Request Indexing on the %s route', (route) => {
-    const prompt = buildAgentSetupPrompt(route)
+  it.each(AGENT_SETUP_ROUTES)('sends an empty Site list back to setup on the %s route during onboarding', (route) => {
+    const prompt = buildAgentSetupPrompt(route, 'onboarding')
     expect(prompt).toContain(ONBOARDING_SETUP_URL)
     expect(prompt).not.toContain('gscdump.com/app')
   })
 
+  // Only a reader who finished setup reaches Developers, and the wizard
+  // redirects them to the dashboard. Connect a Site is open to them.
+  it.each(AGENT_SETUP_ROUTES)('sends an empty Site list to Connect a Site on the %s route on Developers', (route) => {
+    const prompt = buildAgentSetupPrompt(route, 'developers')
+    expect(prompt).toContain('Tell me to connect a Site at https://requestindexing.com/pro/dashboard/sites/connect')
+    expect(prompt).not.toContain(ONBOARDING_SETUP_URL)
+    expect(prompt).not.toContain('gscdump.com/app')
+  })
+
   it.each(AGENT_SETUP_ROUTES)('carries no API key on the %s route', (route) => {
-    expect(buildAgentSetupPrompt(route)).not.toMatch(/GSCDUMP_API_KEY|x-api-key|--api-key/)
+    for (const place of ['onboarding', 'developers'] as const)
+      expect(buildAgentSetupPrompt(route, place)).not.toMatch(/GSCDUMP_API_KEY|x-api-key|--api-key/)
   })
 
   it.each(AGENT_SETUP_ROUTES)('lets the reader choose the Site on the %s route', (route) => {
     // gscdump can hold its own Site for the same property, so a list of one
     // may still be the wrong Site.
-    expect(buildAgentSetupPrompt(route)).toContain('Ask me which Site to read')
-    expect(buildAgentSetupPrompt(route)).not.toContain('the only Site')
+    expect(buildAgentSetupPrompt(route, 'onboarding')).toContain('Ask me which Site to read')
+    expect(buildAgentSetupPrompt(route, 'onboarding')).not.toContain('the only Site')
   })
 
   it('signs the coding agent in through the browser', () => {
-    expect(buildAgentSetupPrompt('coding-agent')).toContain('gscdump auth login --mode hosted')
+    expect(buildAgentSetupPrompt('coding-agent', 'developers')).toContain('gscdump auth login --mode hosted')
   })
 })
 
