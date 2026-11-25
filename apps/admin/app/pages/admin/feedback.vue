@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import type { FeedbackStatus } from '#layers/pro-saas/shared/feedback'
+import type { FeedbackResolutionStatus, FeedbackStatus } from '#layers/pro-saas/shared/feedback'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
-import { FEEDBACK_STATUSES } from '#layers/pro-saas/shared/feedback'
+import { FEEDBACK_STATUSES, resolveFeedbackStatus } from '#layers/pro-saas/shared/feedback'
 
 // Feedback reports from the Send feedback drawer, read through the
 // `pro-feedback` admin resource. The `admin` layout refuses a non-admin, and
@@ -36,6 +36,7 @@ interface FeedbackListing {
 
 const PER_PAGE = 25
 const page = ref(1)
+const statusFilter = ref<string>('open')
 const listing = ref<FeedbackListing | null>(null)
 const failure = ref<string | null>(null)
 
@@ -49,9 +50,42 @@ const draft = reactive({
   fixRef: '',
 })
 
+const statusFilterItems = [
+  { label: 'Needs review', value: 'open' },
+  { label: 'All statuses', value: 'all' },
+  ...FEEDBACK_STATUSES.map(value => ({ label: value, value })),
+]
+
+const PUBLIC_RESOLUTION_LABELS: Record<FeedbackResolutionStatus, string> = {
+  received: 'Received',
+  in_progress: 'In progress',
+  fixed: 'Fixed',
+  replied: 'Replied',
+  closed: 'Closed',
+}
+
+function resolutionBadgeColor(resolution: FeedbackResolutionStatus): 'warning' | 'info' | 'success' | 'neutral' {
+  switch (resolution) {
+    case 'in_progress':
+      return 'info'
+    case 'fixed':
+    case 'replied':
+      return 'success'
+    default:
+      return 'neutral'
+  }
+}
+
+const reporterResolution = computed(() => resolveFeedbackStatus(draft.status))
+const reporterResolutionLabel = computed(() => PUBLIC_RESOLUTION_LABELS[reporterResolution.value])
+const reporterNotePreview = computed(() => draft.resolutionNote.trim())
+
 async function load() {
   failure.value = null
-  listing.value = await getAppFetch()<FeedbackListing>('/api/admin/resources/pro-feedback', { query: { page: page.value, perPage: PER_PAGE } })
+  const query: Record<string, string | number> = { page: page.value, perPage: PER_PAGE }
+  if (statusFilter.value !== 'all')
+    query['filter[status]'] = statusFilter.value
+  listing.value = await getAppFetch()<FeedbackListing>('/api/admin/resources/pro-feedback', { query })
     .catch((error: unknown) => {
       failure.value = error instanceof Error ? error.message : 'Feedback reports could not load.'
       return null
@@ -59,6 +93,12 @@ async function load() {
 }
 onMounted(load)
 watch(page, load)
+watch(statusFilter, () => {
+  if (page.value !== 1)
+    page.value = 1
+  else
+    void load()
+})
 
 const statusItems = FEEDBACK_STATUSES.map(value => ({ label: value, value }))
 
@@ -128,6 +168,13 @@ async function saveReview() {
     })
 }
 
+function onSaveShortcut(e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !saving.value) {
+    e.preventDefault()
+    void saveReview()
+  }
+}
+
 interface Row {
   id: number
   submitted: string
@@ -176,13 +223,27 @@ const columns: TableColumn<Row>[] = [
 
 <template>
   <div class="space-y-4">
-    <div>
-      <h1 class="text-lg font-semibold text-highlighted">
-        Feedback reports
-      </h1>
-      <p class="text-sm text-muted">
-        Reports from the Send feedback drawer, newest first.
-      </p>
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-lg font-semibold text-highlighted">
+          Feedback reports
+        </h1>
+        <p class="text-sm text-muted">
+          Reports from the Send feedback drawer, newest first.
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <USelect
+          v-model="statusFilter"
+          :items="statusFilterItems"
+          value-key="value"
+          aria-label="Filter by status"
+          class="min-w-40"
+        />
+        <UButton variant="outline" color="neutral" size="sm" class="min-h-11 sm:min-h-0" @click="load()">
+          Refresh
+        </UButton>
+      </div>
     </div>
     <UAlert v-if="failure" color="error" variant="subtle" title="Feedback reports could not load." :description="failure" />
     <UTable :data="rows" :columns="columns" :loading="!listing && !failure" empty="No feedback reports yet.">
@@ -211,29 +272,75 @@ const columns: TableColumn<Row>[] = [
 
     <UModal :open="editing !== null" title="Review feedback" @update:open="value => { if (!value && !saving) editing = null }">
       <template #body>
-        <form class="space-y-4" @submit.prevent="saveReview">
-          <UFormField label="Status">
-            <USelect v-model="draft.status" :items="statusItems" value-key="value" class="w-full" aria-label="Feedback status" />
-          </UFormField>
-          <UFormField label="Resolution note" hint="Shown to the reporter in their feedback history">
-            <UTextarea v-model="draft.resolutionNote" :rows="3" :maxlength="1000" placeholder="Short user-facing summary of what shipped or how it was resolved" class="w-full" />
-          </UFormField>
-          <UFormField label="Internal triage note" :hint="draft.status === 'ignored' ? 'Private; required for ignored' : 'Private operator note'">
-            <UTextarea v-model="draft.triageNote" :rows="2" :maxlength="1000" class="w-full" />
-          </UFormField>
-          <UFormField label="Fix ref" hint="PR number or commit">
-            <UInput v-model="draft.fixRef" :maxlength="200" placeholder="#123" class="w-full" />
-          </UFormField>
+        <form v-if="editing" class="space-y-4" @submit.prevent="saveReview">
+          <!-- Original submission context so the reviewer sees what they are resolving -->
+          <div class="rounded-lg bg-elevated/50 px-3 py-2.5 space-y-1">
+            <p class="text-sm text-default whitespace-pre-wrap break-words">
+              {{ editing.comment || 'No comment' }}
+            </p>
+            <p class="text-xs font-mono text-muted truncate" :title="editing.path">
+              {{ editing.path }}
+            </p>
+          </div>
+
+          <!-- Reporter-facing -->
+          <div class="space-y-3">
+            <UFormField label="Status">
+              <USelect v-model="draft.status" :items="statusItems" value-key="value" class="w-full" aria-label="Feedback status" />
+            </UFormField>
+            <UFormField label="Resolution note" hint="Visible to the reporter in their feedback history">
+              <UTextarea
+                v-model="draft.resolutionNote"
+                :rows="3"
+                :maxlength="1000"
+                placeholder="Short user-facing summary of what shipped or how it was resolved"
+                class="w-full"
+                @keydown="onSaveShortcut"
+              />
+            </UFormField>
+            <div class="rounded-lg bg-elevated/40 px-3 py-2 space-y-1">
+              <div class="flex items-center justify-between gap-2 text-xs text-muted">
+                <span>Reporter sees</span>
+                <UBadge variant="subtle" :color="resolutionBadgeColor(reporterResolution)">
+                  {{ reporterResolutionLabel }}
+                </UBadge>
+              </div>
+              <p v-if="reporterNotePreview" class="text-xs text-default whitespace-pre-wrap break-words">
+                {{ reporterNotePreview }}
+              </p>
+              <p v-else class="text-xs text-muted">
+                {{ draft.status === 'fixed' || draft.status === 'replied' ? 'No note yet. Add a short note so the user knows what changed.' : 'Status badge only until you add a resolution note.' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Internal only -->
+          <div class="space-y-3 border-t border-default pt-4">
+            <div class="flex items-center justify-between gap-2 text-xs text-muted">
+              <span class="font-medium">Internal only</span>
+              <span>Never shown to the reporter</span>
+            </div>
+            <UFormField label="Internal triage note" :hint="draft.status === 'ignored' ? 'Required for ignored' : 'Private operator note'">
+              <UTextarea v-model="draft.triageNote" :rows="2" :maxlength="1000" class="w-full" @keydown="onSaveShortcut" />
+            </UFormField>
+            <UFormField label="Fix ref" hint="PR number or commit">
+              <UInput v-model="draft.fixRef" :maxlength="200" placeholder="#123" class="w-full" />
+            </UFormField>
+          </div>
+
           <p v-if="saveError" role="alert" class="text-sm text-error">
             {{ saveError }}
           </p>
-          <div class="flex justify-end gap-2">
-            <UButton type="button" variant="ghost" color="neutral" :disabled="saving" @click="editing = null">
-              Cancel
-            </UButton>
-            <UButton type="submit" :loading="saving">
-              Save
-            </UButton>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs text-muted">Cmd/Ctrl+Enter to save</span>
+            <div class="flex items-center gap-2">
+              <UButton type="button" variant="ghost" color="neutral" :disabled="saving" @click="editing = null">
+                Cancel
+              </UButton>
+              <UButton type="submit" :loading="saving">
+                Save
+              </UButton>
+            </div>
           </div>
         </form>
       </template>
