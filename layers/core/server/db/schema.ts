@@ -610,7 +610,15 @@ export const feedback = sqliteTable('feedback', {
   metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>(),
   userId: integer('user_id').references(() => users.userId, { onDelete: 'set null' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-})
+  status: text('status', { enum: ['new', 'triaged', 'fixing', 'fixed', 'replied', 'closed', 'ignored'] }).notNull().default('new'),
+  triageNote: text('triage_note'),
+  resolutionNote: text('resolution_note'),
+  fixRef: text('fix_ref'),
+  fixedAt: integer('fixed_at', { mode: 'timestamp' }),
+  repliedAt: integer('replied_at', { mode: 'timestamp' }),
+}, t => ({
+  userCreatedIdx: index('feedback_user_created_idx').on(t.userId, t.createdAt),
+}))
 
 // One row per address and drip sequence, ported from nuxtseo.com. The
 // scheduled sender reads the due rows, sends the current step, then moves the

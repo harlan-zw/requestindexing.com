@@ -1,4 +1,5 @@
 import type { SQL, SQLWrapper } from 'drizzle-orm'
+import type { FeedbackStatus } from '../../../shared/feedback'
 import type { AdminCtx, AdminListQuery } from '../admin-shell'
 import { and, asc, count, desc, eq, inArray, like, or } from 'drizzle-orm'
 import { getUserDisplayMetaMap } from '../../../../pro-saas-auth/server/utils/auth/identity'
@@ -13,6 +14,12 @@ interface ProFeedbackRow {
   metadata: Record<string, unknown> | null
   createdAt: Date | null
   userId: number | null
+  status: FeedbackStatus
+  triageNote: string | null
+  resolutionNote: string | null
+  fixRef: string | null
+  fixedAt: Date | null
+  repliedAt: Date | null
 }
 
 const sortableMap: Record<string, SQLWrapper> = {
@@ -121,6 +128,12 @@ export default defineAdminResource<ProFeedbackRow>({
         metadata: feedback.metadata,
         createdAt: feedback.createdAt,
         userId: feedback.userId,
+        status: feedback.status,
+        triageNote: feedback.triageNote,
+        resolutionNote: feedback.resolutionNote,
+        fixRef: feedback.fixRef,
+        fixedAt: feedback.fixedAt,
+        repliedAt: feedback.repliedAt,
       })
         .from(feedback)
         .where(whereExpr)
@@ -156,6 +169,12 @@ export default defineAdminResource<ProFeedbackRow>({
         metadata: feedback.metadata,
         createdAt: feedback.createdAt,
         userId: feedback.userId,
+        status: feedback.status,
+        triageNote: feedback.triageNote,
+        resolutionNote: feedback.resolutionNote,
+        fixRef: feedback.fixRef,
+        fixedAt: feedback.fixedAt,
+        repliedAt: feedback.repliedAt,
       })
       .from(feedback)
       .where(eq(feedback.feedbackId, Number(id)))
