@@ -125,7 +125,7 @@ export async function listDashboardFeedbackHistory(
       sentiment: sentiment.success ? sentiment.data : null,
       createdAt: row.createdAt?.toISOString() ?? null,
       resolution,
-      resolutionNote: row.resolutionNote ?? null,
+      resolutionNote: row.resolutionNote?.trim() || null,
       resolvedAt: resolveFeedbackTimestamp({
         resolution,
         fixedAt: row.fixedAt?.toISOString() ?? null,
