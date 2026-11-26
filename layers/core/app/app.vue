@@ -13,9 +13,11 @@ useSeoMeta({
 })
 
 // Only prerendered routes get the site-wide OG image. `ogImage.zeroRuntime`
-// serves images as build-time files, so emitting this URL on a runtime-only
-// route points social crawlers at an image the worker cannot produce.
-if (!isRuntimeOnlyRoute(useRoute().path))
+// serves images as build-time files, so emitting this URL on a runtime-only,
+// unmatched, or error route points social crawlers at an image the worker
+// cannot produce.
+const route = useRoute()
+if (!useError().value && route.matched.length > 0 && !isRuntimeOnlyRoute(route.path))
   defineOgImage('Splash')
 
 // nuxtseo.com's toaster: a peek deck of three, bottom right, configured by
@@ -77,7 +79,9 @@ const { loggedIn } = useUserSession()
           </Transition>
         </SkewNotification>
       </UApp>
-      <UiToaster v-bind="toasterConfig" />
+      <ClientOnly>
+        <UiToaster v-bind="toasterConfig" />
+      </ClientOnly>
     </MotionConfig>
   </ConfigProvider>
 </template>
