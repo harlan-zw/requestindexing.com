@@ -3,6 +3,7 @@
 // `ProNavSite`. Routes read the short public id (`s_…`).
 import type { ProShellSite } from '@nuxtseo/pro-shell/shared/sites'
 import type { ProNavSite } from '#layers/pro-features/app/composables/useProSingleSiteNav'
+import { detectPreviewSiteSignals } from '@nuxtseo/pro-shell/shared/preview-site'
 import { proShellSiteHost } from '@nuxtseo/pro-shell/shared/sites'
 
 /** The reference a Site route reads, or an empty string for a row with none. */
@@ -10,9 +11,12 @@ export function proNavSiteRef(site: ProNavSite): string {
   return site.publicId ?? site.siteId ?? site.id ?? ''
 }
 
-export function toProShellSite(site: ProNavSite): ProShellSite {
+export function toProShellSite(site: ProNavSite, teamSiteUrls?: readonly string[]): ProShellSite {
   const ref = proNavSiteRef(site)
   const raw = site.domain || site.url || site.property || null
+  const preview = raw
+    ? detectPreviewSiteSignals({ url: raw, teamSiteUrls }).classification === 'likely_preview'
+    : false
   return {
     id: ref,
     ref,
@@ -23,6 +27,7 @@ export function toProShellSite(site: ProNavSite): ProShellSite {
     // The sidebar roster badges a held Site; the switcher never has.
     statusLabel: null,
     emphasis: 'full',
+    preview,
   }
 }
 
@@ -32,9 +37,12 @@ export function toProShellSite(site: ProNavSite): ProShellSite {
  * than one that cannot switch.
  */
 export function proShellSiteList(roster: readonly ProNavSite[], routed: ProNavSite | null): ProShellSite[] {
-  const sites = roster.map(toProShellSite)
+  const teamSiteUrls = roster
+    .map(site => site.domain || site.url || site.property || null)
+    .filter((value): value is string => Boolean(value))
+  const sites = roster.map(site => toProShellSite(site, teamSiteUrls))
   if (!routed)
     return sites
-  const current = toProShellSite(routed)
+  const current = toProShellSite(routed, teamSiteUrls)
   return sites.some(site => site.ref === current.ref) ? sites : [current, ...sites]
 }

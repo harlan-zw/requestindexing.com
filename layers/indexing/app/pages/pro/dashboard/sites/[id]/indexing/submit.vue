@@ -7,6 +7,7 @@ import type { IndexingGrantRefusal, SubmissionAttempt } from '#layers/indexing/a
 import type { SiteIndexingGrant } from '#layers/indexing/shared/contracts/indexing-grant'
 import type { GscdumpIndexingUrl } from '#layers/pro-gsc/shared/gscdump-api'
 import { GOOGLE_SUBMISSION_SITE_DAILY_LIMIT } from '@gscdump/contracts/v1'
+import { assessIndexingSubmissionPreviewRisk } from '@nuxtseo/pro-shell/shared/preview-site'
 import { nanoid } from 'nanoid'
 import { h } from 'vue'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
@@ -77,6 +78,14 @@ const { data: grant, error: grantError } = useFetch<SiteIndexingGrant>(() => `/a
 // The grant asks the person to read what the API is for before Google asks
 // for consent. Overuse can make Google block it for every user.
 const intentConfirmed = ref(false)
+const previewConfirmed = ref(false)
+const previewRisk = computed(() => {
+  const targetUrl = url.value.trim() || site.value?.url || (siteName.value && siteName.value !== 'Site' ? `https://${siteName.value}/` : '')
+  return targetUrl ? assessIndexingSubmissionPreviewRisk({ url: targetUrl }) : null
+})
+watch(siteId, () => {
+  previewConfirmed.value = false
+})
 
 const engineId = computed(() => gscdumpSiteId.value ?? undefined)
 const receipts = useGscdumpQuery<GscdumpV1OperationResponse<'partner.sites.indexing.google.submissions.list'>['data']>(
@@ -277,12 +286,30 @@ const submissionsRoute = computed(() => expandProSiteRoute(proSiteFeatureManifes
             type="submit"
             purpose="cta"
             :loading="submitting"
-            :disabled="!url.trim() || submitAction._tag !== 'Submit' || !canWrite || submissionsLeft === 0"
+            :disabled="!url.trim() || submitAction._tag !== 'Submit' || !canWrite || submissionsLeft === 0 || (previewRisk?.risky && !previewConfirmed)"
             class="min-h-11"
           >
             Submit URL
           </UiButton>
         </form>
+
+        <UiAlert
+          v-if="previewRisk?.risky"
+          status="warning"
+          title="This looks like a staging or preview URL"
+          :description="previewRisk.reason ?? undefined"
+          data-testid="google-submit-preview-risk"
+          class="mt-4 max-w-2xl"
+        >
+          <template #default>
+            <UCheckbox
+              :model-value="previewConfirmed"
+              label="I confirm this is a live production URL I want Google to index."
+              class="mt-3"
+              @update:model-value="previewConfirmed = $event === true"
+            />
+          </template>
+        </UiAlert>
 
         <div v-if="submitAction._tag === 'GrantAccess'" class="mt-4 max-w-2xl space-y-3 rounded-md border border-default p-4 text-sm">
           <p class="text-default">
