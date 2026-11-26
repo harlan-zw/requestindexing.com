@@ -1,15 +1,10 @@
 // The dashboard's Send feedback drawer (`ProShellFeedbackDrawer`): one open
 // state for every place that opens it (the page header, the user menu), and
 // the submit adapter that posts a report to `/api/pro/feedback`.
-import type { FeedbackIntent, FeedbackSubmitInput } from '@nuxtseo/pro-shell/shared/contracts'
-import type { FeedbackSubmitAdapter, FeedbackSubmitResult } from '@nuxtseo/pro-shell/shared/feedback'
+import type { FeedbackHistoryResponse, FeedbackIntent, FeedbackSubmitInput } from '@nuxtseo/pro-shell/shared/contracts'
+import type { FeedbackHistoryAdapter, FeedbackHistoryResult, FeedbackSubmitAdapter, FeedbackSubmitResult } from '@nuxtseo/pro-shell/shared/feedback'
 import type { DashboardFeedbackWrite } from '#layers/pro-saas/server/utils/dashboard-feedback'
-import type { FeedbackHistoryItem, FeedbackHistoryResponse } from '#layers/pro-saas/shared/feedback'
 import { readProErrorMessage } from '#layers/pro-saas/shared/errors'
-
-export type FeedbackHistoryResult
-  = | { readonly _tag: 'Loaded', readonly items: readonly FeedbackHistoryItem[], readonly hasMore: boolean }
-    | { readonly _tag: 'Failed', readonly message: string | null }
 
 interface ProFeedbackState {
   open: boolean
@@ -31,7 +26,7 @@ export function useProFeedback() {
       .then((write): FeedbackSubmitResult => write._tag === 'Recorded' ? SENT : { _tag: 'Failed', message: null })
       .catch((error: unknown): FeedbackSubmitResult => ({ _tag: 'Failed', message: readProErrorMessage(error) }))
 
-  const loadHistory = (): Promise<FeedbackHistoryResult> =>
+  const loadHistory: FeedbackHistoryAdapter = () =>
     proFetch<FeedbackHistoryResponse>('/api/pro/feedback')
       .then((data): FeedbackHistoryResult => ({ _tag: 'Loaded', items: data.items, hasMore: data.hasMore }))
       .catch((error: unknown): FeedbackHistoryResult => ({ _tag: 'Failed', message: readProErrorMessage(error) }))
