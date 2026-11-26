@@ -162,6 +162,10 @@ async function verifyKey() {
     action.value = { _tag: 'error', message: result.data._tag === 'verification-required' && result.data.reason ? reasonMessage(result.data.reason) : 'Key verification failed. Check the published file, then verify it again.' }
     return
   }
+  if (previewRisk.value?.risky && !previewConfirmed.value) {
+    action.value = { _tag: 'message', message: 'Key verified. Automatic sending stayed off because this looks like a staging or preview URL.' }
+    return
+  }
   if (!shouldTurnOnAutomaticSending(before, result.data)) {
     action.value = { _tag: 'message', message: AUTOMATIC_SENDING_COPY.verified }
     return
@@ -334,7 +338,14 @@ function formatDate(value: string) {
         {{ action.message }}
       </p>
       <UiCard v-if="engineId && setup && setup._tag !== 'disconnected' && !connection.error.value" size="lg" class="mt-4">
-        <IndexNowAutomaticSending :connection="setup" :engine-site-id="engineId" :can-write="canWrite" @updated="connection.data.value = $event" />
+        <IndexNowAutomaticSending
+          :connection="setup"
+          :engine-site-id="engineId"
+          :can-write="canWrite"
+          :prevent-turn-on="Boolean(previewRisk?.risky && !previewConfirmed)"
+          :prevent-turn-on-reason="previewRisk?.risky && !previewConfirmed ? 'Confirm this is a live production Site above before enabling automatic sending.' : null"
+          @updated="connection.data.value = $event"
+        />
       </UiCard>
     </ProPageZone>
 
