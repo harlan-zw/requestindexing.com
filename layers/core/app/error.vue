@@ -133,7 +133,9 @@ const scrollBody = { padding: 0, margin: 0 } as const
           <Footer />
         </div>
       </UApp>
-      <UiToaster v-bind="toasterConfig" />
+      <ClientOnly>
+        <UiToaster v-bind="toasterConfig" />
+      </ClientOnly>
     </MotionConfig>
   </ConfigProvider>
 </template>
