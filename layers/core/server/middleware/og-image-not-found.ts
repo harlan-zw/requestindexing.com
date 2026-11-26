@@ -1,3 +1,5 @@
+import { createFast404Response } from '~~/shared/server/static-probe-404'
+
 /**
  * `ogImage.zeroRuntime` strips the OG image renderer from the worker, so the
  * only OG images that exist are the files written during prerendering. Those
@@ -5,8 +7,8 @@
  *
  * A `/_og/**` request arriving here therefore asks for an image that does not
  * exist: a stale social card URL from an older deploy, or a crawler guessing.
- * Answer 404 so the request is reported as a missing file, instead of letting
- * the stripped renderer throw "Not supported in zeroRuntime mode." as a 500.
+ * Answer with a fast plain-text 404 instead of rendering `error.vue` through
+ * Nuxt SSR or letting the stripped renderer throw a 500.
  *
  * Dev and prerendering still render on demand, matching the module's own
  * zero-runtime handler.
@@ -16,5 +18,5 @@ export default defineEventHandler((event) => {
     return
 
   if (event.path === '/_og' || event.path.startsWith('/_og/'))
-    throw createError({ statusCode: 404, statusMessage: 'OG image not found' })
+    return createFast404Response(event.req.method)
 })

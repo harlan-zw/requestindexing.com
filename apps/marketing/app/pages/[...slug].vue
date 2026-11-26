@@ -7,15 +7,14 @@ definePageMeta({
 
 const route = useRoute()
 
-const [{ data: page }, { data: surround }] = await Promise.all([
-  useAsyncData(`guide-${route.path}`, () => queryCollection('guides').path(route.path).first()),
-  useAsyncData(`guide-${route.path}-surround`, () => queryCollectionItemSurroundings('guides', route.path, {
-    fields: ['title', 'description'],
-  })),
-])
+const { data: page } = await useAsyncData(`guide-${route.path}`, () => queryCollection('guides').path(route.path).first())
 
 if (!page.value)
   throw createError({ statusCode: 404, statusMessage: 'Page not found', fatal: true })
+
+const { data: surround } = await useAsyncData(`guide-${route.path}-surround`, () => queryCollectionItemSurroundings('guides', route.path, {
+  fields: ['title', 'description'],
+}))
 
 useSeoMeta({
   title: () => page.value?.title || '',
