@@ -1,7 +1,7 @@
 minimumReleaseAgeExcludePrune: true
 minimumReleaseAgeExclude:
   - nuxt@4.7.0
-  - '@harlan-zw/nuxt-cloudflare@0.5.3'
+  - '@harlan-zw/nuxt-cloudflare@0.6.1'
   - '@nuxt/kit@4.7.0'
   - '@nuxt/nitro-server@4.7.0'
   - '@nuxt/nitro-v3-server@4.7.0'
@@ -11,7 +11,7 @@ minimumReleaseAgeExclude:
   - '@nuxtjs/seo@6.1.0'
   - nitropack@2.14.0
   - '@vercel/nft@1.11.12'
-  - '@harlan-zw/comark-content@0.2.0'
+  - '@harlan-zw/comark-content@0.2.3'
   - '@harlan-zw/nuxt-checkin@0.4.1'
   - '@harlan-zw/nuxt-domain-events@0.2.1'
   - '@harlan-zw/nuxt-use-query@0.3.3'
@@ -26,15 +26,15 @@ minimumReleaseAgeExclude:
   - '@vitejs/plugin-vue@6.0.9'
   - '@nuxtjs/robots@7.1.0'
   - '@nuxtjs/sitemap@9.2.0'
-  - nuxt-og-image@7.1.1
-  - nuxt-ai-ready@3.6.1
+  - nuxt-og-image@7.2.1
+  - nuxt-ai-ready@3.6.2
   - nuxt-skew-protection@2.0.6
-  - nuxt-schema-org@7.1.1
-  - nuxt-seo-utils@9.1.0
+  - nuxt-schema-org@7.1.2
+  - nuxt-seo-utils@9.1.1
   - nuxt-link-checker@6.0.2
-  - nuxt-site-config@5.0.4
-  - nuxt-site-config-kit@5.0.4
-  - site-config-stack@5.0.4
+  - nuxt-site-config@5.1.1
+  - nuxt-site-config-kit@5.1.1
+  - site-config-stack@5.1.1
   - nuxtseo-shared@6.0.2
   - nuxtseo-devtools-host@1.0.2
   - nuxtseo-layer-devtools@6.0.2
@@ -147,9 +147,9 @@ catalog:
   '@gscdump/contracts': 7.18.0
   '@gscdump/engine': 7.18.0
   '@gscdump/sdk': 7.18.0
-  '@harlan-zw/comark-content': 0.2.0
+  '@harlan-zw/comark-content': 0.2.3
   '@harlan-zw/nuxt-checkin': 0.4.1
-  '@harlan-zw/nuxt-cloudflare': 0.5.3
+  '@harlan-zw/nuxt-cloudflare': 0.6.1
   '@harlan-zw/nuxt-domain-events': 0.2.1
   '@harlan-zw/nuxt-dx': 0.3.0
   '@harlan-zw/nuxt-sentry': 0.3.0
