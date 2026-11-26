@@ -2,6 +2,7 @@
 import type { IndexNowConnectionV1 } from '@gscdump/contracts/v1'
 import type { IndexingSite } from '@nuxtseo/pro-indexing/shared/source'
 import IndexingSubmissionsCard from '@nuxtseo/pro-indexing/app/components/IndexingSubmissionsCard.vue'
+import { detectPreviewSiteSignals } from '@nuxtseo/pro-shell/shared/preview-site'
 import { useIndexNowConnection, useSubmissionWindowRefresh } from '#layers/indexing/app/composables/useSiteSubmissions'
 import IndexNowAutomaticSending from '#layers/indexing/app/internal/components/indexing/IndexNowAutomaticSending.vue'
 import { resolveSitemapEmptyState } from '#layers/indexing/app/utils/sitemap-empty-state'
@@ -25,8 +26,13 @@ const { isAdmin } = useCaller()
 const teamPolicy = useTeamPolicy(() => site.value?.teamId)
 const canWrite = computed(() => isAdmin.value || teamPolicy.can('write-data'))
 
+const isPreviewSite = computed(() => {
+  const url = site.value?.url || (siteName.value && siteName.value !== 'Site' ? `https://${siteName.value}/` : '')
+  return Boolean(url && detectPreviewSiteSignals({ url }).classification === 'likely_preview')
+})
+
 const indexingSite = computed<IndexingSite | null>(() => siteId.value
-  ? { id: siteId.value, ref: siteId.value, label: siteName.value, url: site.value?.url ?? null, dataId: gscdumpSiteId.value ?? null }
+  ? { id: siteId.value, ref: siteId.value, label: siteName.value, url: site.value?.url ?? null, dataId: gscdumpSiteId.value ?? null, preview: isPreviewSite.value }
   : null)
 
 const indexNowConnection = useIndexNowConnection(engineId)
@@ -85,6 +91,7 @@ const sitemapState = computed(() => resolveSitemapEmptyState({
             :connection="indexNowConnection.data.value"
             :engine-site-id="engineId"
             :can-write="canWrite"
+            :prevent-turn-on="isPreviewSite"
             @updated="onAutomaticChanged"
           />
         </template>

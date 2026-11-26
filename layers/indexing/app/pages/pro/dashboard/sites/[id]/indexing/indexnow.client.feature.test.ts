@@ -308,11 +308,33 @@ describe('indexNow page', () => {
     await fill(host.querySelector('textarea')!, 'https://staging.example.com/new')
     expect(host.textContent).toContain('This looks like a staging or preview URL')
     expect(button(host, 'Submit URLs').disabled).toBe(true)
+    expect(automaticSwitch(host).disabled).toBe(true)
     const checkbox = host.querySelector<HTMLInputElement>('input[type="checkbox"]')!
     checkbox.checked = true
     checkbox.dispatchEvent(new Event('change', { bubbles: true }))
     await nextTick()
     expect(button(host, 'Submit URLs').disabled).toBe(false)
+    expect(automaticSwitch(host).disabled).toBe(false)
+  })
+
+  it('keeps automatic sending off on key verify for a staging host, while still allowing turning it off when already on', async () => {
+    connectionData.value = { _tag: 'verification-required', host: 'staging.example.com', keyLocation: 'https://staging.example.com/abc12345.txt', reason: null }
+    fixture.verify.mockResolvedValueOnce({ _tag: 'connected', host: 'staging.example.com', keyLocation: 'https://staging.example.com/abc12345.txt', verifiedAt: '2026-09-30T12:00:00.000Z' })
+    const host = mount()
+    button(host, 'Verify key').click()
+    await flush()
+    expect(fixture.update).not.toHaveBeenCalled()
+    expect(host.textContent).toContain('Key verified. Automatic sending stayed off because this looks like a staging or preview URL.')
+    expect(automaticSwitch(host).checked).toBe(false)
+    expect(automaticSwitch(host).disabled).toBe(true)
+
+    connectionData.value = { _tag: 'connected', host: 'staging.example.com', keyLocation: 'https://staging.example.com/abc12345.txt', verifiedAt: '2026-09-30T12:00:00.000Z', automaticSending: { _tag: 'on', since: '2026-11-17T12:00:00.000Z', lastCheck: null } }
+    await nextTick()
+    expect(automaticSwitch(host).checked).toBe(true)
+    expect(automaticSwitch(host).disabled).toBe(false)
+    automaticSwitch(host).click()
+    await flush()
+    expect(fixture.update).toHaveBeenCalledWith({ params: { siteId: 's_engine' }, body: { automaticSending: 'off' } }, true)
   })
 
   it('rejects malformed keys and URLs before contacting the engine', async () => {

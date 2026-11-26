@@ -9,7 +9,7 @@ import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump/use
 // this reads it from the connection and writes it with one PATCH. The verify
 // action on the IndexNow page turns it on, so a reader only uses this switch
 // to turn it off, or back on.
-const { connection, engineSiteId, canWrite, bare = false } = defineProps<{
+const { connection, engineSiteId, canWrite, bare = false, preventTurnOn = false, preventTurnOnReason = null } = defineProps<{
   connection: IndexNowConnectionV1
   /** `sites.gscdumpSiteId`: this calls the engine. */
   engineSiteId: string
@@ -19,6 +19,9 @@ const { connection, engineSiteId, canWrite, bare = false } = defineProps<{
    * Submissions card draws the label and the state beside it.
    */
   bare?: boolean
+  /** Block enabling automatic sending (e.g. unconfirmed staging/preview host), while still allowing turning it off. */
+  preventTurnOn?: boolean
+  preventTurnOnReason?: string | null
 }>()
 
 const emit = defineEmits<{ updated: [connection: IndexNowConnectionV1] }>()
@@ -29,10 +32,11 @@ const failed = ref(false)
 
 const view = computed(() => viewAutomaticSending(connection))
 const isOn = computed(() => connection._tag !== 'disconnected' && connection.automaticSending._tag === 'on')
+const switchDisabled = computed(() => !canWrite || busy.value || connection._tag === 'disconnected' || (!isOn.value && preventTurnOn))
 const lines = computed(() => describeAutomaticSending(view.value))
 
 async function change(value: boolean) {
-  if (!canWrite || busy.value || connection._tag === 'disconnected')
+  if (!canWrite || busy.value || connection._tag === 'disconnected' || (value && preventTurnOn))
     return
   const siteId = engineSiteId
   busy.value = true
@@ -56,7 +60,7 @@ async function change(value: boolean) {
     <USwitch
       :model-value="isOn"
       :aria-label="AUTOMATIC_SENDING_COPY.label"
-      :disabled="!canWrite || busy"
+      :disabled="switchDisabled"
       :loading="busy"
       @update:model-value="change($event === true)"
     />
@@ -69,11 +73,14 @@ async function change(value: boolean) {
       :model-value="isOn"
       :label="AUTOMATIC_SENDING_COPY.label"
       :description="AUTOMATIC_SENDING_COPY.description"
-      :disabled="!canWrite || busy || connection._tag === 'disconnected'"
+      :disabled="switchDisabled"
       :loading="busy"
       :ui="{ label: 'text-base', description: 'text-base text-muted' }"
       @update:model-value="change($event === true)"
     />
+    <p v-if="!isOn && preventTurnOn && preventTurnOnReason" class="text-sm text-warning">
+      {{ preventTurnOnReason }}
+    </p>
     <p v-for="line in lines" :key="line" class="text-base text-muted">
       {{ line }}
     </p>
