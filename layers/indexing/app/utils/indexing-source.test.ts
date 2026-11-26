@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { changesRollupFromTransitions, sitemapProblemsFrom, toIndexingInspectResult, toIndexingSite, toPortfolioEntry } from './indexing-source'
+import { changesRollupFromTransitions, shouldFetchSiteIndexing, sitemapProblemsFrom, toIndexingInspectResult, toIndexingSite, toPortfolioEntry } from './indexing-source'
 
 const site = { id: 's_one', label: 'example.com', url: 'sc-domain:example.com', gscdumpSiteId: 'g_one' }
 
@@ -27,8 +27,23 @@ describe('toPortfolioEntry', () => {
     expect(toPortfolioEntry(site, { _tag: 'Failed', last: data })).toMatchObject({ read: { _tag: 'failed' }, trend: data.trend })
   })
 
-  it('has no readings for an unlinked Site', () => {
+  it('has no readings for an unlinked or held Site', () => {
     expect(toPortfolioEntry({ ...site, gscdumpSiteId: null }, { _tag: 'NotConnected' })).toMatchObject({ read: { _tag: 'idle' }, summary: null, trend: [] })
+    expect(toPortfolioEntry({ ...site, hold: 'size_limit' }, { _tag: 'Held' })).toMatchObject({ read: { _tag: 'idle' }, summary: null, trend: [] })
+  })
+})
+
+describe('shouldFetchSiteIndexing', () => {
+  it.each([
+    [{ gscdumpSiteId: 'g_one', hold: null }, true],
+    [{ gscdumpSiteId: 'g_one', hold: undefined }, true],
+    [{ gscdumpSiteId: 'g_one', hold: 'size_pending' as const }, true],
+    [{ gscdumpSiteId: 'g_one', hold: 'size_limit' as const }, false],
+    [{ gscdumpSiteId: 'g_one', hold: 'sitemap_limit' as const }, false],
+    [{ gscdumpSiteId: 'g_one', hold: 'size_unknown' as const }, false],
+    [{ gscdumpSiteId: null, hold: null }, false],
+  ])('returns %s for %o', (row, expected) => {
+    expect(shouldFetchSiteIndexing(row)).toBe(expected)
   })
 })
 

@@ -57,6 +57,14 @@ function mount(onBlocked = vi.fn(), { suspense = true, targetUrl = undefined as 
     setup: (props, { slots }) => () => h('a', { href: props.to }, slots.default?.()),
   }))
   app.component('UIcon', defineComponent({ setup: () => () => null }))
+  app.component('UBadge', defineComponent({
+    props: ['label'],
+    setup: props => () => h('span', { 'data-badge': props.label }, props.label),
+  }))
+  app.component('UiDisclosure', defineComponent({
+    props: ['label', 'count'],
+    setup: (props, { slots }) => () => h('details', [h('summary', props.label), slots.default?.()]),
+  }))
   app.component('ProAlert', defineComponent({
     props: ['title', 'description'],
     setup: props => () => h('div', { role: 'alert' }, [props.title, props.description]),
@@ -69,9 +77,10 @@ function mount(onBlocked = vi.fn(), { suspense = true, targetUrl = undefined as 
     inheritAttrs: false,
     props: ['modelValue'],
     emits: ['update:modelValue'],
-    setup: (props, { emit }) => () => h('input', {
-      value: props.modelValue,
-      onInput: (event: Event) => emit('update:modelValue', (event.target as HTMLInputElement).value),
+    setup: (props, { attrs, emit }) => () => h('input', {
+      'data-testid': attrs['data-testid'],
+      'value': props.modelValue,
+      'onInput': (event: Event) => emit('update:modelValue', (event.target as HTMLInputElement).value),
     }),
   }))
   app.mount(host)
@@ -235,5 +244,54 @@ describe('connect a Site', () => {
     expect([...host.querySelectorAll('a')].find(a => a.textContent === 'Connect Google')?.getAttribute('href'))
       .toBe('/auth/integrations/gsc/connect?scope=read&returnTo=%2Fpro%2Fdashboard%2Fonboarding%3Fstep%3Dsites')
     expect(host.querySelector('input')).toBeNull()
+  })
+
+  it('shows allowance summary in the header, type badges, and filter chrome only above 8 properties', async () => {
+    reads.preview.value = {
+      sites: Array.from({ length: 6 }, (_, i) => ({ siteId: `s_${i}`, domain: `connected-${i}.com`, property: `sc-domain:connected-${i}.com` })),
+      siteAllowance: { _tag: 'Capped', used: 6, allowance: 25 },
+    }
+    reads.properties.value = {
+      connected: true,
+      properties: Array.from({ length: 10 }, (_, i) => ({
+        siteUrl: i % 2 === 0 ? `sc-domain:site-${i}.com` : `https://site-${i}.org/`,
+        permissionLevel: 'siteOwner',
+      })),
+    }
+
+    const host = mount()
+    await flush()
+
+    expect(host.querySelector('[data-testid="site-allowance-pill"]')?.textContent).toContain('6 of 25 Sites in your Free allowance.')
+    expect(host.querySelector('details summary')?.textContent).toBe('Connected (6)')
+    expect(host.querySelector('[data-testid="gsc-property-filter"]')).not.toBeNull()
+    expect(host.querySelectorAll('[data-testid="gsc-property"]')).toHaveLength(10)
+    expect([...host.querySelectorAll('[data-badge]')].map(el => el.textContent)).toEqual(
+      expect.arrayContaining(['Domain', 'URL prefix']),
+    )
+
+    const filterInput = host.querySelector<HTMLInputElement>('[data-testid="gsc-property-filter"]')!
+    filterInput.value = 'site-3'
+    filterInput.dispatchEvent(new Event('input'))
+    await flush()
+
+    expect(host.querySelectorAll('[data-testid="gsc-property"]')).toHaveLength(1)
+    expect(host.textContent).toContain('1 of 10 matching')
+  })
+
+  it('omits filter chrome when 8 or fewer properties are available', async () => {
+    reads.properties.value = {
+      connected: true,
+      properties: Array.from({ length: 8 }, (_, i) => ({
+        siteUrl: `sc-domain:small-${i}.com`,
+        permissionLevel: 'siteOwner',
+      })),
+    }
+
+    const host = mount()
+    await flush()
+
+    expect(host.querySelector('[data-testid="gsc-property-filter"]')).toBeNull()
+    expect(host.querySelectorAll('[data-testid="gsc-property"]')).toHaveLength(8)
   })
 })

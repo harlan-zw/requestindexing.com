@@ -2,6 +2,7 @@
 // Each function maps one read this app already makes onto the shape the
 // `@nuxtseo/pro-indexing` sections take. No fetch, no Nuxt.
 
+import type { SiteHoldReason } from '@gscdump/contracts'
 import type { IndexingTrendReading, SiteIndexingReadings } from '@gscdump/sdk/indexing'
 import type { IndexingChangesRollup, IndexingChangesRow } from '@nuxtseo/pro-indexing/shared/changes'
 import type { IndexingPortfolioEntry, IndexingReadState } from '@nuxtseo/pro-indexing/shared/portfolio'
@@ -25,6 +26,14 @@ export interface RequestIndexingSiteRow {
   /** The property, such as `https://example.com/` or `sc-domain:example.com`. Null when unknown. */
   readonly url: string | null
   readonly gscdumpSiteId: string | null
+  readonly hold?: SiteHoldReason | null
+}
+
+/** Held Sites whose automatic sync is paused skip live indexing fetches. */
+export function shouldFetchSiteIndexing(site: Pick<RequestIndexingSiteRow, 'gscdumpSiteId' | 'hold'>): boolean {
+  if (!site.gscdumpSiteId)
+    return false
+  return !site.hold || site.hold === 'size_pending'
 }
 
 /** A roster Site as the indexing sections address it. `id` and `ref` are both the route id. */
@@ -43,6 +52,7 @@ export function toIndexingSite(site: RequestIndexingSiteRow): IndexingSite {
 /** One Site's indexing read, as the fleet page tracks it. */
 export type SiteIndexingRead
   = | { readonly _tag: 'NotConnected' }
+    | { readonly _tag: 'Held' }
     | { readonly _tag: 'Loading', readonly last: SiteIndexingReadings | null }
     | { readonly _tag: 'Failed', readonly last: SiteIndexingReadings | null }
     | { readonly _tag: 'Loaded', readonly data: SiteIndexingReadings }
@@ -50,6 +60,7 @@ export type SiteIndexingRead
 function readState(read: SiteIndexingRead): IndexingReadState {
   switch (read._tag) {
     case 'NotConnected':
+    case 'Held':
       return { _tag: 'idle' }
     case 'Loading':
       return { _tag: 'loading' }
@@ -61,7 +72,7 @@ function readState(read: SiteIndexingRead): IndexingReadState {
 }
 
 function readingsOf(read: SiteIndexingRead): SiteIndexingReadings | null {
-  return read._tag === 'Loaded' ? read.data : read._tag === 'NotConnected' ? null : read.last
+  return read._tag === 'Loaded' ? read.data : (read._tag === 'NotConnected' || read._tag === 'Held') ? null : read.last
 }
 
 /** The Portfolio entry of one roster Site. A refresh keeps the last readings. */

@@ -4,12 +4,14 @@ import type { FactItem } from '@nuxtseo/design-system/app/components/data/UiFact
 import type { IndexingCoverageTrendViewState } from '@nuxtseo/pro-indexing/shared/coverage-trend'
 import type { IndexingSite } from '@nuxtseo/pro-indexing/shared/source'
 import type { SitemapLiveness } from '#layers/indexing/shared/contracts/sitemap-liveness'
+import type { FreeAllowanceView } from '#layers/pro-gsc/shared/free-allowance'
 import type { FunnelStep } from '#layers/pro-saas/app/components/pro/ProFunnel.vue'
 import { buildIndexingOverviewModel, countInspectionStages, indexCohortFilterValue, selectIndexCohortLead, selectIndexingRegressionLead, sitemapHistoryCollapsed } from '@gscdump/sdk/indexing'
 import { useIndexingSource } from '@nuxtseo/pro-indexing/app/composables/useIndexingSource'
 import { resolveProIndexingCopy } from '@nuxtseo/pro-indexing/shared/copy'
 import { buildIndexingCoverageTrend } from '@nuxtseo/pro-indexing/shared/coverage-trend'
 import { withQuery } from 'ufo'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { ConnectSearchConsoleButton, IndexingCohortList, IndexingCoverageTrend, IndexingDiagnosisPanel } from '#components'
 import { INDEXING_OVERVIEW_URLS_LIMIT } from '#layers/indexing/app/composables/useRequestIndexingSource'
 import { PRO_INDEXING_COPY_OVERRIDES } from '#layers/indexing/app/pro-indexing'
@@ -17,6 +19,7 @@ import { formatIndexingFreshness, resolveIndexingFreshness } from '#layers/index
 import { requestIndexingTrustGate } from '#layers/indexing/app/utils/indexing-trust'
 import { sitemapLivenessSchema } from '#layers/indexing/shared/contracts/sitemap-liveness'
 import { diagnoseIndexing } from '#layers/indexing/shared/indexing-diagnosis'
+import ProSiteHoldCard from '#layers/pro-gsc/app/components/pro/ProSiteHoldCard.vue'
 import {
   useProGscdump,
   useProGscdumpIndexing,
@@ -32,8 +35,51 @@ definePageMeta({
   icon: 'i-lucide-layout-dashboard',
 })
 
-const { siteId, site, siteName, gscdumpSiteId, isNotConnected, isLifecycleSettled, gscData, gscStatusError, refreshGscStatus } = useSite('Indexing')
+const { siteId, site, siteName, gscdumpSiteId, isNotConnected, isLifecycleSettled, hold, gscData, gscStatusError, refreshGscStatus } = useSite('Indexing')
 const proFetch = useProFetch()
+const toast = useToast()
+const teamPolicy = useTeamPolicy(() => site.value?.teamId)
+const canManageSites = computed(() => teamPolicy.can('manage-sites'))
+
+const retryingHold = ref(false)
+async function retryHold() {
+  if (retryingHold.value || !canManageSites.value || !siteId.value)
+    return
+  retryingHold.value = true
+  try {
+    await getAppFetch()(`/api/pro/sites/${encodeURIComponent(siteId.value)}/retry-hold`, { method: 'POST' })
+    toast.add({ title: 'Measurement queued', description: `Request Indexing is measuring ${siteName.value} again.`, color: 'success' })
+    await refreshGscStatus()
+  }
+  catch (err: unknown) {
+    const e = err as { data?: { message?: string }, message?: string } | null
+    toast.add({ title: 'Could not retry check', description: e?.data?.message || e?.message || 'Try again in a moment.', color: 'error' })
+  }
+  finally {
+    retryingHold.value = false
+  }
+}
+
+const { data: usageData } = useAsyncData(
+  'pro:usage:free-allowance',
+  () => getAppFetch()<{ allowance: FreeAllowanceView }>('/api/pro/usage'),
+  { server: false, lazy: true, dedupe: 'defer' },
+)
+const inspectionAllowanceChip = computed(() => {
+  const view = usageData.value?.allowance
+  if (view?._tag === 'Hidden')
+    return null
+  if (view?._tag === 'Metered') {
+    const { used, allowance } = view.entitlements.meters.urlInspections
+    if (allowance !== null) {
+      return {
+        label: `${used.toLocaleString('en-US')} of ${allowance.toLocaleString('en-US')} monthly URL Inspections`,
+        percent: allowance > 0 ? Math.min(100, Math.round((used / allowance) * 100)) : 100,
+      }
+    }
+  }
+  return { label: 'Check Free allowance', percent: null }
+})
 
 // The Site as the shared indexing sections (`@nuxtseo/pro-indexing`) read it.
 const indexingSite = computed<IndexingSite | null>(() => siteId.value
@@ -536,163 +582,192 @@ const overviewErrorDescription = computed(() => {
 
 <template>
   <div data-testid="indexing-page">
-    <ProFirstSiteReport v-if="gscdumpSiteId" :site-id="siteId" class="mb-6" />
-    <div v-if="overviewError && overviewModel" class="mb-6">
-      <UiAlert
-        status="warning"
-        :title="overviewErrorTitle"
-        :description="overviewErrorDescription"
-      >
-        <template #action>
-          <UiButton purpose="secondary" size="xs" class="min-h-11" @click="retryOverview">
-            {{ overviewErrorAction }}
-          </UiButton>
-        </template>
-      </UiAlert>
-    </div>
-
-    <ProPageZone tier="primary" first :aria-busy="overviewLoading">
-      <IndexingDiagnosisPanel
-        v-if="overviewModel"
-        :state="{ _tag: 'ready', model: overviewModel }"
-        :action-to="primaryActionRoute"
-        :sitemap-to="sitemapsRoute"
-        :freshness="diagnosisFreshness"
-        :lead="cohortLead"
-        :lead-to="cohortLeadTo"
-        lead-detail
-      >
-        <!-- The one control that clears each waiting state: connect before
-             any Search Console grant, the Sitemap before any inspection. -->
-        <template #waiting-actions="{ model }">
-          <ConnectSearchConsoleButton v-if="model.state === 'not_connected'" />
-          <UiButton v-else-if="model.state === 'pending' && !model.progress" :to="sitemapsRoute" purpose="secondary" trailing-icon="next" class="min-h-11">
-            {{ indexingCopy.diagnosis.reviewSitemap }}
-          </UiButton>
-        </template>
-      </IndexingDiagnosisPanel>
-
-      <UiAlert
-        v-else-if="overviewError"
-        status="error"
-        :title="overviewErrorTitle"
-        :description="overviewErrorDescription"
-      >
-        <template #action>
-          <UiButton purpose="secondary" size="xs" class="min-h-11" @click="retryOverview">
-            {{ overviewErrorAction }}
-          </UiButton>
-        </template>
-      </UiAlert>
-
-      <IndexingDiagnosisPanel
-        v-else-if="overviewLoading"
-        :state="{ _tag: 'loading' }"
-        :action-to="urlsRoute"
-        :sitemap-to="sitemapsRoute"
-        :freshness="null"
+    <ProPageZone v-if="hold" tier="primary" first>
+      <ProSiteHoldCard
+        :hold="hold"
+        :site-id="siteId"
+        :can-retry="canManageSites"
+        :retrying="retryingHold"
+        @retry="retryHold"
       />
-
-      <UiAlert
-        v-else
-        status="error"
-        title="Indexing evidence is unavailable"
-        description="No diagnosis could be built from the current evidence. Retry the indexing checks."
-      >
-        <template #action>
-          <UiButton purpose="secondary" size="xs" class="min-h-11" @click="retryOverview">
-            Retry
-          </UiButton>
-        </template>
-      </UiAlert>
     </ProPageZone>
 
-    <ProPageZone v-if="overviewLoading" tier="secondary" aria-busy="true">
-      <ProSecondaryGrid layout="wide-narrow">
-        <UiCard title="Why pages stop" size="sm">
-          <div class="space-y-4">
-            <div class="border-b border-default pb-4">
-              <UiSkeleton type="text" :base="180" :range="30" />
-              <UiSkeleton type="text" :base="420" :range="80" class="mt-3 !h-24" />
+    <template v-else>
+      <ProFirstSiteReport v-if="gscdumpSiteId" :site-id="siteId" class="mb-6" />
+      <div v-if="overviewError && overviewModel" class="mb-6">
+        <UiAlert
+          status="warning"
+          :title="overviewErrorTitle"
+          :description="overviewErrorDescription"
+        >
+          <template #action>
+            <UiButton purpose="secondary" size="xs" class="min-h-11" @click="retryOverview">
+              {{ overviewErrorAction }}
+            </UiButton>
+          </template>
+        </UiAlert>
+      </div>
+
+      <ProPageZone tier="primary" first :aria-busy="overviewLoading">
+        <IndexingDiagnosisPanel
+          v-if="overviewModel"
+          :state="{ _tag: 'ready', model: overviewModel }"
+          :action-to="primaryActionRoute"
+          :sitemap-to="sitemapsRoute"
+          :freshness="diagnosisFreshness"
+          :lead="cohortLead"
+          :lead-to="cohortLeadTo"
+          lead-detail
+        >
+          <!-- The one control that clears each waiting state: connect before
+             any Search Console grant, the Sitemap before any inspection. -->
+          <template #waiting-actions="{ model }">
+            <ConnectSearchConsoleButton v-if="model.state === 'not_connected'" />
+            <UiButton v-else-if="model.state === 'pending' && !model.progress" :to="sitemapsRoute" purpose="secondary" trailing-icon="next" class="min-h-11">
+              {{ indexingCopy.diagnosis.reviewSitemap }}
+            </UiButton>
+          </template>
+        </IndexingDiagnosisPanel>
+
+        <UiAlert
+          v-else-if="overviewError"
+          status="error"
+          :title="overviewErrorTitle"
+          :description="overviewErrorDescription"
+        >
+          <template #action>
+            <UiButton purpose="secondary" size="xs" class="min-h-11" @click="retryOverview">
+              {{ overviewErrorAction }}
+            </UiButton>
+          </template>
+        </UiAlert>
+
+        <IndexingDiagnosisPanel
+          v-else-if="overviewLoading"
+          :state="{ _tag: 'loading' }"
+          :action-to="urlsRoute"
+          :sitemap-to="sitemapsRoute"
+          :freshness="null"
+        />
+
+        <UiAlert
+          v-else
+          status="error"
+          title="Indexing evidence is unavailable"
+          description="No diagnosis could be built from the current evidence. Retry the indexing checks."
+        >
+          <template #action>
+            <UiButton purpose="secondary" size="xs" class="min-h-11" @click="retryOverview">
+              Retry
+            </UiButton>
+          </template>
+        </UiAlert>
+      </ProPageZone>
+
+      <ProPageZone v-if="overviewLoading" tier="secondary" aria-busy="true">
+        <ProSecondaryGrid layout="wide-narrow">
+          <UiCard title="Why pages stop" size="sm">
+            <div class="space-y-4">
+              <div class="border-b border-default pb-4">
+                <UiSkeleton type="text" :base="180" :range="30" />
+                <UiSkeleton type="text" :base="420" :range="80" class="mt-3 !h-24" />
+              </div>
+              <UiSkeleton :lines="3" :base="260" :range="80" />
             </div>
-            <UiSkeleton :lines="3" :base="260" :range="80" />
-          </div>
-        </UiCard>
-        <div class="space-y-3" aria-label="Sitemap evidence">
-          <UiCard title="Sitemap" variant="subtle" size="sm">
-            <UiSkeleton :lines="2" :base="120" :range="40" />
           </UiCard>
-          <UiStat title="Sitemap URLs" loading card size="sm" />
-          <UiStat title="Reported issues" loading card size="sm" />
-        </div>
-      </ProSecondaryGrid>
-    </ProPageZone>
+          <div class="space-y-3" aria-label="Sitemap evidence">
+            <UiCard title="Sitemap" variant="subtle" size="sm">
+              <UiSkeleton :lines="2" :base="120" :range="40" />
+            </UiCard>
+            <UiStat title="Sitemap URLs" loading card size="sm" />
+            <UiStat title="Reported issues" loading card size="sm" />
+          </div>
+        </ProSecondaryGrid>
+      </ProPageZone>
 
-    <ProPageZone v-if="overviewModel?._tag === 'diagnosis'" tier="secondary">
-      <ProSecondaryGrid layout="wide-narrow">
-        <UiCard title="Why pages stop" size="sm">
-          <!--
+      <ProPageZone v-if="overviewModel?._tag === 'diagnosis'" tier="secondary">
+        <ProSecondaryGrid layout="wide-narrow">
+          <UiCard title="Why pages stop" size="sm">
+            <!--
             Full inspection coverage is a non-event: a 100% bar paints an
             expected state and spends the attention budget the one incomplete
             site needs. Complete coverage degrades to a caption; only a gap
             keeps the bar.
           -->
-          <p
-            v-if="inspectionProgress?.complete"
-            class="mb-4 border-b border-default pb-4 text-mini text-dimmed"
-          >
-            All {{ inspectionProgress.total.toLocaleString() }} sitemap URLs have current inspection evidence.
-          </p>
-          <div
-            v-else-if="inspectionProgress"
-            class="mb-4 border-b border-default pb-4"
-          >
-            <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-              <p class="text-sm font-medium text-default">
-                Inspection coverage
-              </p>
-              <p class="shrink-0 text-sm numerals-display text-muted">
-                {{ inspectionProgress.inspected.toLocaleString() }} of {{ inspectionProgress.total.toLocaleString() }} sitemap URLs checked · {{ inspectionProgress.percent }}%
+            <p
+              v-if="inspectionProgress?.complete"
+              class="mb-4 border-b border-default pb-4 text-mini text-dimmed"
+            >
+              All {{ inspectionProgress.total.toLocaleString() }} sitemap URLs have current inspection evidence.
+            </p>
+            <div
+              v-else-if="inspectionProgress"
+              class="mb-4 border-b border-default pb-4"
+            >
+              <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                <p class="text-sm font-medium text-default">
+                  Inspection coverage
+                </p>
+                <p class="shrink-0 text-sm numerals-display text-muted">
+                  {{ inspectionProgress.inspected.toLocaleString() }} of {{ inspectionProgress.total.toLocaleString() }} sitemap URLs checked · {{ inspectionProgress.percent }}%
+                </p>
+              </div>
+              <UiProgressPercent
+                :value="inspectionProgress.percent"
+                :total="100"
+                :tooltip="`${inspectionProgress.percent}% of known sitemap URLs have current URL Inspection evidence`"
+                color="primary"
+                class="mt-2"
+              />
+              <div v-if="inspectionProgress.inspected < inspectionProgress.total && inspectionAllowanceChip" class="mt-2.5 flex flex-wrap items-center justify-between gap-2">
+                <NuxtLink
+                  to="/pro/dashboard/usage"
+                  class="inline-flex items-center gap-2 rounded-full border border-default bg-elevated px-2.5 py-1 text-xs font-medium tabular-nums text-muted transition-colors hover:border-primary/40 hover:text-highlighted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  data-testid="inspection-allowance-link"
+                >
+                  <span v-if="inspectionAllowanceChip.percent !== null" class="h-1.5 w-8 overflow-hidden rounded-full bg-accented" aria-hidden="true">
+                    <span
+                      class="block h-full rounded-full"
+                      :class="inspectionAllowanceChip.percent >= 80 ? 'bg-warning' : 'bg-primary'"
+                      :style="{ width: `${inspectionAllowanceChip.percent}%` }"
+                    />
+                  </span>
+                  <UIcon v-else name="i-heroicons-chart-bar" class="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                  <span>{{ inspectionAllowanceChip.label }}</span>
+                  <UiIcon name="next" class="size-3 shrink-0 text-dimmed" aria-hidden="true" />
+                </NuxtLink>
+              </div>
+            </div>
+            <p v-else-if="indexingProgressError" class="mb-4 text-sm text-muted">
+              Inspection progress is unavailable.
+            </p>
+
+            <IndexingCoverageTrend
+              :state="coverageTrendState"
+              :action-to="urlsRoute"
+              @retry="refreshIndexingProgress"
+            />
+
+            <div v-if="funnelSteps.length" class="border-b border-default pb-4">
+              <ProFunnel
+                :steps="funnelSteps"
+                :height="160"
+                scale="neutral"
+                aria-label="Indexing funnel stages"
+              />
+              <p v-if="largestFunnelLoss" class="mt-2 text-sm text-muted">
+                {{ largestFunnelLoss.count.toLocaleString() }} of {{ overviewModel.scope.inspected.toLocaleString() }} inspected URLs stop between
+                {{ largestFunnelLoss.from.toLowerCase() }} and {{ largestFunnelLoss.to.toLowerCase() }}.
               </p>
             </div>
-            <UiProgressPercent
-              :value="inspectionProgress.percent"
-              :total="100"
-              :tooltip="`${inspectionProgress.percent}% of known sitemap URLs have current URL Inspection evidence`"
-              color="primary"
-              class="mt-2"
-            />
-          </div>
-          <p v-else-if="indexingProgressError" class="mb-4 text-sm text-muted">
-            Inspection progress is unavailable.
-          </p>
-
-          <IndexingCoverageTrend
-            :state="coverageTrendState"
-            :action-to="urlsRoute"
-            @retry="refreshIndexingProgress"
-          />
-
-          <div v-if="funnelSteps.length" class="border-b border-default pb-4">
-            <ProFunnel
-              :steps="funnelSteps"
-              :height="160"
-              scale="neutral"
-              aria-label="Indexing funnel stages"
-            />
-            <p v-if="largestFunnelLoss" class="mt-2 text-sm text-muted">
-              {{ largestFunnelLoss.count.toLocaleString() }} of {{ overviewModel.scope.inspected.toLocaleString() }} inspected URLs stop between
-              {{ largestFunnelLoss.from.toLowerCase() }} and {{ largestFunnelLoss.to.toLowerCase() }}.
+            <p
+              v-else-if="funnelUnavailableReason"
+              class="border-b border-default pb-4 text-sm text-muted"
+            >
+              {{ funnelUnavailableReason }}
             </p>
-          </div>
-          <p
-            v-else-if="funnelUnavailableReason"
-            class="border-b border-default pb-4 text-sm text-muted"
-          >
-            {{ funnelUnavailableReason }}
-          </p>
 
-          <!--
+            <!--
             Cohort comparison replaces the reason-group list. The reason
             taxonomy names Google's symptom ("crawled but not indexed"), which
             the developer cannot act on; the cohort names the part of their
@@ -700,66 +775,67 @@ const overviewErrorDescription = computed(() => {
             issue type is not lost: the URLs tab owns that filter and the hero's
             primary action deep-links the top reason.
           -->
-          <IndexingCohortList
-            v-if="cohortState"
-            :key="cohortState._tag"
-            :site="indexingSite"
-            :class="{ 'mt-3': funnelSteps.length || funnelUnavailableReason }"
-          />
-          <p
-            v-else-if="cohortsError"
-            class="text-sm text-muted"
-            :class="{ 'mt-3': funnelSteps.length || funnelUnavailableReason }"
-          >
-            Cohort comparison is unavailable.
-          </p>
-          <UiSkeleton
-            v-else
-            :lines="3"
-            :base="260"
-            :range="80"
-            :class="{ 'mt-3': funnelSteps.length || funnelUnavailableReason }"
-          />
-        </UiCard>
-
-        <div class="space-y-3" aria-label="Sitemap evidence">
-          <UiCard title="Sitemaps" variant="subtle" size="sm">
-            <div class="flex flex-col gap-4">
-              <UiFactsGrid :facts="sitemapFacts" :columns="2" />
-              <UiButton
-                :to="sitemapsRoute"
-                purpose="link"
-                trailing-icon="next"
-                class="min-h-11 self-start"
-              >
-                View sitemaps
-              </UiButton>
-            </div>
+            <IndexingCohortList
+              v-if="cohortState"
+              :key="cohortState._tag"
+              :site="indexingSite"
+              :class="{ 'mt-3': funnelSteps.length || funnelUnavailableReason }"
+            />
+            <p
+              v-else-if="cohortsError"
+              class="text-sm text-muted"
+              :class="{ 'mt-3': funnelSteps.length || funnelUnavailableReason }"
+            >
+              Cohort comparison is unavailable.
+            </p>
+            <UiSkeleton
+              v-else
+              :lines="3"
+              :base="260"
+              :range="80"
+              :class="{ 'mt-3': funnelSteps.length || funnelUnavailableReason }"
+            />
           </UiCard>
-          <UiStat
-            title="Sitemap URLs"
-            tooltip="URLs currently listed across your sitemap files."
-            :value="sitemapCurrentUrlCount"
-            :trend="sitemapUrlDelta"
-            :trend-label="sitemapTrendLabel"
-            :sparkline="sitemapUrlTrend.length > 1 ? sitemapUrlTrend : undefined"
-            card
-            size="sm"
-          />
-          <UiStat
-            title="Reported issues"
-            :tooltip="sitemapIssueBreakdown"
-            :value="sitemapCurrentIssueCount"
-            :value-class="sitemapCurrentIssueCount > 0 ? 'text-warning' : 'text-default'"
-            :trend="sitemapIssueDelta"
-            :trend-label="sitemapIssueTrendLabel"
-            :sparkline="sitemapIssueTrend.length > 1 ? sitemapIssueTrend : undefined"
-            invert-trend
-            card
-            size="sm"
-          />
-        </div>
-      </ProSecondaryGrid>
-    </ProPageZone>
+
+          <div class="space-y-3" aria-label="Sitemap evidence">
+            <UiCard title="Sitemaps" variant="subtle" size="sm">
+              <div class="flex flex-col gap-4">
+                <UiFactsGrid :facts="sitemapFacts" :columns="2" />
+                <UiButton
+                  :to="sitemapsRoute"
+                  purpose="link"
+                  trailing-icon="next"
+                  class="min-h-11 self-start"
+                >
+                  View sitemaps
+                </UiButton>
+              </div>
+            </UiCard>
+            <UiStat
+              title="Sitemap URLs"
+              tooltip="URLs currently listed across your sitemap files."
+              :value="sitemapCurrentUrlCount"
+              :trend="sitemapUrlDelta"
+              :trend-label="sitemapTrendLabel"
+              :sparkline="sitemapUrlTrend.length > 1 ? sitemapUrlTrend : undefined"
+              card
+              size="sm"
+            />
+            <UiStat
+              title="Reported issues"
+              :tooltip="sitemapIssueBreakdown"
+              :value="sitemapCurrentIssueCount"
+              :value-class="sitemapCurrentIssueCount > 0 ? 'text-warning' : 'text-default'"
+              :trend="sitemapIssueDelta"
+              :trend-label="sitemapIssueTrendLabel"
+              :sparkline="sitemapIssueTrend.length > 1 ? sitemapIssueTrend : undefined"
+              invert-trend
+              card
+              size="sm"
+            />
+          </div>
+        </ProSecondaryGrid>
+      </ProPageZone>
+    </template>
   </div>
 </template>

@@ -8,6 +8,7 @@
 // The page owns the data. This component owns the layout: the card grid (the
 // default) or table rows (`?grid=0`), the pinned "All sites" row, and which
 // rows are expanded.
+import type { SiteHoldReason } from '@gscdump/contracts'
 import type { SiteSyncStatus } from '#layers/pro-saas/shared/site-sync'
 import { useLocalStorage, useMediaQuery, useMounted } from '@vueuse/core'
 import { computed } from 'vue'
@@ -25,6 +26,8 @@ export interface FleetSiteListRow {
   syncStatus: SiteSyncStatus
   /** The Site is linked to a Search Console property through gscdump. */
   connected: boolean
+  /** Why gscdump holds the Site before its first import, or null. */
+  hold?: SiteHoldReason | null
 }
 
 const {

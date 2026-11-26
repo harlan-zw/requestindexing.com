@@ -1,7 +1,7 @@
 import type { PropertyPickerInput } from './property-picker'
 import { describe, expect, it } from 'vitest'
 import { connectedSiteDomain } from '#layers/pro-saas/shared/site-url'
-import { projectPropertyPicker, propertyPickerBlocksConnect } from './property-picker'
+import { filterPickerProperties, projectPropertyPicker, propertyKindLabel, propertyPickerBlocksConnect } from './property-picker'
 
 function loaded(data: PropertyPickerInput['data'], connectedDomains: string[] = []): PropertyPickerInput {
   return { queryStatus: 'success', data, sitesLoaded: true, connectedDomains: new Set(connectedDomains) }
@@ -122,5 +122,34 @@ describe('projectPropertyPicker', () => {
     })
 
     expect(state).toEqual({ _tag: 'Loading' })
+  })
+})
+
+describe('propertyKindLabel', () => {
+  it.each([
+    ['sc-domain:example.com', 'Domain'],
+    ['https://example.com/', 'URL prefix'],
+    ['http://sub.example.com/blog/', 'URL prefix'],
+  ] as const)('labels %s as %s', (siteUrl, label) => {
+    expect(propertyKindLabel(siteUrl)).toBe(label)
+  })
+})
+
+describe('filterPickerProperties', () => {
+  const properties = [
+    { siteUrl: 'sc-domain:alorair.com', domain: 'alorair.com', verified: true },
+    { siteUrl: 'https://shop.alorair.com/', domain: 'shop.alorair.com', verified: true },
+    { siteUrl: 'sc-domain:northwind.co', domain: 'northwind.co', verified: false },
+  ]
+
+  it('returns all properties when the query is blank', () => {
+    expect(filterPickerProperties(properties, '   ')).toEqual(properties)
+  })
+
+  it('matches by domain, raw property URL, or type label case-insensitively', () => {
+    expect(filterPickerProperties(properties, 'NORTHWIND').map(p => p.domain)).toEqual(['northwind.co'])
+    expect(filterPickerProperties(properties, 'url prefix').map(p => p.domain)).toEqual(['shop.alorair.com'])
+    expect(filterPickerProperties(properties, 'sc-domain:alorair').map(p => p.domain)).toEqual(['alorair.com'])
+    expect(filterPickerProperties(properties, 'no-such-domain')).toEqual([])
   })
 })

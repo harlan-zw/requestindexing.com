@@ -1,6 +1,9 @@
 <script lang="ts" setup>
 import type { SiteHoldReason } from '@gscdump/contracts'
 import type { DropdownMenuItem } from '@nuxt/ui'
+import type { FreeAllowanceView } from '#layers/pro-gsc/shared/free-allowance'
+import type { ManageSitesFilter } from '#layers/pro-saas/shared/site-roster'
+import type { SiteSyncStatus } from '#layers/pro-saas/shared/site-sync'
 import { useIntervalFn } from '@vueuse/core'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
@@ -10,6 +13,7 @@ import ProNoPropertyActions from '#layers/pro-saas/app/components/pro/ProNoPrope
 import ProAbilityGate from '#layers/pro-saas/app/components/pro/team/ProAbilityGate.vue'
 import { useNoSearchConsoleProperty } from '#layers/pro-saas/app/composables/useNoSearchConsoleProperty'
 import { useRemoveSite } from '#layers/pro-saas/app/composables/useRemoveSite'
+import { filterManageSites, MANAGE_SITES_FILTER_THRESHOLD, siteNeedsAttention } from '#layers/pro-saas/shared/site-roster'
 import { SITE_SYNC_LABELS } from '#layers/pro-saas/shared/site-sync'
 
 // The Site roster, ported from nuxtseo.com's `sites/index.vue` and cut to what
@@ -39,6 +43,7 @@ interface SiteRow {
   label: string
   url: string
   property: string
+  syncStatus: SiteSyncStatus
   syncLabel: string
   refused: boolean
   /** gscdump holds the Site before its first import; the sync label does not apply. */
@@ -51,6 +56,7 @@ const rows = computed<SiteRow[]>(() => (data.value?.sites ?? []).map(site => ({
   label: siteLabel(site),
   url: siteLabel(site),
   property: site.property,
+  syncStatus: site.syncStatus,
   syncLabel: site.syncStatus === 'syncing' && site.syncProgress !== null
     ? `${SITE_SYNC_LABELS.syncing} ${Math.round(site.syncProgress)}%`
     : site.syncProgress === null && site.syncStatus === 'synced'
@@ -60,6 +66,28 @@ const rows = computed<SiteRow[]>(() => (data.value?.sites ?? []).map(site => ({
   hold: site.hold,
   to: `/pro/dashboard/sites/${site.siteId}`,
 })))
+
+const { data: usageData } = useAsyncData(
+  'pro:usage:free-allowance',
+  () => getAppFetch()<{ allowance: FreeAllowanceView }>('/api/pro/usage'),
+  { server: false, lazy: true, dedupe: 'defer' },
+)
+const siteAllowance = computed(() => {
+  const view = usageData.value?.allowance
+  if (view?._tag !== 'Metered')
+    return null
+  const { used, allowance } = view.entitlements.meters.sites
+  const percent = allowance > 0 ? Math.min(100, Math.round((used / allowance) * 100)) : 100
+  return { used, allowance, percent, atLimit: used >= allowance }
+})
+
+const searchQuery = ref('')
+const activeFilter = ref<ManageSitesFilter>('all')
+const showTriageControls = computed(() => rows.value.length > MANAGE_SITES_FILTER_THRESHOLD)
+const attentionCount = computed(() => rows.value.filter(siteNeedsAttention).length)
+const filteredRows = computed(() => showTriageControls.value
+  ? filterManageSites(rows.value, { filter: activeFilter.value, query: searchQuery.value })
+  : rows.value)
 
 const loading = computed(() => status.value === 'pending' && !data.value)
 
@@ -189,7 +217,25 @@ async function removeSite() {
     <div v-else-if="rows.length" class="overflow-hidden rounded-xl border border-default bg-default">
       <div class="flex min-h-16 flex-wrap items-center gap-3 border-b border-default bg-elevated/60 px-5 py-3.5">
         <span class="text-base font-semibold text-highlighted">All Sites</span>
-        <span class="text-xs text-dimmed tabular-nums">{{ rows.length }}</span>
+        <NuxtLink
+          v-if="siteAllowance"
+          to="/pro/dashboard/usage"
+          class="inline-flex items-center gap-2 rounded-full border border-default bg-default px-2.5 py-1 text-xs tabular-nums text-muted transition-colors hover:border-primary/40 hover:text-highlighted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          data-testid="sites-allowance-link"
+        >
+          <span class="h-1.5 w-12 overflow-hidden rounded-full bg-accented" aria-hidden="true">
+            <span
+              class="block h-full rounded-full transition-all"
+              :class="siteAllowance.atLimit ? 'bg-error' : siteAllowance.percent >= 80 ? 'bg-warning' : 'bg-primary'"
+              :style="{ width: `${siteAllowance.percent}%` }"
+            />
+          </span>
+          <span>
+            <strong class="font-semibold text-highlighted">{{ siteAllowance.used.toLocaleString('en-US') }}</strong>
+            of {{ siteAllowance.allowance.toLocaleString('en-US') }} in Free allowance
+          </span>
+        </NuxtLink>
+        <span v-else class="text-xs text-dimmed tabular-nums">{{ rows.length }}</span>
         <div class="ml-auto">
           <ProAbilityGate ability="manage-sites">
             <UiButton size="sm" purpose="cta" icon="add" aria-haspopup="dialog" @click="connectOpen = true">
@@ -199,7 +245,48 @@ async function removeSite() {
         </div>
       </div>
 
+      <div
+        v-if="showTriageControls"
+        class="flex flex-wrap items-center gap-2.5 border-b border-default px-5 py-3"
+        data-testid="sites-triage-bar"
+      >
+        <UInput
+          v-model="searchQuery"
+          icon="i-heroicons-magnifying-glass"
+          placeholder="Search Sites..."
+          aria-label="Search Sites"
+          size="sm"
+          class="w-full sm:w-64"
+        />
+        <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter Sites">
+          <UButton
+            size="xs"
+            :color="activeFilter === 'all' ? 'primary' : 'neutral'"
+            :variant="activeFilter === 'all' ? 'soft' : 'outline'"
+            :aria-pressed="activeFilter === 'all'"
+            @click="activeFilter = 'all'"
+          >
+            All ({{ rows.length }})
+          </UButton>
+          <UButton
+            size="xs"
+            :color="activeFilter === 'attention' ? 'primary' : 'neutral'"
+            :variant="activeFilter === 'attention' ? 'soft' : 'outline'"
+            :aria-pressed="activeFilter === 'attention'"
+            @click="activeFilter = 'attention'"
+          >
+            Needs attention ({{ attentionCount }})
+          </UButton>
+        </div>
+      </div>
+
+      <div v-if="showTriageControls && !filteredRows.length" class="flex flex-wrap items-center justify-between gap-2 px-5 py-6 text-sm text-muted">
+        <span>No Sites match your current filter.</span>
+        <UButton color="neutral" variant="ghost" size="xs" label="Clear filter" @click="searchQuery = ''; activeFilter = 'all'" />
+      </div>
+
       <UiTableShell
+        v-else
         class="hidden md:block"
         table-class="min-w-[640px] table-fixed"
         size="sm"
@@ -220,7 +307,7 @@ async function removeSite() {
             <span class="sr-only">Actions</span>
           </UiTableTh>
         </template>
-        <tr v-for="row in rows" :key="row.siteId">
+        <tr v-for="row in filteredRows" :key="row.siteId">
           <UiTableTd row-header>
             <NuxtLink :to="row.to" class="block min-w-0 rounded py-1 focus-visible:outline-2 focus-visible:outline-primary">
               <ProSiteIdentity :url="row.url" :size="18" />
@@ -257,16 +344,28 @@ async function removeSite() {
         </tr>
       </UiTableShell>
 
-      <ul class="divide-y divide-default md:hidden">
-        <li v-for="row in rows" :key="row.siteId" class="flex min-h-16 items-center gap-2 px-4 py-3">
-          <NuxtLink :to="row.to" class="min-w-0 flex-1">
-            <ProSiteIdentity :url="row.url" :size="18" />
-            <span v-if="row.hold" class="mt-1 block pl-7 text-xs text-muted">
-              <UBadge color="warning" variant="subtle" size="sm" :label="HELD_LABEL" class="mr-1" />{{ holdMessage(row.hold) }}
-            </span>
-            <span v-else-if="row.refused" class="mt-1 block pl-7 text-xs text-muted">{{ row.syncLabel }}. {{ SITE_LINK_REFUSED }}</span>
-            <span v-else class="mt-1 block pl-7 text-xs text-muted">{{ row.syncLabel }}</span>
-          </NuxtLink>
+      <ul v-if="filteredRows.length" class="divide-y divide-default md:hidden">
+        <li v-for="row in filteredRows" :key="row.siteId" class="flex min-h-16 items-start gap-2 px-4 py-3">
+          <div class="min-w-0 flex-1">
+            <NuxtLink :to="row.to" class="block min-w-0">
+              <ProSiteIdentity :url="row.url" :size="18" />
+              <span v-if="row.hold" class="mt-1 block pl-7 text-xs text-muted">
+                <UBadge color="warning" variant="subtle" size="sm" :label="HELD_LABEL" class="mr-1" />{{ holdMessage(row.hold) }}
+              </span>
+              <span v-else-if="row.refused" class="mt-1 block pl-7 text-xs text-muted">{{ row.syncLabel }}. {{ SITE_LINK_REFUSED }}</span>
+              <span v-else class="mt-1 block pl-7 text-xs text-muted">{{ row.syncLabel }}</span>
+            </NuxtLink>
+            <div v-if="row.hold === 'size_unknown' && canManageSites" class="mt-2 pl-7">
+              <UiButton
+                purpose="quiet"
+                size="xs"
+                :loading="retryingSiteId === row.siteId"
+                @click="retryHold(row)"
+              >
+                Retry check
+              </UiButton>
+            </div>
+          </div>
           <UDropdownMenu :items="rowMenuItems(row)" :content="{ align: 'end', sideOffset: 6 }">
             <UiButton purpose="quiet" icon="more-horizontal" class="min-h-11 min-w-11" :aria-label="`Actions for ${row.label}`" />
           </UDropdownMenu>

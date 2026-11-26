@@ -18,8 +18,9 @@ import { formatNumber } from '@nuxtseo/design-system/app/composables/formatting'
 import { useGridCols } from '@nuxtseo/design-system/app/composables/useGridCols'
 import { buildPortfolioOverview, indexedShare, notIndexedShare, readingErrors, unindexedCount, windowTrend } from '@nuxtseo/pro-indexing/shared/portfolio-overview'
 import { computed } from 'vue'
-import { IndexingSiteIssues, NuxtLink, ProFleetSiteList, UiAlert, UiButton, UiIcon, UiMetricBarPopover, UiMetricStat, UiSkeleton, UiSparkline, UiSyncDot, UiTooltip, UiTrend } from '#components'
+import { IndexingSiteIssues, NuxtLink, ProFleetSiteList, UBadge, UiAlert, UiButton, UiIcon, UiMetricBarPopover, UiMetricStat, UiSkeleton, UiSparkline, UiSyncDot, UiTooltip, UiTrend, UTooltip } from '#components'
 import FleetIndexingChart from '#layers/indexing/app/internal/components/fleet/FleetIndexingChart.vue'
+import { HELD_LABEL, holdMessage } from '#layers/pro-gsc/shared/entitlement-copy'
 import { useFleetColumnSort } from '#layers/pro-saas/app/composables/useFleetColumnSort'
 
 const {
@@ -228,6 +229,7 @@ function errorPanelRows(siteId: string): MetricPanelRow[] {
     :sort-comparator="effectiveComparator"
     :grid-layout="gridLayout"
     :grid-expanded="gridExpanded"
+    :row-expandable="site => site.connected && !site.hold"
     :connect-to="connectTo"
   >
     <!-- All sites totals, table rows layout. Mirrors the per-Site grid so
@@ -328,7 +330,14 @@ function errorPanelRows(siteId: string): MetricPanelRow[] {
     <template #columns="{ site, isSyncing, syncLabel, layout }">
       <!-- Card grid: the stats as direct labels over the chart. -->
       <template v-if="layout === 'grid'">
-        <span v-if="isSyncing" class="inline-flex items-center gap-1.5 text-xs text-muted">
+        <div v-if="site.hold" class="flex flex-wrap items-center gap-2">
+          <span class="inline-block h-2 w-16 shrink-0 rounded-full border border-dashed border-warning/50" aria-hidden="true" />
+          <UTooltip :text="holdMessage(site.hold)">
+            <UBadge color="warning" variant="subtle" :label="HELD_LABEL" />
+          </UTooltip>
+          <span class="text-xs text-dimmed">Automatic sync paused</span>
+        </div>
+        <span v-else-if="isSyncing" class="inline-flex items-center gap-1.5 text-xs text-muted">
           <UiSyncDot :status="site.syncStatus" :label="syncLabel" />
         </span>
         <NuxtLink
@@ -364,6 +373,22 @@ function errorPanelRows(siteId: string): MetricPanelRow[] {
         <span v-else-if="stateOf(site.id) === 'Loaded'" class="text-xs text-dimmed">Collecting indexing data</span>
         <span v-else-if="stateOf(site.id) === 'Failed'" class="text-xs text-error">Indexing data failed to load</span>
         <UiSkeleton v-else class="w-40 h-5" />
+      </template>
+
+      <!-- Held before first import. -->
+      <template v-else-if="site.hold">
+        <div class="flex items-center gap-2">
+          <span class="inline-block h-2 w-16 shrink-0 rounded-full border border-dashed border-warning/50" aria-hidden="true" />
+          <UTooltip :text="holdMessage(site.hold)">
+            <UBadge color="warning" variant="subtle" :label="HELD_LABEL" />
+          </UTooltip>
+        </div>
+        <div />
+        <span class="text-xs text-dimmed">Automatic sync paused</span>
+        <template v-for="i in Math.max(0, activeIndexingColumns.length - 2)" :key="i">
+          <div />
+          <span class="text-sm text-dimmed">—</span>
+        </template>
       </template>
 
       <!-- A first sync is still running. -->
@@ -484,8 +509,14 @@ function errorPanelRows(siteId: string): MetricPanelRow[] {
     </template>
 
     <template #mobile="{ site }">
-      <div class="flex items-baseline gap-1">
-        <UiSkeleton v-if="stateOf(site.id) === 'Loading'" class="w-16 h-5" />
+      <div class="flex items-center gap-2">
+        <template v-if="site.hold">
+          <UTooltip :text="holdMessage(site.hold)">
+            <UBadge color="warning" variant="subtle" size="sm" :label="HELD_LABEL" />
+          </UTooltip>
+          <span class="text-xs text-dimmed">Automatic sync paused</span>
+        </template>
+        <UiSkeleton v-else-if="stateOf(site.id) === 'Loading'" class="w-16 h-5" />
         <template v-else-if="observed(site.id)">
           <span
             class="text-base font-medium tabular-nums"
