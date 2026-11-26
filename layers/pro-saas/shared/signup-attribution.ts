@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { isRuntimeOnlyRoute, PERMANENT_REDIRECTS } from '~~/shared/routes'
+import { PERMANENT_REDIRECTS, PRERENDERED_PAGE_PATHS } from '~~/shared/routes'
 
 export const SIGNUP_TOUCH_COOKIE = 'pro-first-touch'
 const landingPaths = ['/', '/tools', '/guides', '/comparisons', '/pro/onboarding', '/pro/dashboard', '/login', '/auth'] as const
@@ -28,8 +28,11 @@ export interface SignupAttribution {
   referrerDomain?: string
 }
 
-/** Root paths that are not guides. `isRuntimeOnlyRoute` covers the app routes. */
-const nonGuidePages = new Set<string>(['/privacy', '/terms', ...Object.keys(PERMANENT_REDIRECTS)])
+/** Known root-level guide slugs from `PRERENDERED_PAGE_PATHS`. */
+const nonGuidePages = new Set<string>(['/', '/privacy', '/terms', '/tools', '/guides', '/comparisons', ...Object.keys(PERMANENT_REDIRECTS)])
+const guidePagePaths = new Set<string>(
+  PRERENDERED_PAGE_PATHS.filter(path => !nonGuidePages.has(path) && /^\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)),
+)
 function routeGroup(path: string): typeof landingPaths[number] | null {
   if (path === '/')
     return '/'
@@ -47,8 +50,9 @@ function routeGroup(path: string): typeof landingPaths[number] | null {
     return '/guides'
   if (/^\/comparisons(?:\/|$)/.test(path))
     return '/comparisons'
-  // Guides render from content at one root slug. The group keeps no slug.
-  if (/^\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path) && !isRuntimeOnlyRoute(path) && !nonGuidePages.has(path))
+  // Only known guide paths map to `/guides`; unknown 404 slugs must not emit a
+  // `Set-Cookie` header that disables edge caching on anonymous 404 responses.
+  if (guidePagePaths.has(path))
     return '/guides'
   return null
 }
