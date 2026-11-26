@@ -144,8 +144,8 @@ useSeoMeta({ title: 'Set up Request Indexing' })
 
 <template>
   <ProShellOnboardingFrame
-    class="[&_[data-onboarding-step]]:relative min-[1420px]:[&_[data-onboarding-step]]:min-h-[30rem]"
     :flow="flow"
+    :aside="currentStep !== 'sync' || hasSites"
     :next-disabled="currentStep === 'sync' && !hasSites"
     :next-loading="finishing"
   >
@@ -248,8 +248,8 @@ useSeoMeta({ title: 'Set up Request Indexing' })
 
       <UiWizardNav
         can-back
+        :show-next="hasSites"
         :next-label="frameCopy.next"
-        :next-disabled="!hasSites"
         @back="controls.back()"
         @next="controls.next()"
       />
@@ -271,28 +271,17 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       />
     </template>
 
-    <!-- The step guide follows the step's buttons, so on a narrow screen it
-         never pushes the step's way forward down. The frame's class makes
-         the step section its anchor, so from 1420px the guide's column hangs
-         to the right of the step and runs the section's full height. The card
-         starts level with the heading and sticks 24px from the top while the
-         reader scrolls a long step. The column keeps its width. The 672px
-         column stays centred, so the 32px gap and the 320px card need that
-         width again on the left: 1376px, plus the scrollbar and a margin.
-         The hanging column leaves the page's flow, and the surface clips what
-         overflows it, so from 1420px the section holds at least 30rem, the
-         tallest guide. A short step, such as Connect Sites before Google
-         connects, then cannot cut the card off. The last step's guide
-         describes the report, so it waits for a Site. -->
     <template #after>
-      <div
-        v-if="currentStep !== 'sync' || hasSites"
-        class="min-[1420px]:absolute min-[1420px]:inset-y-0 min-[1420px]:left-full min-[1420px]:ml-8 min-[1420px]:w-80"
-      >
-        <ProOnboardingStepGuide :guide="ONBOARDING_STEP_GUIDES[currentStep]" :name="currentStep" class="min-[1420px]:sticky min-[1420px]:top-6" />
-      </div>
       <ProOnboardingAnswers v-if="currentStep === 'sync'" />
       <ProSetupExitFeedback v-if="feedbackStep" :step="feedbackStep" />
+    </template>
+
+    <!-- Native 2-column grid from `lg` (1024px) via ProShellOnboardingFrame's `#aside`
+         slot so 1280px laptops and wider desktops keep the step guide beside the step. -->
+    <template #aside>
+      <div v-if="currentStep !== 'sync' || hasSites" class="mt-6 lg:mt-0 lg:sticky lg:top-6">
+        <ProOnboardingStepGuide :guide="ONBOARDING_STEP_GUIDES[currentStep]" :name="currentStep" />
+      </div>
     </template>
   </ProShellOnboardingFrame>
 </template>

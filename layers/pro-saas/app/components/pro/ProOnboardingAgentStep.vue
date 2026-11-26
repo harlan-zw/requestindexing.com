@@ -28,7 +28,7 @@ const agent = defineModel<AgentSetupRoute | null>('agent', { default: null })
       <UiButton
         purpose="link"
         size="sm"
-        class="-ml-2.5 min-h-11 shrink-0 self-start sm:ml-0 sm:min-h-9 sm:self-auto"
+        class="-ml-2.5 min-h-11 shrink-0 self-start font-medium text-default sm:ml-0 sm:min-h-9 sm:self-auto"
         :label="copy.skip"
         data-testid="step-skip"
         @click="emit('skip')"

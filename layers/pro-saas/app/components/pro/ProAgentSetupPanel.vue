@@ -125,9 +125,12 @@ const primaryStep = computed(() => steps.value.find(step => step.action)?.key ??
                 :purpose="primaryStep === step.key ? 'cta' : 'secondary'"
                 size="sm"
                 class="min-h-11 shrink-0 self-start sm:min-h-9 sm:self-auto"
-                trailing-icon="external"
                 :label="step.action.label"
-              />
+              >
+                <template #trailing>
+                  <UiIcon name="external" class="size-3.5" aria-hidden="true" />
+                </template>
+              </UiButton>
               <UiCopyButton
                 v-else-if="step.action?._tag === 'CopyPrompt'"
                 :text="setupPrompt"

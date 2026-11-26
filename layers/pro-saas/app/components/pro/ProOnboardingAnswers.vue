@@ -103,14 +103,13 @@ const restClass = 'border-accented bg-default/80 hover:border-primary/60 hover:b
 </script>
 
 <template>
-  <section
+  <details
     v-if="visible"
-    class="space-y-5 rounded-xl border border-default bg-elevated/40 p-4 sm:p-5"
-    aria-labelledby="onboarding-answers-heading"
+    class="group rounded-(--ui-radius) border border-default bg-elevated/40 p-4 sm:p-5"
     data-testid="onboarding-answers"
   >
-    <header class="flex items-start justify-between gap-3">
-      <div class="space-y-1">
+    <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+      <div class="space-y-0.5">
         <h2 id="onboarding-answers-heading" class="text-base font-semibold text-highlighted">
           {{ copy.heading }}
         </h2>
@@ -118,73 +117,76 @@ const restClass = 'border-accented bg-default/80 hover:border-primary/60 hover:b
           {{ copy.description }}
         </p>
       </div>
-      <UButton color="neutral" variant="ghost" class="min-h-11 shrink-0" :label="copy.skip" data-testid="onboarding-answers-skip" @click="close('skipped')" />
-    </header>
+      <UiIcon name="i-lucide-chevron-down" class="size-4 shrink-0 text-dimmed transition-transform group-open:rotate-180" aria-hidden="true" />
+    </summary>
 
-    <!-- The layer spaces its questions 24px and 10px apart; this card keeps 20px and 8px. -->
-    <UiOnboardingAnswers
-      :model-value="draft"
-      :intents="ONBOARDING_INTENTS"
-      :copy="answersCopy"
-      class="space-y-5! [&_fieldset]:space-y-2!"
-      @update:model-value="update"
-    >
-      <template #option="{ option, selected, pick }">
-        <UButton
-          :color="selected ? 'primary' : 'neutral'"
-          :variant="selected ? 'soft' : 'outline'"
-          :aria-pressed="selected"
-          :label="option.label"
-          class="min-h-11"
-          @click="pick"
-        />
-      </template>
-      <template #intents="{ intents, selected, toggle, other, setOther }">
-        <div class="space-y-3" @blur.capture="flushText">
-          <div class="grid gap-2 sm:grid-cols-2">
-            <button
-              v-for="intent in intents"
-              :key="intent.id"
-              type="button"
-              :aria-pressed="selected.includes(intent.id)"
-              :class="[cardClass, selected.includes(intent.id) ? selectedClass : restClass]"
-              @click="toggle(intent.id)"
-            >
-              <UiIcon :name="intent.icon" class="size-4 shrink-0 text-highlighted" aria-hidden="true" />
-              <span class="font-medium text-highlighted">{{ intent.label }}</span>
-              <UiIcon
-                v-if="selected.includes(intent.id)"
-                name="check"
-                class="absolute top-1/2 right-3 size-4 -translate-y-1/2 text-primary"
-                aria-hidden="true"
+    <div class="mt-5 space-y-5 border-t border-default pt-5" aria-labelledby="onboarding-answers-heading">
+      <!-- The layer spaces its questions 24px and 10px apart; this card keeps 20px and 8px. -->
+      <UiOnboardingAnswers
+        :model-value="draft"
+        :intents="ONBOARDING_INTENTS"
+        :copy="answersCopy"
+        class="space-y-5! [&_fieldset]:space-y-2!"
+        @update:model-value="update"
+      >
+        <template #option="{ option, selected, pick }">
+          <UButton
+            :color="selected ? 'primary' : 'neutral'"
+            :variant="selected ? 'soft' : 'outline'"
+            :aria-pressed="selected"
+            :label="option.label"
+            class="min-h-11"
+            @click="pick"
+          />
+        </template>
+        <template #intents="{ intents, selected, toggle, other, setOther }">
+          <div class="space-y-3" @blur.capture="flushText">
+            <div class="grid gap-2 sm:grid-cols-2">
+              <button
+                v-for="intent in intents"
+                :key="intent.id"
+                type="button"
+                :aria-pressed="selected.includes(intent.id)"
+                :class="[cardClass, selected.includes(intent.id) ? selectedClass : restClass]"
+                @click="toggle(intent.id)"
+              >
+                <UiIcon :name="intent.icon" class="size-4 shrink-0 text-highlighted" aria-hidden="true" />
+                <span class="font-medium text-highlighted">{{ intent.label }}</span>
+                <UiIcon
+                  v-if="selected.includes(intent.id)"
+                  name="check"
+                  class="absolute top-1/2 right-3 size-4 -translate-y-1/2 text-primary"
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+
+            <div class="space-y-1.5">
+              <label :for="otherId" class="block text-sm text-muted">{{ copy.otherLabel }}</label>
+              <UTextarea
+                :id="otherId"
+                :model-value="other"
+                :maxlength="ONBOARDING_OTHER_MAX_LENGTH"
+                :placeholder="copy.otherPlaceholder"
+                :rows="2"
+                autoresize
+                class="w-full"
+                @update:model-value="setOther(String($event ?? ''))"
               />
-            </button>
+            </div>
           </div>
+        </template>
+      </UiOnboardingAnswers>
 
-          <div class="space-y-1.5">
-            <label :for="otherId" class="block text-sm text-muted">{{ copy.otherLabel }}</label>
-            <UTextarea
-              :id="otherId"
-              :model-value="other"
-              :maxlength="ONBOARDING_OTHER_MAX_LENGTH"
-              :placeholder="copy.otherPlaceholder"
-              :rows="2"
-              autoresize
-              class="w-full"
-              @update:model-value="setOther(String($event ?? ''))"
-            />
-          </div>
-        </div>
-      </template>
-    </UiOnboardingAnswers>
-
-    <div class="flex flex-wrap items-center gap-3">
-      <UButton color="neutral" variant="outline" class="min-h-11" :label="copy.done" data-testid="onboarding-answers-done" @click="close('saved')" />
-      <p v-if="status === 'failed'" role="status" class="text-sm text-muted">
-        {{ copy.failed }}
-      </p>
+      <div class="flex flex-wrap items-center gap-3">
+        <UButton color="neutral" variant="outline" class="min-h-11" :label="copy.done" data-testid="onboarding-answers-done" @click="close('saved')" />
+        <UButton color="neutral" variant="ghost" class="min-h-11" :label="copy.skip" data-testid="onboarding-answers-skip" @click="close('skipped')" />
+        <p v-if="status === 'failed'" role="status" class="text-sm text-muted">
+          {{ copy.failed }}
+        </p>
+      </div>
     </div>
-  </section>
+  </details>
   <p v-else-if="status === 'saved'" role="status" class="text-sm text-muted">
     {{ copy.saved }}
   </p>
