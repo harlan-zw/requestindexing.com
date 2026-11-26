@@ -1,15 +1,14 @@
 name: Deploy to Cloudflare
 
-# Runs only after CI passes on main. Before, this workflow built and shipped every
-# push to main with no check of any kind in front of it.
+# Deploys directly on pushes to main because branch protection already enforces
+# CI on pull requests.
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    # Only CI runs on main start this workflow. A run started by a pull request's
-    # CI used to join the concurrency group below, then replace the pending main
-    # deploy and skip itself, so a merge to main could ship nothing.
+  push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - README.md
+      - AGENTS.md
   workflow_dispatch:
 
 permissions:
@@ -18,30 +17,14 @@ permissions:
 
 concurrency:
   group: >-
-    ${{ ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository &&
-      github.event.workflow_run.head_branch == 'main')) &&
-      'deploy-cloudflare-production' || format('deploy-cloudflare-production-isolated-{0}', github.run_id) }}
+    ${{ github.ref == 'refs/heads/main' && 'deploy-cloudflare-production' || format('deploy-cloudflare-production-isolated-{0}', github.run_id) }}
   # A deploy in flight must finish. Wrangler uploads and activates a Worker
   # version, and cancelling part-way leaves it uploaded but not activated.
   cancel-in-progress: false
 
 jobs:
   deploy:
-    # `github.sha` is the default branch tip for a `workflow_run` event, not the
-    # commit the run covered, so it cannot be compared against `head_sha` and
-    # cannot be checked out. Use `head_sha` throughout.
-    # Reject fork and pull request runs before checkout, build, or deployment.
-    if: >-
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository &&
-      github.event.workflow_run.head_branch == 'main')
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     # Both steps below needed almost the same secrets, so the list was written
@@ -79,8 +62,6 @@ jobs:
           fi
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: harlan-zw/harlan-nuxt/.github/actions/harlan-desktop-setup@main
         with:
@@ -96,7 +77,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/nuxt-seo
-          key: nuxt-skew-${{ github.event.workflow_run.head_sha || github.sha }}
+          key: nuxt-skew-${{ github.sha }}
           restore-keys: |
             nuxt-skew-
 
@@ -104,10 +85,7 @@ jobs:
         timeout-minutes: 30
         env:
           NODE_OPTIONS: --max-old-space-size=16384
-          # `GITHUB_SHA` is the default branch tip on a `workflow_run` event, so
-          # the release named a commit this build does not contain. Sentry then
-          # blamed live errors on code that was never deployed.
-          SENTRY_RELEASE: ${{ github.event.workflow_run.head_sha || github.sha }}
+          SENTRY_RELEASE: ${{ github.sha }}
           # Turns the onboarding drip on in production. `nuxt.config.ts` writes
           # it into the Worker vars at build time. A build without it deploys
           # the drip off. The daily bulk sync keeps its own switch,
@@ -133,7 +111,7 @@ jobs:
 
       - run: pnpm deploy
         env:
-          PUBLIC_EGRESS_VERSION_TAG: public-egress-v1-${{ github.event.workflow_run.head_sha || github.sha }}
+          PUBLIC_EGRESS_VERSION_TAG: public-egress-v1-${{ github.sha }}
 
       - name: Verify agent skill discovery
         timeout-minutes: 2
@@ -141,7 +119,7 @@ jobs:
 
       # Sentry shows "No deploys found" until a deploy is recorded against the
       # release, so already-fixed checks cannot cite a production deploy. The
-      # build names the release `head_sha`; this marker must name the same
+      # build names the release `github.sha`; this marker must name the same
       # version. `environment` is what records the deploy. `set_commits` is
       # skipped because this checkout is shallow (depth 1): `--auto` cannot
       # find the previous release commit. `SENTRY_AUTH_TOKEN` comes from the
@@ -151,7 +129,7 @@ jobs:
         uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
         with:
           environment: production
-          release: ${{ github.event.workflow_run.head_sha || github.sha }}
+          release: ${{ github.sha }}
           projects: request-indexing
           set_commits: skip
         env:
