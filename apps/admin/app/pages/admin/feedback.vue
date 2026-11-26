@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import type { FeedbackResolutionStatus, FeedbackStatus } from '#layers/pro-saas/shared/feedback'
+import { shouldDefaultNotifyReporter } from '@nuxtseo/pro-shell/shared/feedback'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { FEEDBACK_STATUSES, resolveFeedbackStatus } from '#layers/pro-saas/shared/feedback'
 
@@ -43,11 +44,14 @@ const failure = ref<string | null>(null)
 const editing = ref<FeedbackReport | null>(null)
 const saving = ref(false)
 const saveError = ref<string | null>(null)
+const saveNotice = ref<string | null>(null)
+const notifyTouched = ref(false)
 const draft = reactive({
   status: 'new' as FeedbackStatus,
   resolutionNote: '',
   triageNote: '',
   fixRef: '',
+  notifyReporter: false,
 })
 
 const statusFilterItems = [
@@ -79,6 +83,32 @@ function resolutionBadgeColor(resolution: FeedbackResolutionStatus): 'warning' |
 const reporterResolution = computed(() => resolveFeedbackStatus(draft.status))
 const reporterResolutionLabel = computed(() => PUBLIC_RESOLUTION_LABELS[reporterResolution.value])
 const reporterNotePreview = computed(() => draft.resolutionNote.trim())
+const editingReporterEmail = computed(() => {
+  const userId = editing.value?.userId
+  if (userId == null)
+    return null
+  return listing.value?.relations?.users?.[String(userId)]?.email ?? null
+})
+const canNotifyReporter = computed(() => Boolean(editingReporterEmail.value) && (draft.status === 'fixed' || draft.status === 'replied'))
+
+watch([() => draft.status, () => draft.resolutionNote, editingReporterEmail], () => {
+  const report = editing.value
+  if (!report)
+    return
+  if (!canNotifyReporter.value) {
+    draft.notifyReporter = false
+    return
+  }
+  if (!notifyTouched.value) {
+    draft.notifyReporter = shouldDefaultNotifyReporter({
+      beforeStatus: report.status ?? 'new',
+      afterStatus: draft.status,
+      beforeNote: report.resolutionNote,
+      afterNote: draft.resolutionNote,
+      hasReporterEmail: Boolean(editingReporterEmail.value),
+    })
+  }
+})
 
 async function load() {
   failure.value = null
@@ -137,7 +167,10 @@ function openReview(report: FeedbackReport) {
   draft.resolutionNote = report.resolutionNote ?? ''
   draft.triageNote = report.triageNote ?? ''
   draft.fixRef = report.fixRef ?? ''
+  draft.notifyReporter = false
+  notifyTouched.value = false
   saveError.value = null
+  saveNotice.value = null
 }
 
 async function saveReview() {
@@ -146,16 +179,24 @@ async function saveReview() {
     return
   saving.value = true
   saveError.value = null
-  await getAppFetch()(`/api/admin/feedback/${target.id}`, {
+  await getAppFetch()<{ reporterNotification?: { _tag: 'Sent', email: string } | { _tag: 'Skipped', email: string, reason: string } | { _tag: 'Failed', message: string } | { _tag: 'NoEmail' } }>(`/api/admin/feedback/${target.id}`, {
     method: 'PATCH',
     body: {
       status: draft.status,
       resolutionNote: draft.resolutionNote.trim() || null,
       triageNote: draft.triageNote.trim() || null,
       fixRef: draft.fixRef.trim() || null,
+      notifyReporter: draft.notifyReporter && canNotifyReporter.value,
     },
   })
-    .then(async () => {
+    .then(async (res) => {
+      const outcome = res?.reporterNotification
+      if (outcome?._tag === 'Failed')
+        saveNotice.value = `Saved, but email failed: ${outcome.message}`
+      else if (outcome?._tag === 'Sent')
+        saveNotice.value = `Saved and emailed ${outcome.email}.`
+      else if (outcome?._tag === 'Skipped')
+        saveNotice.value = `Saved. Email skipped (${outcome.reason}).`
       if (editing.value?.id === target.id)
         editing.value = null
       await load()
@@ -246,6 +287,7 @@ const columns: TableColumn<Row>[] = [
       </div>
     </div>
     <UAlert v-if="failure" color="error" variant="subtle" title="Feedback reports could not load." :description="failure" />
+    <UAlert v-if="saveNotice" color="neutral" variant="subtle" :description="saveNotice" />
     <UTable :data="rows" :columns="columns" :loading="!listing && !failure" empty="No feedback reports yet.">
       <template #status-cell="{ row }">
         <UBadge variant="subtle" :color="statusBadgeColor(row.original.status)">
@@ -311,6 +353,19 @@ const columns: TableColumn<Row>[] = [
               <p v-else class="text-xs text-muted">
                 {{ draft.status === 'fixed' || draft.status === 'replied' ? 'No note yet. Add a short note so the user knows what changed.' : 'Status badge only until you add a resolution note.' }}
               </p>
+            </div>
+            <div class="rounded-lg border border-default px-3 py-2.5">
+              <UCheckbox
+                :model-value="draft.notifyReporter"
+                :disabled="!canNotifyReporter"
+                :label="editingReporterEmail ? `Email reporter (${editingReporterEmail})` : 'Email reporter'"
+                :description="!editingReporterEmail
+                  ? 'No email address on file for this submission.'
+                  : (draft.status !== 'fixed' && draft.status !== 'replied')
+                    ? 'Available when status is fixed or replied.'
+                    : 'Sends a short update with your resolution note from harlan@harlanzw.com.'"
+                @update:model-value="val => { notifyTouched = true; draft.notifyReporter = val === true }"
+              />
             </div>
           </div>
 
