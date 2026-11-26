@@ -1,9 +1,12 @@
 import type { H3Event } from 'h3'
 import type { ZodType } from 'zod'
+import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { migratedDatabase, proDatabase } from '~~/tests/support/migrated-d1'
 import feedbackResource from '../../admin/resources/feedback'
 import proFeedbackResource from '../../admin/resources/pro-feedback'
+import { feedback as feedbackTable } from '../../database/_surface'
+import { feedbackTriageSet, listDashboardFeedbackHistory } from '../../utils/dashboard-feedback'
 import feedback from './feedback.post'
 
 interface Context { event: H3Event, db: ReturnType<typeof useDrizzle>, caller: { user: { id: number } }, team: { team: { teamId: number } }, body: unknown }
@@ -74,5 +77,63 @@ it('lists the stored report in the admin Pro feedback and Feedback resources', a
   for (const listing of [pro, all]) {
     expect(listing.total).toBe(1)
     expect(listing.rows[0]).toMatchObject({ path: '/pro/dashboard', thumb: 'up', comment: 'Show the sitemap age', userId: 7 })
+  }
+})
+
+it('returns only the account submissions with public resolutions and hides internal triage notes', async () => {
+  sqlite.prepare('INSERT INTO users (user_id, public_id, name, email, avatar, last_login, sub, current_team_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(8, 'user-8', 'Other', '8@example.test', '', Date.now(), 'sub-8', 1)
+  await send({ intent: 'bug', path: '/pro/dashboard/sites/s_1', comment: 'Blank chart' })
+  await send({ intent: 'other', path: '/pro/dashboard', sentiment: 'happy', comment: 'Duplicate' })
+  await (feedback as unknown as (context: Context) => Promise<unknown>)({
+    event: {} as H3Event,
+    db: db as unknown as ReturnType<typeof useDrizzle>,
+    caller: { user: { id: 8 } },
+    team: { team: { teamId: 1 } },
+    body: { path: '/pro/dashboard', sentiment: 'love', comment: 'Other user' },
+  })
+
+  const fixedAt = new Date('2026-11-22T12:00:00.000Z')
+  const stored = sqlite.prepare('SELECT feedback_id, comment FROM feedback ORDER BY feedback_id').all() as Array<{ feedback_id: number, comment: string }>
+  const firstId = stored.find(r => r.comment === 'Blank chart')!.feedback_id
+  const secondId = stored.find(r => r.comment === 'Duplicate')!.feedback_id
+
+  await db.update(feedbackTable)
+    .set(feedbackTriageSet({
+      status: 'fixed',
+      triageNote: 'Private root cause',
+      resolutionNote: 'Fixed the site-switch cache reset.',
+      fixRef: '#42',
+    }, fixedAt))
+    .where(eq(feedbackTable.feedbackId, firstId))
+  await db.update(feedbackTable)
+    .set(feedbackTriageSet({
+      status: 'ignored',
+      triageNote: 'Private duplicate reason',
+    }, fixedAt))
+    .where(eq(feedbackTable.feedbackId, secondId))
+
+  const history = await listDashboardFeedbackHistory(db as unknown as ReturnType<typeof useDrizzle>, 7)
+  expect(history.hasMore).toBe(false)
+  expect(history.items).toHaveLength(2)
+  const fixedItem = history.items.find(item => item.comment === 'Blank chart')!
+  const ignoredItem = history.items.find(item => item.comment === 'Duplicate')!
+  expect(fixedItem).toMatchObject({
+    id: String(firstId),
+    intent: 'bug',
+    resolution: 'fixed',
+    resolutionNote: 'Fixed the site-switch cache reset.',
+    resolvedAt: fixedAt.toISOString(),
+  })
+  expect(ignoredItem).toMatchObject({
+    id: String(secondId),
+    intent: 'other',
+    sentiment: 'happy',
+    resolution: 'closed',
+    resolutionNote: null,
+    resolvedAt: null,
+  })
+  for (const item of history.items) {
+    expect(item).not.toHaveProperty('triageNote')
+    expect(item).not.toHaveProperty('fixRef')
   }
 })

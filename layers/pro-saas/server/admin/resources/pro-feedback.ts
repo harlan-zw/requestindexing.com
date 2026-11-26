@@ -1,9 +1,13 @@
 import type { SQL, SQLWrapper } from 'drizzle-orm'
+import type { FeedbackStatus } from '../../../shared/feedback'
 import type { AdminCtx, AdminListQuery } from '../admin-shell'
 import { and, asc, count, desc, eq, inArray, like, or } from 'drizzle-orm'
 import { getUserDisplayMetaMap } from '../../../../pro-saas-auth/server/utils/auth/identity'
+import { FEEDBACK_STATUSES } from '../../../shared/feedback'
 import { feedback } from '../../database/_surface'
 import { defineAdminResource } from '../admin-shell'
+
+const FEEDBACK_STATUS_SET = new Set<string>(FEEDBACK_STATUSES)
 
 interface ProFeedbackRow {
   id: number
@@ -13,6 +17,12 @@ interface ProFeedbackRow {
   metadata: Record<string, unknown> | null
   createdAt: Date | null
   userId: number | null
+  status: FeedbackStatus
+  triageNote: string | null
+  resolutionNote: string | null
+  fixRef: string | null
+  fixedAt: Date | null
+  repliedAt: Date | null
 }
 
 const sortableMap: Record<string, SQLWrapper> = {
@@ -103,10 +113,15 @@ export default defineAdminResource<ProFeedbackRow>({
 
     const filters: SQL[] = []
     if (q.search) {
-      const searchFilter = or(like(feedback.comment, `%${q.search}%`), like(feedback.path, `%${q.search}%`))
+      const searchFilter = or(like(feedback.comment, `%${q.search}%`), like(feedback.path, `%${q.search}%`), like(feedback.resolutionNote, `%${q.search}%`))
       if (searchFilter)
         filters.push(searchFilter)
     }
+    const statusFilter = typeof q.filters?.status === 'string' ? q.filters.status : undefined
+    if (statusFilter === 'open')
+      filters.push(inArray(feedback.status, ['new', 'triaged', 'fixing', 'fixed']))
+    else if (statusFilter && statusFilter !== 'all' && FEEDBACK_STATUS_SET.has(statusFilter))
+      filters.push(eq(feedback.status, statusFilter as FeedbackStatus))
     const whereExpr = filters.length ? and(...filters) : undefined
 
     const orderCol = q.sort ? sortableMap[q.sort.key] : feedback.createdAt
@@ -121,6 +136,12 @@ export default defineAdminResource<ProFeedbackRow>({
         metadata: feedback.metadata,
         createdAt: feedback.createdAt,
         userId: feedback.userId,
+        status: feedback.status,
+        triageNote: feedback.triageNote,
+        resolutionNote: feedback.resolutionNote,
+        fixRef: feedback.fixRef,
+        fixedAt: feedback.fixedAt,
+        repliedAt: feedback.repliedAt,
       })
         .from(feedback)
         .where(whereExpr)
@@ -156,6 +177,12 @@ export default defineAdminResource<ProFeedbackRow>({
         metadata: feedback.metadata,
         createdAt: feedback.createdAt,
         userId: feedback.userId,
+        status: feedback.status,
+        triageNote: feedback.triageNote,
+        resolutionNote: feedback.resolutionNote,
+        fixRef: feedback.fixRef,
+        fixedAt: feedback.fixedAt,
+        repliedAt: feedback.repliedAt,
       })
       .from(feedback)
       .where(eq(feedback.feedbackId, Number(id)))

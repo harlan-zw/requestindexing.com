@@ -69,7 +69,7 @@ function parsePositiveInteger(value: unknown, fallback: number, max: number): nu
 
 /**
  * Parse a list request's query once, at the route. Ported from nuxtseo.com
- * `admin-list-query.ts`, without `filters`: no resource here reads one.
+ * `admin-list-query.ts`.
  */
 export function parseAdminListQuery(query: Record<string, unknown>, defaultPerPage: number): ParseAdminListQueryResult {
   const issues: AdminListQueryIssue[] = []
@@ -92,10 +92,23 @@ export function parseAdminListQuery(query: Record<string, unknown>, defaultPerPa
       issues.push({ field: 'sort', message: 'must use key:asc or key:desc' })
   }
 
+  const filters: Record<string, unknown> = {}
+  for (const [rawKey, value] of Object.entries(query)) {
+    const match = /^filter\[([^\]]+)\]$/.exec(rawKey)
+    if (match && typeof value === 'string' && value.length > 0)
+      filters[match[1]!] = value
+  }
+
   if (issues.length > 0 || page === null || perPage === null)
     return { _tag: 'Err', issues }
   return {
     _tag: 'Ok',
-    value: { search: typeof query.search === 'string' ? query.search : undefined, sort, page, perPage },
+    value: {
+      search: typeof query.search === 'string' ? query.search : undefined,
+      sort,
+      filters: Object.keys(filters).length > 0 ? filters : undefined,
+      page,
+      perPage,
+    },
   }
 }
