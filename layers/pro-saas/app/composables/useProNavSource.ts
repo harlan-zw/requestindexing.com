@@ -30,6 +30,9 @@ export function provideProNavSource(input: ProNavSourceInput): ProShellNavSource
   const { session } = useUserSession()
   const { caller } = useCaller()
   const feedback = useProFeedback()
+  onMounted(() => {
+    feedback.prefetchUnread()
+  })
   const flags = computed(() => readProFeatureFlags(useRuntimeConfig().public))
 
   const access: ProShellAccessAdapter = (ability, teamId) => {
@@ -52,5 +55,6 @@ export function provideProNavSource(input: ProNavSourceInput): ProShellNavSource
     access,
     hasFeature: feature => (flags.value as Record<string, boolean | undefined>)[feature] === true,
     openFeedback: context => feedback.open(context),
+    feedbackUnreadCount: feedback.unreadCount,
   })
 }

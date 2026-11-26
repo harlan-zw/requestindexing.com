@@ -10,6 +10,7 @@ export const feedbackTriagePatchSchema = z.object({
   triageNote: z.string().trim().max(1000).nullable().optional(),
   resolutionNote: z.string().trim().max(1000).nullable().optional(),
   fixRef: z.string().trim().max(200).nullable().optional(),
+  notifyReporter: z.boolean().optional(),
 }).superRefine((value, ctx) => {
   if (value.status === 'ignored' && !value.triageNote?.trim())
     ctx.addIssue({ code: 'custom', path: ['triageNote'], message: 'Say why this feedback is ignored.' })

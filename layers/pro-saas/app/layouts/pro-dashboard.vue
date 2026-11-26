@@ -309,6 +309,8 @@ function onPageError(error: unknown) {
       :account="feedbackAccount"
       :submit="feedback.submit"
       :load-history="feedback.loadHistory"
+      :unread-count="feedback.unreadCount.value"
+      @history-seen="feedback.markHistorySeen"
     />
   </ProShellDashboardFrame>
 </template>
