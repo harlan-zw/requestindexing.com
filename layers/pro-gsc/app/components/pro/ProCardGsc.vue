@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import type { SearchConsoleTrendDay } from '@nuxtseo/pro-search/shared/search-console-trend'
 import type { Period } from '../../composables/useGscPeriod'
 import { gscMetricColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
 import { formatReportingDay } from '@nuxtseo/design-system/app/composables/formatting'
@@ -129,8 +130,8 @@ watch(() => graph.value.length, (len) => {
     hasEverHadData.value = true
 }, { immediate: true })
 
-const tooltipData = ref<DateAnalytics | null>(null)
-const tooltipPrev = ref<DateAnalytics | null>(null)
+const tooltipData = ref<SearchConsoleTrendDay | null>(null)
+const tooltipPrev = ref<SearchConsoleTrendDay | null>(null)
 const tooltipEstimated = ref(false)
 
 const TOOLTIP_WIDTH = 200
@@ -228,29 +229,30 @@ function tooltipDelta(col: string): number {
     return 0
   if ((col === 'position' || col === 'ctr') && (!(cur.impressions > 0) || !(prev.impressions > 0)))
     return 0
-  const c = cur[col as keyof DateAnalytics] as number
-  const p = prev[col as keyof DateAnalytics] as number
-  if (!Number.isFinite(c) || !Number.isFinite(p))
+  const c = cur[col as keyof SearchConsoleTrendDay]
+  const p = prev[col as keyof SearchConsoleTrendDay]
+  if (typeof c !== 'number' || typeof p !== 'number' || !Number.isFinite(c) || !Number.isFinite(p))
     return 0
   if (col === 'position') {
     if (!c || !p)
       return 0
     return Math.round((p - c) / p * 100)
   }
-  return calcTrendPercent(c as number, p as number)
+  return calcTrendPercent(c, p)
 }
 
-function formatMetricValue(col: string, data: PeriodTotals): string {
-  if (!Number.isFinite(data[col as keyof PeriodTotals]))
+function formatMetricValue(col: string, data: PeriodTotals | SearchConsoleTrendDay): string {
+  const value = data[col as keyof PeriodTotals]
+  if (typeof value !== 'number' || !Number.isFinite(value))
     return '—'
-  if ((col === 'position' || col === 'ctr') && (!(data.impressions > 0) || !Number.isFinite(data[col]) || (col === 'position' && data.position < 1)))
+  if ((col === 'position' || col === 'ctr') && (!(data.impressions > 0) || (col === 'position' && value < 1)))
     return '—'
   if (col === 'clicks')
     return useProHumanFriendlyNumber(data.clicks)
   if (col === 'impressions')
     return useProHumanFriendlyNumber(data.impressions)
   if (col === 'position')
-    return data.position.toFixed(1)
+    return value.toFixed(1)
   if (col === 'ctr')
     return `${(data.ctr * 100).toFixed(1)}%`
   return ''
@@ -266,7 +268,7 @@ function sparklineData(col: string): number[] {
   })
 }
 
-function onTooltip(data: DateAnalytics | null, prev: DateAnalytics | null, isEstimated: boolean) {
+function onTooltip(data: SearchConsoleTrendDay | null, prev: SearchConsoleTrendDay | null, isEstimated: boolean) {
   // Suppress hover tooltip while dragging. The selection overlay owns the visual.
   if (isDragging.value) {
     tooltipData.value = null

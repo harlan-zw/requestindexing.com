@@ -308,6 +308,7 @@ function onPageError(error: unknown) {
       :context="feedbackContext"
       :account="feedbackAccount"
       :submit="feedback.submit"
+      :load-history="feedback.loadHistory"
     />
   </ProShellDashboardFrame>
 </template>

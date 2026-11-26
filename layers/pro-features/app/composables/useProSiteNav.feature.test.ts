@@ -23,10 +23,10 @@ function labelsOf(section: { links: Array<{ label: string }> }) {
 }
 
 describe('useProSiteNav', () => {
-  it('groups the site rows under Search Console, Indexing and a settings rail', () => {
+  it('groups the site rows under Google Search Console, Indexing and a settings rail', () => {
     const { sections, footerLinks } = nav()
 
-    expect(sections.value.map(section => section.label)).toEqual(['Search Console', 'Indexing'])
+    expect(sections.value.map(section => section.label)).toEqual(['Google Search Console', 'Indexing'])
     expect(labelsOf(sections.value[0]!)).toEqual(['Overview', 'Queries', 'Pages', 'Countries'])
     expect(labelsOf(sections.value[1]!)).toEqual(['Overview', 'Submissions', 'Recovery', 'Sitemaps', 'URLs', 'Watched URLs'])
     expect(footerLinks.value.map(link => link.label)).toEqual(['Site settings'])
@@ -74,10 +74,10 @@ describe('useProSiteNav', () => {
     expect(urls.active!(`/pro/dashboard/sites/${SITE}/indexing`)).toBe(false)
   })
 
-  it('puts Webmaster Tools in its own row when Bing is enabled', () => {
-    expect(nav().pinnedLinks.value.map(link => link.label)).not.toContain('Webmaster Tools')
+  it('puts Bing Webmaster Tools in its own row when Bing is enabled', () => {
+    expect(nav().pinnedLinks.value.map(link => link.label)).not.toContain('Bing Webmaster Tools')
     const flagged = nav({ flags: { bing: true } })
-    const webmasterTools = flagged.pinnedLinks.value.find(link => link.label === 'Webmaster Tools')
+    const webmasterTools = flagged.pinnedLinks.value.find(link => link.label === 'Bing Webmaster Tools')
     const path = `/pro/dashboard/sites/${SITE}/webmaster-tools`
 
     expect(webmasterTools?.to).toBe(path)
