@@ -9,6 +9,7 @@ import type { IndexingInspectResult, IndexingSite, IndexingSitemapProblems } fro
 import type { SitemapLiveness } from '#layers/indexing/shared/contracts/sitemap-liveness'
 import type { GscdumpInspectRefused } from '#layers/pro-gsc/app/composables/useProGscdump'
 import type { GscdumpInspectRateLimited, GscdumpInspectResponse, GscdumpSitemapsResponse } from '#layers/pro-gsc/shared/gscdump-api'
+import { detectPreviewSiteSignals } from '@nuxtseo/pro-shell/shared/preview-site'
 
 /** The days the Portfolio Changes roll-up covers, ending today (UTC). */
 export const INDEXING_CHANGES_WINDOW_DAYS = 28
@@ -28,12 +29,14 @@ export interface RequestIndexingSiteRow {
 
 /** A roster Site as the indexing sections address it. `id` and `ref` are both the route id. */
 export function toIndexingSite(site: RequestIndexingSiteRow): IndexingSite {
+  const url = site.url?.startsWith('sc-domain:') ? `https://${site.url.slice('sc-domain:'.length)}` : site.url
   return {
     id: site.id,
     ref: site.id,
     label: site.label,
-    url: site.url?.startsWith('sc-domain:') ? `https://${site.url.slice('sc-domain:'.length)}` : site.url,
+    url,
     dataId: site.gscdumpSiteId,
+    preview: url ? detectPreviewSiteSignals({ url }).classification === 'likely_preview' : false,
   }
 }
 

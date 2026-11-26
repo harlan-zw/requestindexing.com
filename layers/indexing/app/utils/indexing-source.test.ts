@@ -5,7 +5,13 @@ const site = { id: 's_one', label: 'example.com', url: 'sc-domain:example.com', 
 
 describe('toIndexingSite', () => {
   it('addresses a Site by its route id and reads data with its gscdump id', () => {
-    expect(toIndexingSite(site)).toEqual({ id: 's_one', ref: 's_one', label: 'example.com', url: 'https://example.com', dataId: 'g_one' })
+    expect(toIndexingSite(site)).toEqual({ id: 's_one', ref: 's_one', label: 'example.com', url: 'https://example.com', dataId: 'g_one', preview: false })
+  })
+
+  it('flags staging and preview hosts as preview', () => {
+    expect(toIndexingSite({ ...site, url: 'https://csland-staging.fun/' }).preview).toBe(true)
+    expect(toIndexingSite({ ...site, url: 'https://demo-app.netlify.app/' }).preview).toBe(true)
+    expect(toIndexingSite({ ...site, url: 'https://mdream.dev/' }).preview).toBe(false)
   })
 
   it('reads nothing for a Site with no Search Console link', () => {

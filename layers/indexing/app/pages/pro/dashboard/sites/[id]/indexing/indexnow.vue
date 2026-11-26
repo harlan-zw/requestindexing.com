@@ -3,6 +3,7 @@ import type { IndexNowSubmissionReceiptV1 } from '@gscdump/contracts/v1/http'
 import type { GscdumpV1OperationResponse } from '@gscdump/sdk/v1'
 import { indexNowConfigureV1Schema, indexNowKeyV1Schema, indexNowSubmitV1Schema } from '@gscdump/contracts/v1/http'
 import { isGscdumpV1Error } from '@gscdump/sdk/v1'
+import { assessIndexingSubmissionPreviewRisk } from '@nuxtseo/pro-shell/shared/preview-site'
 import { useMounted } from '@vueuse/core'
 import { customAlphabet, nanoid } from 'nanoid'
 import { useIndexNowConnection } from '#layers/indexing/app/composables/useSiteSubmissions'
@@ -49,12 +50,17 @@ const receipts = useGscdumpQuery<GscdumpV1OperationResponse<'partner.sites.index
   [receiptOffset],
 )
 const setup = computed(() => connection.data.value)
+const previewConfirmed = ref(false)
+const previewRisk = computed(() => {
+  const host = setup.value?.host || site.value?.url || ''
+  return host ? assessIndexingSubmissionPreviewRisk({ url: host }) : null
+})
 const defaultKeyLocation = computed(() => setup.value && key.value.trim()
   ? `https://${setup.value.host}/${key.value.trim()}.txt`
   : '')
 const publishedKeyLocation = computed(() => setup.value && setup.value._tag !== 'disconnected' ? setup.value.keyLocation : null)
 const setupChanged = computed(() => Boolean(key.value.trim()) || (Boolean(keyLocation.value.trim()) && keyLocation.value.trim() !== publishedKeyLocation.value))
-const canSubmit = computed(() => canWrite.value && setup.value?._tag === 'connected' && !connection.error.value && !setupChanged.value && urls.value.length > 0 && urls.value.length <= 1000)
+const canSubmit = computed(() => canWrite.value && setup.value?._tag === 'connected' && !connection.error.value && !setupChanged.value && urls.value.length > 0 && urls.value.length <= 1000 && (!previewRisk.value?.risky || previewConfirmed.value))
 
 // A repeated attempt for the same batch keeps its key after a network failure.
 // Editing the batch produces a fresh key, so the engine can deduplicate retries.
@@ -218,6 +224,7 @@ watch(engineId, () => {
   savedKey.value = ''
   keyLocation.value = ''
   urlInput.value = ''
+  previewConfirmed.value = false
   batch = undefined
   receiptOffset.value = 0
   action.value = { _tag: 'idle' }
@@ -245,6 +252,23 @@ function formatDate(value: string) {
       <p class="mb-4 max-w-2xl text-base text-muted">
         IndexNow notifies Bing and other participating search engines about new or changed URLs. Google is not one of them.
       </p>
+      <UiAlert
+        v-if="previewRisk?.risky"
+        status="warning"
+        title="This looks like a staging or preview URL"
+        :description="previewRisk.reason ?? undefined"
+        data-testid="indexnow-preview-risk"
+        class="mb-4"
+      >
+        <template #default>
+          <UCheckbox
+            :model-value="previewConfirmed"
+            label="I confirm this is a live production Site I want search engines to index."
+            class="mt-3"
+            @update:model-value="previewConfirmed = $event === true"
+          />
+        </template>
+      </UiAlert>
       <UiCard v-if="!engineId" size="lg">
         <p class="text-base text-muted">
           Connect this Site before setting up IndexNow.
