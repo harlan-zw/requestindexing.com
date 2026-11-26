@@ -3,6 +3,7 @@ import type { SiteHoldReason } from '@gscdump/contracts'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { useIntervalFn } from '@vueuse/core'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { HELD_LABEL, holdMessage, SITE_LINK_REFUSED } from '#layers/pro-gsc/shared/entitlement-copy'
 import { NO_PROPERTY_DETAIL_OUTSIDE_LIST, noPropertyTitle } from '#layers/pro-gsc/shared/no-property-copy'
 import ProNoPropertyActions from '#layers/pro-saas/app/components/pro/ProNoPropertyActions.vue'
@@ -77,6 +78,7 @@ async function onSiteConnected() {
 }
 
 const toast = useToast()
+const retryingSiteId = ref<string | null>(null)
 const siteToRemove = ref<SiteRow | null>(null)
 const { removeSite: removeSiteById, removing } = useRemoveSite()
 const confirmOpen = computed({
@@ -87,11 +89,36 @@ const confirmOpen = computed({
   },
 })
 
+async function retryHold(row: SiteRow) {
+  if (retryingSiteId.value || !canManageSites.value)
+    return
+  retryingSiteId.value = row.siteId
+  try {
+    await getAppFetch()(`/api/pro/sites/${encodeURIComponent(row.siteId)}/retry-hold`, { method: 'POST' })
+    toast.add({ title: 'Measurement queued', description: `Request Indexing is measuring ${row.label} again.`, color: 'success' })
+    await refresh()
+  }
+  catch (err: unknown) {
+    const e = err as { data?: { message?: string }, message?: string } | null
+    toast.add({ title: 'Could not retry check', description: e?.data?.message || e?.message || 'Try again in a moment.', color: 'error' })
+  }
+  finally {
+    retryingSiteId.value = null
+  }
+}
+
 function rowMenuItems(row: SiteRow): DropdownMenuItem[][] {
   const primary: DropdownMenuItem[] = [
     { label: 'Open', icon: 'i-heroicons-arrow-top-right-on-square', to: row.to },
     { label: 'Settings', icon: 'i-heroicons-cog-6-tooth', to: `${row.to}/settings` },
   ]
+  if (canManageSites.value && row.hold === 'size_unknown') {
+    primary.push({
+      label: 'Retry check',
+      icon: 'i-heroicons-arrow-path',
+      onSelect: () => { retryHold(row) },
+    })
+  }
   if (!canManageSites.value)
     return [primary]
   return [primary, [{
@@ -203,9 +230,20 @@ async function removeSite() {
             <span class="block truncate font-mono text-xs text-muted">{{ row.property }}</span>
           </UiTableTd>
           <UiTableTd>
-            <UTooltip v-if="row.hold" :text="holdMessage(row.hold)">
-              <UBadge color="warning" variant="subtle" :label="HELD_LABEL" />
-            </UTooltip>
+            <div v-if="row.hold" class="flex items-center gap-2">
+              <UTooltip :text="holdMessage(row.hold)">
+                <UBadge color="warning" variant="subtle" :label="HELD_LABEL" />
+              </UTooltip>
+              <UiButton
+                v-if="row.hold === 'size_unknown' && canManageSites"
+                purpose="quiet"
+                size="xs"
+                :loading="retryingSiteId === row.siteId"
+                @click="retryHold(row)"
+              >
+                Retry check
+              </UiButton>
+            </div>
             <UTooltip v-else-if="row.refused" :text="SITE_LINK_REFUSED">
               <span class="text-sm">{{ row.syncLabel }}</span>
             </UTooltip>
