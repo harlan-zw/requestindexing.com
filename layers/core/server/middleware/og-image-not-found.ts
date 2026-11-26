@@ -17,6 +17,7 @@ export default defineEventHandler((event) => {
   if (import.meta.dev || import.meta.prerender)
     return
 
-  if (event.path === '/_og' || event.path.startsWith('/_og/'))
+  const pathname = event.url?.pathname ?? event.path.split('?', 1)[0]!
+  if (pathname === '/_og' || pathname.startsWith('/_og/'))
     return createFast404Response(event.req.method)
 })

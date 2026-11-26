@@ -48,6 +48,7 @@ const ALLOWED_PREFIXES = [
   '/comparisons',
   '/skills',
   '/llms',
+  '/.well-known/agent-skills',
 ] as const
 
 const ALLOWED_EXACT_PATHS = new Set<string>([

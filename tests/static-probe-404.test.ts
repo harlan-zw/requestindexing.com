@@ -93,6 +93,8 @@ describe('isStaticProbe404', () => {
     '/index.md',
     '/google-indexing-api.md',
     '/skills/google-indexing/SKILL.md',
+    '/.well-known/agent-skills/index.json',
+    '/.well-known/agent-skills/google-indexing/SKILL.md',
     '/get-started',
     '/privacy',
     '/terms',
