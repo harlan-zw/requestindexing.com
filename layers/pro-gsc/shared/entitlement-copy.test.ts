@@ -28,10 +28,15 @@ describe('refusalMessage', () => {
   })
 
   it('explains a held Site with the hold reason, never with gscdump\'s Local mode advice', () => {
-    const message = refusalMessage({ reason: 'site_held', hold: 'size_limit' })
-
-    expect(message).toBe(holdMessage('size_limit'))
-    expect(message).not.toMatch(/Local mode|CLI|Google keys/)
+    for (const hold of ['size_limit', 'sitemap_limit', 'size_unknown', 'size_pending'] as const) {
+      const message = refusalMessage({ reason: 'site_held', hold })
+      expect(message).toBe(holdMessage(hold))
+      expect(message).not.toMatch(/Local mode|CLI|Google keys/)
+    }
+    expect(holdMessage('size_limit')).toContain('manual URL submission stays available')
+    expect(holdMessage('sitemap_limit')).toContain('manual URL submission stays available')
+    expect(holdMessage('size_unknown')).toContain('Retry check')
+    expect(holdMessage('size_unknown')).not.toContain('Remove the Site')
   })
 })
 

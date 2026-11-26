@@ -383,9 +383,9 @@ These assets apply to Site connection, held Sites, URL Inspection refusals, the 
 | Held notice title | This Site is held |
 | Site list, registration refused | Not linked |
 | Registration refused, detail | Request Indexing could not link Search Console for this Site. Your Free allowance was full, or its property is already connected as another Site. Remove a Site or reconnect Google to try again. |
-| Held, size limit | This Site adds more Search Console rows each day than the Free allowance accepts. Its Search Console data is not imported. |
-| Held, sitemap limit | The sitemaps of this Site list more URLs than the Free allowance accepts. Its Search Console data is not imported. |
-| Held, size unknown | Request Indexing could not measure the size of this Site, so its Search Console data is not imported. Remove the Site and connect it again to retry. |
+| Held, size limit | This Site adds more Search Console rows each day than the Free allowance accepts. Search Console history is not imported, while manual URL submission stays available. |
+| Held, sitemap limit | The sitemaps of this Site list more URLs than the Free allowance accepts. Search Console history is not imported, while manual URL submission stays available. |
+| Held, size unknown | Request Indexing could not measure the size of this Site, so Search Console history did not start yet. Use Retry check on the Sites page to measure it again. |
 | Held, size pending | Request Indexing is measuring the size of this Site. The import of its Search Console data starts when the measurement succeeds. |
 | URL Inspection allowance reached | You used the {limit} URL Inspections in this month's Free allowance. URL Inspection starts again on {date}. |
 | URL Inspection off | URL Inspection is off for this Site. Request Indexing cannot inspect its URLs right now. |

@@ -46,11 +46,11 @@ export function siteAllowanceReached(limit: number): string {
 export function holdMessage(hold: SiteHoldReason): string {
   switch (hold) {
     case 'size_limit':
-      return 'This Site adds more Search Console rows each day than the Free allowance accepts. Its Search Console data is not imported.'
+      return 'This Site adds more Search Console rows each day than the Free allowance accepts. Search Console history is not imported, while manual URL submission stays available.'
     case 'sitemap_limit':
-      return 'The sitemaps of this Site list more URLs than the Free allowance accepts. Its Search Console data is not imported.'
+      return 'The sitemaps of this Site list more URLs than the Free allowance accepts. Search Console history is not imported, while manual URL submission stays available.'
     case 'size_unknown':
-      return 'Request Indexing could not measure the size of this Site, so its Search Console data is not imported. Remove the Site and connect it again to retry.'
+      return 'Request Indexing could not measure the size of this Site, so Search Console history did not start yet. Use Retry check on the Sites page to measure it again.'
     case 'size_pending':
       return 'Request Indexing is measuring the size of this Site. The import of its Search Console data starts when the measurement succeeds.'
   }
