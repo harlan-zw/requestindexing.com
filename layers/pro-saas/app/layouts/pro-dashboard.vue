@@ -16,14 +16,14 @@
 import type { ProNavSite } from '#layers/pro-features/app/composables/useProSingleSiteNav'
 import type { SiteLookup, SiteResource } from '#layers/pro-saas/shared/site-lookup'
 import ProShellCommandPalette from '@nuxtseo/pro-shell/app/components/ProShellCommandPalette.vue'
+import ProShellCommandPaletteTrigger from '@nuxtseo/pro-shell/app/components/ProShellCommandPaletteTrigger.vue'
 import ProShellDashboardFrame from '@nuxtseo/pro-shell/app/components/ProShellDashboardFrame.vue'
 import ProShellFeedbackDrawer from '@nuxtseo/pro-shell/app/components/ProShellFeedbackDrawer.vue'
 import ProShellMobileNavTrigger from '@nuxtseo/pro-shell/app/components/ProShellMobileNavTrigger.vue'
 import ProShellPageHeader from '@nuxtseo/pro-shell/app/components/ProShellPageHeader.vue'
-import ProShellSidebarModes from '@nuxtseo/pro-shell/app/components/ProShellSidebarModes.vue'
+import ProShellSidebarHeader from '@nuxtseo/pro-shell/app/components/ProShellSidebarHeader.vue'
 import ProShellSiteSwitcher from '@nuxtseo/pro-shell/app/components/ProShellSiteSwitcher.vue'
 import ProShellUserMenu from '@nuxtseo/pro-shell/app/components/ProShellUserMenu.vue'
-import { useProShellCopy } from '@nuxtseo/pro-shell/app/composables/useProShellCopy'
 import { useProShellRoute } from '@nuxtseo/pro-shell/app/composables/useProShellRoute'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { parseGscConnectReturn } from '#layers/pro-gsc/shared/gsc-grant'
@@ -111,19 +111,13 @@ const scopedSite = computed<ProNavSite | null>(() => {
   return singleSite.value ? sites.value[0]! : null
 })
 
-// nuxtseo.com's `showSiteBack`: on a Site's page, an account with more than
-// one Site gets a way back to all of them above the Site nav. An account with
-// one Site has nowhere wider to go, so it gets none.
 const liveSiteRef = computed(() => {
   if (!routeSiteId.value)
     return singleSite.value ? proNavSiteRef(sites.value[0]!) : null
   const selected = site.value
   return selected && selected.id === routeSiteId.value ? selected.publicId ?? routeSiteId.value : routeSiteId.value
 })
-const showSiteBack = computed(() => !!routeSiteId.value && !singleSite.value)
-const allSitesLabel = useProShellCopy().siteSwitcher.allSites
-const dashboardTo = useProShellRoute()('dashboard')
-const sidebarBack = computed(() => showSiteBack.value && dashboardTo ? { label: allSitesLabel, to: dashboardTo } : null)
+const dashboardTo = useProShellRoute()('dashboard') ?? '/pro/dashboard'
 
 const siteStatus = computed(() => {
   if (!routeSiteId.value)
@@ -204,23 +198,31 @@ function onPageError(error: unknown) {
 
 <template>
   <ProShellDashboardFrame>
+    <template #brand>
+      <div class="flex min-w-0 items-center gap-1.5">
+        <ProShellSidebarHeader :to="dashboardTo" :search="false">
+          <template #brand-mark>
+            <OgBrand :size="22" semantic />
+          </template>
+        </ProShellSidebarHeader>
+        <span class="shrink-0 px-0.5 text-xs font-medium text-dimmed">Beta</span>
+        <ProShellCommandPaletteTrigger class="h-7 min-w-0 flex-1 gap-1.5! px-2!" />
+      </div>
+    </template>
+
     <template #brand-mark>
-      <OgBrand :size="24" semantic />
+      <OgBrand :size="22" semantic />
     </template>
 
     <template #sidebar>
-      <ProShellSidebarModes :back="sidebarBack">
-        <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" class="flex-1" />
-        <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" class="flex-1" />
-      </ProShellSidebarModes>
+      <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" class="flex-1" />
+      <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" class="flex-1" />
     </template>
 
     <template #mobile="{ closeNav }">
       <div class="flex min-w-0 flex-1 flex-col">
-        <ProShellSidebarModes :back="sidebarBack" class="flex-1" @navigate="closeNav">
-          <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" class="flex-1" @navigate="closeNav" />
-          <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" class="flex-1" @navigate="closeNav" />
-        </ProShellSidebarModes>
+        <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" class="flex-1" @navigate="closeNav" />
+        <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" class="flex-1" @navigate="closeNav" />
         <ProShellUserMenu variant="drawer" :items="userMenu" @navigate="closeNav" />
       </div>
     </template>

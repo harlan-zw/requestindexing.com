@@ -52,6 +52,13 @@ const manifest = computed<ProShellNavManifest>(() => ({
   railLabel: 'Manage',
   rail: [
     ...pathNavItems(integrationsRailLinks(integrationsSetup.value)),
+    {
+      id: 'developers',
+      label: 'Agent setup',
+      icon: 'terminal',
+      target: { _tag: 'Route', name: 'developers' },
+      active: (p: string) => p === '/pro/dashboard/developers' || p.startsWith('/pro/dashboard/developers/'),
+    },
     { id: 'sites', label: 'Manage Sites', icon: 'settings', target: { _tag: 'Route', name: 'sites' }, active: (p: string) => p === sitesTo },
   ],
 }))
@@ -115,7 +122,9 @@ const siteLinks = computed<FleetSiteLink[]>(() => sites.map((site) => {
           @click="emit('navigate')"
         >
           <template #icon="{ link }">
-            <UiFavicon :domain="(link as FleetSiteLink).domain" :size="13" decorative class="shrink-0" />
+            <span class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[4px] border border-default bg-default">
+              <UiFavicon :domain="(link as FleetSiteLink).domain" :size="12" decorative class="shrink-0" />
+            </span>
           </template>
         </UiNavList>
       </div>
