@@ -26,7 +26,7 @@ const googleUser = computed(() => {
     data-testid="gsc-consent-preview"
     class="rounded-(--ui-radius) border border-default bg-[color-mix(in_oklab,var(--ui-bg-elevated)_35%,var(--ui-bg))] p-4 shadow-(--elevation-raised) dark:border-accented"
   >
-    <p class="text-xs text-muted">
+    <p class="text-sm text-muted">
       {{ copy.consent.ask }}
     </p>
     <p class="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-base text-highlighted">

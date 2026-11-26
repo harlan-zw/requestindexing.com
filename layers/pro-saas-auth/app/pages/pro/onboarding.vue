@@ -148,7 +148,7 @@ useSeoMeta({
 
       <ProSetupExample v-if="savedPage?._tag !== 'Available'" class="mt-4" :record-view="false" :expanded="!missingScope" />
 
-      <p class="mt-7 text-xs text-muted">
+      <p class="mt-7 text-sm text-muted">
         Already have an account?
         <ULink to="/login" class="font-medium text-highlighted transition-colors hover:text-primary">
           Sign in

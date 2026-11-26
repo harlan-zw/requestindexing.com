@@ -48,7 +48,7 @@ const headingId = computed(() => `step-guide-${name}-title`)
     <!-- The rows match the First Site report's: the URL in mono, then an
          amber dot with Google's coverage state, because none is indexed. -->
     <div v-if="guide.example" class="rounded-md border border-default bg-default/60 px-3 py-2.5 dark:border-accented">
-      <p class="text-xs font-medium text-muted">
+      <p class="text-sm font-medium text-muted">
         {{ guide.example.label }}
       </p>
       <ul class="mt-1.5 space-y-2">

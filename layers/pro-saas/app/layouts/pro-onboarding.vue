@@ -15,7 +15,7 @@ const accountLabel = computed(() => session.value?.user?.email ?? session.value?
 </script>
 
 <template>
-  <ProShellOnboardingSurface class="min-h-screen overflow-clip!" :show-exit="false">
+  <ProShellOnboardingSurface class="min-h-screen overflow-clip! [&_.max-w-6xl]:max-w-[66rem]" :wide="true" :show-exit="false">
     <!-- The mark sits centred and larger above the step, as on gscdump.com.
          It centres on the column, not in the space the account leaves, so it
          leaves the row's flow, and a spacer keeps the row's height. From
