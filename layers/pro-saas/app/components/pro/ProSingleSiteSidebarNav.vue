@@ -8,9 +8,12 @@
 // `useProSingleSiteNav` suppresses the synthesized Overview row.
 import type { ProNavSite } from '#layers/pro-features/app/composables/useProSingleSiteNav'
 import ProShellSidebarNav from '@nuxtseo/pro-shell/app/components/ProShellSidebarNav.vue'
+import ProShellSidebarSiteSwitch from '@nuxtseo/pro-shell/app/components/ProShellSidebarSiteSwitch.vue'
+import { useProShellRoute } from '@nuxtseo/pro-shell/app/composables/useProShellRoute'
+import { useProShellSiteMenu } from '@nuxtseo/pro-shell/app/composables/useProShellSiteMenu'
 import { useRoute } from 'nuxt/app'
 import { computed } from 'vue'
-import { NuxtLink, UiFavicon } from '#components'
+import { NuxtLink, UiFavicon, UiIcon, UiTooltip } from '#components'
 import { useProSingleSiteNav } from '#layers/pro-features/app/composables/useProSingleSiteNav'
 import { gatedSiteNavItems, gatedSiteNavSections } from '../../utils/pro-shell-nav'
 
@@ -23,6 +26,14 @@ function onNavigate() {
 
 const route = useRoute()
 const nav = useProSingleSiteNav(() => site)
+const { activeCount, copy } = useProShellSiteMenu()
+const resolveRoute = useProShellRoute()
+const allSitesTo = computed(() => {
+  const to = resolveRoute('dashboard')
+  return activeCount.value > 1 && to && route.path.replace(/\/$/, '') !== to ? to : null
+})
+const addSiteTo = resolveRoute('addSite')
+const switchActions = computed(() => addSiteTo ? [{ label: 'Connect a Site', icon: 'add', to: addSiteTo }] : [])
 const headerActive = computed(() => route.path === nav.siteTo.value)
 const manifest = computed(() => ({
   pinnedLabel: 'Site',
@@ -36,22 +47,35 @@ const manifest = computed(() => ({
 <template>
   <ProShellSidebarNav :manifest="manifest" @navigate="onNavigate">
     <template #header>
-      <div class="mb-0.5 flex items-center justify-between px-1 lg:mb-2">
-        <!-- The header IS the Site landing row, so it renders like one: the
-             same raised active surface every UiNavList row gets. -->
+      <div class="mb-2 flex items-center rounded-md border border-default bg-default">
+        <UiTooltip v-if="allSitesTo" :text="copy.allSites" side="bottom" trigger-as="child">
+          <NuxtLink
+            :to="allSitesTo"
+            :aria-label="copy.allSites"
+            class="flex size-11 shrink-0 items-center justify-center rounded-l-[5px] border-r border-default text-dimmed transition-colors hover:bg-elevated hover:text-default focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary lg:h-7 lg:w-6"
+            @click="onNavigate"
+          >
+            <UiIcon name="back" class="size-4" aria-hidden="true" />
+          </NuxtLink>
+        </UiTooltip>
         <NuxtLink
           :to="nav.siteTo.value"
-          class="flex min-h-11 min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:min-h-0"
-          :class="headerActive
-            ? 'bg-elevated text-highlighted'
-            : 'text-highlighted hover:bg-elevated dark:text-toned dark:hover:text-highlighted'"
-          :style="headerActive ? { boxShadow: 'var(--elevation-raised)', backgroundImage: 'var(--surface-raised)' } : undefined"
+          class="flex min-h-11 min-w-0 flex-1 items-center gap-2 px-2 py-1 text-sm font-medium transition-colors hover:bg-elevated focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:h-7 lg:min-h-0"
+          :class="[
+            !allSitesTo ? 'rounded-l-[5px]' : undefined,
+            headerActive
+              ? 'text-highlighted'
+              : 'text-highlighted dark:text-toned dark:hover:text-highlighted',
+          ]"
           :aria-current="headerActive ? 'page' : undefined"
           @click="onNavigate"
         >
-          <UiFavicon :domain="nav.siteDomain.value" :size="13" decorative class="shrink-0" />
+          <span class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[4px] border border-default bg-default">
+            <UiFavicon :domain="nav.siteDomain.value" :size="12" decorative class="shrink-0" />
+          </span>
           <span class="truncate">{{ nav.siteLabel.value }}</span>
         </NuxtLink>
+        <ProShellSidebarSiteSwitch :actions="switchActions" />
       </div>
     </template>
   </ProShellSidebarNav>

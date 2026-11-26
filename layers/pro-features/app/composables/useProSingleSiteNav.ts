@@ -75,10 +75,16 @@ export function useProSingleSiteNav(siteSource: MaybeRefOrGetter<ProNavSite | nu
   const decoratedPinnedLinks = computed<ProSiteNavLink[]>(() => pinnedLinks.value.map(decorate))
   const decoratedSections = computed<ProNavSection[]>(() =>
     sections.value.map(section => ({ ...section, links: section.links.map(decorate) })))
-  // A pending Integration joins the rail above Site settings, as upstream. An
-  // account with one Site only ever sees this sidebar, so it must carry it.
+  // A pending Integration and Agent setup join the rail above Site settings,
+  // so one-Site and fleet-opened Site views both keep Agent setup one click away.
   const railLinks = computed<UiNavLink[]>(() => [
     ...integrationsRailLinks(integrationsSetup.value),
+    {
+      label: 'Agent setup',
+      icon: 'terminal',
+      to: '/pro/dashboard/developers',
+      active: (path: string) => path === '/pro/dashboard/developers' || path.startsWith('/pro/dashboard/developers/'),
+    },
     ...footerLinks.value.map(decorate),
   ])
 
