@@ -62,6 +62,23 @@ function configure(app: ReturnType<typeof createApp>) {
       setup: (props, { slots }) => () => h('div', [props.title, slots.default?.()]),
     }))
   }
+  app.component('UiAlert', defineComponent({
+    props: ['title', 'description', 'status'],
+    setup: (props, { slots }) => () => h('div', [props.title, props.description, slots.default?.()]),
+  }))
+  app.component('UCheckbox', defineComponent({
+    props: ['modelValue', 'label', 'disabled'],
+    emits: ['update:modelValue'],
+    setup: (props, { emit }) => () => h('label', [
+      h('input', {
+        type: 'checkbox',
+        checked: !!props.modelValue,
+        disabled: props.disabled,
+        onChange: (event: Event) => emit('update:modelValue', (event.target as HTMLInputElement).checked),
+      }),
+      props.label,
+    ]),
+  }))
   app.component('UFormField', defineComponent({
     props: ['label', 'description'],
     setup: (props, { slots }) => () => h('label', [props.label, slots.default?.(), props.description]),
@@ -283,6 +300,19 @@ describe('indexNow page', () => {
     expect(button(host, 'Submit URLs').disabled).toBe(false)
     await fill(host.querySelector('input')!, 'newkey12')
     expect(button(host, 'Submit URLs').disabled).toBe(true)
+  })
+
+  it('requires explicit confirmation before submitting URLs on a staging host', async () => {
+    connectionData.value = { _tag: 'connected', host: 'staging.example.com', keyLocation: 'https://staging.example.com/abc12345.txt', verifiedAt: '2026-09-30T12:00:00.000Z' }
+    const host = mount()
+    await fill(host.querySelector('textarea')!, 'https://staging.example.com/new')
+    expect(host.textContent).toContain('This looks like a staging or preview URL')
+    expect(button(host, 'Submit URLs').disabled).toBe(true)
+    const checkbox = host.querySelector<HTMLInputElement>('input[type="checkbox"]')!
+    checkbox.checked = true
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }))
+    await nextTick()
+    expect(button(host, 'Submit URLs').disabled).toBe(false)
   })
 
   it('rejects malformed keys and URLs before contacting the engine', async () => {
