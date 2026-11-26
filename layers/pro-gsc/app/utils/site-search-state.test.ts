@@ -34,20 +34,41 @@ describe('resolveSiteSearchState', () => {
 describe('sampleOverlay', () => {
   it('sends an account without Search Console to the Integrations page', () => {
     const overlay = sampleOverlay({ _tag: 'NotLinked' }, { gscConnected: false })
-    expect(overlay?.cta).toEqual({ label: 'Connect Search Console', to: INTEGRATIONS_ROUTE })
+    expect(overlay?.cta).toEqual({ _tag: 'Link', label: 'Connect Search Console', to: INTEGRATIONS_ROUTE })
   })
 
   it('tells a connected account why the Site has no link, and sends it to the Sites list', () => {
     const overlay = sampleOverlay({ _tag: 'NotLinked' }, { gscConnected: true })
     expect(overlay?.description).toContain('could not link Search Console for this Site')
-    expect(overlay?.cta.to).toBe(SITES_ROUTE)
+    expect(overlay?.cta).toEqual({ _tag: 'Link', label: 'Manage Sites', to: SITES_ROUTE })
+  })
+
+  it.each(['size_limit', 'sitemap_limit', 'size_pending'] as const)('routes a %s held Site to Submit to Google and IndexNow instead of Manage Sites', (hold) => {
+    const overlay = sampleOverlay({ _tag: 'Held', hold }, { gscConnected: true, siteId: 's_abc' })
+    expect(overlay?.hold).toBe(hold)
+    expect(overlay?.cta).toEqual({ _tag: 'Link', label: 'Submit to Google', to: '/pro/dashboard/sites/s_abc/indexing/submit' })
+    expect(overlay?.secondaryCta).toEqual({ _tag: 'Link', label: 'Submit with IndexNow', to: '/pro/dashboard/sites/s_abc/indexing/indexnow' })
+    expect(overlay?.description).not.toMatch(/Local mode|CLI|GSC/)
+  })
+
+  it('offers in-place Retry check for size_unknown when the caller can manage Sites', () => {
+    const overlay = sampleOverlay({ _tag: 'Held', hold: 'size_unknown' }, { gscConnected: true, siteId: 's_abc', canManageSites: true })
+    expect(overlay?.hold).toBe('size_unknown')
+    expect(overlay?.cta).toEqual({ _tag: 'RetryHold', label: 'Retry check' })
+    expect(overlay?.secondaryCta).toEqual({ _tag: 'Link', label: 'Submit to Google', to: '/pro/dashboard/sites/s_abc/indexing/submit' })
+  })
+
+  it('falls back to Submit to Google for size_unknown when the caller cannot manage Sites', () => {
+    const overlay = sampleOverlay({ _tag: 'Held', hold: 'size_unknown' }, { gscConnected: true, siteId: 's_abc', canManageSites: false })
+    expect(overlay?.cta).toEqual({ _tag: 'Link', label: 'Submit to Google', to: '/pro/dashboard/sites/s_abc/indexing/submit' })
+    expect(overlay?.secondaryCta).toEqual({ _tag: 'Link', label: 'Submit with IndexNow', to: '/pro/dashboard/sites/s_abc/indexing/indexnow' })
   })
 
   // The old button opened `/pro/dashboard/sites/:id`, which redirects back to
   // this page.
   it('sends a syncing Site to the Sites list, never back to its own dashboard', () => {
     const overlay = sampleOverlay({ _tag: 'Syncing' }, { gscConnected: true })
-    expect(overlay?.cta.to).toBe(SITES_ROUTE)
+    expect(overlay?.cta).toEqual({ _tag: 'Link', label: 'View sync status', to: SITES_ROUTE })
   })
 
   it('shows no overlay while the lifecycle is unread or when the Site is ready', () => {

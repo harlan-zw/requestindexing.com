@@ -7,7 +7,14 @@ import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProGscAddVerify from '#layers/pro-gsc/app/components/pro/ProGscAddVerify.vue'
 import { ADD_VERIFY_ACTION } from '#layers/pro-gsc/shared/add-verify-copy'
 import { siteAllowanceReached, siteAllowanceSummary } from '#layers/pro-gsc/shared/entitlement-copy'
-import { projectPropertyPicker, propertyPickerBlocksConnect } from '#layers/pro-gsc/shared/property-picker'
+import {
+  CONNECTED_SITES_COLLAPSE_THRESHOLD,
+  filterPickerProperties,
+  projectPropertyPicker,
+  PROPERTY_PICKER_FILTER_THRESHOLD,
+  propertyKindLabel,
+  propertyPickerBlocksConnect,
+} from '#layers/pro-gsc/shared/property-picker'
 import { sitePropertyRefusalMessage } from '#layers/pro-gsc/shared/site-property'
 import { PAGE_SETUP_COPY, pagePropertyCoversUrl } from '#layers/pro-saas/shared/page-task'
 import { connectedSiteDomain, parseSiteUrlInput } from '#layers/pro-saas/shared/site-url'
@@ -116,6 +123,11 @@ const cappedAllowance = computed(() => {
   const allowance = preview.value?.siteAllowance
   return allowance?._tag === 'Capped' ? allowance : null
 })
+const allowancePercent = computed(() => {
+  if (!cappedAllowance.value || cappedAllowance.value.allowance <= 0)
+    return 100
+  return Math.min(100, Math.round((cappedAllowance.value.used / cappedAllowance.value.allowance) * 100))
+})
 const atLimit = computed(() => !!cappedAllowance.value && cappedAllowance.value.used >= cappedAllowance.value.allowance)
 // One notice for a full allowance, above every way to connect. Every Connect
 // control is disabled under it, so no click can fail with the same message.
@@ -132,6 +144,17 @@ const picker = computed(() => projectPropertyPicker({
 }))
 // A re-read keeps the list on screen, so the Refresh button carries the wait.
 const listReading = computed(() => picker.value._tag === 'Loading' || gscStatus.value === 'pending')
+
+const propertyFilter = ref('')
+const collapseConnected = computed(() => connectedSites.value.length > CONNECTED_SITES_COLLAPSE_THRESHOLD)
+const showPropertyFilter = computed(() => picker.value._tag === 'Properties' && picker.value.properties.length > PROPERTY_PICKER_FILTER_THRESHOLD)
+const filteredProperties = computed(() => {
+  if (picker.value._tag !== 'Properties')
+    return []
+  return showPropertyFilter.value
+    ? filterPickerProperties(picker.value.properties, propertyFilter.value)
+    : picker.value.properties
+})
 
 watch([atLimit, picker], ([full, state]) => {
   if (full || propertyPickerBlocksConnect(state))
@@ -234,28 +257,58 @@ async function connect(value: string, source: 'field' | 'list') {
 <template>
   <div class="space-y-6">
     <div v-if="connectedSites.length && !targetUrl" class="space-y-2">
-      <h2 class="text-sm font-semibold text-highlighted">
-        Connected
-      </h2>
-      <ul class="space-y-2">
-        <li
-          v-for="site in connectedSites"
-          :key="site.siteId"
-          class="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 px-3 py-2"
-        >
-          <UIcon name="i-heroicons-check-circle" class="size-5 shrink-0 text-primary" aria-hidden="true" />
-          <span class="truncate text-sm text-highlighted">{{ site.domain || site.property }}</span>
-        </li>
-      </ul>
+      <UiDisclosure v-if="collapseConnected" :label="`Connected (${connectedSites.length})`">
+        <ul class="max-h-52 space-y-2 overflow-y-auto pr-1">
+          <li
+            v-for="site in connectedSites"
+            :key="site.siteId"
+            class="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 px-3 py-2"
+          >
+            <UIcon name="i-heroicons-check-circle" class="size-5 shrink-0 text-primary" aria-hidden="true" />
+            <span class="truncate text-sm text-highlighted">{{ site.domain || site.property }}</span>
+          </li>
+        </ul>
+      </UiDisclosure>
+      <template v-else>
+        <h2 class="text-sm font-semibold text-highlighted">
+          Connected
+        </h2>
+        <ul class="space-y-2">
+          <li
+            v-for="site in connectedSites"
+            :key="site.siteId"
+            class="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 px-3 py-2"
+          >
+            <UIcon name="i-heroicons-check-circle" class="size-5 shrink-0 text-primary" aria-hidden="true" />
+            <span class="truncate text-sm text-highlighted">{{ site.domain || site.property }}</span>
+          </li>
+        </ul>
+      </template>
     </div>
 
     <ProAlert v-if="allowanceFullNotice" color="warning" :title="allowanceFullNotice" />
 
     <section class="space-y-3" aria-labelledby="site-add-form-properties">
-      <div class="flex items-center justify-between gap-2">
-        <h2 id="site-add-form-properties" class="text-sm font-semibold text-highlighted">
-          Your Search Console properties
-        </h2>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <h2 id="site-add-form-properties" class="text-sm font-semibold text-highlighted">
+            Your Search Console properties
+          </h2>
+          <div
+            v-if="cappedAllowance"
+            class="inline-flex items-center gap-2 rounded-full border border-default bg-muted px-2.5 py-1 text-xs tabular-nums text-muted"
+            data-testid="site-allowance-pill"
+          >
+            <span class="h-1.5 w-10 overflow-hidden rounded-full bg-accented" aria-hidden="true">
+              <span
+                class="block h-full rounded-full transition-all"
+                :class="atLimit ? 'bg-error' : allowancePercent >= 80 ? 'bg-warning' : 'bg-primary'"
+                :style="{ width: `${allowancePercent}%` }"
+              />
+            </span>
+            <span>{{ siteAllowanceSummary(cappedAllowance.used, cappedAllowance.allowance) }}</span>
+          </div>
+        </div>
         <UButton
           v-if="picker._tag !== 'NotConnected' && picker._tag !== 'Reconnect'"
           color="neutral"
@@ -344,43 +397,76 @@ async function connect(value: string, source: 'field' | 'list') {
           <UButton :to="gscConnectUrl" external color="neutral" variant="outline" label="Connect another Google account" class="min-h-11" />
         </template>
       </div>
-      <ul v-else-if="picker._tag === 'Properties'" class="space-y-2">
-        <li
-          v-for="property in picker.properties"
-          :key="property.siteUrl"
-          class="flex items-center gap-3 rounded-lg border border-default px-3 py-2"
-          data-testid="gsc-property"
+      <div v-else-if="picker._tag === 'Properties'" class="space-y-2.5">
+        <div v-if="showPropertyFilter" class="flex flex-wrap items-center gap-2.5">
+          <UInput
+            v-model="propertyFilter"
+            icon="i-heroicons-magnifying-glass"
+            placeholder="Filter properties..."
+            aria-label="Filter Search Console properties"
+            class="min-w-0 flex-1"
+            data-testid="gsc-property-filter"
+          />
+          <span class="shrink-0 text-xs tabular-nums text-muted" role="status" aria-live="polite">
+            {{ propertyFilter.trim() ? `${filteredProperties.length} of ${picker.properties.length} matching` : `${picker.properties.length} available` }}
+          </span>
+        </div>
+
+        <div
+          v-if="showPropertyFilter && !filteredProperties.length"
+          class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-default px-3.5 py-3 text-sm text-muted"
         >
-          <div class="min-w-0 flex-1">
-            <div class="truncate text-sm text-highlighted">
-              {{ property.domain }}
+          <span>No properties match "{{ propertyFilter.trim() }}".</span>
+          <UButton color="neutral" variant="ghost" size="xs" label="Clear filter" @click="propertyFilter = ''" />
+        </div>
+
+        <ul v-else class="space-y-2" :class="showPropertyFilter ? 'max-h-80 overflow-y-auto pr-1' : ''">
+          <li
+            v-for="property in filteredProperties"
+            :key="property.siteUrl"
+            class="flex items-center gap-3 rounded-lg border border-default px-3 py-2"
+            data-testid="gsc-property"
+          >
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="truncate text-sm text-highlighted">
+                  {{ property.domain }}
+                </span>
+                <UBadge
+                  color="neutral"
+                  variant="subtle"
+                  size="sm"
+                  :label="propertyKindLabel(property.siteUrl)"
+                  class="shrink-0"
+                />
+              </div>
+              <div v-if="!property.verified" class="text-xs text-warning">
+                Unverified for this Google account. Select Verify here, or verify it in Search Console and refresh the list.
+              </div>
             </div>
-            <div v-if="!property.verified" class="text-xs text-warning">
-              Unverified for this Google account. Select Verify here, or verify it in Search Console and refresh the list.
-            </div>
-          </div>
-          <ProGscAddVerify
-            v-if="!property.verified"
-            class="shrink-0"
-            :domain="property.domain"
-            :gsc-return-to="gscReturnTo"
-            label="Verify"
-            :aria-label="`Verify ${property.domain}`"
-          />
-          <UButton
-            v-else
-            color="neutral"
-            variant="subtle"
-            size="sm"
-            class="min-h-11 shrink-0"
-            label="Connect"
-            :aria-label="`Connect ${property.domain}`"
-            :loading="submitting === property.domain"
-            :disabled="atLimit || !!submitting"
-            @click="connect(property.siteUrl, 'list')"
-          />
-        </li>
-      </ul>
+            <ProGscAddVerify
+              v-if="!property.verified"
+              class="shrink-0"
+              :domain="property.domain"
+              :gsc-return-to="gscReturnTo"
+              label="Verify"
+              :aria-label="`Verify ${property.domain}`"
+            />
+            <UButton
+              v-else
+              color="neutral"
+              variant="subtle"
+              size="sm"
+              class="min-h-11 shrink-0"
+              label="Connect"
+              :aria-label="`Connect ${property.domain}`"
+              :loading="submitting === property.domain"
+              :disabled="atLimit || !!submitting"
+              @click="connect(property.siteUrl, 'list')"
+            />
+          </li>
+        </ul>
+      </div>
     </section>
 
     <form v-if="showAddressField && !targetUrl" class="space-y-2" @submit.prevent="connect(url, 'field')">
@@ -412,9 +498,5 @@ async function connect(value: string, source: 'field' | 'list') {
     <ProGscAddVerify v-if="addVerifyDomain" :domain="addVerifyDomain" :gsc-return-to="gscReturnTo" @verified="connectError = null" />
     <!-- A property this Google account lacks, for an account that has others. -->
     <ProGscAddVerify v-else-if="showAddressField" :gsc-return-to="gscReturnTo" :label="ADD_VERIFY_ACTION" />
-
-    <p v-if="cappedAllowance && !atLimit" class="text-xs text-muted">
-      {{ siteAllowanceSummary(cappedAllowance.used, cappedAllowance.allowance) }}
-    </p>
   </div>
 </template>

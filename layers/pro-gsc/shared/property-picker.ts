@@ -113,6 +113,28 @@ export function projectPropertyPicker(input: PropertyPickerInput): PropertyPicke
   return properties.length ? { _tag: 'Properties', properties } : { _tag: 'AllConnected' }
 }
 
+export const PROPERTY_PICKER_FILTER_THRESHOLD = 8
+export const CONNECTED_SITES_COLLAPSE_THRESHOLD = 5
+
+export type PropertyKindLabel = 'Domain' | 'URL prefix'
+
+/** Plain-English label distinguishing Search Console property types. */
+export function propertyKindLabel(siteUrl: string): PropertyKindLabel {
+  return siteUrl.startsWith('sc-domain:') ? 'Domain' : 'URL prefix'
+}
+
+/** Case-insensitive filter over connectable properties by domain, raw property URL, or type label. */
+export function filterPickerProperties(properties: readonly PickerProperty[], query: string): PickerProperty[] {
+  const normalized = query.trim().toLowerCase()
+  if (!normalized)
+    return [...properties]
+  return properties.filter(property =>
+    property.domain.toLowerCase().includes(normalized)
+    || property.siteUrl.toLowerCase().includes(normalized)
+    || propertyKindLabel(property.siteUrl).toLowerCase().includes(normalized),
+  )
+}
+
 /**
  * Whether the picker leaves nothing to connect right now. The wizard offers
  * "Skip and connect it later" on this, the way nuxtseo.com reveals its skip

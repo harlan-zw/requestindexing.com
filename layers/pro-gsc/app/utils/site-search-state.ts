@@ -57,10 +57,9 @@ export function resolveSiteSearchState(input: SiteSearchStateInput): SiteSearchS
   return { _tag: 'Ready' }
 }
 
-export interface SiteSearchCta {
-  label: string
-  to: string
-}
+export type SiteSearchCta
+  = | { readonly _tag: 'Link', readonly label: string, readonly to: string }
+    | { readonly _tag: 'RetryHold', readonly label: string }
 
 /**
  * The next step for a Site with no Search Console link, as nuxtseo.com's
@@ -68,20 +67,55 @@ export interface SiteSearchCta {
  * it on the Integrations page. An account with Search Console had the link
  * refused, and the Sites list is where a Site is removed to make room.
  */
-export function searchConsoleLinkCta(gscConnected: boolean): SiteSearchCta {
+export function searchConsoleLinkCta(gscConnected: boolean): Extract<SiteSearchCta, { _tag: 'Link' }> {
   return gscConnected
-    ? { label: 'Manage Sites', to: SITES_ROUTE }
-    : { label: 'Connect Search Console', to: INTEGRATIONS_ROUTE }
+    ? { _tag: 'Link', label: 'Manage Sites', to: SITES_ROUTE }
+    : { _tag: 'Link', label: 'Connect Search Console', to: INTEGRATIONS_ROUTE }
 }
 
 export interface SampleOverlay {
   message: string
   description: string
+  hold?: SiteHoldReason
   cta: SiteSearchCta
+  secondaryCta?: Extract<SiteSearchCta, { _tag: 'Link' }>
+}
+
+export interface SampleOverlayContext {
+  gscConnected: boolean
+  siteId?: string
+  canManageSites?: boolean
+}
+
+function heldOverlayActions(hold: SiteHoldReason, siteId: string | undefined, canManageSites: boolean): Pick<SampleOverlay, 'cta' | 'secondaryCta'> {
+  if (!siteId)
+    return { cta: { _tag: 'Link', label: 'Manage Sites', to: SITES_ROUTE } }
+
+  const submitGoogle: Extract<SiteSearchCta, { _tag: 'Link' }> = {
+    _tag: 'Link',
+    label: 'Submit to Google',
+    to: `/pro/dashboard/sites/${siteId}/indexing/submit`,
+  }
+  const submitIndexNow: Extract<SiteSearchCta, { _tag: 'Link' }> = {
+    _tag: 'Link',
+    label: 'Submit with IndexNow',
+    to: `/pro/dashboard/sites/${siteId}/indexing/indexnow`,
+  }
+
+  switch (hold) {
+    case 'size_limit':
+    case 'sitemap_limit':
+    case 'size_pending':
+      return { cta: submitGoogle, secondaryCta: submitIndexNow }
+    case 'size_unknown':
+      return canManageSites
+        ? { cta: { _tag: 'RetryHold', label: 'Retry check' }, secondaryCta: submitGoogle }
+        : { cta: submitGoogle, secondaryCta: submitIndexNow }
+  }
 }
 
 /** The sample-data overlay for a state that has no data to show, or null. */
-export function sampleOverlay(state: SiteSearchState, context: { gscConnected: boolean }): SampleOverlay | null {
+export function sampleOverlay(state: SiteSearchState, context: SampleOverlayContext): SampleOverlay | null {
   switch (state._tag) {
     case 'NotLinked':
       return {
@@ -90,12 +124,17 @@ export function sampleOverlay(state: SiteSearchState, context: { gscConnected: b
         cta: searchConsoleLinkCta(context.gscConnected),
       }
     case 'Held':
-      return { message: HELD_TITLE, description: holdMessage(state.hold), cta: { label: 'Manage Sites', to: SITES_ROUTE } }
+      return {
+        message: HELD_TITLE,
+        description: holdMessage(state.hold),
+        hold: state.hold,
+        ...heldOverlayActions(state.hold, context.siteId, context.canManageSites ?? true),
+      }
     case 'Syncing':
       return {
         message: 'Syncing your search data...',
         description: 'Showing sample data while we import your Search Console history. You can leave this page while sync runs.',
-        cta: { label: 'View sync status', to: SITES_ROUTE },
+        cta: { _tag: 'Link', label: 'View sync status', to: SITES_ROUTE },
       }
     case 'Checking':
     case 'Ready':

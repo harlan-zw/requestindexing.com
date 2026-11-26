@@ -2,11 +2,13 @@
 import type { GscdumpDataRow } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { fmtGscMetric, formatNumber, getPath } from '@nuxtseo/design-system/app/composables/formatting'
 import { computed, ref, watch } from 'vue'
+import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProSiteSetupOffers from '#layers/pro-gsc/app/components/overview/ProSiteSetupOffers.vue'
 import ProCardGsc from '#layers/pro-gsc/app/components/pro/ProCardGsc.vue'
 import ProGscReadError from '#layers/pro-gsc/app/components/pro/ProGscReadError.vue'
 import ProGscSurfaceBar from '#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue'
 import ProQueryLabel from '#layers/pro-gsc/app/components/pro/ProQueryLabel.vue'
+import ProSiteHoldCard from '#layers/pro-gsc/app/components/pro/ProSiteHoldCard.vue'
 import { periodToDateRange } from '#layers/pro-gsc/app/composables/useGscPeriod'
 import { useGscQueryIdentity } from '#layers/pro-gsc/app/composables/useGscQueryIdentity'
 import {
@@ -38,8 +40,31 @@ definePageMeta({
   icon: 'i-lucide-layout-dashboard',
 })
 
-const { siteId, site, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, isLifecycleSettled, hold, gscData, gscStatusError, refreshGscStatus } = useSite('Search Console')
+const { siteId, site, siteName, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, isLifecycleSettled, hold, gscData, gscStatusError, refreshGscStatus } = useSite('Search Console')
 const route = useRoute()
+const toast = useToast()
+const { currentTeamId } = useCurrentWorkspace()
+const teamPolicy = useTeamPolicy(() => site.value?.teamId ?? currentTeamId.value)
+const canManageSites = computed(() => teamPolicy.can('manage-sites'))
+
+const retryingHold = ref(false)
+async function retryHold() {
+  if (retryingHold.value || !canManageSites.value || !siteId.value)
+    return
+  retryingHold.value = true
+  try {
+    await getAppFetch()(`/api/pro/sites/${encodeURIComponent(siteId.value)}/retry-hold`, { method: 'POST' })
+    toast.add({ title: 'Measurement queued', description: `Request Indexing is measuring ${siteName.value} again.`, color: 'success' })
+    await refreshGscStatus()
+  }
+  catch (err: unknown) {
+    const e = err as { data?: { message?: string }, message?: string } | null
+    toast.add({ title: 'Could not retry check', description: e?.data?.message || e?.message || 'Try again in a moment.', color: 'error' })
+  }
+  finally {
+    retryingHold.value = false
+  }
+}
 
 function reportLink(destination: string): string {
   return searchConsoleLink(`/pro/dashboard/sites/${siteId.value}/search-console/${destination}`, route.query)
@@ -91,7 +116,11 @@ const searchState = computed(() => resolveSiteSearchState({
   ready: isReady.value,
 }))
 const overlay = computed(() => site.value
-  ? sampleOverlay(searchState.value, { gscConnected: !!session.value?.gscConnected })
+  ? sampleOverlay(searchState.value, {
+      gscConnected: !!session.value?.gscConnected,
+      siteId: siteId.value,
+      canManageSites: canManageSites.value,
+    })
   : null)
 interface DemoDatesResponse {
   dates: { date: string, clicks: number, impressions: number, position: number, ctr: number }[]
@@ -489,13 +518,68 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
         </UiButton>
       </div>
 
-      <!-- Not linked, held, or in its first sync: show the live nuxtseo.com preview -->
+      <!-- Held Site: render the subtle held-Site recovery card over the faded sample backdrop -->
+      <div v-if="overlay?.hold" class="relative" data-testid="search-console-held-overlay">
+        <div class="opacity-25 select-none" inert>
+          <div class="space-y-6">
+            <UiStats :data="demoHeroStats" variant="cards" />
+            <div class="h-48 rounded-lg bg-elevated border border-default" />
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="rounded-xl border border-default overflow-hidden">
+                <div class="px-4 py-2.5 border-b border-default">
+                  <ProSectionHeader title="Top Keywords" class="!mb-0" />
+                </div>
+                <div class="divide-y divide-default">
+                  <template v-if="demoKeywords?.rows?.length">
+                    <div v-for="(row, i) in demoKeywords.rows.slice(0, 5)" :key="i" class="flex items-center justify-between px-4 py-2.5">
+                      <span class="text-sm truncate">{{ row.keyword }}</span>
+                      <span class="text-sm text-muted tabular-nums">{{ formatNumber(row.clicks) }}</span>
+                    </div>
+                  </template>
+                  <div v-else class="px-4 py-6">
+                    <UiSkeleton :lines="5" :base="200" :range="80" />
+                  </div>
+                </div>
+              </div>
+              <div class="rounded-xl border border-default overflow-hidden">
+                <div class="px-4 py-2.5 border-b border-default">
+                  <ProSectionHeader title="Top Pages" class="!mb-0" />
+                </div>
+                <div class="divide-y divide-default">
+                  <template v-if="demoPages?.rows?.length">
+                    <div v-for="(row, i) in demoPages.rows.slice(0, 5)" :key="i" class="flex items-center justify-between px-4 py-2.5">
+                      <span class="text-sm truncate">{{ getPath(row.page ?? '') }}</span>
+                      <span class="text-sm text-muted tabular-nums">{{ formatNumber(row.clicks) }}</span>
+                    </div>
+                  </template>
+                  <div v-else class="px-4 py-6">
+                    <UiSkeleton :lines="3" :base="200" :range="80" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[var(--ui-bg)]/70 via-[var(--ui-bg)]/95 to-[var(--ui-bg)]/75 px-4 backdrop-blur-[1px]">
+          <ProSiteHoldCard
+            :hold="overlay.hold"
+            :site-id="siteId"
+            :can-retry="canManageSites"
+            :retrying="retryingHold"
+            centered
+            class="w-full max-w-lg shadow-lg"
+            @retry="retryHold"
+          />
+        </div>
+      </div>
+
+      <!-- Not linked or in its first sync: show the live nuxtseo.com preview -->
       <UiSampleDataOverlay
-        v-if="overlay"
+        v-else-if="overlay"
         :message="overlay.message"
         :description="overlay.description"
         :cta-label="overlay.cta.label"
-        :cta-to="overlay.cta.to"
+        :cta-to="overlay.cta._tag === 'Link' ? overlay.cta.to : undefined"
       >
         <div class="space-y-6">
           <UiStats :data="demoHeroStats" variant="cards" />

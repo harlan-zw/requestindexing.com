@@ -8,6 +8,7 @@
 
 import type { UiNavLink } from '@nuxtseo/design-system/app/shared/nav'
 import type { MaybeRefOrGetter } from 'vue'
+import type { SiteSyncStatus } from '#layers/pro-saas/shared/site-sync'
 import type { ProNavSection, ProSiteNavLink } from './useProSiteNav'
 import { computed, toValue } from 'vue'
 import { ALL_PRO_FEATURE_FLAGS_ON } from '../../shared/manifest'
@@ -30,6 +31,8 @@ export interface ProNavSite {
   property?: string | null
   /** `/api/sites/list` carries gscdump's hold reason for a held Site. */
   hold?: string | null
+  /** `/api/sites/list` carries sync status for sidebar attention prioritization. */
+  syncStatus?: SiteSyncStatus | null
 }
 
 function hostnameOf(value: string): string {

@@ -103,6 +103,16 @@ const submissionsLeft = computed(() => {
   const usedToday = receiptRows.value.filter(receipt => pacificDay.format(new Date(receipt.createdAt)) === today).length
   return Math.max(0, GOOGLE_SUBMISSION_SITE_DAILY_LIMIT - usedToday)
 })
+const submissionsQuotaColor = computed<'neutral' | 'warning' | 'error'>(() => {
+  if (submissionsLeft.value === 0)
+    return 'error'
+  return submissionsLeft.value <= 2 ? 'warning' : 'neutral'
+})
+const submissionsQuotaFillClass = computed(() => {
+  if (submissionsLeft.value === 0)
+    return 'bg-error'
+  return submissionsLeft.value <= 2 ? 'bg-warning' : 'bg-primary'
+})
 const grantRefusal = ref<IndexingGrantRefusal | null>(null)
 const submitAction = computed(() => resolveSubmitAction({
   grant: grant.value ?? null,
@@ -326,9 +336,40 @@ const submissionsRoute = computed(() => expandProSiteRoute(proSiteFeatureManifes
             </UiButton>
           </template>
         </UiAlert>
-        <p v-else-if="engineId && canWrite" class="mt-3 text-sm text-muted">
-          {{ submissionsLeft }} of {{ GOOGLE_SUBMISSION_SITE_DAILY_LIMIT }} Google Submissions left today for this Site.
-        </p>
+        <div
+          v-else-if="engineId && canWrite"
+          class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-default bg-muted/60 px-3.5 py-2.5"
+          data-testid="daily-submission-quota"
+        >
+          <div class="flex flex-wrap items-center gap-2.5">
+            <div
+              class="inline-flex items-center gap-1"
+              role="progressbar"
+              :aria-valuenow="submissionsLeft"
+              aria-valuemin="0"
+              :aria-valuemax="GOOGLE_SUBMISSION_SITE_DAILY_LIMIT"
+              :aria-label="`${submissionsLeft} of ${GOOGLE_SUBMISSION_SITE_DAILY_LIMIT} Google Submissions left today`"
+            >
+              <span
+                v-for="slot in GOOGLE_SUBMISSION_SITE_DAILY_LIMIT"
+                :key="slot"
+                class="h-2.5 w-3.5 rounded-sm transition-colors"
+                :class="slot <= submissionsLeft ? submissionsQuotaFillClass : 'bg-accented'"
+                aria-hidden="true"
+              />
+            </div>
+            <UBadge
+              :color="submissionsQuotaColor"
+              variant="subtle"
+              class="tabular-nums"
+              :label="`${submissionsLeft} of ${GOOGLE_SUBMISSION_SITE_DAILY_LIMIT} left today`"
+            />
+          </div>
+          <span class="inline-flex items-center gap-1.5 rounded-full border border-default bg-elevated px-2.5 py-1 text-xs text-muted">
+            <UIcon name="i-heroicons-clock" class="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
+            <span>Resets daily (Pacific time)</span>
+          </span>
+        </div>
         <p v-else-if="engineId" class="mt-3 text-sm text-muted">
           Your Team role allows viewing only.
         </p>

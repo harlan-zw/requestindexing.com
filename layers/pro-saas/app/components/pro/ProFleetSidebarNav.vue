@@ -11,6 +11,7 @@
 import type { UiNavLink } from '@nuxtseo/design-system/app/shared/nav'
 import type { ProShellNavManifest } from '@nuxtseo/pro-shell/shared/nav'
 import type { ProNavSite } from '#layers/pro-features/app/composables/useProSingleSiteNav'
+import type { SiteSyncStatus } from '#layers/pro-saas/shared/site-sync'
 import { WEBMASTER_TOOLS } from '@nuxtseo/pro-search/shared/navigation'
 import ProShellSidebarNav from '@nuxtseo/pro-shell/app/components/ProShellSidebarNav.vue'
 import { useProShellRoute } from '@nuxtseo/pro-shell/app/composables/useProShellRoute'
@@ -21,6 +22,7 @@ import { useProNavSetupBadges } from '#layers/pro-features/app/composables/usePr
 import { integrationsRailLinks } from '#layers/pro-features/app/utils/integrations-pending'
 import { readProFeatureFlags } from '#layers/pro-features/shared/manifest'
 import { HELD_LABEL, HELD_TITLE } from '#layers/pro-gsc/shared/entitlement-copy'
+import { selectSidebarSites } from '#layers/pro-saas/shared/site-roster'
 
 const { sites, loading = false } = defineProps<{
   sites: ProNavSite[]
@@ -72,7 +74,13 @@ function hostnameOf(value: string): string {
   }
 }
 
-interface FleetSiteLink extends UiNavLink { domain: string }
+const route = useRoute()
+
+interface FleetSiteLink extends UiNavLink {
+  domain: string
+  hold?: string | null
+  syncStatus?: SiteSyncStatus | null
+}
 
 const siteLinks = computed<FleetSiteLink[]>(() => sites.map((site) => {
   const ref = site.publicId ?? site.siteId ?? site.id ?? ''
@@ -83,10 +91,14 @@ const siteLinks = computed<FleetSiteLink[]>(() => sites.map((site) => {
     label: site.name || domain || 'Site',
     to,
     domain,
+    hold: site.hold ?? null,
+    syncStatus: site.syncStatus ?? null,
     ...(site.hold ? { badge: HELD_LABEL, badgeColor: 'warning' as const, title: HELD_TITLE } : {}),
     active: (path: string) => path === to || path.startsWith(`${to}/`),
   }
 }))
+
+const sidebarRoster = computed(() => selectSidebarSites(siteLinks.value, { activePath: route.path }))
 </script>
 
 <template>
@@ -113,20 +125,30 @@ const siteLinks = computed<FleetSiteLink[]>(() => sites.map((site) => {
         <p v-else-if="!siteLinks.length" class="px-1 text-sm text-muted">
           No Sites yet.
         </p>
-        <UiNavList
-          v-else
-          variant="sidebar"
-          tone="default"
-          label="Sites"
-          :links="siteLinks"
-          @click="emit('navigate')"
-        >
-          <template #icon="{ link }">
-            <span class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[4px] border border-default bg-default">
-              <UiFavicon :domain="(link as FleetSiteLink).domain" :size="12" decorative class="shrink-0" />
-            </span>
-          </template>
-        </UiNavList>
+        <template v-else>
+          <UiNavList
+            variant="sidebar"
+            tone="default"
+            label="Sites"
+            :links="sidebarRoster.visible"
+            @click="emit('navigate')"
+          >
+            <template #icon="{ link }">
+              <span class="inline-flex size-[18px] shrink-0 items-center justify-center rounded-[4px] border border-default bg-default">
+                <UiFavicon :domain="(link as FleetSiteLink).domain" :size="12" decorative class="shrink-0" />
+              </span>
+            </template>
+          </UiNavList>
+          <NuxtLink
+            v-if="sidebarRoster.capped"
+            :to="sitesTo"
+            class="mt-1 flex items-center justify-between rounded-md px-2 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-elevated hover:text-highlighted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            @click="emit('navigate')"
+          >
+            <span>View all {{ sidebarRoster.total }} Sites</span>
+            <UiIcon name="chevron-right" class="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
+          </NuxtLink>
+        </template>
       </div>
     </template>
   </ProShellSidebarNav>

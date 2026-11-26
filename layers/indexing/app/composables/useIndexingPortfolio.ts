@@ -15,7 +15,7 @@ import { provideIndexingSource } from '@nuxtseo/pro-indexing/app/composables/use
 import { computed, shallowRef, watch } from 'vue'
 import { siteLabel } from '~~/layers/core/app/utils/site-format'
 import { useRequestIndexingSource } from '#layers/indexing/app/composables/useRequestIndexingSource'
-import { toIndexingSite, toPortfolioEntry } from '#layers/indexing/app/utils/indexing-source'
+import { shouldFetchSiteIndexing, toIndexingSite, toPortfolioEntry } from '#layers/indexing/app/utils/indexing-source'
 import { useProGscdump } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { useProGscFilters } from '#layers/pro-gsc/app/composables/useProGscFilters'
 
@@ -46,6 +46,7 @@ export function useIndexingPortfolio(roster: Awaited<ReturnType<typeof fetchSite
       syncStatus: site.syncStatus,
       connected: !!site.gscdumpSiteId,
       gscdumpSiteId: site.gscdumpSiteId ?? null,
+      hold: site.hold,
     }
   }))
   const hasSites = computed(() => sites.value.length > 0)
@@ -78,7 +79,7 @@ export function useIndexingPortfolio(roster: Awaited<ReturnType<typeof fetchSite
   }
 
   function load(site: FleetIndexingRow) {
-    if (!site.gscdumpSiteId)
+    if (!shouldFetchSiteIndexing(site) || !site.gscdumpSiteId)
       return
     const request = (latestRequest.get(site.id) ?? 0) + 1
     latestRequest.set(site.id, request)
@@ -98,10 +99,12 @@ export function useIndexingPortfolio(roster: Awaited<ReturnType<typeof fetchSite
       })
   }
 
-  /** The read state of one Site. A Site without a gscdump id is `NotConnected` on the server and in the browser alike. */
+  /** The read state of one Site. Unlinked and held Sites skip indexing reads on server and browser alike. */
   function readOf(site: RequestIndexingSiteRow): SiteIndexingRead {
     if (!site.gscdumpSiteId)
       return { _tag: 'NotConnected' }
+    if (!shouldFetchSiteIndexing(site))
+      return { _tag: 'Held' }
     return reads.value.get(site.id) ?? { _tag: 'Loading', last: null }
   }
 
@@ -115,7 +118,7 @@ export function useIndexingPortfolio(roster: Awaited<ReturnType<typeof fetchSite
 
   if (import.meta.client) {
     watch(
-      () => [sites.value.map(site => `${site.id}:${site.gscdumpSiteId ?? ''}`).join(','), readDays.value] as const,
+      () => [sites.value.map(site => `${site.id}:${site.gscdumpSiteId ?? ''}:${site.hold ?? ''}`).join(','), readDays.value] as const,
       () => {
         for (const site of sites.value)
           load(site)
