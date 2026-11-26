@@ -38,8 +38,7 @@ definePageMeta({
 const { siteId, site, siteName, gscdumpSiteId, isNotConnected, isLifecycleSettled, hold, gscData, gscStatusError, refreshGscStatus } = useSite('Indexing')
 const proFetch = useProFetch()
 const toast = useToast()
-const { currentTeamId } = useCurrentWorkspace()
-const teamPolicy = useTeamPolicy(() => site.value?.teamId ?? currentTeamId.value)
+const teamPolicy = useTeamPolicy(() => site.value?.teamId)
 const canManageSites = computed(() => teamPolicy.can('manage-sites'))
 
 const retryingHold = ref(false)

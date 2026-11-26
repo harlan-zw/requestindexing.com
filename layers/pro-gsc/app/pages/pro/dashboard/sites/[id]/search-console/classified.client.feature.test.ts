@@ -100,7 +100,8 @@ Object.assign(globalThis, {
   useRoute: () => route,
   toValue,
   useNuxtQuery: () => ({ data: ref(null) }),
-  useSite: () => ({ siteId: ref('one'), site: ref({ url: 'https://example.com' }), siteStatus: ref('success'), gscdumpSiteId: ref('s_engine'), isProcessing: ref(false), isReady: ref(true), isNotConnected: ref(false), isLifecycleSettled: ref(true), hold: ref(null), gscData: ref({}), gscStatusError: ref(null) }),
+  useTeamPolicy: () => ({ can: () => true }),
+  useSite: () => ({ siteId: ref('one'), site: ref({ url: 'https://example.com', teamId: 1 }), siteName: ref('example.com'), siteStatus: ref('success'), gscdumpSiteId: ref('s_engine'), isProcessing: ref(false), isReady: ref(true), isNotConnected: ref(false), isLifecycleSettled: ref(true), hold: ref(null), gscData: ref({}), gscStatusError: ref(null) }),
 })
 const apps: ReturnType<typeof createApp>[] = []
 function mount(component: any) {

@@ -64,13 +64,17 @@ Object.assign(globalThis, {
   definePageMeta: () => {},
   useSite: () => ({
     siteId: ref('app-site'),
+    site: ref({ teamId: 1 }),
+    siteName: ref('example.com'),
     gscdumpSiteId: ref('engine-site'),
     isNotConnected: ref(false),
     isLifecycleSettled: ref(fixture.settled),
+    hold: ref(null),
     gscStatusError: ref(fixture.lifecycleError),
     refreshGscStatus: refresh.status,
     gscData: ref({ sitemapStatus: fixture.sitemapPhase, indexingStatus: fixture.lifecyclePhase, indexing: { processing: fixture.processing, completed: fixture.completed } }),
   }),
+  useTeamPolicy: () => ({ can: () => true }),
   useProFetch: () => refresh.proFetch,
   useAsyncData: () => ({ data: ref(null), error: ref(null), status: ref('success') }),
 })
