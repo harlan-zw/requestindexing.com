@@ -136,10 +136,36 @@ function siteOffers(input: {
   ]
 }
 
+/** Stable key and account-scoped dismissal key for the beta feedback CTA card. */
+export const BETA_FEEDBACK_OFFER_KEY = 'beta-feedback'
+
+/**
+ * Beta feedback invitation shown on both app landing pages (dashboard home and
+ * Site Search Console overview). Account-scoped dismissal hides it across both.
+ */
+export function buildBetaFeedbackOffer(input: {
+  readonly copy: typeof REQUEST_INDEXING_SETUP_OFFER_COPY['betaFeedback']
+  readonly cta: string
+}): SetupOffer {
+  return {
+    key: BETA_FEEDBACK_OFFER_KEY,
+    dismissKey: BETA_FEEDBACK_OFFER_KEY,
+    title: input.copy.title,
+    body: input.copy.body,
+    cta: input.cta,
+    action: { _tag: 'Run', pending: false },
+    marks: [{ _tag: 'Icon', icon: 'message' }],
+    accent: 'var(--ui-bg-accented)',
+    priority: 0,
+    completion: SETUP_PENDING,
+  }
+}
+
 export interface OverviewSetupOfferInput {
   readonly routes: ProShellRouteMap
   readonly shellCopy: ProShellCopy['setupOffers']
   readonly copy: typeof REQUEST_INDEXING_SETUP_OFFER_COPY
+  readonly feedbackAction: string
   /** The app's own id of the Site the IndexNow and Watched URLs offers open, never its gscdump id. Null with no linked Site. */
   readonly siteId: string | null
   readonly completion: SiteSetupCompletion & {
@@ -149,14 +175,16 @@ export interface OverviewSetupOfferInput {
 }
 
 /**
- * Every offer the dashboard home can show. The shell's Bing and Add another
- * Site offers keep their own priorities (3 and 13). The shell's agent skill,
- * MCP and API offers get no completion, so they never show (COPY.md, "Dashboard
- * shell assets"). The IndexNow and Watched URLs offers open the first Site
- * linked to gscdump, and one dismissal hides each across the home.
+ * Every offer the dashboard home can show. Beta feedback leads at priority 0
+ * (after a Bing reconnect at -1). The shell's Bing and Add another Site offers
+ * keep their own priorities (3 and 13). The shell's agent skill, MCP and API
+ * offers get no completion, so they never show (COPY.md, "Dashboard shell
+ * assets"). The IndexNow and Watched URLs offers open the first Site linked to
+ * gscdump, and one dismissal hides each across the home.
  */
 export function buildOverviewSetupOffers(input: OverviewSetupOfferInput): SetupOffer[] {
   const { completion, siteId } = input
+  const feedback = buildBetaFeedbackOffer({ copy: input.copy.betaFeedback, cta: input.feedbackAction })
   const shared = buildSharedSetupOffers({
     routes: input.routes,
     copy: input.shellCopy,
@@ -164,26 +192,28 @@ export function buildOverviewSetupOffers(input: OverviewSetupOfferInput): SetupO
     completion: { 'bing': completion.bing, 'another-site': completion.anotherSite },
   })
   if (!siteId)
-    return shared
-  return [...shared, ...siteOffers({ copy: input.copy, siteId, dismissKey: key => key, completion })]
+    return [feedback, ...shared]
+  return [feedback, ...shared, ...siteOffers({ copy: input.copy, siteId, dismissKey: key => key, completion })]
 }
 
 export interface SiteSetupOfferInput {
   readonly copy: typeof REQUEST_INDEXING_SETUP_OFFER_COPY
+  readonly feedbackAction: string
   /** The app's own id of the Site in view, never its gscdump id. */
   readonly siteId: string
   readonly completion: SiteSetupCompletion
 }
 
 /**
- * The offers on a Site's page: that Site's IndexNow and Watched URLs, until
- * each is complete. A one-Site account lands there instead of the dashboard
- * home, so this is where it meets them. nuxtseo.com's Site page draws a Site's
- * own Setup offers the same way.
+ * The offers on a Site's page: the beta feedback CTA plus that Site's IndexNow
+ * and Watched URLs, until each is complete. A one-Site account lands there
+ * instead of the dashboard home, so this is where it meets them. nuxtseo.com's
+ * Site page draws a Site's own Setup offers the same way.
  *
- * Each dismissal names the Site, the shell's rule for a Site-scoped offer, so
- * dismissing one Site's card leaves the next Site's card in place.
+ * Site-scoped dismissals name the Site, so dismissing one Site's card leaves
+ * the next Site's card in place. The beta feedback card stays account-scoped.
  */
 export function buildSiteSetupOffers(input: SiteSetupOfferInput): SetupOffer[] {
-  return siteOffers({ ...input, dismissKey: key => `${key}:${input.siteId}` })
+  const feedback = buildBetaFeedbackOffer({ copy: input.copy.betaFeedback, cta: input.feedbackAction })
+  return [feedback, ...siteOffers({ ...input, dismissKey: key => `${key}:${input.siteId}` })]
 }

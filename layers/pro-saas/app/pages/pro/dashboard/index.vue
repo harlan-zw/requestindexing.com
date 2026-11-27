@@ -125,9 +125,12 @@ useJobListener('sites/sync-finished', async ({ siteId }) => {
       <UiLoadingState :rows="3" />
     </div>
 
-    <UiCard v-else-if="!error && !sites.length && noProperty">
-      <ProNoPropertyNotice heading-tag="h2" :email="session?.gscEmail ?? null" gsc-return-to="/pro/dashboard" />
-    </UiCard>
+    <template v-else-if="!error && !sites.length && noProperty">
+      <UiCard>
+        <ProNoPropertyNotice heading-tag="h2" :email="session?.gscEmail ?? null" gsc-return-to="/pro/dashboard" />
+      </UiCard>
+      <ProOverviewSetupOffers :sites="sites" />
+    </template>
 
     <template v-else-if="!error && !sites.length">
       <ProOverviewOnboardingCard v-if="cardStep" :step="cardStep" />

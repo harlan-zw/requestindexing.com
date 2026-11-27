@@ -12,7 +12,6 @@ import { ACCESS_ALLOWED, accessDenied } from '@nuxtseo/pro-shell/shared/access'
 import { readProFeatureFlags } from '#layers/pro-features/shared/manifest'
 import { callerCan } from '../../shared/policies/team-policy'
 import { proNavSiteRef, proShellSiteList, toProShellSite } from '../utils/pro-shell-sites'
-import { useProFeedback } from './useProFeedback'
 
 /** COPY.md, Dashboard shell assets: the tooltip on an action the Team role refuses. */
 export const ACCESS_REFUSED = 'Your Team role does not allow this. Ask a Team admin.'
@@ -24,15 +23,15 @@ export interface ProNavSourceInput {
   readonly scopedSite: Readonly<Ref<ProNavSite | null>>
   /** The Site reference in the URL, or null outside a Site. */
   readonly routeSiteRef: Readonly<Ref<string | null>>
+  /** Opens the Send feedback drawer from the page header and user menu. */
+  readonly openFeedback: NonNullable<ProShellNavSource['openFeedback']>
+  /** Unread resolution count shared with the drawer so viewing History clears the dot immediately. */
+  readonly feedbackUnreadCount: Readonly<Ref<number>>
 }
 
 export function provideProNavSource(input: ProNavSourceInput): ProShellNavSource {
   const { session } = useUserSession()
   const { caller } = useCaller()
-  const feedback = useProFeedback()
-  onMounted(() => {
-    feedback.prefetchUnread()
-  })
   const flags = computed(() => readProFeatureFlags(useRuntimeConfig().public))
 
   const access: ProShellAccessAdapter = (ability, teamId) => {
@@ -54,7 +53,7 @@ export function provideProNavSource(input: ProNavSourceInput): ProShellNavSource
       : null),
     access,
     hasFeature: feature => (flags.value as Record<string, boolean | undefined>)[feature] === true,
-    openFeedback: context => feedback.open(context),
-    feedbackUnreadCount: feedback.unreadCount,
+    openFeedback: input.openFeedback,
+    feedbackUnreadCount: input.feedbackUnreadCount,
   })
 }
