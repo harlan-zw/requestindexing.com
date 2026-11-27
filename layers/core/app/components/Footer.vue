@@ -1,5 +1,7 @@
 <script setup lang="ts">
-const toast = useToast()
+import { GUIDE_NAV_ITEMS } from '#shared/guides-nav'
+import { FREE_TOOLS } from '#shared/tool-registry'
+
 // Ported from nuxtseo.com. The payload carries the server's year to the client,
 // so a reader past midnight on 1 January in another zone hydrates the same text.
 const currentYear = useState('footer-current-year', () => new Date().getUTCFullYear())
@@ -20,65 +22,11 @@ const links = [
   },
   {
     label: 'Guides',
-    children: [
-      {
-        label: 'Ask Google to Index a URL',
-        to: '/request-indexing-google-search-console',
-      },
-      {
-        label: 'Why a Page Is Not Indexed',
-        to: '/why-is-my-page-not-indexed',
-      },
-      {
-        label: 'Why a Site Is Not Indexed',
-        to: '/why-is-my-site-not-indexed',
-      },
-      {
-        label: 'Set Up IndexNow',
-        to: '/indexnow-setup',
-      },
-      {
-        label: 'Google Indexing API',
-        to: '/google-indexing-api',
-      },
-      {
-        label: 'Setup Tutorial',
-        to: '/google-indexing-api-tutorial',
-      },
-      {
-        label: 'Node.js Guide',
-        to: '/google-indexing-api-node-js',
-      },
-      {
-        label: 'Bulk URL Submission',
-        to: '/bulk-submit-urls-google-indexing-api',
-      },
-      {
-        label: 'API for Blog Posts',
-        to: '/indexing-api-for-blog-posts',
-      },
-      {
-        label: 'Quota & Rate Limits',
-        to: '/google-indexing-api-quota',
-      },
-    ],
+    children: GUIDE_NAV_ITEMS.map(({ label, to }) => ({ label, to })),
   },
   {
     label: 'Tools',
-    children: [
-      {
-        label: 'Google Index Checker',
-        to: '/tools/google-indexing-checker',
-      },
-      {
-        label: 'Bulk Indexing Checker',
-        to: '/tools/bulk-indexing-checker',
-      },
-      {
-        label: 'Site Indexing Report',
-        to: '/tools/site-indexing-report',
-      },
-    ],
+    children: FREE_TOOLS.map(({ title, path }) => ({ label: title, to: path })),
   },
   {
     label: 'Resources',
@@ -88,7 +36,7 @@ const links = [
         to: '/comparisons',
       },
       {
-        label: 'Docs',
+        label: 'Source code',
         to: 'https://github.com/harlan-zw/requestindexing.com',
         target: '_blank',
       },
@@ -126,37 +74,13 @@ const links = [
         target: '_blank',
       },
       {
-        label: 'Built with Nuxt UI Pro',
-        to: 'https://ui.nuxt.com/pro?aff=5zj9e',
+        label: 'Built with Nuxt UI',
+        to: 'https://ui.nuxt.com',
         target: '_blank',
       },
     ],
   },
 ]
-
-interface JSConfettiApi {
-  addConfetti: (options?: { emojis: string[] }) => void
-}
-declare global {
-  interface Window {
-    JSConfetti: { new (): JSConfettiApi }
-  }
-}
-function toaster() {
-  const $script = useScript<JSConfettiApi>({
-    key: 'confetti',
-    src: 'https://cdn.jsdelivr.net/npm/js-confetti@latest/dist/js-confetti.browser.js',
-  }, {
-    use() {
-      return new window.JSConfetti()
-    },
-  })
-  $script.proxy.addConfetti({ emojis: ['🍞'] })
-  toast.add({
-    title: 'So you like easters eggs? 🥚',
-    description: 'How about some bread? 🍞',
-  })
-}
 </script>
 
 <template>
@@ -174,16 +98,10 @@ function toaster() {
     </template>
 
     <template #right>
-      <UButton color="neutral" v-bind="{ title: 'Bread' } satisfies { title: string }" variant="link" target="_blank" class="group" @click="toaster">
-        <div class="hidden group-hover:block h-0">
-          <Icon name="noto:bread" class="text-xl  " />
-        </div>
-      </UButton>
-
       <UColorModeButton size="sm" />
 
-      <UButton color="neutral" v-bind="{ title: 'Twitter' } satisfies { title: string }" variant="link" to="https://twitter.com/harlan_zw" target="_blank">
-        <UIcon name="i-simple-icons-twitter" class="text-xl" />
+      <UButton color="neutral" v-bind="{ title: 'X (Twitter)' } satisfies { title: string }" aria-label="X (Twitter)" variant="link" to="https://x.com/harlan_zw" target="_blank">
+        <UIcon name="i-simple-icons-x" class="text-lg" />
       </UButton>
       <UButton color="neutral" v-bind="{ title: 'GitHub' } satisfies { title: string }" aria-label="GitHub" variant="link" to="https://github.com/harlan-zw/requestindexing.com" target="_blank">
         <UIcon name="i-simple-icons-github" class="text-xl" />

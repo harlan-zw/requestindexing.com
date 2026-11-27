@@ -68,16 +68,16 @@ const { title = '', description = '', sampleUrl = 'requestindexing.com/guides' }
               style="width: 10px; height: 10px; border-radius: 9999px; background-color: #10b981;"
             />
             <div style="font-size: 18px; font-weight: 600; color: #1c1f0e;">
-              Indexed by Google
+              Indexed in Google
             </div>
           </div>
           <div style="font-size: 14px; color: #6b6e54;">
-            200 OK
+            Example
           </div>
         </div>
 
         <div style="font-size: 14px; color: #6b6e54;">
-          Checked {{ new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}
+          Estimate from a Google site: search · No signup
         </div>
       </div>
     </div>

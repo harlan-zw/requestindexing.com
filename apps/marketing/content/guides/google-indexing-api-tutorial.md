@@ -115,7 +115,7 @@ The example uses [GoogleAuth's credential discovery](https://github.com/googleap
 
 ## Read the response correctly
 
-`notification-accepted` is the script's label for a successful API response. It does not mean the page was indexed. Google may attempt a recrawl after receiving `URL_UPDATED`; [its usage documentation](https://developers.google.com/search/apis/indexing-api/v3/using-api) defines that response. To check the listing later, open it in Search Console's URL Inspection tool, or run a quick `site:` search for it with the [Google index checker](/tools/google-indexing-checker).
+`notification-accepted` is the script's label for a successful API response. It does not mean the page was indexed. Google may attempt a recrawl after receiving `URL_UPDATED`; [its usage documentation](https://developers.google.com/search/apis/indexing-api/v3/using-api) defines that response. To check the listing later, open it in [Search Console's URL Inspection tool](/request-indexing-google-search-console), or run a quick `site:` search for it with the [Google Index Checker](/tools/google-indexing-checker).
 
 [Google Search timelines](https://nuxtseo.com/learn-seo/google-search-timelines) explains why an accepted notification does not set an indexing deadline.
 

@@ -1,19 +1,20 @@
 <script setup lang="ts">
+import { FREE_TOOLS } from '#shared/tool-registry'
+
 const categories = [
   {
     label: 'Check URLs',
     description: 'Is your content indexed?',
-    items: [
-      { label: 'Google Index Checker', icon: 'i-heroicons-magnifying-glass', to: '/tools/google-indexing-checker' },
-      { label: 'Bulk Indexing Checker', icon: 'i-heroicons-queue-list', to: '/tools/bulk-indexing-checker' },
-    ],
+    items: FREE_TOOLS
+      .filter(tool => tool.category === 'check')
+      .map(tool => ({ label: tool.title, icon: tool.icon, to: tool.path })),
   },
   {
     label: 'Reports',
-    description: 'Site-wide analysis',
-    items: [
-      { label: 'Site Indexing Report', icon: 'i-heroicons-document-chart-bar', to: '/tools/site-indexing-report' },
-    ],
+    description: 'Domain-level estimates',
+    items: FREE_TOOLS
+      .filter(tool => tool.category === 'report')
+      .map(tool => ({ label: tool.title, icon: tool.icon, to: tool.path })),
   },
 ]
 </script>

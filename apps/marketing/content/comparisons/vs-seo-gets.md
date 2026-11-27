@@ -1,23 +1,23 @@
 ---
-title: "Request Indexing vs SEO Gets: Notifications and Reporting"
-description: "Compare direct Indexing API notifications with SEO Gets analytics, indexing history, and its Search Console inspection shortcut."
+title: "Request Indexing vs SEO Gets: Indexing Evidence and Reporting"
+description: "Compare Request Indexing's URL Inspection tracking, IndexNow, and Indexing API workflow with SEO Gets analytics, portfolio reporting, and Search Console shortcut."
 keywords:
   - seo gets alternative
   - gsc retention tool
   - google search console history
-updatedAt: "2026-10-01"
+updatedAt: "2026-11-27"
 ---
 
-SEO Gets is worth a look if you need Search Console analysis and indexing history. Request Indexing is an open-source application that sends Google Indexing API notifications directly. Start with what happens after you click each product's request button.
+SEO Gets focuses on Search Console portfolio analysis, content groups, and client reporting. Request Indexing focuses on indexing: scheduled URL Inspection reasons for your sitemap URLs, 28-day change tracking, Watched URLs, IndexNow Automatic sending, and direct Google Indexing API notifications for eligible pages. Start with which workflow you need.
 
-Checked 15 September 2026 against SEO Gets' documentation and Request Indexing's source. We did not run a signed-in comparison of the two services.
+SEO Gets' documentation was checked on 15 September 2026. Request Indexing's source was checked again on 27 November 2026. We did not run a signed-in comparison of SEO Gets.
 
 ## What happens when you request indexing?
 
 | Product | Documented or inspected action |
 | --- | --- |
 | SEO Gets | Opens Search Console's URL Inspection tool with the selected URL loaded |
-| Request Indexing | Sends an Indexing API notification with your Google grant, up to 5 a day for each Site |
+| Request Indexing | Opens URL Inspection for any URL, sends IndexNow notifications for Bing and other engines, and sends Google Indexing API notifications for eligible pages (up to 5 a day per Site) |
 
 SEO Gets explains its shortcut on its [Index Reporting](https://seogets.com/features/index-reporting) page. You can read Request Indexing's limits on its [Submit to Google page](https://github.com/harlan-zw/requestindexing.com/blob/35342bb3b7afdbac9ffb445e2a0a8d1bacfa36e1/layers/indexing/app/pages/pro/dashboard/sites/%5Bid%5D/indexing/submit.vue).
 
@@ -33,13 +33,13 @@ If you manage several properties, the [feature list](https://seogets.com/feature
 
 ## Request Indexing's scope and limits
 
-Request Indexing's [source is MIT licensed](https://github.com/harlan-zw/requestindexing.com/blob/main/LICENSE). The inspected implementation is a free beta and reads stored indexing states through gscdump. You can follow the request path in the source.
+Request Indexing's [source is MIT licensed](https://github.com/harlan-zw/requestindexing.com/blob/main/LICENSE). It is free during beta within your Free allowance, which gscdump sets and enforces. Through gscdump, it inspects sitemap URLs with URL Inspection, keeps 28-day verdict changes and Watched URLs, retains Search Console history past Google's 16-month window within your Free allowance, and sends new and changed sitemap URLs to Bing and other engines with IndexNow once you verify a key file.
 
-This comparison did not confirm an unlimited row allowance or a hosted retention guarantee for Request Indexing. Its own request limits also differ from Google's project quotas. If request volume affects your choice, read [which quota applies to you](/google-indexing-api-quota).
+This comparison did not confirm an unlimited row allowance or a hosted retention SLA for Request Indexing. Its Google Indexing API limit (5 Submissions a day per Site, 7-day wait per accepted URL) also differs from Google's project quotas. If request volume affects your choice, read [which quota applies to you](/google-indexing-api-quota).
 
 ## Which task matters most?
 
-If you want portfolio reporting and a history of indexing changes, look at SEO Gets' reporting and add-ons. If you want to inspect or adapt an open-source notification workflow for eligible content, look at Request Indexing's code and setup requirements.
+If you want multi-property content groups, client reporting, and Search Console analytics add-ons, look at SEO Gets' plans and add-ons. If you want an open-source app focused on URL Inspection reasons, coverage changes, IndexNow Automatic sending, and eligible Indexing API notifications, look at Request Indexing.
 
 Either way, a request is not a promise that Google will index the page. The [Indexing API guide](/google-indexing-api) separates notification receipt from inspection results.
 

@@ -11,9 +11,18 @@ const { data: page } = await useAsyncData(`comparison-${route.path}`, () =>
 if (!page.value)
   throw createError({ statusCode: 404, statusMessage: 'Comparison not found', fatal: true })
 
+const articleModifiedTime = computed(() => page.value?.updatedAt ? `${page.value.updatedAt}T12:00:00Z` : undefined)
+const humanUpdatedDate = computed(() => formatGuideDate(page.value?.updatedAt))
+
 useSeoMeta({
   title: () => page.value?.title || '',
   description: () => page.value?.description,
+  ogType: 'article',
+  author: 'Harlan Wilton',
+  articleAuthor: ['Harlan Wilton'],
+  articleSection: 'Comparisons',
+  articleTag: page.value?.keywords,
+  articleModifiedTime,
 })
 
 defineOgImage('Guide', {
@@ -26,7 +35,7 @@ useSchemaOrg([
     '@id': '#author',
     'name': 'Harlan Wilton',
     'sameAs': [
-      'https://twitter.com/harlan_zw',
+      'https://x.com/harlan_zw',
       'https://github.com/harlan-zw',
     ],
     'url': 'https://harlanzw.com',
@@ -34,6 +43,7 @@ useSchemaOrg([
   defineArticle({
     author: { '@id': '#author' },
     keywords: page.value?.keywords,
+    dateModified: articleModifiedTime.value,
     articleSection: ['Comparisons'],
   }),
 ])
@@ -45,7 +55,13 @@ useSchemaOrg([
       <UPageHeader
         v-bind="page"
         :ui="{ title: 'text-center text-balance xl:leading-normal min-w-full', description: 'text-center' }"
-      />
+      >
+        <div v-if="page?.updatedAt" class="flex justify-center items-center gap-3 mt-5 text-sm text-dimmed flex-wrap">
+          <span>
+            Updated <time class="font-semibold" :datetime="page.updatedAt">{{ humanUpdatedDate }}</time>
+          </span>
+        </div>
+      </UPageHeader>
       <UPageBody class="prose pb-0">
         <ContentRenderer v-if="page?.body" :value="page" />
       </UPageBody>

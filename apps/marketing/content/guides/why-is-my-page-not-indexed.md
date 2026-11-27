@@ -151,7 +151,7 @@ The page is marked as the canonical, but Google chose another URL as the canonic
 
 Google crawled the page but did not index it. Google says that it does not index every page, and that many sites see this reason. It does not always mean that something is wrong. The label alone does not say why.
 
-**First fix:** Compare it with similar pages on your Site. Improve it, or merge it into the stronger page.
+**First fix:** Compare it with similar pages on your site. Improve it, or merge it into the stronger page.
 
 ## See the reason for every URL in your sitemaps
 

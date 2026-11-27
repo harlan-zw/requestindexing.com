@@ -16,9 +16,19 @@ const { data: surround } = await useAsyncData(`guide-${route.path}-surround`, ()
   fields: ['title', 'description'],
 }))
 
+const articlePublishedTime = computed(() => page.value?.publishedAt ? `${page.value.publishedAt}T12:00:00Z` : undefined)
+const articleModifiedTime = computed(() => page.value?.updatedAt ? `${page.value.updatedAt}T12:00:00Z` : undefined)
+
 useSeoMeta({
   title: () => page.value?.title || '',
   description: () => page.value?.description,
+  ogType: 'article',
+  author: 'Harlan Wilton',
+  articleAuthor: ['Harlan Wilton'],
+  articleSection: 'Indexing Guides',
+  articleTag: page.value?.keywords,
+  articlePublishedTime,
+  articleModifiedTime,
 })
 
 const navigationLinks = computed(() => {
@@ -37,30 +47,13 @@ defineOgImage('Guide', {
   publishedAt: page.value?.publishedAt,
 })
 
-const articlePublishedTime = computed(() => page.value?.publishedAt ? `${page.value.publishedAt}T12:00:00Z` : undefined)
-const articleModifiedTime = computed(() => page.value?.updatedAt ? `${page.value.updatedAt}T12:00:00Z` : undefined)
-
-useSeoMeta({
-  ogType: 'article',
-  author: 'Harlan Wilton',
-  articleAuthor: ['Harlan Wilton'],
-  articleSection: 'Indexing Guides',
-  articleTag: page.value?.keywords,
-  articlePublishedTime,
-  articleModifiedTime,
-  twitterData1: 'Harlan Wilton',
-  twitterLabel1: 'Author',
-  twitterData2: page.value?.readTime === undefined ? undefined : String(page.value.readTime),
-  twitterLabel2: 'Read Time',
-})
-
 useSchemaOrg([
   definePerson({
     '@id': '#author',
     'name': 'Harlan Wilton',
     'description': 'An open-source developer from Sydney, Australia. Core team member of Nuxt, VueUse and UnJS. Author of Unlighthouse, Unhead and Nuxt SEO.',
     'sameAs': [
-      'https://twitter.com/harlan_zw',
+      'https://x.com/harlan_zw',
       'https://github.com/harlan-zw',
     ],
     'url': 'https://harlanzw.com',
