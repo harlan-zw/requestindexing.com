@@ -52,10 +52,10 @@ describe('anotherSiteCompletion', () => {
     expect(anotherSiteCompletion({ siteCount: 3, allowance: metered(3, 3) })).toEqual({ _tag: 'complete' })
   })
 
-  it('offers it with no cap, waits on an unread allowance, and leaves the first Site to the setup card', () => {
+  it('offers it with no cap, waits while unread, hides on unavailable, and leaves the first Site to the setup card', () => {
     expect(anotherSiteCompletion({ siteCount: 4, allowance: { _tag: 'Hidden' } })).toEqual({ _tag: 'pending' })
     expect(anotherSiteCompletion({ siteCount: 2, allowance: null })).toEqual({ _tag: 'unknown' })
-    expect(anotherSiteCompletion({ siteCount: 2, allowance: { _tag: 'Unavailable' } })).toEqual({ _tag: 'unknown' })
+    expect(anotherSiteCompletion({ siteCount: 2, allowance: { _tag: 'Unavailable' } })).toEqual({ _tag: 'unavailable' })
     expect(anotherSiteCompletion({ siteCount: 0, allowance: { _tag: 'Hidden' } })).toEqual({ _tag: 'unavailable' })
   })
 })

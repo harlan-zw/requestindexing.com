@@ -228,7 +228,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 
 ### Setup offer
 
-**Is:** one "Finish setting up" card. The dashboard home shows IndexNow, Bing, Watched URLs, and another Site. A Site's page shows that Site's IndexNow and Watched URLs. A one-Site account never sees the home, so it meets them there. Each shows while its Setup completion is pending. Request Indexing shows no agent skill, MCP, or API offer. nuxtseo.com's glossary owns the term; `@nuxtseo/pro-shell` draws it.
+**Is:** one "Next steps" card. The dashboard home shows Beta feedback, IndexNow, Bing, Watched URLs, and Connect another Site. A Site's page shows Beta feedback plus that Site's IndexNow and Watched URLs. A one-Site account never sees the home, so it meets them there. Each shows while its Setup completion is pending. Request Indexing shows no agent skill, MCP, or API offer. nuxtseo.com's glossary owns the term; `@nuxtseo/pro-shell` draws it.
 
 **Use for:** code and docs about those cards.
 
