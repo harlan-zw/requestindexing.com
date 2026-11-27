@@ -75,7 +75,7 @@ export const PRO_SHELL_COPY_OVERRIDES = {
       'agent': {
         label: 'Agent setup',
         title: 'Choose your agent',
-        description: 'Each sign-in waits for your approval.',
+        description: 'You confirm each sign-in in your browser.',
       },
       'connect': {
         label: 'Connect Google',

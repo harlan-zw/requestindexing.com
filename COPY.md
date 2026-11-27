@@ -561,7 +561,7 @@ article 17209137. Check both before you change either string.
 | --- | --- |
 | Rail label | Agent setup |
 | Heading | Choose your agent |
-| Lead | Each sign-in waits for your approval. |
+| Lead | You confirm each sign-in in your browser. |
 | Skip line | You can set up agents later, and connect more than one. Harlan's words, 2026-11-24. The quiet bar under the lead holds it on the left and the Skip action on the right. Never name Developers here: a new reader does not know that page |
 | Choice group name | Agent |
 | Claude choice | Claude · Web, desktop, and mobile share one connection. |
@@ -570,7 +570,7 @@ article 17209137. Check both before you change either string.
 | Coding agent choice | Coding agent · the marks and names Claude Code, Codex, Cursor, Copilot, OpenCode, then "and others" |
 | Copy action | Copy setup prompt / Setup prompt copied |
 | Coding agent, copy step | Copy the Setup prompt · Your agent installs the gscdump CLI and signs in. |
-| Coding agent, approve step | Approve the sign-in · Your agent opens gscdump in your browser. {account} |
+| Coding agent, authorize step | Authorize the CLI · Your agent opens gscdump in your browser. {account} |
 | Commands summary | Run the commands yourself |
 | Commands copy action | Copy commands, the name of an icon-only button |
 | Add step | Add gscdump to {app} |
@@ -578,8 +578,8 @@ article 17209137. Check both before you change either string.
 | ChatGPT, add detail and action | Follow the setup steps on gscdump.com. · Open setup steps, a link to `https://gscdump.com/mcp/chatgpt` |
 | Gemini, add detail and action | In Gemini, open Settings, then Connected Apps, then Add a custom app. Enter this URL. · `https://gscdump.com/mcp` with its copy button · Open Gemini, a link to `https://gemini.google.com/` |
 | Server URL copy action | Copy server URL, the name of an icon-only button |
-| Approve step | Approve access · {app} opens gscdump. {account} |
-| Gemini, approve step | Sign in and approve access · Gemini opens gscdump. {account} |
+| Allow step | Allow access · {app} opens gscdump. {account} |
+| Gemini, allow step | Sign in and allow access · Gemini opens gscdump. {account} |
 | Ask step | Ask your first question · Paste the Setup prompt into a new {app} chat. |
 | Google account sentence | Sign in with the Google account that owns your Search Console property. |
 | Next step note | Next, connect Google here. Your agent reads your Sites after you connect them. |
@@ -976,7 +976,7 @@ Onboarding Step words, under `proShell.copy.onboarding.steps`:
 
 | Step | Rail label | Heading | Description | Action |
 | --- | --- | --- | --- | --- |
-| `agent` | Agent setup | Choose your agent | Each sign-in waits for your approval. | Continue, secondary, once an agent is chosen. Skip agent setup |
+| `agent` | Agent setup | Choose your agent | You confirm each sign-in in your browser. | Continue, secondary, once an agent is chosen. Skip agent setup |
 | `connect` | Connect Google | Connect Google Search Console | See which pages Google indexed and the reasons it gives for pages it left out. | Continue (shell default) |
 | `sites` | Connect Sites | Connect your Sites | Choose the Search Console property for the Site you want to connect. | Continue (shell default) |
 | `sync` | Finish setup | Setup completion assets | Setup completion assets | Go to dashboard |
