@@ -21,7 +21,7 @@ export function lifecycleAccountError(status: string): GscPropertiesResponse['er
     case 'refresh_missing':
       return { reason: 'MISSING_REFRESH_TOKEN', message: 'Google could not keep this connection active. Reconnect Search Console.' }
     case 'scope_missing':
-      return { reason: 'ACCESS_TOKEN_SCOPE_INSUFFICIENT', message: 'Search Console access was not approved. Reconnect Google and allow Search Console access.' }
+      return { reason: 'ACCESS_TOKEN_SCOPE_INSUFFICIENT', message: 'Search Console access was not granted. Reconnect Google and allow Search Console access.' }
     case 'reauth_required':
       return { reason: 'AUTH_EXPIRED', message: 'Your Google connection has expired. Reconnect Search Console.' }
     case 'disconnected':
