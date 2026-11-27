@@ -939,6 +939,10 @@ The dashboard frame, the command palette, the sidebar back link, the Fleet Sites
 | Team switch confirm body | Switching to {workspace} leaves the current Site. Unsaved filters on this page are lost. | Never Workspace for a Team |
 | Team switch confirm action | Switch Team | Never Workspace for a Team |
 | Refused action tooltip | Your Team role does not allow this. Ask a Team admin. | Says who can change it |
+| Beta CTA row heading | Next steps | `setupOffers.heading` while in beta, when the row can include feedback |
+| Beta feedback offer title | Help improve Request Indexing | Dashboard home and Site Search Console overview |
+| Beta feedback offer body | What’s missing or getting in your way? | Beta feedback card |
+| Beta feedback offer action | Send feedback | Uses `feedback.action` and opens the Send feedback drawer |
 | IndexNow offer title | Send pages with IndexNow | Request Indexing's own offer. Reuses the landing IndexNow card title |
 | IndexNow offer body | Publish your key file and verify it. Request Indexing then sends new and changed sitemap URLs to Bing and other participating search engines. | Automatic sending starts at key verification (Truth rules) |
 | IndexNow offer action | Set up IndexNow | Opens the IndexNow page of the Site in view, or of the first connected Site on the dashboard home |
@@ -963,7 +967,7 @@ The dashboard frame, the command palette, the sidebar back link, the Fleet Sites
 | Invitation link copied | Link copied | Members page |
 | Setup progress label | Setup progress | Onboarding is called setup |
 
-**The setup offers never lead with agents.** Request Indexing shows the IndexNow, Bing, Watched
+**The setup offers never lead with agents.** Request Indexing shows the Beta feedback, IndexNow, Bing, Watched
 URLs, and Connect another Site offers. It shows no agent skill, MCP, or API offer. Agent setup in
 onboarding is the one place Request Indexing leads with agents (MARKETING.md, "Not for" and
 "Boundary with gscdump"). The user menu and the command palette still link the Developers page.

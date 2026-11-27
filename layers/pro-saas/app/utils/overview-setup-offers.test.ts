@@ -84,51 +84,65 @@ describe('watchedUrlsSetupCompletion', () => {
 
 describe('buildOverviewSetupOffers', () => {
   const pending = { _tag: 'pending' } as const
+  const copy = resolveProShellCopy(PRO_SHELL_COPY_OVERRIDES)
   function offers(siteId: string | null) {
     return buildOverviewSetupOffers({
       routes: PRO_SHELL_ROUTES,
-      shellCopy: resolveProShellCopy(PRO_SHELL_COPY_OVERRIDES).setupOffers,
+      shellCopy: copy.setupOffers,
       copy: REQUEST_INDEXING_SETUP_OFFER_COPY,
+      feedbackAction: copy.feedback.action,
       siteId,
       completion: { bing: pending, anotherSite: pending, indexNow: pending, watchedUrls: pending },
     })
   }
 
-  it('leads with IndexNow, and never offers the agent skill, MCP, or API', () => {
-    expect(selectSetupOffers(offers('site_app_1'), new Set()).map(offer => offer.key)).toEqual(['indexnow', 'bing', 'watched-urls', 'another-site'])
-    expect(selectSetupOffers(offers('site_app_1'), new Set(['indexnow'])).map(offer => offer.key)).toEqual(['bing', 'watched-urls', 'another-site'])
+  it('leads with Beta feedback then IndexNow, and never offers the agent skill, MCP, or API', () => {
+    expect(selectSetupOffers(offers('site_app_1'), new Set()).map(offer => offer.key)).toEqual(['beta-feedback', 'indexnow', 'bing', 'watched-urls'])
+    expect(selectSetupOffers(offers('site_app_1'), new Set(['beta-feedback'])).map(offer => offer.key)).toEqual(['indexnow', 'bing', 'watched-urls', 'another-site'])
+    expect(selectSetupOffers(offers('site_app_1'), new Set(['beta-feedback', 'indexnow'])).map(offer => offer.key)).toEqual(['bing', 'watched-urls', 'another-site'])
   })
 
-  it('opens the IndexNow and Watched URLs pages of the Site by its app id', () => {
-    const links = Object.fromEntries(offers('site_app_1').map(offer => [offer.key, offer.action]))
-    expect(links.indexnow).toEqual({ _tag: 'Link', to: '/pro/dashboard/sites/site_app_1/indexing/indexnow' })
-    expect(links['watched-urls']).toEqual({ _tag: 'Link', to: '/pro/dashboard/sites/site_app_1/indexing/watched' })
+  it('runs Beta feedback in place and opens IndexNow and Watched URLs by the Site app id', () => {
+    const actions = Object.fromEntries(offers('site_app_1').map(offer => [offer.key, offer.action]))
+    expect(actions['beta-feedback']).toEqual({ _tag: 'Run', pending: false })
+    expect(actions.indexnow).toEqual({ _tag: 'Link', to: '/pro/dashboard/sites/site_app_1/indexing/indexnow' })
+    expect(actions['watched-urls']).toEqual({ _tag: 'Link', to: '/pro/dashboard/sites/site_app_1/indexing/watched' })
   })
 
-  it('keeps the shell offers and drops the Site offers without a linked Site', () => {
-    expect(offers(null).map(offer => offer.key)).toEqual(['bing', 'another-site'])
+  it('keeps Beta feedback and the shell offers without a linked Site', () => {
+    expect(offers(null).map(offer => offer.key)).toEqual(['beta-feedback', 'bing', 'another-site'])
   })
 })
 
 describe('buildSiteSetupOffers', () => {
   const pending = { _tag: 'pending' } as const
+  const feedbackAction = resolveProShellCopy(PRO_SHELL_COPY_OVERRIDES).feedback.action
   function siteOffers(siteId: string) {
-    return buildSiteSetupOffers({ copy: REQUEST_INDEXING_SETUP_OFFER_COPY, siteId, completion: { indexNow: pending, watchedUrls: pending } })
+    return buildSiteSetupOffers({
+      copy: REQUEST_INDEXING_SETUP_OFFER_COPY,
+      feedbackAction,
+      siteId,
+      completion: { indexNow: pending, watchedUrls: pending },
+    })
   }
   function dismissKey(offers: ReturnType<typeof siteOffers>, key: string) {
     return offers.find(offer => offer.key === key)!.dismissKey
   }
 
-  it('offers only the Site\'s IndexNow and Watched URLs, opened by its app id', () => {
+  it('offers Beta feedback plus the Site\'s IndexNow and Watched URLs, opened by its app id', () => {
     expect(selectSetupOffers(siteOffers('site_app_1'), new Set()).map(offer => [offer.key, offer.action])).toEqual([
+      ['beta-feedback', { _tag: 'Run', pending: false }],
       ['indexnow', { _tag: 'Link', to: '/pro/dashboard/sites/site_app_1/indexing/indexnow' }],
       ['watched-urls', { _tag: 'Link', to: '/pro/dashboard/sites/site_app_1/indexing/watched' }],
     ])
   })
 
-  it('keeps a dismissal to its own Site', () => {
+  it('keeps Site-offer dismissals per Site and Beta feedback account-wide', () => {
     const dismissed = new Set([dismissKey(siteOffers('site_a'), 'indexnow')])
-    expect(selectSetupOffers(siteOffers('site_a'), dismissed).map(offer => offer.key)).toEqual(['watched-urls'])
-    expect(selectSetupOffers(siteOffers('site_b'), dismissed).map(offer => offer.key)).toEqual(['indexnow', 'watched-urls'])
+    expect(selectSetupOffers(siteOffers('site_a'), dismissed).map(offer => offer.key)).toEqual(['beta-feedback', 'watched-urls'])
+    expect(selectSetupOffers(siteOffers('site_b'), dismissed).map(offer => offer.key)).toEqual(['beta-feedback', 'indexnow', 'watched-urls'])
+
+    const dismissedFeedback = new Set([dismissKey(siteOffers('site_a'), 'beta-feedback')])
+    expect(selectSetupOffers(siteOffers('site_b'), dismissedFeedback).map(offer => offer.key)).toEqual(['indexnow', 'watched-urls'])
   })
 })

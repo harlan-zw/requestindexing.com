@@ -143,17 +143,9 @@ watch(siteLookup, (value) => {
 provide('site', site)
 provide('siteStatus', siteStatus)
 
-// The frame, the switcher, the sidebar gates and the user menu read this.
-provideProNavSource({
-  sites: computed(() => sitesLoading.value && !siteData.value ? null : sites.value),
-  scopedSite,
-  routeSiteRef: routeSiteId,
-})
-
-const { items: userMenu } = useProUserMenu({ singleSite })
-
-// Send feedback opens from the page header and the user menu. The drawer
-// files the report against the page it opened on.
+// Send feedback opens from the page header, the user menu, and the dashboard
+// Next steps card. One instance feeds the nav source and the drawer so marking
+// History seen clears the header's unread dot without waiting for a reload.
 const feedback = useProFeedback()
 const feedbackOpen = feedback.isOpen
 const feedbackContext = computed(() => ({
@@ -164,6 +156,20 @@ const feedbackContext = computed(() => ({
 const feedbackAccount = computed(() => session.value?.user
   ? { email: session.value.user.email ?? null, id: session.value.user.id != null ? String(session.value.user.id) : null }
   : null)
+onMounted(() => {
+  feedback.prefetchUnread()
+})
+
+// The frame, the switcher, the sidebar gates, the page header, and the user menu read this.
+provideProNavSource({
+  sites: computed(() => sitesLoading.value && !siteData.value ? null : sites.value),
+  scopedSite,
+  routeSiteRef: routeSiteId,
+  openFeedback: context => feedback.open(context),
+  feedbackUnreadCount: feedback.unreadCount,
+})
+
+const { items: userMenu } = useProUserMenu({ singleSite })
 
 /**
  * The dashboard's one `h1`, drawn by `ProShellPageHeader`, as nuxtseo.com's

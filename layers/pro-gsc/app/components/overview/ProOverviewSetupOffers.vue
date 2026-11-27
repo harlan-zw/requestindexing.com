@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { SetupOffer } from '@nuxtseo/pro-shell/shared/setup-offers'
 import type { SiteFleetRow } from '~~/layers/core/app/types/data'
 import type { FreeAllowanceView } from '#layers/pro-gsc/shared/free-allowance'
 import ProShellSetupOffers from '@nuxtseo/pro-shell/app/components/ProShellSetupOffers.vue'
@@ -6,21 +7,24 @@ import { readProShellConfig, useProShellCopy } from '@nuxtseo/pro-shell/app/comp
 import { useProShellSetupDismissals } from '@nuxtseo/pro-shell/app/composables/useProShellSetupDismissals'
 import { useProBingIntegration } from '#layers/pro-gsc/app/composables/useProGscdump'
 import { useProSetupSiteReads } from '#layers/pro-gsc/app/composables/useProSetupSiteReads'
+import { useProFeedback } from '#layers/pro-saas/app/composables/useProFeedback'
 import { REQUEST_INDEXING_SETUP_OFFER_COPY } from '#layers/pro-saas/app/pro-shell'
 import {
   anotherSiteCompletion,
+  BETA_FEEDBACK_OFFER_KEY,
   bingSetupCompletion,
   buildOverviewSetupOffers,
 } from '#layers/pro-saas/app/utils/overview-setup-offers'
 
 /**
- * "Finish setting up" on the dashboard home: Request Indexing's IndexNow and
- * Watched URLs offers, and the shell's Bing and Add another Site offers, each
- * with its Setup completion from a read this app already makes. IndexNow and
- * Watched URLs read the first Site linked to gscdump; each Site's page shows
- * its own (`ProSiteSetupOffers`). Bing reads the Integrations row, and Add
- * another Site reads the Site count against the Free allowance. Every read is
- * client-only, and the cards wait until all of them land, so none reshuffles.
+ * "Next steps" on the dashboard home: the beta feedback invitation, Request
+ * Indexing's IndexNow and Watched URLs offers, and the shell's Bing and Connect
+ * another Site offers, each with its Setup completion from a read this app
+ * already makes. IndexNow and Watched URLs read the first Site linked to
+ * gscdump; each Site's page shows its own (`ProSiteSetupOffers`). Bing reads
+ * the Integrations row, and Connect another Site reads the Site count against
+ * the Free allowance. Every read is client-only, and the cards wait until all
+ * of them land, so none reshuffles.
  */
 const { sites } = defineProps<{ sites: readonly SiteFleetRow[] }>()
 
@@ -37,7 +41,8 @@ const target = computed(() => sites.find(site => site.gscdumpSiteId) ?? null)
 const siteSetup = useProSetupSiteReads(() => target.value?.gscdumpSiteId)
 
 const routes = readProShellConfig().routes ?? {}
-const shellCopy = useProShellCopy().setupOffers
+const copy = useProShellCopy()
+const feedback = useProFeedback()
 const { dismissedKeys, dismiss } = useProShellSetupDismissals()
 
 // A failed read is no data: its offer shows no card rather than a guess.
@@ -45,8 +50,9 @@ const allowance = computed<FreeAllowanceView | null>(() => usageStatus.value ===
 
 const offers = computed(() => buildOverviewSetupOffers({
   routes,
-  shellCopy,
+  shellCopy: copy.setupOffers,
   copy: REQUEST_INDEXING_SETUP_OFFER_COPY,
+  feedbackAction: copy.feedback.action,
   siteId: target.value?.siteId ?? null,
   completion: {
     bing: bingSetupCompletion(bing.state.value),
@@ -56,10 +62,15 @@ const offers = computed(() => buildOverviewSetupOffers({
   },
 }))
 const loading = computed(() => offers.value.some(offer => offer.completion._tag === 'unknown'))
+
+function onRunOffer(offer: SetupOffer) {
+  if (offer.key === BETA_FEEDBACK_OFFER_KEY)
+    feedback.open({ intent: 'improvement' })
+}
 </script>
 
 <template>
-  <ProShellSetupOffers :offers="offers" :dismissed="dismissedKeys" :loading="loading" @dismiss="dismiss">
+  <ProShellSetupOffers :offers="offers" :dismissed="dismissedKeys" :loading="loading" @dismiss="dismiss" @run="onRunOffer">
     <template #site-mark>
       <OgBrand :size="16" semantic />
     </template>

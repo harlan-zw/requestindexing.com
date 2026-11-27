@@ -48,6 +48,7 @@ export const PRO_SHELL_COPY_OVERRIDES = {
     switchConfirm: 'Switch Team',
   },
   setupOffers: {
+    heading: 'Next steps',
     bing: {
       title: 'Connect Bing Webmaster Tools',
       siteBody: 'Read Bing crawl evidence for this Site.',
@@ -110,6 +111,10 @@ export const PRO_SHELL_COPY_OVERRIDES = {
  * Developers page.
  */
 export const REQUEST_INDEXING_SETUP_OFFER_COPY = {
+  betaFeedback: {
+    title: 'Help improve Request Indexing',
+    body: 'What’s missing or getting in your way?',
+  },
   indexNow: {
     title: 'Send pages with IndexNow',
     body: 'Publish your key file and verify it. Request Indexing then sends new and changed sitemap URLs to Bing and other participating search engines.',

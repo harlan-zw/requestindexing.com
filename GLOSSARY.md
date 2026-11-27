@@ -42,7 +42,7 @@ the vocabulary of this app: accounts, teams, the site list, and the dashboard.
 | Checkpoint | gscdump scheduled URL Inspection for a Watched URL | Watched URL 1—N retained observations | Checkpoint |
 | onboarding drip | drip_emails table, `onboarded` sequence | User 0—1 row per sequence; three emails after onboarding | (internal) |
 | Product updates | notification_optouts, category `lifecycle` | Address 0—1 opt-out per category | product updates |
-| Setup offer | `@nuxtseo/pro-shell` `ProShellSetupOffers`, dashboard home and Site page | Account 0 to 4 open offers on the home, Site 0 to 2 on its page, under "Finish setting up" | (the card title) |
+| Setup offer | `@nuxtseo/pro-shell` `ProShellSetupOffers`, dashboard home and Site page | Account 0 to 4 open offers on the home, Site 0 to 3 on its page, under "Next steps" | (the card title) |
 | Onboarding Step | `@nuxtseo/pro-shell` Step registry, `FIRST_RUN_STEPS` and `DASHBOARD_CARD_STEPS` | Flow 1 to N steps, one Step state each | step |
 | Agent setup | onboarding, decided 2026-11-24; connects gscdump's MCP server (`GSCDUMP_MCP_URL`) | Onboarding 0 to 1 Agent setup; ends in one agent connection or Skip agent setup | Agent setup |
 | Setup prompt | Agent setup and each manual onboarding step | Manual step 0 to 1 Setup prompt; carries no secret | Setup prompt |
