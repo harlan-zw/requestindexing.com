@@ -66,11 +66,13 @@ vi.mock('@nuxtseo/pro-shell/app/components/ProShellSetupOffers.vue', () => ({
 }))
 
 const canWrite = ref(true)
+const usageData = ref<{ allowance: { _tag: string } } | null>({ allowance: { _tag: 'Hidden' } })
+const usageStatus = ref('success')
 Object.assign(globalThis, {
   computed,
   ref,
   useProFetch: () => vi.fn(),
-  useLazyFetch: () => ({ data: ref({ allowance: { _tag: 'Hidden' } }), status: ref('success') }),
+  useLazyFetch: () => ({ data: usageData, status: usageStatus }),
   useCaller: () => ({ caller: ref({ currentTeamId: 1 }), isAdmin: ref(false) }),
   useTeamPolicy: () => ({ can: () => canWrite.value }),
 })
@@ -98,6 +100,8 @@ function offers(host: HTMLElement) {
 
 beforeEach(() => {
   canWrite.value = true
+  usageData.value = { allowance: { _tag: 'Hidden' } }
+  usageStatus.value = 'success'
   engine.indexNow.mockReset()
   engine.watched.mockReset()
   engine.openFeedback.mockReset()
@@ -151,5 +155,15 @@ describe('dashboard home setup offers', () => {
     const viewer = await mount([site('b', 's_engine_b')])
     expect(engine.indexNow).not.toHaveBeenCalled()
     expect(offers(viewer).map(([key]) => key)).toEqual(['beta-feedback', 'another-site'])
+  })
+
+  it('keeps other Next steps visible when the usage read fails', async () => {
+    usageData.value = null
+    usageStatus.value = 'error'
+    engine.indexNow.mockResolvedValue({ _tag: 'disconnected', host: 'b.example' })
+    engine.watched.mockResolvedValue({ watched: [], limit: 50, cadenceDays: 7, meta: { siteUrl: 'sc-domain:b.example' } })
+    const host = await mount([site('b', 's_engine_b')])
+    expect(host.querySelector('[data-loading]')).toBeNull()
+    expect(offers(host).map(([key]) => key)).toEqual(['beta-feedback', 'indexnow', 'watched-urls'])
   })
 })

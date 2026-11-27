@@ -34,17 +34,20 @@ export function bingSetupCompletion(state: BingIntegrationState): SetupCompletio
 }
 
 /**
- * Add another Site, from the Site count and the Free allowance gscdump
+ * Connect another Site, from the Site count and the Free allowance gscdump
  * reports. With no Site, the setup card offers the first one instead. A full
  * allowance has no room for another. An account with no meter has no cap.
- * An unread allowance waits.
+ * An unread allowance waits (`unknown`); a failed or unavailable read hides
+ * only this offer (`unavailable`) so the other Next steps still show.
  */
 export function anotherSiteCompletion(input: { siteCount: number, allowance: FreeAllowanceView | null }): SetupCompletion {
   if (input.siteCount === 0)
     return SETUP_UNAVAILABLE
   const allowance = input.allowance
-  if (!allowance || allowance._tag === 'Unavailable')
+  if (!allowance)
     return SETUP_UNKNOWN
+  if (allowance._tag === 'Unavailable')
+    return SETUP_UNAVAILABLE
   if (allowance._tag === 'Hidden')
     return SETUP_PENDING
   const { used, allowance: limit } = allowance.entitlements.meters.sites
@@ -136,7 +139,7 @@ function siteOffers(input: {
   ]
 }
 
-/** Stable key and account-scoped dismissal key for the beta feedback CTA card. */
+/** Stable key and account-scoped dismissal key for the Beta feedback Setup offer. */
 export const BETA_FEEDBACK_OFFER_KEY = 'beta-feedback'
 
 /**
@@ -205,10 +208,10 @@ export interface SiteSetupOfferInput {
 }
 
 /**
- * The offers on a Site's page: the beta feedback CTA plus that Site's IndexNow
- * and Watched URLs, until each is complete. A one-Site account lands there
- * instead of the dashboard home, so this is where it meets them. nuxtseo.com's
- * Site page draws a Site's own Setup offers the same way.
+ * The offers on a Site's page: Beta feedback plus that Site's IndexNow and
+ * Watched URLs, until each is complete. A one-Site account lands there instead
+ * of the dashboard home, so this is where it meets them. nuxtseo.com's Site
+ * page draws a Site's own Setup offers the same way.
  *
  * Site-scoped dismissals name the Site, so dismissing one Site's card leaves
  * the next Site's card in place. The beta feedback card stays account-scoped.
