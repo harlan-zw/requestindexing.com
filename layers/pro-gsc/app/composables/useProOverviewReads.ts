@@ -22,6 +22,20 @@ export interface OverviewSiteRead {
   indexing: OverviewResult<OverviewIndexing | null>
 }
 
+/** Sites read in parallel on the dashboard home. Each Site fires daily and indexing reads. */
+export const DEFAULT_OVERVIEW_READ_CONCURRENCY = 4
+
+export interface UseProOverviewReadsOptions {
+  /** Max Sites fetched in parallel. Values below 1 clamp to 1. */
+  concurrency?: number
+}
+
+function resolveConcurrency(concurrency?: number): number {
+  if (concurrency === undefined || !Number.isFinite(concurrency))
+    return DEFAULT_OVERVIEW_READ_CONCURRENCY
+  return Math.max(1, Math.floor(concurrency))
+}
+
 /**
  * The dashboard home's per-Site reads: one daily Search Console read and one
  * indexing summary per synced Site, published independently.
@@ -30,9 +44,14 @@ export interface OverviewSiteRead {
  * rather than pending. One Site's failure lands on that Site's entry and never
  * blanks the others. A realtime sync event refetches only the Site it names.
  */
-export function useProOverviewReads(sites: MaybeRefOrGetter<readonly SiteFleetRow[]>, range: OverviewReadRange) {
+export function useProOverviewReads(
+  sites: MaybeRefOrGetter<readonly SiteFleetRow[]>,
+  range: OverviewReadRange,
+  options: UseProOverviewReadsOptions = {},
+) {
   const gscdump = useProGscdump()
   const invalidation = useGscInvalidationMap()
+  const concurrency = resolveConcurrency(options.concurrency)
 
   const targets = computed(() => toValue(sites)
     .filter(isOverviewReadTarget)
@@ -69,35 +88,54 @@ export function useProOverviewReads(sites: MaybeRefOrGetter<readonly SiteFleetRo
   })
 
   async function load(list: readonly { siteId: string, gscdumpSiteId: string }[]): Promise<void> {
-    if (!list.length)
+    if (!list.length || !active)
       return
-    await Promise.all(list.map(async (target) => {
-      const prior = loaded.value[target.siteId]
+    const nextLoaded = { ...loaded.value }
+    const jobs = list.map((target) => {
+      const prior = nextLoaded[target.siteId]
       const retained = prior?.gscdumpSiteId === target.gscdumpSiteId ? prior : null
       const requestVersion = ++version
-      loaded.value = { ...loaded.value, [target.siteId]: {
+      nextLoaded[target.siteId] = {
         gscdumpSiteId: target.gscdumpSiteId,
         version: requestVersion,
         daily: retained?.daily ?? { _tag: 'Pending' },
         indexing: retained?.indexing ?? { _tag: 'Pending' },
-      } }
-      function publish<K extends keyof OverviewSiteRead>(source: K, value: OverviewSiteRead[K]) {
-        const current = loaded.value[target.siteId]
-        if (!active || current?.version !== requestVersion
-          || !targets.value.some(site => site.siteId === target.siteId && site.gscdumpSiteId === target.gscdumpSiteId)) {
-          return
-        }
-        const previous = current[source]
-        const next = value._tag === 'Err' && (previous._tag === 'Ok' || previous._tag === 'Stale')
-          ? { _tag: 'Stale' as const, value: previous.value, error: value.error }
-          : value
-        loaded.value = { ...loaded.value, [target.siteId]: { ...current, [source]: next } }
       }
-      await Promise.all([
-        readDaily(target.gscdumpSiteId).then(result => publish('daily', result)),
-        readIndexing(target.gscdumpSiteId).then(result => publish('indexing', result)),
-      ])
-    }))
+      return { target, requestVersion }
+    })
+    loaded.value = nextLoaded
+
+    let nextIndex = 0
+    async function worker(): Promise<void> {
+      while (nextIndex < jobs.length) {
+        if (!active)
+          break
+        const { target, requestVersion } = jobs[nextIndex++]!
+        const current = loaded.value[target.siteId]
+        if (current?.version !== requestVersion
+          || !targets.value.some(site => site.siteId === target.siteId && site.gscdumpSiteId === target.gscdumpSiteId)) {
+          continue
+        }
+        function publish<K extends keyof OverviewSiteRead>(source: K, value: OverviewSiteRead[K]) {
+          const latest = loaded.value[target.siteId]
+          if (!active || latest?.version !== requestVersion
+            || !targets.value.some(site => site.siteId === target.siteId && site.gscdumpSiteId === target.gscdumpSiteId)) {
+            return
+          }
+          const previous = latest[source]
+          const next = value._tag === 'Err' && (previous._tag === 'Ok' || previous._tag === 'Stale')
+            ? { _tag: 'Stale' as const, value: previous.value, error: value.error }
+            : value
+          loaded.value = { ...loaded.value, [target.siteId]: { ...latest, [source]: next } }
+        }
+        await Promise.all([
+          readDaily(target.gscdumpSiteId).then(result => publish('daily', result)),
+          readIndexing(target.gscdumpSiteId).then(result => publish('indexing', result)),
+        ])
+      }
+    }
+
+    await Promise.all(Array.from({ length: Math.min(concurrency, jobs.length) }, worker))
   }
 
   /** Refetch the given Sites by app id, or every Site when none are named. */
