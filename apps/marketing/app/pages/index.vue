@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
+import { FREE_TOOLS } from '#shared/tool-registry'
 
 // COPY.md "Landing page assets" owns every string on this page.
 const { loggedIn, user } = useUserSession()
@@ -42,12 +42,26 @@ const faqItems = [
   },
 ]
 
+useSchemaOrg([
+  {
+    '@type': 'FAQPage',
+    'mainEntity': faqItems.map(faq => ({
+      '@type': 'Question',
+      'name': faq.label,
+      'acceptedAnswer': {
+        '@type': 'Answer',
+        'text': faq.content,
+      },
+    })),
+  },
+])
+
 // Google's coverage states, verbatim, as the dashboard shows them.
 const mockUrls = [
   { url: '/blog/hello-world', status: 'Crawled - currently not indexed', verdict: 'neutral' },
   { url: '/guides/seo-best-practices', status: 'Submitted and indexed', verdict: 'pass' },
   { url: '/docs/configuration', status: 'Discovered - currently not indexed', verdict: 'neutral' },
-  { url: '/tags/nuxt', status: 'Excluded by \'noindex\' tag', verdict: 'neutral' },
+  { url: '/tags/nuxt', status: 'Excluded by ‘noindex’ tag', verdict: 'neutral' },
   { url: '/changelog/v2', status: 'Submitted and indexed', verdict: 'pass' },
 ]
 
@@ -59,7 +73,7 @@ const mockSites = [
 
 const mockChanges = [
   { url: '/blog/hello-world', from: 'Crawled - currently not indexed', to: 'Submitted and indexed', indexed: true },
-  { url: '/docs/old-setup', from: 'Submitted and indexed', to: 'Excluded by \'noindex\' tag', indexed: false },
+  { url: '/docs/old-setup', from: 'Submitted and indexed', to: 'Excluded by ‘noindex’ tag', indexed: false },
   { url: '/guides/sitemaps', from: 'Discovered - currently not indexed', to: 'Crawled - currently not indexed', indexed: false },
 ]
 
@@ -108,14 +122,21 @@ const walkthroughSteps = [
     eyebrow: 'Connect',
     title: 'Sign in with your Google account',
     description: 'One OAuth sign-in. We read your Search Console data. The only changes we make there are a sitemap submission and a property you add and verify.',
-    bullets: ['Search Console and Indexing API access', 'Revoke any time from your Google account', 'Tokens encrypted at rest'],
+    bullets: [
+      'Read-only Search Console access during setup',
+      'Remove access any time in your Google Account',
+      'Indexing API uses a separate Google grant when needed',
+    ],
   },
   {
     num: '02',
     eyebrow: 'Sync',
-    title: 'See every site in one place',
-    description: 'Every verified property in one list, with its indexing rate and Search Console metrics. No more switching tabs.',
-    bullets: ['Totals across every property you own', 'Filter by domain, path, or status'],
+    title: 'Connect your Sites',
+    description: 'Choose verified Search Console properties to connect as Sites, with each Site\'s indexing rate and Search Console metrics in one list.',
+    bullets: [
+      'Totals across every Site you connect, within your Free allowance',
+      'Filter by domain, path, or status',
+    ],
   },
   {
     num: '03',
@@ -138,28 +159,35 @@ const walkthroughSteps = [
   },
 ]
 
-const marketingTools = [
-  {
-    title: 'Google Index Checker',
-    description: 'Check whether Google has indexed one URL. No account needed.',
-    icon: 'i-heroicons-magnifying-glass',
-    to: '/tools/google-indexing-checker',
-  },
-  {
-    title: 'Bulk Indexing Checker',
-    description: `Paste up to ${BULK_CHECK_URL_LIMIT} URLs or a sitemap, check them in one run, and export the results as CSV.`,
-    icon: 'i-heroicons-queue-list',
-    to: '/tools/bulk-indexing-checker',
-  },
-  {
-    title: 'Site Indexing Report',
-    description: 'A report for any domain: estimated indexed pages, ranking keywords, and recommendations.',
-    icon: 'i-heroicons-document-chart-bar',
-    to: '/tools/site-indexing-report',
-  },
-]
+const marketingTools = FREE_TOOLS.map(tool => ({
+  title: tool.title,
+  description: tool.shortDescription,
+  icon: tool.icon,
+  to: tool.path,
+}))
 
 const learnGuides = [
+  {
+    title: 'Why is my page not indexed?',
+    description: 'Search Console gives a reason for each page Google did not index. Learn what each reason means, and the first fix to try.',
+    icon: 'i-heroicons-question-mark-circle',
+    to: '/why-is-my-page-not-indexed',
+    action: 'Read the reasons',
+  },
+  {
+    title: 'Why is my site not indexed?',
+    description: 'Check the site-wide causes first: robots.txt, noindex, sitemaps, and how to find where your URLs stop.',
+    icon: 'i-heroicons-globe-alt',
+    to: '/why-is-my-site-not-indexed',
+    action: 'Check your site',
+  },
+  {
+    title: 'How to set up IndexNow',
+    description: 'Publish a key file, verify it, and notify Bing and other participating search engines when pages change.',
+    icon: 'i-heroicons-paper-airplane',
+    to: '/indexnow-setup',
+    action: 'Set up IndexNow',
+  },
   {
     title: 'Indexing API for blog posts',
     description: 'Ordinary blog posts are outside Google\'s supported Indexing API use. Learn what to use instead, and what an accepted request proves.',
@@ -173,27 +201,6 @@ const learnGuides = [
     icon: 'i-heroicons-book-open',
     to: '/google-indexing-api',
     action: 'Read the guide',
-  },
-  {
-    title: 'Step-by-step tutorial',
-    description: 'Create a Google Cloud project and service account, give it Search Console ownership, and send your first eligible notification.',
-    icon: 'i-heroicons-academic-cap',
-    to: '/google-indexing-api-tutorial',
-    action: 'Follow tutorial',
-  },
-  {
-    title: 'Node.js implementation',
-    description: 'Send one URL_UPDATED notification with googleapis, read the failures, and tell notification metadata apart from index status.',
-    icon: 'i-simple-icons-nodedotjs',
-    to: '/google-indexing-api-node-js',
-    action: 'See the code',
-  },
-  {
-    title: 'Bulk URL submission',
-    description: 'Send eligible URLs one request at a time, see how multipart batches differ, and keep a result for every URL.',
-    icon: 'i-heroicons-queue-list',
-    to: '/bulk-submit-urls-google-indexing-api',
-    action: 'Read pattern',
   },
   {
     title: 'Quota & rate limits',
@@ -487,7 +494,7 @@ const linkClass = 'underline decoration-primary/30 underline-offset-4 hover:deco
                       </button>
                     </div>
                     <p class="text-xs text-muted">
-                      Search Console and Indexing API access
+                      View Search Console data for your verified sites
                     </p>
                   </div>
                 </div>
@@ -496,7 +503,7 @@ const linkClass = 'underline decoration-primary/30 underline-offset-4 hover:deco
                   <div class="px-5 py-3.5 border-b border-default flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <UIcon name="i-ph-globe-duotone" class="size-4 text-muted" />
-                      <span class="text-sm font-semibold text-default">Your sites</span>
+                      <span class="text-sm font-semibold text-default">Your Sites</span>
                     </div>
                     <UBadge color="neutral" variant="subtle" size="xs">
                       3 verified
@@ -606,7 +613,7 @@ const linkClass = 'underline decoration-primary/30 underline-offset-4 hover:deco
         </UPageGrid>
         <div class="flex justify-center mt-8">
           <UButton to="/tools" variant="ghost" color="neutral" trailing-icon="i-heroicons-arrow-right">
-            View all free indexing tools
+            View all free indexing checkers
           </UButton>
         </div>
       </UPageSection>
@@ -629,7 +636,7 @@ const linkClass = 'underline decoration-primary/30 underline-offset-4 hover:deco
             trailing-icon="i-heroicons-arrow-right"
             class="self-start lg:self-auto"
           >
-            All guides
+            Browse all guides
           </UButton>
         </div>
 

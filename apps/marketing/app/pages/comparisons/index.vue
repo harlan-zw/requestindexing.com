@@ -15,22 +15,31 @@ useSeoMeta({
 
 defineOgImage('Page', {
   headline: 'Comparisons',
-  title: 'Request Indexing vs the rest',
+  title: 'Compare Request Indexing with Other Tools',
   description: 'Indexly, SEO Gets, and a replacement workflow for Tag Parrot.',
 })
+
+useSchemaOrg([
+  defineWebPage({
+    '@type': 'CollectionPage',
+    'name': 'Request Indexing Comparisons',
+    'description': 'Compare Request Indexing with Indexly and SEO Gets, or choose a replacement workflow after Tag Parrot closed.',
+  }),
+])
 </script>
 
 <template>
   <div>
-    <h1 class="sr-only">
-      Request Indexing comparisons
-    </h1>
     <UPageSection
       headline="Comparisons"
-      title="Request Indexing vs the rest"
       description="Compare Indexly and SEO Gets with Request Indexing. Find a replacement workflow for the closed Tag Parrot service."
       :ui="{ container: 'max-w-7xl', title: 'font-title' }"
     >
+      <template #title>
+        <h1 class="font-title">
+          Compare Request Indexing with other tools
+        </h1>
+      </template>
       <UPageGrid>
         <UPageCard
           v-for="comparison in comparisons"

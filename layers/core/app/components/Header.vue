@@ -3,6 +3,8 @@ import { NavigationMenuContent, NavigationMenuItem, NavigationMenuList, Navigati
 import { createLogoutHandler } from '~~/layers/core/app/composables/auth'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { ONBOARDING_ROUTE } from '#layers/pro-saas/shared/onboarding'
+import { GUIDE_NAV_ITEMS } from '#shared/guides-nav'
+import { FREE_TOOLS } from '#shared/tool-registry'
 
 const { loggedIn, user } = useUserSession()
 
@@ -48,24 +50,9 @@ function onMenuEscape(event: KeyboardEvent, value: string): void {
 }
 
 // Mobile nav data
-const mobileGuides = [
-  { label: 'Ask Google to Index a URL', icon: 'i-heroicons-document-magnifying-glass', to: '/request-indexing-google-search-console' },
-  { label: 'Why a Page Is Not Indexed', icon: 'i-heroicons-question-mark-circle', to: '/why-is-my-page-not-indexed' },
-  { label: 'Why a Site Is Not Indexed', icon: 'i-heroicons-globe-alt', to: '/why-is-my-site-not-indexed' },
-  { label: 'Set Up IndexNow', icon: 'i-heroicons-paper-airplane', to: '/indexnow-setup' },
-  { label: 'Google Indexing API', icon: 'i-heroicons-book-open', to: '/google-indexing-api' },
-  { label: 'Setup Tutorial', icon: 'i-heroicons-academic-cap', to: '/google-indexing-api-tutorial' },
-  { label: 'Node.js Implementation', icon: 'i-simple-icons-nodedotjs', to: '/google-indexing-api-node-js' },
-  { label: 'Bulk Submit URLs', icon: 'i-heroicons-arrow-up-tray', to: '/bulk-submit-urls-google-indexing-api' },
-  { label: 'For Blog Posts', icon: 'i-heroicons-document-text', to: '/indexing-api-for-blog-posts' },
-  { label: 'Quota & Limits', icon: 'i-heroicons-chart-bar', to: '/google-indexing-api-quota' },
-]
+const mobileGuides = GUIDE_NAV_ITEMS.map(({ label, icon, to }) => ({ label, icon, to }))
 
-const mobileTools = [
-  { label: 'Google Index Checker', icon: 'i-heroicons-magnifying-glass', to: '/tools/google-indexing-checker' },
-  { label: 'Bulk Indexing Checker', icon: 'i-heroicons-queue-list', to: '/tools/bulk-indexing-checker' },
-  { label: 'Site Indexing Report', icon: 'i-heroicons-document-chart-bar', to: '/tools/site-indexing-report' },
-]
+const mobileTools = FREE_TOOLS.map(({ title, icon, path }) => ({ label: title, icon, to: path }))
 
 const mobileSites = computed(() =>
   (sites.value ?? []).map(site => ({
@@ -83,7 +70,7 @@ const authDropdownItems = computed(() => {
   if (isOnWelcome.value) {
     return [[
       {
-        label: 'Logout',
+        label: 'Sign out',
         onSelect: () => logout(),
         icon: 'i-heroicons-arrow-left-end-on-rectangle',
       },
@@ -95,7 +82,7 @@ const authDropdownItems = computed(() => {
     ],
     [
       {
-        label: 'Logout',
+        label: 'Sign out',
         onSelect: () => logout(),
         icon: 'i-heroicons-arrow-left-end-on-rectangle',
       },

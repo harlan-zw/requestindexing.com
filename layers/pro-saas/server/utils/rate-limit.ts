@@ -57,11 +57,14 @@ export function getRemainingRequests(count: number | null, tier: Tier): number {
 }
 
 const FREE_TOOL_DAILY_LIMIT = 50
+const FEEDBACK_DAILY_LIMIT = 20
 
-export async function checkFreeToolRateLimit(event: H3Event) {
+export async function checkFreeToolRateLimit(event: H3Event, opts?: { cost?: number }) {
   // Skip rate limiting in development
   if (import.meta.dev)
     return
+
+  const cost = Math.max(1, Math.floor(opts?.cost ?? 1))
 
   const ip = getHeader(event, 'cf-connecting-ip')
     || getHeader(event, 'x-forwarded-for')?.split(',')[0]?.trim()
@@ -82,7 +85,7 @@ export async function checkFreeToolRateLimit(event: H3Event) {
       })
       throw createError({
         statusCode: 429,
-        message: 'Rate limit exceeded. Please wait before making more requests.',
+        message: 'Rate limit exceeded. Please wait a minute before checking again.',
       })
     }
   }
@@ -93,25 +96,64 @@ export async function checkFreeToolRateLimit(event: H3Event) {
   const storage = appStorage()
 
   const count = await storage.getItem<number>(dayKey).catch(() => null)
+  const used = count || 0
 
-  if (count !== null && count >= FREE_TOOL_DAILY_LIMIT) {
+  if (used + cost > FREE_TOOL_DAILY_LIMIT) {
     setResponseHeaders(event, {
       'X-RateLimit-Limit': String(FREE_TOOL_DAILY_LIMIT),
-      'X-RateLimit-Remaining': '0',
+      'X-RateLimit-Remaining': String(Math.max(0, FREE_TOOL_DAILY_LIMIT - used)),
       'X-RateLimit-Reset': String(getEndOfDayTimestamp()),
     })
     throw createError({
       statusCode: 429,
-      message: `Daily limit of ${FREE_TOOL_DAILY_LIMIT} requests exceeded. Resets at midnight UTC.`,
+      message: `Daily limit of ${FREE_TOOL_DAILY_LIMIT} free checks exceeded. Resets at midnight UTC.`,
     })
   }
 
-  await storage.setItem(dayKey, (count || 0) + 1, { ttl: 86400 }).catch(err => logWarn('kv.best_effort_write_failed', err, { fn: 'rateLimit.increment', dayKey }))
+  const nextUsed = used + cost
+  await storage.setItem(dayKey, nextUsed, { ttl: 86400 }).catch(err => logWarn('kv.best_effort_write_failed', err, { fn: 'rateLimit.increment', dayKey }))
 
   setResponseHeaders(event, {
     'X-RateLimit-Limit': String(FREE_TOOL_DAILY_LIMIT),
-    'X-RateLimit-Remaining': String(FREE_TOOL_DAILY_LIMIT - (count || 0) - 1),
+    'X-RateLimit-Remaining': String(Math.max(0, FREE_TOOL_DAILY_LIMIT - nextUsed)),
   })
+}
+
+export async function checkAnonymousFeedbackRateLimit(event: H3Event, kind: 'thumbs' | 'comment') {
+  if (import.meta.dev)
+    return
+
+  const ip = getHeader(event, 'cf-connecting-ip')
+    || getHeader(event, 'x-forwarded-for')?.split(',')[0]?.trim()
+    || getRequestIP(event)
+    || 'unknown'
+  const key = `ip:${ip}`
+
+  const cf = resolveCloudflareBindings<Record<string, RateLimiter>>(event)
+  const limiter = cf?.RL_FREE_TOOLS
+  if (limiter) {
+    const { success } = await limiter.limit({ key: `feedback:${key}` })
+    if (!success) {
+      throw createError({
+        statusCode: 429,
+        message: 'Too many feedback submissions. Wait a minute before trying again.',
+      })
+    }
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const dayKey = `ratelimit:feedback:${kind}:${key}:${today}`
+  const storage = appStorage()
+  const used = (await storage.getItem<number>(dayKey).catch(() => null)) || 0
+
+  if (used >= FEEDBACK_DAILY_LIMIT) {
+    throw createError({
+      statusCode: 429,
+      message: 'Daily feedback limit reached. Try again tomorrow.',
+    })
+  }
+
+  await storage.setItem(dayKey, used + 1, { ttl: 86400 }).catch(err => logWarn('kv.best_effort_write_failed', err, { fn: 'feedbackRateLimit.increment', dayKey }))
 }
 
 export async function checkProToolRateLimit(

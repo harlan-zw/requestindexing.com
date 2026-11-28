@@ -88,7 +88,7 @@ console.log(data)
 
 The snippet depends on that client and `url`, so it will not run on its own. Metadata describes the last notification Google received for that URL. It does not establish index status. [Google's usage guide](https://developers.google.com/search/apis/indexing-api/v3/using-api) documents the distinction.
 
-For index information, use the separate [URL Inspection API](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect) and its [Search Console authorization scope](https://gscdump.com/learn-google-search-console/api/authentication). For a one-off check without code, the [Google index checker](/tools/google-indexing-checker) runs a `site:` search for a single URL and reports whether it returns a result.
+For index information, use the separate [URL Inspection API](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect) and its [Search Console authorization scope](https://gscdump.com/learn-google-search-console/api/authentication). For a one-off check without code, the [Google Index Checker](/tools/google-indexing-checker) runs a `site:` search for a single URL and reports whether it returns a result.
 
 ## When you have several URLs
 

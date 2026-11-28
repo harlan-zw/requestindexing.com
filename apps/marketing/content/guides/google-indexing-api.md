@@ -6,7 +6,7 @@ navigation:
   icon: i-heroicons-book-open
 icon: i-heroicons-book-open
 publishedAt: "2026-03-04"
-updatedAt: "2026-10-08"
+updatedAt: "2026-11-27"
 readTime: "4 min"
 keywords:
   - google indexing api
@@ -35,7 +35,7 @@ The body alone is only part of the call. The [Indexing API setup tutorial](/goog
 
 A successful response means Google may attempt to recrawl the URL. It does not prove that a crawl happened or that Google indexed the page. The metadata endpoint reports notification history, so a recent timestamp there cannot establish indexing either. See [Google's request and response meanings](https://developers.google.com/search/apis/indexing-api/v3/using-api).
 
-To see whether Google returns the page in search, run a `site:` search for it with one of the [free indexing tools](/tools). The [Google Index Checker](/tools/google-indexing-checker) checks one URL. The [Bulk Indexing Checker](/tools/bulk-indexing-checker) checks up to 10 URLs, or the first 10 URLs of a sitemap. The [Site Indexing Report](/tools/site-indexing-report) estimates the indexed page count for a whole domain. Each result is an estimate from public search output, not a URL Inspection result.
+To see whether Google returns the page in search, run a `site:` search for it with one of the [free indexing checkers](/tools). The [Google Index Checker](/tools/google-indexing-checker) checks one URL. The [Bulk Indexing Checker](/tools/bulk-indexing-checker) checks up to 10 URLs, or the first 10 URLs of a sitemap. The [Site Indexing Report](/tools/site-indexing-report) estimates the indexed page count for a whole domain. Each result is an estimate from public search output, not a URL Inspection result.
 
 An accepted notification does not set an indexing deadline. [October 2026 conference reporting](https://www.seroundtable.com/google-crawling-indexing-serving-data-42225.html) lists roughly 1.5 hours as typical for indexing processes, with slow cases reaching months or never.
 
@@ -49,9 +49,9 @@ Earlier discovery and crawling stages can delay that work. The figure does not m
 | Search Console URL Inspection tool | Inspect a URL and manually request indexing | Inspection information; a request remains subject to Google's processing |
 | URL Inspection API | Read stored index information programmatically | Information about the version Google has in its index |
 
-Google recommends [manual URL Inspection for a few URLs and sitemaps for many](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl). The [URL Inspection API](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect) has no live-test or request-indexing operation.
+Google recommends [manual URL Inspection for a few URLs and sitemaps for many](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl) (see [how to request indexing in Google Search Console](/request-indexing-google-search-console)). The [URL Inspection API](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect) has no live-test or request-indexing operation.
 
-When you evaluate an indexing tool, ask which of these interfaces its request button calls. The [Indexly and SEO Gets comparisons](/comparisons) check that against each vendor's documentation.
+When you evaluate a submission service or indexing checker, ask which of these interfaces its request button calls. The [Indexly and SEO Gets comparisons](/comparisons) check that against each vendor's documentation.
 
 ## Before you build
 

@@ -6,7 +6,7 @@ navigation:
   icon: i-heroicons-exclamation-triangle
 icon: i-heroicons-exclamation-triangle
 publishedAt: "2026-03-04"
-updatedAt: "2026-10-08"
+updatedAt: "2026-11-27"
 readTime: "3 min"
 keywords:
   - indexing api for blog posts
@@ -41,7 +41,9 @@ This follows [Google's recrawl guidance](https://developers.google.com/search/do
 
 If you have many posts, use a sitemap instead of repeating this process for each one. Your publishing platform may already manage a sitemap; check its documentation before adding another integration.
 
-To see which posts Google returns in search, give that sitemap to the [bulk indexing checker](/tools/bulk-indexing-checker). It runs a `site:` search for each of the first 10 URLs. Past 10 posts, the [site indexing report](/tools/site-indexing-report) estimates how many results a `site:` search returns for your whole domain. Neither tool reads Search Console, so use URL Inspection for the status Google stored.
+To see which posts Google returns in search, give that sitemap to the [Bulk Indexing Checker](/tools/bulk-indexing-checker). It runs a `site:` search for each of the first 10 URLs. Past 10 posts, the [Site Indexing Report](/tools/site-indexing-report) estimates how many results a `site:` search returns for your whole domain. Neither tool reads Search Console, so use URL Inspection for the status Google stored.
+
+For Bing and other participating search engines, [IndexNow](/indexnow-setup) accepts ordinary blog posts and product pages. Google does not participate in IndexNow.
 
 Google must discover and crawl a URL before indexing it. [October 2026 conference reporting](https://www.seroundtable.com/google-crawling-indexing-serving-data-42225.html) puts typical new-URL discovery around 20 hours, with slow cases reaching weeks or never. Sitemap processing was around 24 hours, with slow cases reaching 14 days or never. Processing a sitemap does not prove its URLs were indexed.
 
@@ -65,7 +67,7 @@ Use URL Inspection to check Google's stored index information. If you automate t
 
 No. A tool that sends Indexing API notifications still uses the same Google interface. Easier authentication or a bulk-submit button does not change which content Google supports.
 
-Before choosing an indexing tool, check what its button does. Does it send a notification, open Search Console, or read an inspection result? SEO Gets, for example, opens URL Inspection with the selected URL loaded, as the [SEO Gets comparison](/comparisons/vs-seo-gets) shows.
+Before choosing a submission service or indexing checker, check what its button does. Does it send a notification, open Search Console, or read an inspection result? SEO Gets, for example, opens URL Inspection with the selected URL loaded, as the [SEO Gets comparison](/comparisons/vs-seo-gets) shows.
 
 Tag Parrot states that its service is closed. If you relied on it, [choose a replacement workflow by content type](/comparisons/vs-tagparrot).
 

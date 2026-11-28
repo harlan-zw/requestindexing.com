@@ -6,6 +6,7 @@ navigation:
   icon: i-heroicons-document-magnifying-glass
 icon: i-heroicons-document-magnifying-glass
 publishedAt: "2026-11-05"
+updatedAt: "2026-11-27"
 readTime: "4 min"
 keywords:
   - request indexing google search console
@@ -13,6 +14,10 @@ keywords:
   - url inspection tool
   - google search console request indexing
 relatedPages:
+  - path: /why-is-my-page-not-indexed
+    title: Why is my page not indexed?
+  - path: /why-is-my-site-not-indexed
+    title: Why is my site not indexed?
   - path: /indexing-api-for-blog-posts
     title: Can you use the Google Indexing API for blog posts?
   - path: /google-indexing-api
@@ -48,7 +53,7 @@ The status at the top of the result is the first thing to read. It tells you whe
 | Status | What it means | Next step |
 | --- | --- | --- |
 | URL is on Google | Google has the URL in its index. | If you changed the page, request indexing so Google recrawls it. If the page is missing from results, check the Manual Actions and Security Issues reports. |
-| URL is not on Google | Google has not indexed this URL. The page indexing details give the reason, for example "Discovered - currently not indexed" or "URL is unknown to Google". | Fix any blocking cause first, then request indexing. For an unknown URL, also add it to your sitemap and link to it from your indexed pages. |
+| URL is not on Google | Google has not indexed this URL. The page indexing details give the reason, for example "Discovered - currently not indexed" or "URL is unknown to Google". | Read [what each reason means](/why-is-my-page-not-indexed) and fix any blocking cause first, then request indexing. If your whole site is missing, check [why a site is not indexed](/why-is-my-site-not-indexed). |
 
 If you changed the page after the crawl time in the result, select **Test live URL** to check the current version. A live test does not cover every indexing condition. A page that passes it can still fail to be indexed.
 
@@ -65,7 +70,7 @@ A request cannot override an instruction on the page. Check these first:
 
 Google sets a daily limit on indexing requests, and it does not publish the number. Requesting the same URL many times does not make Google crawl it faster. [Google's recrawl guide](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl) states both.
 
-If you hit the limit, or you have more than a few URLs, submit a sitemap instead. Use the Sitemaps report in Search Console, or list the sitemap in your `robots.txt`. Set `lastmod` only to the date of a significant page change. Google [retired its sitemap ping endpoint](https://developers.google.com/search/blog/2023/06/sitemaps-lastmod-ping), so a script that pings `google.com/ping` does nothing.
+If you hit the limit, or you have more than a few URLs, submit a sitemap instead. Use the Sitemaps report in Search Console, or list the sitemap in your `robots.txt`. Set `lastmod` only to the date of a significant page change. Google [retired its sitemap ping endpoint](https://developers.google.com/search/blog/2023/06/sitemaps-lastmod-ping), so a script that pings `google.com/ping` returns `404`.
 
 ## After you request indexing
 

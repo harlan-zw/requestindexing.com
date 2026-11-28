@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { PAGE_SETUP_COPY, PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
+import { trackToolFathomEvent } from '../../composables/tools'
 
 const { url } = defineProps<{ url?: string }>()
 // The free tools answer from a Google `site:` search. This block offers the
@@ -20,6 +21,7 @@ async function continuePage() {
     return
   saving.value = true
   error.value = ''
+  trackToolFathomEvent('tool:inspection-cta')
   await getAppFetch()('/api/onboarding/page', { method: 'POST', body: { url } })
     .then(async () => { await navigateTo(loggedIn.value ? PAGE_TASK_ROUTE : '/pro/onboarding') })
     .catch(() => { error.value = PAGE_SETUP_COPY.unavailable })
@@ -47,7 +49,8 @@ async function continuePage() {
       v-if="url"
       :loading="saving"
       color="primary"
-      class="min-h-11 w-full shrink-0 justify-center sm:w-auto"
+      trailing-icon="next"
+      class="min-h-11 w-full shrink-0 justify-center sm:min-h-0 sm:w-auto"
       @click="continuePage"
     >
       {{ loggedIn ? 'Open Indexing' : 'Connect Google' }}
@@ -58,6 +61,7 @@ async function continuePage() {
       color="primary"
       trailing-icon="next"
       class="min-h-11 w-full shrink-0 justify-center sm:min-h-0 sm:w-auto"
+      @click="trackToolFathomEvent('tool:inspection-cta')"
     >
       {{ loggedIn ? 'Open Indexing' : 'Connect Google' }}
     </UButton>

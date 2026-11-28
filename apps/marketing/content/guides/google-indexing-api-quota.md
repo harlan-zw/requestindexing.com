@@ -6,7 +6,7 @@ navigation:
   icon: i-heroicons-chart-bar
 icon: i-heroicons-chart-bar
 publishedAt: "2026-03-04"
-updatedAt: "2026-10-01"
+updatedAt: "2026-11-27"
 readTime: "4 min"
 keywords:
   - google indexing api quota

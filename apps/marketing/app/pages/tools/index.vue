@@ -1,49 +1,56 @@
 <script setup lang="ts">
 import { BULK_CHECK_URL_LIMIT } from '#shared/bulk-check'
+import { FREE_TOOLS } from '#shared/tool-registry'
+
+const pageDescription = `Estimate whether Google has indexed one URL, check up to ${BULK_CHECK_URL_LIMIT} URLs at once, or get a domain indexing report from public search results. Free, no signup.`
 
 useSeoMeta({
-  title: 'Free Google Indexing Tools',
-  description: 'Free tools to check if your pages are indexed by Google, audit your site\'s index coverage, and diagnose indexing problems. No signup required.',
+  title: 'Free Google Indexing Checkers',
+  description: pageDescription,
 })
 
 defineOgImage('Page', {
   headline: 'Tools',
-  title: 'Free Google Indexing Tools',
-  description: 'Check, audit, and fix your Google indexing.',
+  title: 'Free Google Indexing Checkers',
+  description: 'Check whether Google returns your pages in search results. No signup.',
 })
 
 useSchemaOrg([
   defineWebPage({
     '@type': 'CollectionPage',
-    'name': 'Free Google Indexing Tools',
-    'description': 'Free tools to check if your pages are indexed by Google, audit your site\'s index coverage, and diagnose indexing problems.',
+    'name': 'Free Google Indexing Checkers',
+    'description': pageDescription,
   }),
+  defineBreadcrumb({
+    itemListElement: [
+      { name: 'Home', item: '/' },
+      { name: 'Free checkers' },
+    ],
+  }),
+  {
+    '@type': 'ItemList',
+    'name': 'Free Google Indexing Checkers',
+    'itemListElement': FREE_TOOLS.map((tool, index) => ({
+      '@type': 'ListItem',
+      'position': index + 1,
+      'item': {
+        '@type': 'WebApplication',
+        'name': tool.title,
+        'description': tool.description,
+        'url': `https://requestindexing.com${tool.path}`,
+        'applicationCategory': 'DeveloperApplication',
+        'operatingSystem': 'Web',
+        'offers': {
+          '@type': 'Offer',
+          'price': '0',
+          'priceCurrency': 'USD',
+        },
+      },
+    })),
+  },
 ])
 
-const tools = [
-  {
-    title: 'Google Index Checker',
-    description: 'Check whether Google has indexed one URL. The checker looks for the page in Google search results.',
-    icon: 'i-heroicons-magnifying-glass',
-    to: '/tools/google-indexing-checker',
-    tags: ['Single URL', 'No signup'],
-    featured: true,
-  },
-  {
-    title: 'Bulk Indexing Checker',
-    description: `Check up to ${BULK_CHECK_URL_LIMIT} URLs at once. Paste a list or give it your sitemap, then export the results as CSV.`,
-    icon: 'i-heroicons-queue-list',
-    to: '/tools/bulk-indexing-checker',
-    tags: ['Bulk', 'Sitemap', 'CSV'],
-  },
-  {
-    title: 'Site Indexing Report',
-    description: 'An indexing report for any domain: estimated indexed pages, ranking keywords, and recommendations.',
-    icon: 'i-heroicons-document-chart-bar',
-    to: '/tools/site-indexing-report',
-    tags: ['Domain audit', 'Health score', 'Recommendations'],
-  },
-]
+const tools = FREE_TOOLS
 </script>
 
 <template>
@@ -54,14 +61,14 @@ const tools = [
         <section class="py-16 sm:py-20 lg:py-24 text-center">
           <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 text-primary px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] mb-6">
             <UIcon name="i-heroicons-wrench-screwdriver" class="size-3.5" />
-            Free tools
+            Free checkers
           </div>
           <h1 class="font-title font-bold text-5xl sm:text-6xl lg:text-7xl tracking-[-0.04em] leading-[1] text-default mb-6 max-w-4xl mx-auto">
             Indexing answers,
             <span class="block italic text-primary">without the signup.</span>
           </h1>
           <p class="text-toned text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-            Three single-purpose tools to check, audit, and diagnose your Google indexing. No account and no email.
+            Three single-purpose checkers for quick estimates from Google search results. No account and no email.
           </p>
         </section>
       </UContainer>
@@ -72,21 +79,24 @@ const tools = [
       <div class="grid lg:grid-cols-6 gap-4 lg:gap-5">
         <NuxtLink
           v-for="tool in tools"
-          :key="tool.to"
-          :to="tool.to"
-          class="rounded-2xl border border-default bg-elevated p-8 sm:p-10 group relative overflow-hidden flex flex-col" :class="[
+          :key="tool.path"
+          :to="tool.path"
+          class="rounded-2xl border border-default bg-elevated p-8 sm:p-10 group relative overflow-hidden flex flex-col"
+          :class="[
             tool.featured ? 'lg:col-span-6 lg:flex-row lg:items-center lg:gap-10 lg:p-12' : 'lg:col-span-3',
           ]"
         >
           <div v-if="tool.featured" class="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-transparent pointer-events-none" />
           <div
-            class="relative shrink-0 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 lg:mb-0" :class="[
+            class="relative shrink-0 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 lg:mb-0"
+            :class="[
               tool.featured ? 'size-16 lg:size-20' : 'size-14',
             ]"
           >
             <UIcon
               :name="tool.icon"
-              class="text-primary" :class="[
+              class="text-primary"
+              :class="[
                 tool.featured ? 'size-8 lg:size-10' : 'size-7',
               ]"
             />
@@ -94,7 +104,8 @@ const tools = [
           <div class="relative flex-1 min-w-0">
             <div class="flex items-center gap-3 mb-3">
               <h2
-                class="font-title font-semibold text-default tracking-[-0.02em] leading-[1.1]" :class="[
+                class="font-title font-semibold text-default tracking-[-0.02em] leading-[1.1]"
+                :class="[
                   tool.featured ? 'text-2xl sm:text-3xl lg:text-4xl' : 'text-xl sm:text-2xl',
                 ]"
               >
@@ -102,7 +113,8 @@ const tools = [
               </h2>
             </div>
             <p
-              class="text-toned leading-relaxed mb-5 max-w-xl" :class="[
+              class="text-toned leading-relaxed mb-5 max-w-xl"
+              :class="[
                 tool.featured ? 'text-base sm:text-lg' : 'text-sm sm:text-base',
               ]"
             >
@@ -118,10 +130,11 @@ const tools = [
               </span>
             </div>
             <div class="flex items-center gap-2 text-primary font-medium">
-              <span :class="tool.featured ? 'text-base' : 'text-sm'">Open tool</span>
+              <span :class="tool.featured ? 'text-base' : 'text-sm'">Open checker</span>
               <UIcon
                 name="i-heroicons-arrow-right"
-                class="group-hover:translate-x-1 transition-transform" :class="[
+                class="group-hover:translate-x-1 transition-transform"
+                :class="[
                   tool.featured ? 'size-4' : 'size-3.5',
                 ]"
               />
@@ -139,7 +152,7 @@ const tools = [
             Workflow
           </span>
           <h2 class="font-title text-3xl sm:text-4xl font-semibold text-default tracking-[-0.03em] leading-[1.1]">
-            Start free. Automate when it stops scaling.
+            Start with a quick check. Connect Search Console for Google's full verdict.
           </h2>
         </div>
         <div class="lg:col-span-7 grid sm:grid-cols-3 gap-8 lg:gap-10">
@@ -151,7 +164,7 @@ const tools = [
               Spot-check URLs
             </div>
             <p class="text-muted text-sm leading-relaxed">
-              Start with the single-URL checker to see whether one page is in Google.
+              Start with the single-URL checker to see whether one page appears in Google.
             </p>
           </div>
           <div>
@@ -159,10 +172,10 @@ const tools = [
               02
             </div>
             <div class="font-title text-base font-semibold text-default mb-1.5 tracking-[-0.01em]">
-              Audit your site
+              Check a list or domain
             </div>
             <p class="text-muted text-sm leading-relaxed">
-              Run the bulk checker and the site report to find where coverage leaks across the property.
+              Run the bulk checker on up to {{ BULK_CHECK_URL_LIMIT }} URLs and check domain-level estimates with the site report.
             </p>
           </div>
           <div>

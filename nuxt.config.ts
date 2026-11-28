@@ -125,7 +125,14 @@ export default defineNuxtConfig({
   wideEvents: {
     service: 'request-indexing',
     request: true,
-    fields: [],
+    fields: [
+      'tool.id',
+      'tool.outcome',
+      'tool.cached',
+      'tool.urlCount',
+      'tool.resultCount',
+      'tool.failureProvenance',
+    ],
     exclude: [
       '/__comark_content/**',
       '/_ipx/**',
@@ -405,8 +412,8 @@ export default defineNuxtConfig({
       meta: [
         // The only theme-color metas. A keyed `useHead` theme-color has no
         // server tag the client can match, so hydration appends a duplicate.
-        { name: 'theme-color', content: '#18181b', media: '(prefers-color-scheme: dark)' },
-        { name: 'theme-color', content: 'white', media: '(prefers-color-scheme: light)' },
+        { name: 'theme-color', content: '#1c1f0e', media: '(prefers-color-scheme: dark)' },
+        { name: 'theme-color', content: '#f7f7eb', media: '(prefers-color-scheme: light)' },
         // `seo.automaticTwitterTags: false` drops every inferred `twitter:*`
         // tag. X still reads the card type from this one.
         { name: 'twitter:card', content: 'summary_large_image' },

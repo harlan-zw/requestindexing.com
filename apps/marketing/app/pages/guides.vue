@@ -24,21 +24,21 @@ function getNavigationOrder(item: unknown): number {
 }
 
 useSeoMeta({
-  title: 'Google Indexing API Guides',
-  description: 'Choose the supported Google indexing method, configure service-account access, and send eligible notifications with Node.js.',
+  title: 'Indexing Guides',
+  description: 'Check why pages are not indexed, request indexing in Search Console, set up IndexNow, and use the Google Indexing API where supported.',
 })
 
 defineOgImage('Page', {
   headline: 'Guides',
-  title: 'Google Indexing API Guides',
-  description: 'Supported content, setup, Node.js examples, and quotas.',
+  title: 'Indexing Guides',
+  description: 'Search Console URL Inspection, indexing reasons, IndexNow, and the Google Indexing API.',
 })
 
 useSchemaOrg([
   defineWebPage({
     '@type': 'CollectionPage',
-    'name': 'Google Indexing API Guides',
-    'description': 'Choose the supported Google indexing method, configure service-account access, and send eligible notifications with Node.js.',
+    'name': 'Indexing Guides',
+    'description': 'Check why pages are not indexed, request indexing in Search Console, set up IndexNow, and use the Google Indexing API where supported.',
   }),
 ])
 
@@ -58,15 +58,16 @@ const iconMap: Record<string, string> = {
 
 <template>
   <div>
-    <h1 class="sr-only">
-      Google Indexing API Guides
-    </h1>
     <UPageSection
       headline="Guides"
-      title="Google Indexing API Guides"
-      description="Check supported content, set up your first eligible notification, and learn how to interpret responses and quotas."
+      description="Check why pages are not indexed, request indexing in Search Console, set up IndexNow, and use the Google Indexing API where supported."
       :ui="{ container: 'max-w-7xl', title: 'font-title' }"
     >
+      <template #title>
+        <h1 class="font-title">
+          Indexing guides
+        </h1>
+      </template>
       <UPageGrid>
         <UPageCard
           v-for="guide in guides"
@@ -79,9 +80,9 @@ const iconMap: Record<string, string> = {
           spotlight-color="primary"
           variant="outline"
         >
-          <template v-if="guide.path === '/google-indexing-api'" #badge>
+          <template v-if="guide.path === '/request-indexing-google-search-console'" #badge>
             <UBadge color="primary" variant="subtle" size="sm">
-              Start Here
+              Start here
             </UBadge>
           </template>
         </UPageCard>

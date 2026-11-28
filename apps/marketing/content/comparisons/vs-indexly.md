@@ -1,16 +1,16 @@
 ---
 title: "Request Indexing vs Indexly: Compare the Workflow"
-description: "Compare Indexly's advertised automation and AI visibility features with Request Indexing's open-source notification workflow."
+description: "Compare Indexly's advertised automation and AI visibility features with Request Indexing's open-source URL Inspection, IndexNow, and Indexing API workflow."
 keywords:
   - indexly alternative
   - indexly vs request indexing
   - google indexing api tool
-updatedAt: "2026-10-01"
+updatedAt: "2026-11-27"
 ---
 
-Indexly bundles automated indexing with AI visibility and content features. Request Indexing covers less ground. It shows indexing information, sends Google Indexing API notifications, and publishes its source. Start with the features your team needs.
+Indexly bundles automated indexing with AI visibility and content features. Request Indexing covers a narrower job. It shows Google's URL Inspection reason for your sitemap URLs, tracks coverage changes, sends new and changed pages to Bing and other engines with IndexNow, sends Google Indexing API notifications for eligible pages, and publishes its source. Start with the features your team needs.
 
-We compared Indexly's public documentation with Request Indexing's source on 15 September 2026. We did not sign in to test either service.
+Indexly's public documentation was checked on 15 September 2026. Request Indexing's source was checked again on 27 November 2026. We did not sign in to test Indexly.
 
 ## What Indexly offers
 
@@ -20,9 +20,13 @@ If you want content automation and AI visibility reporting in one place, that br
 
 ## What Request Indexing implements
 
-Each Site can send 5 Submissions a day, as the [Submit to Google page](https://github.com/harlan-zw/requestindexing.com/blob/35342bb3b7afdbac9ffb445e2a0a8d1bacfa36e1/layers/indexing/app/pages/pro/dashboard/sites/%5Bid%5D/indexing/submit.vue) shows. After Google accepts a URL, you can submit that URL again after 7 days. Those limits are application policy. They tell you nothing about whether Google indexed the URL.
+Request Indexing inspects the URLs in your sitemaps with Google's URL Inspection, within your Free allowance, and keeps Google's verdict, reason, and 28-day change history through gscdump. You can also choose Watched URLs for scheduled checks.
 
-Request Indexing also reads stored indexing information through gscdump. Its [MIT licensed source](https://github.com/harlan-zw/requestindexing.com/blob/main/LICENSE) is open to inspect. Self-hosting takes your own infrastructure and configuration, and this comparison did not confirm a one-click setup.
+For Bing and other participating search engines, Request Indexing sends new and changed sitemap URLs through IndexNow with Automatic sending once you verify your key file. Google does not participate in IndexNow.
+
+For eligible job posting and livestream pages, each Site can send 5 Google Indexing API Submissions a day, as the [Submit to Google page](https://github.com/harlan-zw/requestindexing.com/blob/35342bb3b7afdbac9ffb445e2a0a8d1bacfa36e1/layers/indexing/app/pages/pro/dashboard/sites/%5Bid%5D/indexing/submit.vue) shows. After Google accepts a URL, you can submit that URL again after 7 days. Those limits are application policy. They tell you nothing about whether Google indexed the URL.
+
+Its [MIT licensed source](https://github.com/harlan-zw/requestindexing.com/blob/main/LICENSE) is open to inspect. Self-hosting takes your own infrastructure and a hosted gscdump partner key, and this comparison did not confirm a one-click setup.
 
 ## Questions to settle before choosing
 

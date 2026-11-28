@@ -1,28 +1,7 @@
 <script setup lang="ts">
-const categories = [
-  {
-    label: 'Fundamentals',
-    description: 'Learn the API basics',
-    items: [
-      { label: 'API Overview', icon: 'i-heroicons-book-open', to: '/google-indexing-api' },
-      { label: 'Setup Tutorial', icon: 'i-heroicons-academic-cap', to: '/google-indexing-api-tutorial' },
-      { label: 'Quota & Limits', icon: 'i-heroicons-chart-bar', to: '/google-indexing-api-quota' },
-    ],
-  },
-  {
-    label: 'How-To Guides',
-    description: 'Practical implementations',
-    items: [
-      { label: 'Ask Google to Index a URL', icon: 'i-heroicons-document-magnifying-glass', to: '/request-indexing-google-search-console' },
-      { label: 'Why a Page Is Not Indexed', icon: 'i-heroicons-question-mark-circle', to: '/why-is-my-page-not-indexed' },
-      { label: 'Why a Site Is Not Indexed', icon: 'i-heroicons-globe-alt', to: '/why-is-my-site-not-indexed' },
-      { label: 'Set Up IndexNow', icon: 'i-heroicons-paper-airplane', to: '/indexnow-setup' },
-      { label: 'Node.js Implementation', icon: 'i-simple-icons-nodedotjs', to: '/google-indexing-api-node-js' },
-      { label: 'Bulk Submit URLs', icon: 'i-heroicons-arrow-up-tray', to: '/bulk-submit-urls-google-indexing-api' },
-      { label: 'For Blog Posts', icon: 'i-heroicons-document-text', to: '/indexing-api-for-blog-posts' },
-    ],
-  },
-]
+import { GUIDE_NAV_CATEGORIES } from '#shared/guides-nav'
+
+const categories = GUIDE_NAV_CATEGORIES
 </script>
 
 <template>
