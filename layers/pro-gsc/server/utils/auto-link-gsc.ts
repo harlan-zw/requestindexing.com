@@ -1,10 +1,10 @@
 import type { EntitlementRefusal } from '@gscdump/contracts'
 import type { GscdumpAvailableSite, GscdumpSiteAccess } from './gscdump-client'
-import { eq } from 'drizzle-orm'
+import { and, eq, exists, isNull } from 'drizzle-orm'
 import { isVerifiedGscPermission, matchGscSite, normalizeRegistrationTarget, pickBestGscProperty } from 'gscdump'
-import { isError } from 'h3'
+import { createError, isError } from 'h3'
 import { logWarn } from '~~/shared/logging'
-import { sites } from '#layers/pro-saas/server/database'
+import { sites, teams, users } from '#layers/pro-saas/server/database'
 import { useGscdumpClient } from './gscdump-client'
 import { getGscdumpWebhookUrl } from './gscdump-origin'
 import { updateOnboardingState } from './onboarding'
@@ -84,13 +84,36 @@ export async function autoLinkGsc(opts: {
   preferredSiteUrl?: string
   /** Pre-fetched available sites (for bulk operations) */
   availableSites?: GscdumpAvailableSite[]
+  /** The verified owner and canonical Team for an explicit Personal Team relink. */
+  personalTeam?: {
+    teamId: number
+    ownerId: number
+    gscdumpTeamId: string
+    bindExistingSite: (siteId: string) => Promise<boolean>
+  }
 }): Promise<AutoLinkResult> {
-  const { db, siteId, origin } = opts
+  const { db, siteId, origin, personalTeam } = opts
   const { gscdumpUserId } = opts.user
   const gscdump = useGscdumpClient()
 
+  const siteScope = eq(sites.id, siteId)
+  const personalScope = personalTeam && and(
+    siteScope,
+    eq(sites.teamId, personalTeam.teamId),
+    exists(db.select({ id: teams.teamId }).from(teams).innerJoin(users, eq(users.userId, teams.ownerId)).where(and(
+      eq(teams.teamId, personalTeam.teamId),
+      eq(teams.ownerId, personalTeam.ownerId),
+      eq(teams.personalTeam, true),
+      eq(teams.gscdumpTeamId, personalTeam.gscdumpTeamId),
+      eq(users.gscdumpUserId, gscdumpUserId),
+    ))),
+  )
+  const scopeUnavailable = () => createError({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable' })
+
   // Idempotency guard: return early if already linked
-  const [existing] = await db.select({ gscdumpSiteId: sites.gscdumpSiteId }).from(sites).where(eq(sites.id, siteId))
+  const [existing] = await db.select({ gscdumpSiteId: sites.gscdumpSiteId }).from(sites).where(personalScope ?? siteScope)
+  if (personalTeam && !existing)
+    throw scopeUnavailable()
 
   if (existing?.gscdumpSiteId) {
     const reusable = await assertLocalRegisteredGscSiteScope(db, siteId, existing.gscdumpSiteId, id => gscdump.getRegisteredHostIdentity(id), origin, 'relink')
@@ -100,8 +123,11 @@ export async function autoLinkGsc(opts: {
           return false
         throw error
       })
-    if (reusable)
+    if (reusable) {
+      if (personalScope && !await db.select({ id: sites.id }).from(sites).where(and(personalScope, eq(sites.gscdumpSiteId, existing.gscdumpSiteId))).get())
+        throw scopeUnavailable()
       return { _tag: 'Linked', gscdumpSiteId: existing.gscdumpSiteId }
+    }
   }
 
   // Use pre-fetched sites or fetch fresh
@@ -157,6 +183,10 @@ export async function autoLinkGsc(opts: {
       return { _tag: 'Refused', refusal: result.refusal }
     }
     if (result?._tag === 'Registered' && await readableRegistration(result.registration, gscdump.readSiteAccess)) {
+      // Fresh registrations already use the registrant's canonical Personal Team.
+      // An existing registration can still be assigned to a different Team.
+      if (personalTeam && result.registration.existing && !await personalTeam.bindExistingSite(result.registration.siteId))
+        throw scopeUnavailable()
       gscdumpSiteId = result.registration.siteId
       gscdumpSiteUrl = simpleDomain
     }
@@ -164,9 +194,18 @@ export async function autoLinkGsc(opts: {
 
   if (gscdumpSiteId) {
     // `pending` also clears a `refused` mark left by an earlier attempt.
-    await db.update(sites)
-      .set({ gscdumpSiteId, gscdumpSiteUrl, gscdumpSyncStatus: 'pending' })
-      .where(eq(sites.id, siteId))
+    const update = db.update(sites).set({ gscdumpSiteId, gscdumpSiteUrl, gscdumpSyncStatus: 'pending' })
+    if (personalScope) {
+      const previousSite = existing?.gscdumpSiteId
+      const updated = await update.where(and(personalScope, previousSite ? eq(sites.gscdumpSiteId, previousSite) : isNull(sites.gscdumpSiteId)))
+        .returning({ id: sites.id })
+        .get()
+      if (!updated && !await db.select({ id: sites.id }).from(sites).where(and(personalScope, eq(sites.gscdumpSiteId, gscdumpSiteId))).get())
+        throw scopeUnavailable()
+    }
+    else {
+      await update.where(siteScope)
+    }
 
     // Update onboarding state to reflect GSC connection
     // Look up the user who owns this site
