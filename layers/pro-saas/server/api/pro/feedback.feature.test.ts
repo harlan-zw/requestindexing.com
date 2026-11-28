@@ -18,6 +18,7 @@ vi.mock('~~/layers/core/server/utils/email', () => ({ sendEmail: sendEmailMock }
 let sqlite: ReturnType<typeof migratedDatabase>
 let db: ReturnType<typeof proDatabase>
 let pendingWaitUntil: Promise<unknown>[]
+let observedQueries: string[]
 async function send(body: unknown, email: string | null = '7@example.test') {
   return (feedback as unknown as (context: Context) => Promise<unknown>)({
     event: { waitUntil: (work: Promise<unknown>) => { pendingWaitUntil.push(work) } } as unknown as H3Event,
@@ -33,7 +34,10 @@ function rows() {
 
 beforeEach(() => {
   sqlite = migratedDatabase()
-  db = proDatabase(sqlite)
+  observedQueries = []
+  db = proDatabase(sqlite, (statements) => {
+    observedQueries.push(...statements.map(statement => statement.sql))
+  })
   pendingWaitUntil = []
   sendEmailMock.mockReset().mockResolvedValue({ _tag: 'Sent' })
   sqlite.prepare('INSERT INTO teams (team_id, public_id, name) VALUES (?, ?, ?)').run(1, 'team-one', 'Team')
@@ -67,6 +71,17 @@ it('uses caller.user.email directly without re-querying users', async () => {
   expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
     replyTo: 'identity@example.test',
   }))
+  expect(observedQueries.some(sql => /\bfrom\s+"?users"?\b/i.test(sql))).toBe(false)
+
+  sendEmailMock.mockClear()
+  observedQueries = []
+  expect(await send({ intent: 'bug', path: '/pro/dashboard', comment: 'No email test' }, null)).toEqual({ _tag: 'Recorded' })
+  await Promise.all(pendingWaitUntil)
+  expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+    to: 'harlan@harlanzw.com',
+  }))
+  expect(sendEmailMock.mock.calls[0]?.[0]).not.toHaveProperty('replyTo')
+  expect(observedQueries.some(sql => /\bfrom\s+"?users"?\b/i.test(sql))).toBe(false)
 })
 
 it('still records feedback when operator email delivery fails', async () => {

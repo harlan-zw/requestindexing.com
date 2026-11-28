@@ -120,9 +120,9 @@ it('ignores anonymous tool thumbs for warning severity while surfacing them as s
 
     // Anonymous free-tool votes should surface as signal without turning daily checkin into Warn.
     const thumbTs = Math.floor(Date.parse('2026-11-20T00:00:00Z') / 1000)
-    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, user_id, created_at) VALUES (?, ?, NULL, NULL, ?)').run('/tools/sitemap', 'up', thumbTs)
-    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, user_id, created_at) VALUES (?, ?, NULL, NULL, ?)').run('/tools/sitemap', 'up', thumbTs)
-    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, user_id, created_at) VALUES (?, ?, NULL, NULL, ?)').run('/tools/meta', 'down', thumbTs)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, metadata, user_id, created_at) VALUES (?, ?, NULL, ?, NULL, ?)').run('/tools/sitemap', 'up', JSON.stringify({ source: 'tool-feedback', toolId: 'sitemap' }), thumbTs)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, metadata, user_id, created_at) VALUES (?, ?, NULL, ?, NULL, ?)').run('/blog/post', 'up', JSON.stringify({ source: 'site-feedback' }), thumbTs)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, metadata, user_id, created_at) VALUES (?, ?, NULL, ?, NULL, ?)').run('/tools/meta', 'down', JSON.stringify({ source: 'tool-feedback', toolId: 'meta' }), thumbTs)
 
     const thumbsOnly = await runChecks([feedback], { event: databaseEvent(db) })
     expect(thumbsOnly.severity).toBe('pass')
@@ -131,13 +131,14 @@ it('ignores anonymous tool thumbs for warning severity while surfacing them as s
       evidence: { newCount: 0, toolThumbsDown: 1, toolThumbsUp: 2 },
     })
 
-    // Actionable reports (signed-in dashboard feedback or written comments) trigger Warn.
+    // Actionable reports (signed-in dashboard feedback, written comments, and nullified-user account-delete churn rows) trigger Warn.
     const reportOldest = Math.floor(Date.parse('2026-11-28T00:00:00Z') / 1000)
     const reportNewer = Math.floor(Date.parse('2026-11-28T06:00:00Z') / 1000)
     sqlite.prepare('INSERT INTO teams (team_id, public_id, name) VALUES (?, ?, ?)').run(1, 'team-1', 'Team')
     sqlite.prepare('INSERT INTO users (user_id, public_id, name, email, avatar, last_login, sub, current_team_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(7, 'u-7', 'Test', '7@example.test', '', Date.now(), 'sub-7', 1)
-    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, user_id, created_at) VALUES (?, ?, NULL, ?, ?)').run('/pro/dashboard', 'up', 7, reportOldest)
-    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, user_id, created_at) VALUES (?, NULL, ?, NULL, ?)').run('/tools/meta', 'Broken parser', reportNewer)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, metadata, user_id, created_at) VALUES (?, ?, NULL, ?, NULL, ?)').run('/pro/dashboard/account/delete', 'down', JSON.stringify({ type: 'account_delete', reasons: ['price'] }), reportOldest)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, metadata, user_id, created_at) VALUES (?, ?, NULL, ?, ?, ?)').run('/pro/dashboard', 'up', JSON.stringify({ source: 'dashboard-drawer' }), 7, reportNewer)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, metadata, user_id, created_at) VALUES (?, NULL, ?, ?, NULL, ?)').run('/tools/meta', 'Broken parser', JSON.stringify({ source: 'tool-feedback' }), reportNewer)
     sqlite.prepare('INSERT INTO feedback (path, thumb, comment, user_id, status, created_at) VALUES (?, NULL, ?, ?, ?, ?)').run('/pro/dashboard', 'Already triaged', 7, 'triaged', thumbTs)
 
     const waiting = await runChecks([feedback], { event: databaseEvent(db) })
@@ -145,7 +146,7 @@ it('ignores anonymous tool thumbs for warning severity while surfacing them as s
     expect(waiting.results[0]?.result).toMatchObject({
       _tag: 'Warn',
       evidence: {
-        newCount: 2,
+        newCount: 3,
         oldestCreatedAt: '2026-11-28T00:00:00.000Z',
         toolThumbsDown: 1,
         toolThumbsUp: 2,
@@ -168,6 +169,15 @@ it('ignores anonymous tool thumbs for warning severity while surfacing them as s
   })
   expect(errored.severity).toBe('fail')
   expect(failReason(errored.results[0]!.result)).toContain('D1_ERROR')
+
+  const emptyRow = await runChecks([feedback], {
+    event: databaseEvent({
+      prepare: () => ({
+        first: async () => null,
+      }),
+    }),
+  })
+  expect(emptyRow.severity).toBe('fail')
 
   const missing = await runChecks([feedback], { event: { context: { cloudflare: { env: {} } } } })
   expect(missing.results[0]?.result._tag).toBe('Unavailable')

@@ -16,19 +16,20 @@ interface D1Binding {
   }
 }
 
+const ANONYMOUS_THUMBS_PREDICATE = 'comment IS NULL AND user_id IS NULL AND COALESCE(json_extract(metadata, \'$.source\'), \'\') IN (\'tool-feedback\', \'site-feedback\')'
+
 const FEEDBACK_TRIAGE_SQL = [
   'SELECT',
-  '  SUM(CASE WHEN comment IS NOT NULL OR user_id IS NOT NULL THEN 1 ELSE 0 END) AS count,',
-  '  MIN(CASE WHEN comment IS NOT NULL OR user_id IS NOT NULL THEN created_at END) AS oldest_created_at,',
-  '  SUM(CASE WHEN comment IS NULL AND user_id IS NULL AND thumb = \'down\' THEN 1 ELSE 0 END) AS tool_thumbs_down,',
-  '  SUM(CASE WHEN comment IS NULL AND user_id IS NULL AND thumb = \'up\' THEN 1 ELSE 0 END) AS tool_thumbs_up',
+  `  COALESCE(SUM(CASE WHEN NOT (${ANONYMOUS_THUMBS_PREDICATE}) THEN 1 ELSE 0 END), 0) AS count,`,
+  `  MIN(CASE WHEN NOT (${ANONYMOUS_THUMBS_PREDICATE}) THEN created_at END) AS oldest_created_at,`,
+  `  COALESCE(SUM(CASE WHEN (${ANONYMOUS_THUMBS_PREDICATE}) AND thumb = 'down' THEN 1 ELSE 0 END), 0) AS tool_thumbs_down,`,
+  `  COALESCE(SUM(CASE WHEN (${ANONYMOUS_THUMBS_PREDICATE}) AND thumb = 'up' THEN 1 ELSE 0 END), 0) AS tool_thumbs_up`,
   'FROM feedback',
   'WHERE status = \'new\'',
 ].join(' ')
 
 function parseNonNegativeCount(value: unknown): number | null {
-  const n = typeof value === 'number' ? value : Number(value ?? 0)
-  return Number.isFinite(n) && n >= 0 ? n : null
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null
 }
 
 export default defineCheck({
@@ -50,9 +51,12 @@ export default defineCheck({
       return fail(`The feedback triage query failed: ${error instanceof Error ? error.message : String(error)}`)
     }
 
-    const newCount = parseNonNegativeCount(row?.count)
-    const toolThumbsDown = parseNonNegativeCount(row?.tool_thumbs_down)
-    const toolThumbsUp = parseNonNegativeCount(row?.tool_thumbs_up)
+    if (!row)
+      return fail('The feedback triage query returned no row.')
+
+    const newCount = parseNonNegativeCount(row.count)
+    const toolThumbsDown = parseNonNegativeCount(row.tool_thumbs_down)
+    const toolThumbsUp = parseNonNegativeCount(row.tool_thumbs_up)
     if (newCount === null || toolThumbsDown === null || toolThumbsUp === null)
       return fail('The feedback triage query returned an invalid count.')
 
