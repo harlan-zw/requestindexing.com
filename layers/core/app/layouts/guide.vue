@@ -62,7 +62,7 @@ const breadcrumbs = useBreadcrumbItems({
                 </div>
 
                 <!-- Navigation -->
-                <nav aria-label="Guide Navigation" class="space-y-1">
+                <nav aria-label="Guides" class="space-y-1">
                   <NuxtLink
                     v-for="item in navItems"
                     :key="item.path"

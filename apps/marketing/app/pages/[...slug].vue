@@ -80,7 +80,7 @@ const humanUpdatedDate = computed(() => formatGuideDate(page.value?.updatedAt))
       <UPageHeader v-bind="page" :ui="{ title: 'text-center text-balance xl:leading-normal min-w-full', description: 'text-center' }">
         <div class="flex justify-center items-center gap-3 mt-5 text-sm text-[var(--ui-text-dimmed)] flex-wrap">
           <NuxtLink to="https://x.com/harlan_zw" external target="_blank" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-[var(--ui-border)] hover:border-[var(--ui-border-accented)] transition">
-            <img alt="Harlan Wilton" src="https://avatars.githubusercontent.com/u/5326365?v=4" class="w-4 h-4 rounded-full">
+            <img alt="" src="https://avatars.githubusercontent.com/u/5326365?v=4" class="w-4 h-4 rounded-full">
             <span class="hover:text-[var(--ui-text)] text-[var(--ui-text-muted)] transition">Harlan Wilton</span>
           </NuxtLink>
           <span v-if="page?.readTime">{{ page.readTime }} read</span>
