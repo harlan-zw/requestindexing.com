@@ -192,6 +192,64 @@ export type GscdumpV1SiteAccessSelection
     | { _tag: 'forbidden' }
     | { _tag: 'allowed' }
 
+const SITE_INDEXING_EVIDENCE_OPERATIONS = new Map<string, 'overview' | 'diagnostics' | 'urls'>([
+  [protocol.surfaces.partner.operations.getSiteIndexing.id, 'overview'],
+  [protocol.surfaces.partner.operations.getSiteIndexingDiagnostics.id, 'diagnostics'],
+  [protocol.surfaces.partner.operations.listSiteIndexingUrls.id, 'urls'],
+])
+
+export interface SiteIndexingEvidenceObservation {
+  count: number
+  source: 'overview' | 'diagnostics' | 'urls'
+}
+
+export function isSiteIndexingEvidenceOperation(operationId: string): boolean {
+  return SITE_INDEXING_EVIDENCE_OPERATIONS.has(operationId)
+}
+
+function positiveInteger(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? Math.floor(value)
+    : null
+}
+
+/**
+ * Check whether an upstream gscdump indexing response carries real URL
+ * Inspection evidence (never an empty snapshot). Used to record the
+ * first-time `site_evidence_viewed` funnel milestone on Site indexing pages.
+ */
+export function extractSiteIndexingEvidenceObservation(
+  operationId: string,
+  payload: unknown,
+): SiteIndexingEvidenceObservation | null {
+  const source = SITE_INDEXING_EVIDENCE_OPERATIONS.get(operationId)
+  if (!source || !payload || typeof payload !== 'object' || Array.isArray(payload))
+    return null
+
+  const record = payload as Record<string, unknown>
+
+  if (source === 'diagnostics') {
+    const summary = record.summary
+    if (!summary || typeof summary !== 'object' || Array.isArray(summary))
+      return null
+    const count = positiveInteger((summary as Record<string, unknown>).totalUrls)
+    return count ? { count, source } : null
+  }
+
+  if (source === 'urls') {
+    const urls = record.urls
+    if (!Array.isArray(urls) || urls.length === 0)
+      return null
+    return { count: urls.length, source }
+  }
+
+  const meta = record.meta
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta))
+    return null
+  const count = positiveInteger((meta as Record<string, unknown>).inspectedCount)
+  return count ? { count, source } : null
+}
+
 /**
  * Decide whether `caller` may use the browser proxy against a resolved site.
  *

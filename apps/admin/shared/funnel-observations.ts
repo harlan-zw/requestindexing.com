@@ -73,7 +73,7 @@ export function buildObservedFunnelUsers(accounts: FunnelAccount[], events: Funn
       signedUp: signedUpAt,
       googleConnected: first('gsc_connected')?.at ?? null,
       siteConnected: first('site_added')?.at ?? null,
-      evidenceViewed: valid.find(event => ['page_evidence_viewed', 'first_report_evidence_viewed'].includes(event.type))?.at ?? null,
+      evidenceViewed: valid.find(event => ['page_evidence_viewed', 'first_report_evidence_viewed', 'site_evidence_viewed'].includes(event.type))?.at ?? null,
       setupCompleted: first('onboarding_completed')?.at ?? completedAt,
     }
     const feedback = new Map<string, FeedbackObservation>()

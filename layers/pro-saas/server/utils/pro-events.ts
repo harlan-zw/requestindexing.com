@@ -22,6 +22,7 @@ export type ProEventType
     | 'page_inspection_started'
     | 'first_report_started'
     | 'first_report_evidence_viewed'
+    | 'site_evidence_viewed'
     | 'setup_example_viewed'
     | 'gsc_connected'
     | 'site_added'

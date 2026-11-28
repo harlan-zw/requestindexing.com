@@ -16,6 +16,8 @@ import { createError, getQuery, getRequestHeader, getRequestURL, getRouterParam,
 import { teamSites } from '~~/layers/core/server/db/schema'
 import { readProFeatureFlags } from '#layers/pro-features/shared/manifest'
 import {
+  extractSiteIndexingEvidenceObservation,
+  isSiteIndexingEvidenceOperation,
   resolveGscdumpV1ProxyOperation,
   selectGscdumpV1ProxyBody,
   selectGscdumpV1ProxyTarget,
@@ -27,6 +29,7 @@ import { getGscdumpApiUrl } from '#layers/pro-gsc/server/utils/gscdump-origin'
 import { assertRegisteredGscSiteScope, registeredSiteTeamPrincipals } from '#layers/pro-gsc/server/utils/registered-site-scope'
 import { sites, teams, users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
+import { emitFirstProEvent, hasProEvent } from '#layers/pro-saas/server/utils/pro-events'
 
 function requestIdForUpstream(requestId: string): string {
   return `req_${requestId.replace(/[^\w-]/g, '_')}`
@@ -215,6 +218,27 @@ export default defineProApiHandler({}, async ({ event, db, caller }) => {
       ...(body === undefined ? {} : { 'content-type': 'application/json' }),
     },
   })
+
+  // Record the first-time `site_evidence_viewed` milestone only when a Site
+  // indexing read returns real URL Inspection evidence. Skip cloning the body
+  // once the user already has the milestone.
+  if (
+    response.ok
+    && target._tag === 'site'
+    && isSiteIndexingEvidenceOperation(descriptor.id)
+    && !(await hasProEvent(db, caller.user.id, 'site_evidence_viewed'))
+  ) {
+    // Non-JSON or unreadable upstream bodies are ignored so telemetry never blocks the read.
+    const payload = await response.clone().json().catch(() => null)
+    const observed = extractSiteIndexingEvidenceObservation(descriptor.id, payload)
+    if (observed) {
+      await emitFirstProEvent(db, caller.user.id, 'site_evidence_viewed', {
+        siteId: target.siteId,
+        count: observed.count,
+        source: observed.source,
+      })
+    }
+  }
 
   // Preserve status, body, request id, retry hints, and content type. Never
   // forward an upstream cookie onto the host origin, where a same-name cookie
