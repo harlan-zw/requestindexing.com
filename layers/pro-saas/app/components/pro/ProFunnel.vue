@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { RouteLocationRaw } from 'vue-router'
-import { computed } from 'vue'
-import { NuxtLink, UiTooltip } from '#components'
+import { computed, ref } from 'vue'
+import { NuxtLink, UiChartSkeleton, UiIcon, UiTooltip } from '#components'
 /**
  * ProFunnel
  *
@@ -36,6 +36,8 @@ interface Props {
   height?: number
   /** Aria label for the SVG region. */
   ariaLabel?: string
+  /** Cold-loading zero-CLS funnel skeleton state. */
+  loading?: boolean
 }
 
 const {
@@ -43,7 +45,10 @@ const {
   scale = 'neutral',
   height = 240,
   ariaLabel,
+  loading = false,
 } = defineProps<Props>()
+
+const hoveredKey = ref<string | null>(null)
 
 const VB_W = 1000
 const LABEL_LINE_HEIGHT_PX = 14
@@ -71,18 +76,24 @@ const bands = computed(() => {
     const currH = (curr / maxValue.value) * innerH
     const x = i * colW
 
-    // Path: prev-top → curr-top → curr-bottom → prev-bottom
+    // Smooth cubic-bezier S-curve taper: prev-top → curr-top → curr-bottom → prev-bottom
+    const cp = colW * 0.45
+    const x2 = x + colW
+    const yTop1 = midY - prevH / 2
+    const yTop2 = midY - currH / 2
+    const yBot2 = midY + currH / 2
+    const yBot1 = midY + prevH / 2
     const path = [
-      `M ${x} ${midY - prevH / 2}`,
-      `L ${x + colW} ${midY - currH / 2}`,
-      `L ${x + colW} ${midY + currH / 2}`,
-      `L ${x} ${midY + prevH / 2}`,
+      `M ${x} ${yTop1}`,
+      `C ${x + cp} ${yTop1} ${x2 - cp} ${yTop2} ${x2} ${yTop2}`,
+      `L ${x2} ${yBot2}`,
+      `C ${x2 - cp} ${yBot2} ${x + cp} ${yBot1} ${x} ${yBot1}`,
       'Z',
     ].join(' ')
 
     // 5-stop opacity ramp, lightest at right (drop-off) — matches the reference image
     const ramp = [0.85, 0.55, 0.35, 0.22, 0.12]
-    const opacity = ramp[Math.min(i, ramp.length - 1)]
+    const opacity = ramp[Math.min(i, ramp.length - 1)] ?? 0.12
 
     const conversionRatio = baseValue.value > 0
       ? Math.min(100, Math.max(0, (curr / baseValue.value) * 100))
@@ -146,106 +157,124 @@ function stageAriaLabel(band: typeof bands.value[number]): string {
       </div>
       <div v-if="delta" class="text-right shrink-0">
         <div
-          class="text-xs font-medium"
+          class="inline-flex items-center gap-1 text-xs font-medium tabular-nums"
           :class="delta.direction === 'up' ? 'text-success' : delta.direction === 'down' ? 'text-error' : 'text-dimmed'"
         >
-          <span aria-hidden="true">{{ delta.direction === 'up' ? '↑' : delta.direction === 'down' ? '↓' : '·' }}</span>
+          <UiIcon
+            v-if="delta.direction !== 'flat'"
+            :name="delta.direction === 'up' ? 'i-lucide-arrow-up' : 'i-lucide-arrow-down'"
+            class="size-3 shrink-0"
+            aria-hidden="true"
+          />
+          <span v-else aria-hidden="true">·</span>
           <span class="sr-only">{{ delta.direction === 'up' ? 'Up' : delta.direction === 'down' ? 'Down' : 'No change' }}</span>
           {{ delta.value }}
         </div>
       </div>
     </div>
 
+    <UiChartSkeleton v-if="loading" variant="funnel" :height="height" />
+
     <!-- Narrow containers use stacked stage rows. The chart remains the same
          component, but its labels never have to share four cramped columns. -->
-    <div class="funnel-mobile" :style="{ '--funnel-base': scaleVar }" role="group" :aria-label="ariaLabel || title || 'Funnel stages'">
-      <UiTooltip
-        v-for="band in bands"
-        :key="`m-${band.step.key}`"
-        :text="band.step.tooltip"
-        :disabled="!band.step.tooltip"
-        trigger-as="child"
-      >
-        <component
-          :is="band.step.to ? NuxtLink : band.step.tooltip ? 'button' : 'div'"
-          :to="band.step.to || undefined"
-          :type="!band.step.to && band.step.tooltip ? 'button' : undefined"
-          :role="!band.step.to && !band.step.tooltip ? 'group' : undefined"
-          :aria-label="stageAriaLabel(band)"
-          class="funnel-mobile-row"
+    <template v-else>
+      <div class="funnel-mobile" :style="{ '--funnel-base': scaleVar }" role="group" :aria-label="ariaLabel || title || 'Funnel stages'">
+        <UiTooltip
+          v-for="band in bands"
+          :key="`m-${band.step.key}`"
+          :text="band.step.tooltip"
+          :disabled="!band.step.tooltip"
+          trigger-as="child"
         >
-          <span class="funnel-mobile-copy">
-            <span class="text-sm font-medium text-default">{{ band.step.label }}</span>
-            <span class="text-sm numerals-display text-default">{{ band.displayValue }}</span>
-          </span>
-          <span class="funnel-mobile-meta">
-            {{ band.conversionLabel }}% of {{ steps[0]?.label.toLowerCase() ?? 'first stage' }}
-          </span>
-          <span class="funnel-mobile-track" aria-hidden="true">
-            <span :style="{ width: `${band.conversion}%` }" />
-          </span>
-        </component>
-      </UiTooltip>
-    </div>
-
-    <!-- Wide containers keep the visual UI funnel. The SVG is decorative;
-         its visible stage controls are the single accessible representation. -->
-    <div class="funnel-chart" role="group" :aria-label="ariaLabel || title || 'Funnel stages'">
-      <div class="relative">
-        <svg
-          :viewBox="`0 0 ${VB_W} ${height}`"
-          preserveAspectRatio="none"
-          class="block w-full"
-          :style="{ 'height': `${height}px`, '--funnel-base': scaleVar }"
-          aria-hidden="true"
-        >
-          <g>
-            <path
-              v-for="(band, i) in bands"
-              :key="band.step.key"
-              :d="band.path"
-              :fill="scaleVar"
-              class="funnel-band"
-              :style="{ '--band-delay': `${i * 60}ms`, '--final-opacity': band.opacity }"
-            />
-            <line
-              v-for="i in steps.length - 1"
-              :key="`div-${i}`"
-              :x1="i * (VB_W / steps.length)"
-              :x2="i * (VB_W / steps.length)"
-              y1="0"
-              :y2="height"
-              stroke="var(--ui-border)"
-              stroke-width="1"
-              vector-effect="non-scaling-stroke"
-              opacity="0.6"
-            />
-          </g>
-        </svg>
-
-        <div class="pointer-events-none absolute inset-0 grid" :style="{ gridTemplateColumns: `repeat(${steps.length}, 1fr)` }">
           <component
-            :is="band.step.to ? NuxtLink : 'div'"
-            v-for="band in bands"
-            :key="`o-${band.step.key}`"
+            :is="band.step.to ? NuxtLink : band.step.tooltip ? 'button' : 'div'"
             :to="band.step.to || undefined"
-            class="funnel-col"
-            :class="{ 'funnel-col--link': !!band.step.to }"
+            :type="!band.step.to && band.step.tooltip ? 'button' : undefined"
+            :role="!band.step.to && !band.step.tooltip ? 'group' : undefined"
+            :aria-label="stageAriaLabel(band)"
+            class="funnel-mobile-row"
           >
-            <span class="funnel-count">{{ band.displayValue }}</span>
-            <span class="funnel-pill">{{ band.conversionLabel }}%</span>
-            <UiTooltip
-              v-if="band.step.tooltip"
-              :text="stageAriaLabel(band)"
-              :trigger-as="band.step.to ? 'span' : 'button'"
-            >
-              <span class="funnel-label funnel-label--help">{{ band.step.label }}</span>
-            </UiTooltip>
-            <span v-else class="funnel-label">{{ band.step.label }}</span>
+            <span class="funnel-mobile-copy">
+              <span class="text-sm font-medium text-default">{{ band.step.label }}</span>
+              <span class="text-sm numerals-display text-default">{{ band.displayValue }}</span>
+            </span>
+            <span class="funnel-mobile-meta">
+              {{ band.conversionLabel }}% of {{ steps[0]?.label.toLowerCase() ?? 'first stage' }}
+            </span>
+            <span class="funnel-mobile-track" aria-hidden="true">
+              <span :style="{ width: `${band.conversion}%` }" />
+            </span>
           </component>
+        </UiTooltip>
+      </div>
+
+      <!-- Wide containers keep the visual UI funnel. The SVG is decorative;
+         its visible stage controls are the single accessible representation. -->
+      <div class="funnel-chart" role="group" :aria-label="ariaLabel || title || 'Funnel stages'">
+        <div class="relative">
+          <svg
+            :viewBox="`0 0 ${VB_W} ${height}`"
+            preserveAspectRatio="none"
+            class="block w-full"
+            :style="{ 'height': `${height}px`, '--funnel-base': scaleVar }"
+            aria-hidden="true"
+          >
+            <g>
+              <path
+                v-for="(band, i) in bands"
+                :key="band.step.key"
+                :d="band.path"
+                :fill="scaleVar"
+                class="funnel-band transition-opacity duration-150"
+                :style="{
+                  '--band-delay': `${i * 60}ms`,
+                  '--final-opacity': hoveredKey && hoveredKey !== band.step.key ? band.opacity * 0.45 : band.opacity,
+                }"
+              />
+              <line
+                v-for="i in steps.length - 1"
+                :key="`div-${i}`"
+                :x1="i * (VB_W / steps.length)"
+                :x2="i * (VB_W / steps.length)"
+                y1="0"
+                :y2="height"
+                stroke="var(--ui-border)"
+                stroke-width="1"
+                vector-effect="non-scaling-stroke"
+                opacity="0.6"
+              />
+            </g>
+          </svg>
+
+          <div class="pointer-events-none absolute inset-0 grid" :style="{ gridTemplateColumns: `repeat(${steps.length}, 1fr)` }">
+            <component
+              :is="band.step.to ? NuxtLink : 'div'"
+              v-for="band in bands"
+              :key="`o-${band.step.key}`"
+              :to="band.step.to || undefined"
+              class="funnel-col transition-opacity duration-150"
+              :class="[
+                { 'funnel-col--link': !!band.step.to },
+                hoveredKey && hoveredKey !== band.step.key ? 'opacity-50' : '',
+              ]"
+              @pointerenter="hoveredKey = band.step.key"
+              @pointerleave="hoveredKey = null"
+            >
+              <span class="funnel-count">{{ band.displayValue }}</span>
+              <span class="funnel-pill">{{ band.conversionLabel }}%</span>
+              <UiTooltip
+                v-if="band.step.tooltip"
+                :text="stageAriaLabel(band)"
+                :trigger-as="band.step.to ? 'span' : 'button'"
+              >
+                <span class="funnel-label funnel-label--help">{{ band.step.label }}</span>
+              </UiTooltip>
+              <span v-else class="funnel-label">{{ band.step.label }}</span>
+            </component>
+          </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 

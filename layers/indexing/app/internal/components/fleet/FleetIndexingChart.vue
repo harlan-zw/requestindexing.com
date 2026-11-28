@@ -7,7 +7,7 @@ import { formatIndexingCoverageDate } from '@nuxtseo/pro-indexing/shared/coverag
 // plots rates only: crawl errors are a count, and a count on a percent scale
 // would read as a rate.
 import { computed } from 'vue'
-import { UiLineChart, UiSkeleton } from '#components'
+import { UiChartSkeleton, UiLineChart } from '#components'
 
 const { data, height = 200, loading = false } = defineProps<{
   data: ReadonlyArray<{ date: string, indexedPercent: number }>
@@ -34,11 +34,10 @@ function formatRate(value: number): string {
 <template>
   <div
     v-if="loading && !points.length"
-    :style="{ height: `${height}px` }"
     aria-busy="true"
     aria-label="Loading the indexing trend"
   >
-    <UiSkeleton class="size-full rounded-xl" />
+    <UiChartSkeleton variant="line" :height="height" />
   </div>
   <UiLineChart
     v-else-if="points.length > 1"

@@ -251,7 +251,7 @@ function variantPositionClass(value: number): string {
           Where this query ranked in Google across the selected period, averaged over every impression.
           Only shown when the average is {{ POSITION_DISPLAY_THRESHOLD }} or better.
         </div>
-        <div v-if="positionSeriesLoading && !hasPositionSeries" class="animate-pulse rounded bg-accented/60" :style="{ width: `${SPARK_W}px`, height: `${SPARK_H}px` }" aria-hidden="true" />
+        <UiSkeleton v-if="positionSeriesLoading && !hasPositionSeries" type="block" :style="{ width: `${SPARK_W}px`, height: `${SPARK_H}px` }" />
         <div v-else-if="hasPositionSeries && positionSeriesSummary" class="space-y-1">
           <UiSparkline
             :data="positionSeries!"
@@ -293,7 +293,7 @@ function variantPositionClass(value: number): string {
           {{ formatNumber(impressions ?? 0) }} impressions. Flagged at {{ POSITION_FALL_PLACES }}+ places over
           {{ POSITION_FALL_MIN_IMPRESSIONS }}+ impressions.
         </div>
-        <div v-if="positionSeriesLoading && !hasPositionSeries" class="animate-pulse rounded bg-accented/60" :style="{ width: `${SPARK_W}px`, height: `${SPARK_H}px` }" aria-hidden="true" />
+        <UiSkeleton v-if="positionSeriesLoading && !hasPositionSeries" type="block" :style="{ width: `${SPARK_W}px`, height: `${SPARK_H}px` }" />
         <div v-else-if="hasPositionSeries && positionSeriesSummary" class="space-y-1">
           <UiSparkline
             :data="positionSeries!"

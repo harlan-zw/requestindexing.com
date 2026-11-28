@@ -37,7 +37,7 @@ it('escape cancels pending animation and cannot commit the abandoned selection',
       return () => h('div', slots.default?.())
     },
   })
-  for (const name of ['UiPopover', 'ClientOnly', 'UiSparkline', 'UiTrend', 'UiSkeleton', 'UIcon', 'UiIcon', 'ProFavicon'])
+  for (const name of ['UiPopover', 'ClientOnly', 'UiSparkline', 'UiTrend', 'UiSkeleton', 'UiChartFrame', 'UiChartSkeleton', 'UiEmptyState', 'UiSyncDot', 'UIcon', 'UiIcon', 'ProFavicon'])
     app.component(name, pass)
   const host = document.createElement('div')
   app.mount(host)
@@ -79,7 +79,7 @@ it('keeps known totals during refresh and explains a failed comparison', async (
   app = createApp({ setup: () => () => h(ProCardGsc, props.value) })
   Object.assign(app.config.globalProperties, { gscMetricColors, useProHumanFriendlyNumber: (value: number) => String(value) })
   const pass = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
-  for (const name of ['UiPopover', 'ClientOnly', 'UiSparkline', 'UiTrend', 'UIcon', 'UiIcon', 'ProFavicon'])
+  for (const name of ['UiPopover', 'ClientOnly', 'UiSparkline', 'UiTrend', 'UiChartFrame', 'UiChartSkeleton', 'UiEmptyState', 'UiSyncDot', 'UIcon', 'UiIcon', 'ProFavicon'])
     app.component(name, pass)
   app.component('UiSkeleton', UiSkeleton)
   const host = document.createElement('div')

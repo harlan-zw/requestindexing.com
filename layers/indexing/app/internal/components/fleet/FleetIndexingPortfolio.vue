@@ -8,6 +8,7 @@
 import type { IndexingMarkdownSite } from '@gscdump/sdk/indexing'
 import type { FleetView } from '#layers/pro-saas/app/composables/useFleetSiteListLayout'
 import { buildIndexingPortfolioMarkdown } from '@gscdump/sdk/indexing'
+import { providePortfolioChartSync } from '@nuxtseo/design-system/app/composables/usePortfolioChartSync'
 import { buildPortfolioOverview, portfolioMarkdownSite } from '@nuxtseo/pro-indexing/shared/portfolio-overview'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
 import { ConnectSearchConsoleButton, IndexingPortfolioChanges, IndexingPortfolioIssues, IndexingPortfolioOverview, ProFleetSiteListLayoutControls, UiAlert, UiButton, UiCopyButton, UiEmptyState, UiMetricToggle, UiTabs, UiTogglePill } from '#components'
@@ -23,6 +24,7 @@ import { useNoSearchConsoleProperty } from '#layers/pro-saas/app/composables/use
 import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 
 const { tab } = defineProps<{ tab: 'overview' | 'issues' | 'changes' }>()
+providePortfolioChartSync()
 
 const CONNECT_SITE_PATH = '/pro/dashboard/sites/connect'
 const TABS = [

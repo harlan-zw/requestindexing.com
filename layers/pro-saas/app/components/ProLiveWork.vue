@@ -98,7 +98,7 @@ watch(surface, () => {
         <span v-if="first" class="flex max-w-full items-center gap-2 text-sm text-default">
           <span class="size-1.5 shrink-0 rounded-full bg-primary motion-safe:animate-pulse" aria-hidden="true" />
           {{ first.label }}
-          <span v-if="first.percent != null" class="font-mono tabular-nums">{{ first.percent }}%</span>
+          <span v-if="first.percent != null" class="tabular-nums">{{ first.percent }}%</span>
           <span v-if="single && single.activities.length > 1" class="text-muted">+{{ single.activities.length - 1 }}</span>
         </span>
         <span v-else class="min-w-0 truncate text-sm text-muted">{{ summary }}</span>

@@ -2,7 +2,7 @@
 import { useElementSize, useWindowSize } from '@vueuse/core'
 import { AnimatePresence, motion } from 'motion-v'
 import { computed, ref, useTemplateRef } from 'vue'
-import { UiSparkColumns, UiSparkline } from '#components'
+import { UiSkeleton, UiSparkColumns, UiSparkline } from '#components'
 // Presentational sparkline cell. The series is resolved in bulk by
 // `useProEntitySparklines` (one scan for the whole table page), so this
 // component just plots the resolved numbers or a placeholder.
@@ -159,12 +159,12 @@ const cardStyle = computed(() => {
     @mousemove="onMove"
     @mouseleave="onLeave"
   >
-    <div v-if="pending && !data" class="animate-pulse" aria-busy="true">
-      <div
-        class="bg-accented rounded"
-        :style="{ width: `${width || 80}px`, height: `${height || 28}px` }"
-      />
-    </div>
+    <UiSkeleton
+      v-if="pending && !data"
+      type="block"
+      :style="{ width: `${width || 80}px`, height: `${height || 28}px` }"
+      aria-busy="true"
+    />
     <UiSparkColumns
       v-else-if="hasSeries && !inverted && metricLabel !== 'CTR'"
       :data="data!"

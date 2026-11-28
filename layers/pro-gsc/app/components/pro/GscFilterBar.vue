@@ -124,7 +124,7 @@ function devicePct(value: string): number {
           />
           <UiIcon :name="d.icon" class="relative size-3.5 shrink-0" aria-hidden="true" />
           <span class="relative flex-1 text-left">{{ d.label }}</span>
-          <span v-if="deviceDistribution" class="relative text-dimmed">{{ devicePct(d.value) }}%</span>
+          <span v-if="deviceDistribution" class="relative text-dimmed tabular-nums">{{ devicePct(d.value) }}%</span>
         </button>
       </div>
     </div>

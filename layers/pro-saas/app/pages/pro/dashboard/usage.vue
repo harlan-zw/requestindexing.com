@@ -58,7 +58,7 @@ const pending = computed(() => !data.value && status.value !== 'error')
               {{ meter.label }}
             </dt>
             <dd class="mt-1 space-y-2">
-              <div class="font-mono text-2xl tabular-nums text-highlighted">
+              <div class="text-2xl tabular-nums text-highlighted">
                 {{ meter.value }}
               </div>
               <UProgress
