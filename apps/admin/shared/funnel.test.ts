@@ -1,6 +1,6 @@
 import type { FunnelUser } from './funnel'
 import { describe, expect, it } from 'vitest'
-import { buildFunnelReport, defaultFunnelDates, funnelTimestamp, parseFunnelQuery, resolveGoogleConnectStop } from './funnel'
+import { buildFunnelReport, defaultFunnelDates, funnelTimestamp, parseFunnelQuery, resolveAgentSetupChoice, resolveGoogleConnectStop } from './funnel'
 
 const now = Date.parse('2026-10-18T12:00:00Z')
 const query = parseFunnelQuery({ from: '2026-10-01', to: '2026-10-07' }, now)
@@ -118,6 +118,37 @@ describe('where signups stop before Google', () => {
       cancelled: 2,
       scopeMissing: 0,
       failed: 0,
+    })
+  })
+})
+
+describe('agent setup choice reversal tracking', () => {
+  it('reads the latest agent setup observation for a signup', () => {
+    expect(resolveAgentSetupChoice([])).toEqual({ choice: 'noRecord', agent: null })
+    expect(resolveAgentSetupChoice([{ type: 'agent_setup_skipped', time: 2 }])).toEqual({ choice: 'skipped', agent: null })
+    expect(resolveAgentSetupChoice([{ type: 'agent_setup_selected', time: 2, agent: 'claude' }])).toEqual({ choice: 'selected', agent: 'claude' })
+    expect(resolveAgentSetupChoice([
+      { type: 'agent_setup_selected', time: 2, agent: 'claude' },
+      { type: 'agent_setup_skipped', time: 3 },
+    ])).toEqual({ choice: 'skipped', agent: null })
+  })
+
+  it('summarizes selected vs skipped and Google connect conversion for the MARKETING.md reversal gate', () => {
+    const report = buildFunnelReport([
+      user(1, { agentSetupChoice: 'selected', agentSetupRoute: 'claude', googleConnected: true }),
+      user(2, { agentSetupChoice: 'selected', agentSetupRoute: 'chatgpt', googleConnected: false }),
+      user(3, { agentSetupChoice: 'skipped', googleConnected: true }),
+      user(4, { agentSetupChoice: 'skipped', googleConnected: false }),
+      user(5, { googleConnected: true }),
+    ], query, now)
+
+    expect(report.agentSetup).toEqual({
+      selected: 2,
+      skipped: 2,
+      noRecord: 1,
+      selectedAndConnectedGoogle: 1,
+      skippedAndConnectedGoogle: 1,
+      byRoute: { claude: 1, chatgpt: 1 },
     })
   })
 })
