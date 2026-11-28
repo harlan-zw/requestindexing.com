@@ -25,7 +25,7 @@ export type OnboardingIntentId = typeof ONBOARDING_INTENTS[number]['id']
 export const ONBOARDING_INTENT_IDS = ONBOARDING_INTENTS.map(intent => intent.id) as [OnboardingIntentId, ...OnboardingIntentId[]]
 
 /**
- * Onboarding Answers: what a user told the "About you" card on the sync step.
+ * Onboarding Answers: what a user told the optional About you step.
  * Every field is optional, so a partial answer is a valid answer.
  */
 export const OnboardingAnswersSchema = z.object({
@@ -73,14 +73,12 @@ export function parseStoredOnboardingAnswers(value: unknown): OnboardingAnswers 
   return parsed.success ? parsed.data : null
 }
 
-/** COPY.md: About you card. */
+/** COPY.md: About you. */
 export const ONBOARDING_ANSWERS_COPY = {
   heading: 'About you',
   description: 'Optional. Your answers help us improve Request Indexing.',
   otherLabel: 'Anything else? Optional',
   otherPlaceholder: 'Tell us what you want to get indexed',
-  done: 'Save answers',
-  skip: 'Skip',
-  saved: 'Answers saved.',
+  skip: 'Skip for now',
   failed: 'Your answer could not save. You can still finish setup.',
 } as const

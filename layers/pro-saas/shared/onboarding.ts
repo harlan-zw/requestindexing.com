@@ -6,9 +6,7 @@
 // Agent setup leads, as in nuxtseo.com (decided 2026-11-24, COPY.md Agent
 // setup assets). Google Search Console is the only integration, there is no
 // billing and there are no invites, so `plan` and `invite` are gone and `integrations` folds into
-// `connect`. nuxtseo.com's `help` step is not a step here: its questions sit on
-// the `sync` step as the optional "About you" card (Onboarding Answers), so they
-// add no time and never gate completion.
+// `connect`. About you follows Agent setup and can be skipped.
 //
 // The steps register on `@nuxtseo/pro-shell`'s Step registry
 // (`app/plugins/onboarding-steps.ts`), and its pure resolver picks the current
@@ -34,7 +32,7 @@ export const ONBOARDING_ROUTE = '/pro/dashboard/onboarding'
 
 /**
  * Where a new signup lands: Agent setup. A saved page outranks it
- * (`finalize.ts`), and Skip agent setup moves on to Connect Google.
+ * (`finalize.ts`), and Skip agent setup moves on to About you.
  */
 export const ONBOARDING_AGENT_SETUP_PATH = `${ONBOARDING_ROUTE}?step=agent`
 
@@ -58,7 +56,7 @@ export const ONBOARDING_EXEMPT_PREFIXES = [
   ONBOARDING_ROUTE,
 ] as const
 
-export const ONBOARDING_STEPS = ['agent', 'connect', 'sites', 'sync'] as const
+export const ONBOARDING_STEPS = ['agent', 'help', 'connect', 'sites', 'sync'] as const
 
 export type OnboardingStep = typeof ONBOARDING_STEPS[number]
 
@@ -165,7 +163,7 @@ export const DASHBOARD_CARD_FLOW = 'dashboard-card'
  *
  * - `agent` (Agent setup) is `Optional`, so resume never lands there. A new
  *   signup opens it by URL (`ONBOARDING_AGENT_SETUP_PATH`). Skip agent setup
- *   goes to `connect` and keeps progress. Every agent route still passes
+ *   goes to About you and keeps progress. Every agent route still passes
  *   Connect Google.
  * - `connect` is `Optional` once a Site exists, so a member of a Team that
  *   already has one is never sent back to it. Before any Site it is
@@ -185,6 +183,15 @@ export const FIRST_RUN_STEPS: readonly ProShellOnboardingStep[] = [
     flow: FIRST_RUN_FLOW,
     order: 5,
     titleKey: 'agent',
+    nav: 'step',
+    state: () => STEP_OPTIONAL,
+    skip: () => true,
+  },
+  {
+    id: 'help',
+    flow: FIRST_RUN_FLOW,
+    order: 7,
+    titleKey: 'help',
     nav: 'step',
     state: () => STEP_OPTIONAL,
     skip: () => true,

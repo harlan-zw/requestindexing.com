@@ -149,17 +149,17 @@ describe('first-run steps', () => {
 
   it('keeps every step in the rail and finishes from the last one', () => {
     const resolution = current({ gsc: NOT_CONNECTED, hasSites: true }, 'sync')
-    expect(resolution.steps.map(step => step.id)).toEqual(['agent', 'connect', 'sites', 'sync'])
     expect(resolution.next).toEqual({ _tag: 'Finish' })
     expect(resolution.back).toBe('sites')
   })
 
-  it('opens Agent setup first, and Skip agent setup goes to Connect Google', () => {
+  it('goes from Agent setup through optional About you to Connect Google', () => {
     const resolution = current({ gsc: NOT_CONNECTED, hasSites: false }, 'agent')
     expect(resolution.index).toBe(0)
     expect(resolution.back).toBeNull()
-    expect(resolution.skip).toEqual({ _tag: 'Go', step: 'connect' })
-    expect(resolution.next).toEqual({ _tag: 'Go', step: 'connect' })
+    expect(resolution.skip).toEqual({ _tag: 'Go', step: 'help' })
+    expect(resolution.next).toEqual({ _tag: 'Go', step: 'help' })
+    expect(current({ gsc: NOT_CONNECTED, hasSites: false }, 'help').skip).toEqual({ _tag: 'Go', step: 'connect' })
   })
 
   it('never resumes at Agent setup', () => {
@@ -168,8 +168,8 @@ describe('first-run steps', () => {
     expect(current({ gsc: CONNECTED, hasSites: false }).current.id).toBe('sites')
   })
 
-  it('reopens Agent setup with Back from Connect Google', () => {
-    expect(current({ gsc: NOT_CONNECTED, hasSites: false }, 'connect').back).toBe('agent')
+  it('goes back to About you from Connect Google', () => {
+    expect(current({ gsc: NOT_CONNECTED, hasSites: false }, 'connect').back).toBe('help')
   })
 
   it('shows a requested step as asked, even one the user already finished', () => {

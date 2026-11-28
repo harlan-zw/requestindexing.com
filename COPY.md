@@ -893,8 +893,8 @@ The reader selects Check again.
 
 ## About you
 
-The optional card on the last setup step. Every answer saves when the reader taps it.
-It never gates setup. `layers/pro-saas/shared/onboarding-answers.ts` holds the card strings.
+The optional step after Agent setup. Every answer saves when the reader taps it.
+The reader can continue to Connect Google at any time. `layers/pro-saas/shared/onboarding-answers.ts` holds the step strings.
 `@nuxtseo/design-system` holds the shared questions and options, in `app/components/element/onboarding-answers.ts`.
 The goals question and its options are Request Indexing's own, in `layers/pro-saas/shared/onboarding-answers.ts`.
 
@@ -912,9 +912,7 @@ The goals question and its options are Request Indexing's own, in `layers/pro-sa
 | Goals options | Get new pages indexed, Find why pages are not indexed, Watch indexing across many sites, Recover after a launch or migration |
 | Free text label | Anything else? Optional |
 | Free text placeholder | Tell us what you want to get indexed |
-| Save action | Save answers |
-| Skip action | Skip |
-| Saved | Answers saved. |
+| Skip action | Skip for now |
 | Save failed | Your answer could not save. You can still finish setup. |
 | Admin heading | Onboarding Answers |
 | Admin explanation | Self-reported answers from the optional About you card. Unanswered questions are not counted. |
@@ -1063,7 +1061,6 @@ The dashboard shows the current indexing evidence.
 While authoritative first collection runs with no inspected URLs, show the existing neutral waiting state.
 An empty discovery snapshot does not establish a missing sitemap.
 
-The About you card follows the step's buttons, so it never pushes the report or Go to dashboard down.
 
 | Asset | String |
 | --- | --- |

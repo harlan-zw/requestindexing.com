@@ -24,8 +24,7 @@ import {
 import { ONBOARDING_STEP_GUIDES } from '#layers/pro-saas/shared/onboarding-step-guide'
 import { PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 
-// First-run setup, four steps, the step in the URL. Agent setup leads, and a
-// new signup opens it by URL; Skip agent setup moves on to Connect Google.
+// First-run setup keeps the step in the URL. Agent setup leads, then About you.
 //
 // The steps are registered on `@nuxtseo/pro-shell`'s Step registry
 // (`shared/onboarding.ts`), and the shell's flow resolves the current one. The
@@ -113,7 +112,7 @@ const flow = useProShellOnboardingFlow({
 const currentStep = computed(() => parseOnboardingStep(flow.current.value?.id) ?? 'connect')
 // Agent setup has its own exit, Skip agent setup, so the exit question
 // shows on the web steps only.
-const feedbackStep = computed(() => currentStep.value === 'agent' ? null : currentStep.value)
+const feedbackStep = computed(() => currentStep.value === 'agent' || currentStep.value === 'help' ? null : currentStep.value)
 
 // Agent setup keeps the chosen agent in `?agent=`. Step moves keep every
 // other query key, and the Google return carries it, so Back reopens Agent
@@ -162,7 +161,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
 <template>
   <ProShellOnboardingFrame
     :flow="flow"
-    :aside="currentStep !== 'sync' || hasSites"
+    :aside="currentStep !== 'help' && (currentStep !== 'sync' || hasSites)"
     :next-disabled="currentStep === 'sync' && !hasSites"
     :next-loading="finishing"
   >
@@ -174,6 +173,10 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         @skip="handleAgentSkip(controls.skip)"
         @next="handleAgentNext(controls.next)"
       />
+    </template>
+
+    <template #step-help="{ controls }">
+      <ProOnboardingAnswers @back="controls.back()" @continue="controls.next()" />
     </template>
 
     <template #step-connect="{ step, controls }">
@@ -272,9 +275,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       />
     </template>
 
-    <!-- The First Site report is the step's result, so it comes straight
-         after the heading. About you follows the step's buttons: it is
-         optional, and it must not push the result or Go to dashboard down. -->
+    <!-- The First Site report is the step's result and follows the heading. -->
     <template #step-sync>
       <div v-if="hasSites" class="space-y-5">
         <UiAuthHeading size="md" :title="FIRST_REPORT_COPY.heading" />
@@ -289,14 +290,13 @@ useSeoMeta({ title: 'Set up Request Indexing' })
     </template>
 
     <template #after>
-      <ProOnboardingAnswers v-if="currentStep === 'sync'" />
       <ProSetupExitFeedback v-if="feedbackStep" :step="feedbackStep" />
     </template>
 
     <!-- Native 2-column grid from `lg` (1024px) via ProShellOnboardingFrame's `#aside`
          slot so 1280px laptops and wider desktops keep the step guide beside the step. -->
     <template #aside>
-      <div v-if="currentStep !== 'sync' || hasSites" class="mt-6 lg:mt-0 lg:sticky lg:top-6">
+      <div v-if="currentStep !== 'help' && (currentStep !== 'sync' || hasSites)" class="mt-6 lg:mt-0 lg:sticky lg:top-6">
         <ProOnboardingStepGuide :guide="ONBOARDING_STEP_GUIDES[currentStep]" :name="currentStep" />
       </div>
     </template>
