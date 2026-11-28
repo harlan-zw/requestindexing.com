@@ -11,7 +11,7 @@ import { ONBOARDING_ANSWERS_COPY as copy, EMPTY_ONBOARDING_ANSWERS, ONBOARDING_I
 // even when answers cannot be loaded or saved.
 const emit = defineEmits(['back', 'continue'])
 
-const { data } = useFetch<OnboardingAnswersState>('/api/pro/onboarding/answers', { server: false, lazy: true })
+const { data, status } = useFetch<OnboardingAnswersState>('/api/pro/onboarding/answers', { server: false, lazy: true })
 
 const answers = ref<OnboardingAnswers>({ ...EMPTY_ONBOARDING_ANSWERS })
 const otherText = ref('')
@@ -25,6 +25,7 @@ watch(() => data.value, (state) => {
 }, { immediate: true })
 
 const visible = computed(() => data.value?._tag === 'Open')
+const loading = computed(() => status.value === 'idle' || status.value === 'pending')
 
 const answersCopy: Partial<OnboardingAnswersCopy> = {
   intentsQuestion: ONBOARDING_INTENTS_QUESTION,
@@ -41,7 +42,7 @@ function save(close = false) {
   const body: OnboardingAnswersWrite = { answers: { ...answers.value, other: other || undefined }, close }
   const write = writes.then(() => getAppFetch()<OnboardingAnswersWriteResult>('/api/pro/onboarding/answers', { method: 'POST', body, retry: 0 }))
     .then((result) => {
-      if (result._tag === 'Closed' || close)
+      if (result._tag === 'Closed')
         data.value = { _tag: 'Closed' }
       saveFailed.value = false
     })
@@ -86,6 +87,15 @@ function update(next: OnboardingAnswersDraft) {
   void save()
 }
 
+async function back() {
+  if (leaving.value)
+    return
+  leaving.value = true
+  flushText()
+  await writes
+  emit('back')
+}
+
 async function advance() {
   if (leaving.value)
     return
@@ -93,7 +103,8 @@ async function advance() {
   clearTimeout(textTimer)
   textTimer = undefined
   if (visible.value)
-    await save(true)
+    void save(true)
+  await writes
   emit('continue')
 }
 
@@ -104,7 +115,14 @@ const restClass = 'border-accented bg-default/80 hover:border-primary/60 hover:b
 
 <template>
   <section class="space-y-5" data-testid="onboarding-answers">
-    <UiAuthHeading size="md" :title="copy.heading" :description="copy.description" />
+    <div class="flex flex-wrap items-start justify-between gap-x-4">
+      <UiAuthHeading size="md" :title="copy.heading" :description="copy.description" />
+      <UiButton purpose="link" class="min-h-11" :label="copy.skip" :disabled="leaving" @click="advance" />
+    </div>
+
+    <p v-if="!visible" class="text-sm text-muted" role="status">
+      {{ loading ? copy.loading : copy.unavailable }}
+    </p>
 
     <div v-if="visible">
       <UiOnboardingAnswers
@@ -168,11 +186,11 @@ const restClass = 'border-accented bg-default/80 hover:border-primary/60 hover:b
     </p>
     <UiWizardNav
       can-back
-      :skip-label="visible ? copy.skip : undefined"
+      :busy="leaving"
+      :next-disabled="loading && !visible"
       :next-loading="leaving"
-      @back="emit('back')"
+      @back="back"
       @next="advance"
-      @skip="advance"
     />
   </section>
 </template>

@@ -42,6 +42,7 @@ function mount() {
       props.skipLabel ? h('button', { onClick: () => emit('skip') }, props.skipLabel) : null,
     ],
   }))
+  app.component('UiButton', defineComponent({ props: ['label'], setup: (props, { attrs }) => () => h('button', attrs, props.label) }))
   app.component('UButton', defineComponent({ props: ['label'], setup: (props, { attrs }) => () => h('button', attrs, props.label) }))
   app.mount(host)
   apps.push(app)
@@ -55,7 +56,7 @@ beforeEach(async () => {
   io.layer.current = (await import('@nuxtseo/design-system/app/components/element/UiOnboardingAnswers.vue')).default
   Object.assign(globalThis, {
     onBeforeUnmount,
-    useFetch: () => ({ data: ref({ _tag: 'Open', answers: { intents: [] } }) }),
+    useFetch: () => ({ data: ref({ _tag: 'Open', answers: { intents: [] } }), status: ref('success') }),
   })
   io.fetch.mockResolvedValue({ _tag: 'Saved' })
 })
@@ -68,14 +69,14 @@ afterEach(() => {
 it('saves a tapped option at once and clears it on a second tap', async () => {
   const card = mount()
   await flush()
-  card.button('Agency or freelancer').click()
+  card.button('Site or business owner').click()
   await flush()
-  expect(card.button('Agency or freelancer').getAttribute('aria-pressed')).toBe('true')
-  card.button('Agency or freelancer').click()
+  expect(card.button('Site or business owner').getAttribute('aria-pressed')).toBe('true')
+  card.button('Site or business owner').click()
   await flush()
-  expect(card.button('Agency or freelancer').getAttribute('aria-pressed')).toBe('false')
+  expect(card.button('Site or business owner').getAttribute('aria-pressed')).toBe('false')
   expect(card.bodies()).toEqual([
-    { answers: { intents: [], role: 'agency', siteCount: undefined, seoExperience: undefined, other: undefined }, close: false },
+    { answers: { intents: [], role: 'business-owner', siteCount: undefined, seoExperience: undefined, other: undefined }, close: false },
     { answers: { intents: [], role: undefined, siteCount: undefined, seoExperience: undefined, other: undefined }, close: false },
   ])
 })
@@ -107,5 +108,5 @@ it('continues without answers on Skip for now', async () => {
   await flush()
   expect(card.bodies()).toEqual([{ answers: { intents: [], other: undefined }, close: true }])
   expect(card.advance).toHaveBeenCalledOnce()
-  expect(card.host.querySelector('textarea')).toBeNull()
+  expect(card.host.querySelector('textarea')).not.toBeNull()
 })

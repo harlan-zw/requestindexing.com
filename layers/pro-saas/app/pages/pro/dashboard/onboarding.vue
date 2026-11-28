@@ -9,8 +9,9 @@ import ProSetupFirstSiteReport from '~~/layers/indexing/app/components/ProSetupF
 
 import ProOnboardingStepGuide from '~~/layers/pro-saas/app/components/pro/ProOnboardingStepGuide.vue'
 import { FIRST_REPORT_COPY } from '#layers/indexing/shared/first-report'
-import { parseAgentSetupRoute } from '#layers/pro-gsc/shared/agent-setup'
+import { AGENT_SETUP_COPY, AGENT_SETUP_OPTIONS, parseAgentSetupRoute } from '#layers/pro-gsc/shared/agent-setup'
 import { parseGscConnectReturn } from '#layers/pro-gsc/shared/gsc-grant'
+import { PRO_SHELL_ROUTES } from '#layers/pro-saas/app/pro-shell'
 import { readProErrorMessage } from '#layers/pro-saas/shared/errors'
 import { GSC_CONNECT_COPY } from '#layers/pro-saas/shared/gsc-connect-copy'
 import {
@@ -78,7 +79,7 @@ const sitesBlocked = ref(false)
 
 const finishing = ref(false)
 
-async function finish(options: { skipSites?: boolean } = {}) {
+async function finish(options: { skipSites?: boolean, setupAgent?: AgentSetupRoute } = {}) {
   if (finishing.value)
     return
   finishing.value = true
@@ -88,7 +89,9 @@ async function finish(options: { skipSites?: boolean } = {}) {
       body: options.skipSites ? { skipSites: true } : undefined,
     })
     await refreshSession()
-    await navigateTo(DASHBOARD_ROUTE)
+    await navigateTo(options.setupAgent
+      ? { path: PRO_SHELL_ROUTES.developers, query: { agent: options.setupAgent } }
+      : DASHBOARD_ROUTE)
   }
   catch (err: unknown) {
     // The server says why, for example that Google must be connected first.
@@ -118,6 +121,7 @@ const feedbackStep = computed(() => currentStep.value === 'agent' || currentStep
 // other query key, and the Google return carries it, so Back reopens Agent
 // setup with the same choice.
 const agent = ref(parseAgentSetupRoute(route.query.agent))
+const chosenAgent = computed(() => AGENT_SETUP_OPTIONS.find(option => option.route === agent.value))
 watch(agent, (value) => {
   if (value && route.query.agent !== value)
     void navigateTo({ query: { ...route.query, agent: value } }, { replace: true })
@@ -133,8 +137,14 @@ function recordAgentObservation(body: { type: 'agent_setup_skipped' } | { type: 
   void getAppFetch()('/api/pro/onboarding/observation', { method: 'POST', body }).catch(() => {})
 }
 
-function handleAgentSkip(skip: () => void) {
+async function handleAgentSkip(skip: () => void) {
   recordAgentObservation({ type: 'agent_setup_skipped' })
+  if (route.query.agent) {
+    const query = { ...route.query }
+    delete query.agent
+    agent.value = null
+    await navigateTo({ query }, { replace: true })
+  }
   skip()
 }
 
@@ -237,7 +247,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
            advance, so the footer is empty; after, it offers Continue. There
            is no skip (COPY.md, Connect Google assets). A member of a Team
            that already has a Site may continue without a grant. Back
-           reopens Agent setup. -->
+           reopens About you. -->
       <UiWizardNav
         can-back
         :divider="false"
@@ -280,6 +290,14 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       <div v-if="hasSites" class="space-y-5">
         <UiAuthHeading size="md" :title="FIRST_REPORT_COPY.heading" />
         <ProSetupFirstSiteReport />
+        <UiButton
+          v-if="chosenAgent"
+          purpose="secondary"
+          class="min-h-11"
+          :label="AGENT_SETUP_COPY.finish(chosenAgent.label)"
+          :loading="finishing"
+          @click="finish({ setupAgent: chosenAgent.route })"
+        />
       </div>
       <UiAuthHeading
         v-else

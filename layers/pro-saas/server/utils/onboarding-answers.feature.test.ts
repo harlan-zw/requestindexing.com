@@ -35,12 +35,15 @@ it('keeps partial answers from each tap without closing the card', async () => {
   expect(await state(8)).toEqual({ _tag: 'Open', answers: { intents: [] } })
 })
 
-it('closes the card for good once submitted or skipped, and refuses later writes', async () => {
-  await send({ answers: { seoExperience: 'new', intents: [] } })
-  expect(await send({ answers: { seoExperience: 'new', intents: [] }, close: true })).toEqual({ _tag: 'Saved' })
+it('keeps submitted answers editable until onboarding is complete', async () => {
+  await send({ answers: { seoExperience: 'new' }, close: true })
+  expect(await state()).toEqual({ _tag: 'Open', answers: { seoExperience: 'new', intents: [] } })
+  expect(await send({ answers: { role: 'business-owner', intents: [] } })).toEqual({ _tag: 'Saved' })
+  expect(await state()).toEqual({ _tag: 'Open', answers: { role: 'business-owner', intents: [] } })
+
+  sqlite.prepare('UPDATE users SET onboarding_completed_at = ? WHERE user_id = 7').run(Date.now())
   expect(await state()).toEqual({ _tag: 'Closed' })
-  expect(await send({ answers: { role: 'solo', intents: [] } })).toEqual({ _tag: 'Closed' })
-  expect(sqlite.prepare('SELECT onboarding_answers FROM users WHERE user_id = 7').get()).toEqual({ onboarding_answers: JSON.stringify({ seoExperience: 'new', intents: [] }) })
+  expect(await send({ answers: { role: 'solo' } })).toEqual({ _tag: 'Closed' })
 })
 
 it.each([

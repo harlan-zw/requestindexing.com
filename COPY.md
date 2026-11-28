@@ -582,12 +582,12 @@ article 17209137. Check both before you change either string.
 | Gemini, allow step | Sign in and allow access · Gemini opens gscdump. {account} |
 | Ask step | Ask your first question · Paste the Setup prompt into a new {app} chat. |
 | Google account sentence | Sign in with the Google account that owns your Search Console property. |
-| Next step note | Next, connect Google here. Your agent reads your Sites after you connect them. |
-| Continue action | Continue, a secondary button shown once the reader chooses an agent. It is the footer's only button |
+| Next step note | Finish setting up your agent after your first Site report. |
+| Continue action | Continue, shown once the reader chooses an agent |
+| First Site report action | Set up {agent} |
 | Skip action | Skip agent setup, a link with a next icon on the right of the Skip line's bar |
 
-**One solid button: the first step's action.** Continue stays secondary. gscdump makes Continue
-solid after its server confirms the connection. This app has no such read.
+Continue opens About you. The first Site report offers setup for the chosen agent. On Developers, the first setup action is the primary button.
 
 **The step shows no connection status.** gscdump reports no browser sign-in or MCP grant to
 Request Indexing, so the step cannot confirm a connection. Never show "Connected" or "Waiting"
@@ -903,7 +903,7 @@ The goals question and its options are Request Indexing's own, in `layers/pro-sa
 | Card heading | About you |
 | Card detail | Optional. Your answers help us improve Request Indexing. |
 | Role question | What best describes you? |
-| Role options | Solo developer, Agency or freelancer, In-house team, Building an SEO tool, Something else |
+| Role options | Solo developer, Site or business owner, Agency or freelancer, In-house team, Building an SEO tool, Something else |
 | Site count question | How many websites do you look after? |
 | Site count options | 1, 2–5, 6–20, 21+ |
 | SEO question | How comfortable are you with SEO? |
@@ -913,6 +913,8 @@ The goals question and its options are Request Indexing's own, in `layers/pro-sa
 | Free text label | Anything else? Optional |
 | Free text placeholder | Tell us what you want to get indexed |
 | Skip action | Skip for now |
+| Loading questions | Loading questions… |
+| Questions unavailable | Questions could not load. You can still continue. |
 | Save failed | Your answer could not save. You can still finish setup. |
 | Admin heading | Onboarding Answers |
 | Admin explanation | Self-reported answers from the optional About you card. Unanswered questions are not counted. |

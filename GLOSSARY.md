@@ -123,7 +123,7 @@ Quota and Free allowance are different ceilings. Quota is Google's daily Indexin
 **Casing:** lowercase in prose; `Link` only at the start of a label.
 
 ### Onboarding Answers
-**Is:** what a user tells the optional About you step after Agent setup: role, site count, SEO experience, goals, and free text. Stored in `users.onboarding_answers`. `users.onboarding_answers_closed_at` records Continue or Skip for now. The ids match nuxtseo.com and gscdump.com.
+**Is:** what a user tells the optional About you step after Agent setup: role, site count, SEO experience, goals, and free text. Stored in `users.onboarding_answers`. `users.onboarding_answers_closed_at` records the first Continue or Skip for now. Answers stay editable during setup. The ids match nuxtseo.com and gscdump.com.
 **Use for:** code, admin reports, and docs about these answers. The card heading says About you.
 **Never:** profile, priorities, survey, or intents for the whole set. Intents names the goals question only.
 **Casing:** `Onboarding Answers` in prose, `onboardingAnswers` in identifiers.

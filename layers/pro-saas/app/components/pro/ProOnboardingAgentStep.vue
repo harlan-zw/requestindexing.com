@@ -3,10 +3,8 @@ import type { AgentSetupRoute } from '#layers/pro-gsc/shared/agent-setup'
 import ProAgentSetupPanel from '~~/layers/pro-saas/app/components/pro/ProAgentSetupPanel.vue'
 import { AGENT_SETUP_COPY as copy } from '#layers/pro-gsc/shared/agent-setup'
 
-// Agent setup: the first onboarding step. The agent panel is the one the
-// Developers page shows (`ProAgentSetupPanel`); this step adds the skip line,
-// the next step note, and the wizard nav. Skip agent setup moves on to
-// Connect Google.
+// Choose an agent before About you. Developers shows its authorization steps
+// after the first Site report.
 const { title, description } = defineProps<{ title: string, description?: string }>()
 
 const emit = defineEmits<{ skip: [], next: [] }>()
@@ -53,7 +51,6 @@ const agent = defineModel<AgentSetupRoute | null>('agent', { default: null })
       v-if="agent"
       show-next
       :next-label="copy.continue"
-      next-purpose="secondary"
       @next="emit('next')"
     />
   </div>

@@ -38,7 +38,7 @@ export const OnboardingAnswersSchema = z.object({
 
 export type OnboardingAnswers = z.output<typeof OnboardingAnswersSchema>
 
-/** One write from the card. `close` ends the card: Done or Skip. */
+/** One write from the card. `close` records leaving About you. */
 export const OnboardingAnswersWriteSchema = z.object({
   answers: OnboardingAnswersSchema,
   close: z.boolean().default(false),
@@ -46,7 +46,7 @@ export const OnboardingAnswersWriteSchema = z.object({
 
 export type OnboardingAnswersWrite = z.input<typeof OnboardingAnswersWriteSchema>
 
-/** What the card reads. A closed card never shows again. */
+/** What the card reads. Answers remain editable until onboarding is complete. */
 export type OnboardingAnswersState
   = | { _tag: 'Open', answers: OnboardingAnswers }
     | { _tag: 'Closed' }
@@ -80,5 +80,7 @@ export const ONBOARDING_ANSWERS_COPY = {
   otherLabel: 'Anything else? Optional',
   otherPlaceholder: 'Tell us what you want to get indexed',
   skip: 'Skip for now',
+  loading: 'Loading questions…',
+  unavailable: 'Questions could not load. You can still continue.',
   failed: 'Your answer could not save. You can still finish setup.',
 } as const
