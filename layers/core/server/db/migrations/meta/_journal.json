@@ -176,6 +176,13 @@
       "when": 1795869040896,
       "tag": "0025_stripe_billing_readiness",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1795875721192,
+      "tag": "0026_stripe_collection_status",
+      "breakpoints": true
     }
   ]
 }

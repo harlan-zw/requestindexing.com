@@ -1,5 +1,5 @@
-# Copy this to .dev.vars and fill in your values
-# These are used by wrangler for local development
+# Copy this file to .dev.vars for Wrangler development.
+# For pnpm dev, follow the Stripe instructions in docs/runbooks/stripe-reconciliation.md.
 
 NUXT_KEY=your-session-key
 NUXT_POSTMARK_API_KEY=

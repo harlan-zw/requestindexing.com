@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { stripeBillingAccounts } from '#schema/pro'
 
 const subscriptionStatus = z.enum(stripeBillingAccounts.stripeStatus.enumValues)
+const collectionMethod = z.enum(stripeBillingAccounts.stripeCollectionMethod.enumValues)
 
 const subscriptionDelivery = z.object({
   id: z.string().startsWith('evt_'),
@@ -65,7 +66,8 @@ export async function retrieveStripeSubscription(stripe: Stripe, id: string): Pr
     customerId: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
     subscriptionId: subscription.id,
     status: subscriptionStatus.parse(subscription.status),
+    collectionMethod: collectionMethod.parse(subscription.collection_method),
+    collectionPaused: subscription.pause_collection !== null,
     live: subscription.livemode,
-    paused: subscription.pause_collection !== null || subscription.collection_method !== 'charge_automatically',
   }
 }

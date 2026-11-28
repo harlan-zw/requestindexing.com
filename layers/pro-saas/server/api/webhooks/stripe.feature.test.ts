@@ -1,6 +1,7 @@
 import { H3 } from 'h3'
+import Stripe from 'stripe'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createStripeClient } from '../../utils/stripe-webhook'
+import { createStripeClient, retrieveStripeSubscription } from '../../utils/stripe-webhook'
 import handler from './stripe.post'
 
 const { reconcile } = vi.hoisted(() => ({ reconcile: vi.fn() }))
@@ -63,5 +64,30 @@ describe('sandbox Stripe webhook', () => {
   it('returns a retryable response when another reconciliation wrote first', async () => {
     reconcile.mockResolvedValue({ _tag: 'Retry' })
     expect((await deliver()).status).toBe(503)
+  })
+})
+
+it.each([
+  { method: 'charge_automatically', pause: { behavior: 'void' }, collectionPaused: true },
+  { method: 'send_invoice', pause: null, collectionPaused: false },
+] as const)('reads Stripe $method without changing the subscription status', async ({ method, pause, collectionPaused }) => {
+  const stripe = new Stripe(sandboxConfig.stripeSecretKey, {
+    httpClient: Stripe.createFetchHttpClient(async () => Response.json({
+      id: 'sub_fixture',
+      customer: 'cus_fixture',
+      status: 'active',
+      collection_method: method,
+      pause_collection: pause,
+      livemode: false,
+    })),
+  })
+
+  await expect(retrieveStripeSubscription(stripe, 'sub_fixture')).resolves.toEqual({
+    customerId: 'cus_fixture',
+    subscriptionId: 'sub_fixture',
+    status: 'active',
+    collectionMethod: method,
+    collectionPaused,
+    live: false,
   })
 })

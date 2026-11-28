@@ -11,8 +11,9 @@ export interface StripeSubscriptionSnapshot {
   customerId: string
   subscriptionId: string
   status: NonNullable<typeof stripeBillingAccounts.$inferSelect.stripeStatus>
+  collectionMethod: NonNullable<typeof stripeBillingAccounts.$inferSelect.stripeCollectionMethod>
+  collectionPaused: boolean
   live: boolean
-  paused: boolean
 }
 
 export async function reconcileStripeSubscription(
@@ -47,7 +48,9 @@ export async function reconcileStripeSubscription(
   const [updated] = await db.batch([
     db.update(stripeBillingAccounts)
       .set({
-        stripeStatus: current.paused ? 'paused' : current.status,
+        stripeStatus: current.status,
+        stripeCollectionMethod: current.collectionMethod,
+        stripeCollectionPaused: current.collectionPaused,
         lastReconciledEventId: eventId,
         reconciledAt: sql`unixepoch()`,
       })

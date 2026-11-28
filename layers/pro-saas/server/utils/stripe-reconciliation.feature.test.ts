@@ -13,7 +13,14 @@ const delivery: StripeSubscriptionDelivery = {
   subscriptionId: 'sub_test',
 }
 
-const snapshot = { customerId: 'cus_test', subscriptionId: 'sub_test', status: 'active', live: false, paused: false } as const
+const snapshot = {
+  customerId: 'cus_test',
+  subscriptionId: 'sub_test',
+  status: 'active',
+  collectionMethod: 'charge_automatically',
+  collectionPaused: false,
+  live: false,
+} as const
 const openDatabases: ReturnType<typeof migratedSqlite>[] = []
 
 function fixture(failBatch?: (statements: string[]) => boolean) {
@@ -25,6 +32,9 @@ function fixture(failBatch?: (statements: string[]) => boolean) {
   return {
     db: d1Database(sqlite, { failBatch }),
     readStatus: () => sqlite.prepare('SELECT stripe_status FROM stripe_billing_accounts').get()?.stripe_status,
+    readSubscription: () => sqlite.prepare(`
+      SELECT stripe_status, stripe_collection_method, stripe_collection_paused FROM stripe_billing_accounts
+    `).get(),
   }
 }
 
@@ -42,6 +52,22 @@ describe('sandbox Stripe reconciliation', () => {
     expect(readStatus()).toBe('active')
     await expect(reconcileStripeSubscription(db, delivery, retrieve)).resolves.toEqual({ _tag: 'Duplicate' })
     expect(retrieve).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    { status: 'active', collectionMethod: 'charge_automatically', collectionPaused: true },
+    { status: 'active', collectionMethod: 'send_invoice', collectionPaused: false },
+    { status: 'paused', collectionMethod: 'charge_automatically', collectionPaused: false },
+  ] as const)('records $status independently of $collectionMethod and pause $collectionPaused', async (current) => {
+    const { db, readSubscription } = fixture()
+    const { status, collectionMethod, collectionPaused } = current
+
+    await expect(reconcileStripeSubscription(db, delivery, async () => ({ ...snapshot, ...current }))).resolves.toEqual({ _tag: 'Reconciled' })
+    expect(readSubscription()).toEqual({
+      stripe_status: status,
+      stripe_collection_method: collectionMethod,
+      stripe_collection_paused: Number(collectionPaused),
+    })
   })
 
   it('ignores a Stripe subscription that lacks an explicit binding', async () => {

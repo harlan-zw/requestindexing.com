@@ -100,6 +100,8 @@ export const stripeBillingAccounts = sqliteTable('stripe_billing_accounts', {
   customerId: text('customer_id').notNull().unique(),
   subscriptionId: text('subscription_id').notNull().unique(),
   stripeStatus: text('stripe_status', { enum: ['incomplete', 'incomplete_expired', 'trialing', 'active', 'past_due', 'canceled', 'unpaid', 'paused'] }),
+  stripeCollectionMethod: text('stripe_collection_method', { enum: ['charge_automatically', 'send_invoice'] }),
+  stripeCollectionPaused: integer('stripe_collection_paused', { mode: 'boolean' }),
   lastReconciledEventId: text('last_reconciled_event_id'),
   reconciledAt: integer('reconciled_at'),
 })
