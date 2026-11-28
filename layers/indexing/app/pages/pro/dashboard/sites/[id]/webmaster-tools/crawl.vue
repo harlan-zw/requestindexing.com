@@ -65,8 +65,31 @@ const evidenceQuery = useProGscdumpBingEvidence(gscdumpSiteId, {
   offset: evidenceOffset,
   enabled: canRead,
 })
-const rows = computed(() => toBingCrawlDetailViews(evidenceQuery.data.value?.indexingEvidence ?? []))
-const evidencePagination = computed(() => evidenceQuery.data.value?.pagination)
+type BingEvidenceData = NonNullable<typeof evidenceQuery.data.value>
+const retainedEvidence = ref<{ siteId: string, data: BingEvidenceData } | null>(null)
+watch([gscdumpSiteId, () => evidenceQuery.data.value], ([siteKey, data]) => {
+  if (!siteKey) {
+    retainedEvidence.value = null
+    return
+  }
+  if (retainedEvidence.value && retainedEvidence.value.siteId !== siteKey)
+    retainedEvidence.value = null
+  if (data)
+    retainedEvidence.value = { siteId: siteKey, data }
+}, { immediate: true })
+
+const effectiveEvidence = computed(() => {
+  if (evidenceQuery.data.value)
+    return evidenceQuery.data.value
+  const retained = retainedEvidence.value
+  return retained && retained.siteId === gscdumpSiteId.value ? retained.data : null
+})
+const evidencePending = computed(() => evidenceQuery.status.value === 'pending')
+const evidenceWidgetStatus = computed(() =>
+  evidencePending.value && effectiveEvidence.value ? 'success' : evidenceQuery.status.value,
+)
+const rows = computed(() => toBingCrawlDetailViews(effectiveEvidence.value?.indexingEvidence ?? []))
+const evidencePagination = computed(() => effectiveEvidence.value?.pagination)
 const evidenceTotal = computed(() => evidencePagination.value?.total ?? 0)
 const pageCount = computed(() => bingCrawlDetailsPageCount(evidenceTotal.value))
 const rangeStart = computed(() => rows.value.length ? (evidencePagination.value?.offset ?? evidenceOffset.value) + 1 : 0)
@@ -90,8 +113,8 @@ const paginationPage = computed({
 // A page past the end, from an old link or a shrunk list, moves to the last
 // page. Only a real page counts: the query also settles with no data while the
 // connection read is in flight, and that must not reset `bingPage`.
-watch([evidencePagination, pageCount], ([pagination, count]) => {
-  if (pagination && currentPage.value > count)
+watch([() => evidenceQuery.data.value?.pagination, pageCount, evidencePending], ([pagination, count, pending]) => {
+  if (!pending && pagination && currentPage.value > count)
     updatePage(count, true)
 })
 
@@ -192,9 +215,9 @@ function handleVerificationChecked(next: BingConnectionV1) {
           />
           <UiWidgetState
             class="mt-3"
-            :status="evidenceQuery.status.value"
+            :status="evidenceWidgetStatus"
             :error="evidenceQuery.error.value"
-            :empty="evidenceQuery.status.value === 'success' && rows.length === 0"
+            :empty="evidenceWidgetStatus === 'success' && !evidencePending && rows.length === 0"
             :skeleton-lines="8"
             empty-icon="search"
             empty-title="No Bing crawl details yet"
@@ -217,6 +240,7 @@ function handleVerificationChecked(next: BingConnectionV1) {
 
             <UiDataTableSection
               v-model:page="paginationPage"
+              :pending="evidencePending"
               :rows="rows"
               :total="evidenceTotal"
               :columns="[]"
@@ -225,8 +249,14 @@ function handleVerificationChecked(next: BingConnectionV1) {
               item-label="crawl details"
               label="Bing crawl details"
             >
-              <template #body>
-                <UiTableShell bordered row-hover size="xs" label="Bing crawl details">
+              <template #body="{ pending }">
+                <UiTableShell
+                  bordered
+                  row-hover
+                  size="xs"
+                  label="Bing crawl details"
+                  :class="pending && rows.length > 0 ? 'opacity-60 transition-opacity duration-150' : 'transition-opacity duration-150'"
+                >
                   <template #head>
                     <UiTableTh>URL</UiTableTh>
                     <UiTableTh visible-from="md">

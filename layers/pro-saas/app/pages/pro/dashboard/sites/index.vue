@@ -88,6 +88,44 @@ const attentionCount = computed(() => rows.value.filter(siteNeedsAttention).leng
 const filteredRows = computed(() => showTriageControls.value
   ? filterManageSites(rows.value, { filter: activeFilter.value, query: searchQuery.value })
   : rows.value)
+const filterOptions = computed<Array<{ value: ManageSitesFilter, label: string }>>(() => [
+  { value: 'all', label: `All (${rows.value.length})` },
+  { value: 'attention', label: `Needs attention (${attentionCount.value})` },
+])
+
+const searchWrapRef = useTemplateRef<HTMLElement>('searchWrapRef')
+
+function onSearchEscape(e: KeyboardEvent) {
+  if (searchQuery.value !== '') {
+    e.preventDefault()
+    searchQuery.value = ''
+  }
+  else {
+    ;(e.target as HTMLInputElement | null)?.blur()
+  }
+}
+
+function onSlashKeydown(e: KeyboardEvent) {
+  if (!showTriageControls.value || e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey)
+    return
+  const active = document.activeElement as HTMLElement | null
+  const tag = active?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || active?.isContentEditable)
+    return
+  const input = searchWrapRef.value?.querySelector<HTMLInputElement>('input')
+  if (!input || input.offsetParent === null)
+    return
+  e.preventDefault()
+  input.focus()
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onSlashKeydown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onSlashKeydown)
+})
 
 const loading = computed(() => status.value === 'pending' && !data.value)
 
@@ -250,34 +288,42 @@ async function removeSite() {
         class="flex flex-wrap items-center gap-2.5 border-b border-default px-5 py-3"
         data-testid="sites-triage-bar"
       >
-        <UInput
-          v-model="searchQuery"
-          icon="i-heroicons-magnifying-glass"
-          placeholder="Search Sites..."
-          aria-label="Search Sites"
-          size="sm"
-          class="w-full sm:w-64"
-        />
-        <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter Sites">
-          <UButton
-            size="xs"
-            :color="activeFilter === 'all' ? 'primary' : 'neutral'"
-            :variant="activeFilter === 'all' ? 'soft' : 'outline'"
-            :aria-pressed="activeFilter === 'all'"
-            @click="activeFilter = 'all'"
+        <div ref="searchWrapRef" class="w-full sm:w-64">
+          <UiInput
+            :model-value="searchQuery"
+            icon="search"
+            placeholder="Search Sites..."
+            aria-label="Search Sites"
+            autocomplete="off"
+            size="sm"
+            :ui="{ base: 'min-h-11 sm:min-h-0 sm:h-8' }"
+            class="w-full"
+            @update:model-value="searchQuery = $event ?? ''"
+            @keydown.escape="onSearchEscape"
           >
-            All ({{ rows.length }})
-          </UButton>
-          <UButton
-            size="xs"
-            :color="activeFilter === 'attention' ? 'primary' : 'neutral'"
-            :variant="activeFilter === 'attention' ? 'soft' : 'outline'"
-            :aria-pressed="activeFilter === 'attention'"
-            @click="activeFilter = 'attention'"
-          >
-            Needs attention ({{ attentionCount }})
-          </UButton>
+            <template #trailing>
+              <UiButton
+                v-if="searchQuery !== ''"
+                purpose="quiet"
+                icon="close"
+                size="xs"
+                class="min-h-11 min-w-11 sm:min-h-0 sm:min-w-0"
+                aria-label="Clear search"
+                @click="searchQuery = ''"
+              />
+              <kbd
+                v-else
+                class="hidden sm:inline-flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded border border-default/80 bg-muted font-mono text-[10px] font-medium leading-none text-dimmed pointer-events-none"
+                aria-hidden="true"
+              >/</kbd>
+            </template>
+          </UiInput>
         </div>
+        <UiTogglePill
+          v-model="activeFilter"
+          :options="filterOptions"
+          label="Filter Sites"
+        />
       </div>
 
       <div v-if="showTriageControls && !filteredRows.length" class="flex flex-wrap items-center justify-between gap-2 px-5 py-6 text-sm text-muted">

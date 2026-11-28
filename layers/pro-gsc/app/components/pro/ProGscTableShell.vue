@@ -2,7 +2,7 @@
 import type { UiTableColumn, UiTableRowId, UiTableSize } from '@nuxtseo/design-system/app/shared/table'
 import { countryData } from '@nuxtseo/design-system/app/utils/countries'
 import { refDebounced } from '@vueuse/core'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { UiAlert, UiButton, UiFilterMenu, UiIcon, UiInput, UiSkeleton, UiTable, UPagination } from '#components'
 import { useProHumanFriendlyNumber } from '#imports'
 import { isMoversFilter } from '../../../shared/utils/gsc-facets'
@@ -120,6 +120,8 @@ const accessibleTableLabel = computed(() => tableLabel || itemLabel || 'Data tab
 
 const localQ = ref(q)
 const debouncedQ = refDebounced(localQ, 300)
+const isDebouncing = computed(() => localQ.value !== q)
+const searchWrapRef = useTemplateRef<HTMLElement>('searchWrapRef')
 
 const localPage = computed({
   get: () => page,
@@ -160,6 +162,39 @@ function commitQ(value = localQ.value) {
     emit('update:q', value)
   emit('update:page', 1)
 }
+
+function onSearchEscape(e: KeyboardEvent) {
+  if (localQ.value !== '') {
+    e.preventDefault()
+    commitQ('')
+  }
+  else {
+    ;(e.target as HTMLInputElement | null)?.blur()
+  }
+}
+
+function onSlashKeydown(e: KeyboardEvent) {
+  if (!searchable || e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey)
+    return
+  const active = document.activeElement as HTMLElement | null
+  const tag = active?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || active?.isContentEditable)
+    return
+  const input = searchWrapRef.value?.querySelector<HTMLInputElement>('input')
+  if (!input || input.offsetParent === null)
+    return
+  e.preventDefault()
+  input.focus()
+}
+
+onMounted(() => {
+  if (searchable)
+    document.addEventListener('keydown', onSlashKeydown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onSlashKeydown)
+})
 
 // Wire the presentational GscFilterBar to URL-synced Pro facet state.
 // `countryData` is auto-imported from `design-system/app/utils/countries.ts`.
@@ -258,21 +293,28 @@ function onApplySaved(id: string) {
     <!-- Wraps on a phone, so toolbar chips (an active issue filter) move below
          the search instead of pushing the Filter button off screen. -->
     <div v-if="searchable || filters.length || facets" class="flex flex-wrap items-center justify-between gap-2">
-      <div v-if="searchable" class="min-w-48 flex-1 sm:flex-none sm:w-64">
+      <div v-if="searchable" ref="searchWrapRef" class="min-w-48 flex-1 sm:flex-none sm:w-64">
         <UiInput
           :model-value="localQ" :placeholder="searchPlaceholder"
           :aria-label="searchPlaceholder"
           icon="search"
           autocomplete="off"
           size="sm"
-          :ui="{ base: 'min-h-11 sm:min-h-10' }"
+          :ui="{ base: 'min-h-11 sm:min-h-0 sm:h-8' }"
           data-inp-target="gsc-table-search"
           @update:model-value="localQ = $event ?? ''"
           @keydown.enter="commitQ()"
+          @keydown.escape="onSearchEscape"
         >
           <template #trailing>
+            <UiIcon
+              v-if="isDebouncing"
+              name="loading"
+              class="size-3 animate-spin text-dimmed"
+              aria-hidden="true"
+            />
             <UiButton
-              v-if="localQ !== ''"
+              v-else-if="localQ !== ''"
               purpose="quiet"
               icon="close"
               size="xs"
@@ -280,6 +322,11 @@ function onApplySaved(id: string) {
               aria-label="Clear search"
               @click="commitQ('')"
             />
+            <kbd
+              v-else
+              class="hidden sm:inline-flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded border border-default/80 bg-muted font-mono text-[10px] font-medium leading-none text-dimmed pointer-events-none"
+              aria-hidden="true"
+            >/</kbd>
           </template>
         </UiInput>
       </div>
@@ -292,6 +339,7 @@ function onApplySaved(id: string) {
           :saved-filters="saved"
           :active-count="activeCount"
           :show-saved="showSavedFilters"
+          :loading="isLoading && !isLoadingMore"
           @apply-preset="onApplyPreset"
           @apply-saved="onApplySaved"
           @remove-saved="removeSavedFilter"
@@ -343,8 +391,8 @@ function onApplySaved(id: string) {
       <span v-else>Comparison unavailable. Both periods need complete recorded Search Console data.</span>
     </div>
 
-    <!-- Loading skeleton (suppressed while paging in load-more — the table stays put) -->
-    <div v-if="isLoading && !isLoadingMore" class="rounded-xl border border-default overflow-hidden">
+    <!-- Loading skeleton (cold-load only; in-place refetches keep loaded rows visible and dimmed) -->
+    <div v-if="isLoading && !isLoadingMore && !rows.length" class="rounded-xl border border-default overflow-hidden">
       <slot name="skeleton">
         <div class="bg-[var(--ui-bg-elevated)]/50 px-5 py-3 border-b border-default">
           <div class="flex gap-8">
@@ -423,6 +471,7 @@ function onApplySaved(id: string) {
       :sorting="tableSorting"
       disable-pagination
       row-hover
+      :class="isLoading && !isLoadingMore && rows.length > 0 ? 'opacity-60 transition-opacity duration-150' : 'transition-opacity duration-150'"
       @row-click="emit('rowClick', $event)"
       @sort-column="emit('sortColumn', $event)"
     >

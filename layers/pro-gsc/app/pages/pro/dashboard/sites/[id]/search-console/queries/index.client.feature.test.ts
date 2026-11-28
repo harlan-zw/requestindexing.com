@@ -28,7 +28,7 @@ function mount() {
   const host = document.createElement('div')
   document.body.appendChild(host)
   const app = createApp(QueriesPage)
-  for (const name of ['UiAlert', 'UiEmptyState', 'ConnectSearchConsoleButton', 'ProPageZone', 'ProSectionHeader', 'UiSkeleton']) {
+  for (const name of ['UiAlert', 'UiEmptyState', 'ConnectSearchConsoleButton', 'ProPageZone', 'ProSectionHeader', 'UiSkeleton', 'UiFilterBarSkeleton']) {
     app.component(name, defineComponent({
       props: ['title'],
       setup: (props, { slots }) => () => h('div', [props.title, slots.default?.(), slots.action?.()]),

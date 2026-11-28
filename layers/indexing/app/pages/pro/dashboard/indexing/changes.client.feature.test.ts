@@ -50,6 +50,7 @@ vi.mock('#components', () => ({
   UiButton: none,
   UiCopyButton: none,
   UiEmptyState: none,
+  UiFilterBarSkeleton: none,
   UiMetricToggle: none,
   UiTabs: none,
   UiTogglePill: none,

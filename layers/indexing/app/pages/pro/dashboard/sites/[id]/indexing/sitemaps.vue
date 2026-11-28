@@ -846,6 +846,9 @@ const isConnected = computed(() => Boolean(gscdumpSiteId.value))
                     :show-compare="false"
                     :show-stable="false"
                   />
+                  <template #fallback>
+                    <UiSkeleton type="block" class="h-11 sm:h-8 w-36 rounded-lg" />
+                  </template>
                 </ClientOnly>
               </div>
             </template>

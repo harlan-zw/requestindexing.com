@@ -11,7 +11,7 @@ import { buildIndexingPortfolioMarkdown } from '@gscdump/sdk/indexing'
 import { providePortfolioChartSync } from '@nuxtseo/design-system/app/composables/usePortfolioChartSync'
 import { buildPortfolioOverview, portfolioMarkdownSite } from '@nuxtseo/pro-indexing/shared/portfolio-overview'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
-import { ConnectSearchConsoleButton, IndexingPortfolioChanges, IndexingPortfolioIssues, IndexingPortfolioOverview, ProFleetSiteListLayoutControls, UiAlert, UiButton, UiCopyButton, UiEmptyState, UiMetricToggle, UiTabs, UiTogglePill } from '#components'
+import { ConnectSearchConsoleButton, IndexingPortfolioChanges, IndexingPortfolioIssues, IndexingPortfolioOverview, ProFleetSiteListLayoutControls, UiAlert, UiButton, UiCopyButton, UiEmptyState, UiFilterBarSkeleton, UiMetricToggle, UiTabs, UiTogglePill } from '#components'
 import { useIndexingPortfolio } from '#layers/indexing/app/composables/useIndexingPortfolio'
 import FleetIndexingList from '#layers/indexing/app/internal/components/fleet/FleetIndexingList.vue'
 import { INDEXING_CHANGES_WINDOW_DAYS } from '#layers/indexing/app/utils/indexing-source'
@@ -130,7 +130,14 @@ function downloadMarkdown() {
     <div v-else-if="sitesLoading || hasSites" class="flex flex-col gap-3">
       <!-- Changes holds a fixed window, so the date range applies to Overview
            and Issues only, and Changes has no toolbar. -->
-      <div v-if="tab !== 'changes'" class="flex items-center gap-2 sm:gap-3 flex-wrap" role="toolbar" aria-label="Indexing filters">
+      <UiFilterBarSkeleton
+        v-if="tab !== 'changes' && sitesLoading"
+        :show-search="false"
+        :show-filter="false"
+        :show-mode="tab === 'overview'"
+        label="Loading indexing filters"
+      />
+      <div v-else-if="tab !== 'changes'" class="flex items-center gap-2 sm:gap-3 flex-wrap" role="toolbar" aria-label="Indexing filters">
         <ClientOnly>
           <ProDateRangePicker
             v-model:period="period"
@@ -138,6 +145,9 @@ function downloadMarkdown() {
             v-model:stable-data="stableData"
             :show-compare="false"
           />
+          <template #fallback>
+            <div class="h-11 sm:h-8 w-36 shrink-0 rounded-lg bg-muted animate-pulse" aria-hidden="true" />
+          </template>
         </ClientOnly>
         <template v-if="tab === 'overview'">
           <UiTogglePill
@@ -161,7 +171,7 @@ function downloadMarkdown() {
               purpose="quiet"
               size="xs"
               icon="download"
-              class="min-h-11 sm:min-h-7"
+              class="min-h-11 sm:min-h-0 sm:h-8"
               :disabled="!exportReady"
               @click="downloadMarkdown"
             >

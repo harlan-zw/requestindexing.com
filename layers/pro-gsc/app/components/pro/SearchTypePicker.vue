@@ -33,18 +33,19 @@ const activeOption = computed(() => SEARCH_TYPE_OPTIONS.find(o => o.value === se
       type="button"
       :aria-label="`Search type: ${getSearchTypeLabel(searchType)}`"
       :aria-expanded="open"
-      class="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-xs font-medium transition-colors duration-150 border focus-visible:ring-2 focus-visible:ring-primary"
+      class="cursor-pointer inline-flex items-center justify-center gap-1.5 px-2.5 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 sm:h-8 rounded-lg text-xs font-medium transition-colors duration-150 border outline-none focus-visible:ring-2 focus-visible:ring-primary"
       :class="[
         open
-          ? 'border-accented bg-elevated text-default'
-          : 'border-default bg-muted text-muted hover:text-default hover:border-accented',
+          ? 'border-accented bg-elevated text-highlighted'
+          : 'border-default bg-default text-default hover:border-accented hover:bg-muted/60',
       ]"
     >
-      <UiIcon :name="activeOption.icon" class="size-3.5" aria-hidden="true" />
-      <span>{{ activeOption.label }}</span>
+      <UiIcon :name="activeOption.icon" class="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
+      <span data-toolbar-label class="whitespace-nowrap">{{ activeOption.label }}</span>
       <UiIcon
         :name="switching ? 'loading' : 'expand'"
-        class="size-3 text-dimmed -mr-0.5"
+        :data-toolbar-chevron="switching ? undefined : ''"
+        class="size-3 shrink-0 text-dimmed -mr-0.5"
         :class="{ 'animate-spin': switching }"
         aria-hidden="true"
       />
