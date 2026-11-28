@@ -33,8 +33,12 @@ async function syncOwnedGscdumpTeam(
   { userId, gscdumpUserId, mode }: TeamMirrorOwner,
 ): Promise<string | null> {
   const recoveringPersonalTeam = mode !== 'regular' && team.personalTeam
+  const trimmedName = team.name.trim()
+  // Local Personal Team names can come from an OAuth profile. The partner
+  // endpoint validates the name even when it only returns an existing Team.
+  const name = team.personalTeam && (trimmedName.length < 2 || trimmedName.length > 60) ? 'My team' : team.name
   const result = await teamsClient.createTeam(
-    { ownerUserId: gscdumpUserId, name: team.name, personalTeam: team.personalTeam },
+    { ownerUserId: gscdumpUserId, name, personalTeam: team.personalTeam },
     { actorUserId: userId, proTeamId: team.id },
   )
   const canonicalId = result?.team?.id

@@ -270,6 +270,19 @@ describe('explicitly linking Search Console to an owning Personal Team', () => {
     expect(external.updateSiteTeam).not.toHaveBeenCalled()
   })
 
+  it.each(['A', 'A'.repeat(61)])('repairs a Personal Team with a legacy name length', async (name) => {
+    sqlite.prepare('UPDATE teams SET name = ?, gscdump_team_id = ? WHERE team_id = 1').run(name, 't_stale')
+    external.lifecycle.mockResolvedValue({ sites: [{ siteId: 's_engine', requestedUrl: 'https://example.com' }] })
+    external.createTeam.mockImplementationOnce(async ({ body }) => {
+      if (body.name.trim().length < 2 || body.name.trim().length > 60)
+        throw new Error('Team name must be 2–60 characters')
+      return { data: { team: { id: 't_owner' } } }
+    })
+
+    await expect(relink()).resolves.toMatchObject({ success: true, gscdumpSiteId: 's_engine' })
+    expect(sqlite.prepare('SELECT name, gscdump_team_id FROM teams WHERE team_id = 1').get()).toMatchObject({ name, gscdump_team_id: 't_owner' })
+  })
+
   it('leaves the Site pointer intact if an existing registration cannot bind', async () => {
     sqlite.prepare('UPDATE teams SET gscdump_team_id = ? WHERE team_id = 1').run('t_stale')
     external.lifecycle.mockResolvedValue({ sites: [] })
