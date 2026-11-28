@@ -20,6 +20,9 @@ New Markdown at the repository root is an error. Identity and filters only.
 
 ## Rules
 
+- After an edit, run `pnpm test --since-last-run --reporter=agent` for affected tests.
+  After a failure, use `pnpm test --last-failed --reporter=agent`. Before opening a PR, run `pnpm test`.
+
 - **If a capability could live in gscdump, it does.** This app holds accounts, teams, the
   site list, and the dashboard. Sync, retention, inspection, sitemaps, and submission belong
   to the engine, and arrive here by upgrading the protocol pin, not by building them again.
