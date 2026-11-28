@@ -2,6 +2,7 @@
 import type { SiteAllowance } from '#layers/pro-gsc/shared/free-allowance'
 
 import type { PropertyPickerResponse } from '#layers/pro-gsc/shared/property-picker'
+import { useIntervalFn } from '@vueuse/core'
 import { isVerifiedGscPermission, pickBestGscProperty } from 'gscdump'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProGscAddVerify from '#layers/pro-gsc/app/components/pro/ProGscAddVerify.vue'
@@ -54,6 +55,8 @@ const emit = defineEmits<{
    * skip on this, as nuxtseo.com does.
    */
   blocked: []
+  /** Connectable state restored (for example after provisioning finishes). */
+  unblocked: []
 }>()
 
 interface ConnectedSite {
@@ -156,9 +159,42 @@ const filteredProperties = computed(() => {
     : picker.value.properties
 })
 
-watch([atLimit, picker], ([full, state]) => {
-  if (full || propertyPickerBlocksConnect(state))
+const PROVISIONING_POLL_INTERVAL_MS = 3_000
+const PROVISIONING_MAX_POLLS = 20
+const provisioningPolls = ref(0)
+const provisioningTimedOut = ref(false)
+
+const { pause: pauseProvisioningPoll, resume: resumeProvisioningPoll } = useIntervalFn(async () => {
+  if (picker.value._tag !== 'Provisioning') {
+    pauseProvisioningPoll()
+    return
+  }
+  provisioningPolls.value += 1
+  if (provisioningPolls.value > PROVISIONING_MAX_POLLS) {
+    pauseProvisioningPoll()
+    provisioningTimedOut.value = true
+    return
+  }
+  await refreshGsc({ dedupe: 'cancel' })
+}, PROVISIONING_POLL_INTERVAL_MS, { immediate: false })
+
+watch(() => picker.value._tag, (tag) => {
+  if (tag === 'Provisioning') {
+    provisioningPolls.value = 0
+    provisioningTimedOut.value = false
+    resumeProvisioningPoll()
+  }
+  else {
+    pauseProvisioningPoll()
+    provisioningTimedOut.value = false
+  }
+}, { immediate: true })
+
+watch([atLimit, picker, provisioningTimedOut], ([full, state, timedOut]) => {
+  if (full || timedOut || propertyPickerBlocksConnect(state))
     emit('blocked')
+  else if (state._tag !== 'Loading' && state._tag !== 'Provisioning')
+    emit('unblocked')
 }, { immediate: true })
 
 watch(connectedSites, sites => emit('changed', sites.length), { immediate: true })

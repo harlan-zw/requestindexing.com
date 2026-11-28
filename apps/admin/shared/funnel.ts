@@ -41,6 +41,25 @@ const STOP_BY_EVENT: Record<string, GoogleConnectStop> = {
 /** The connect event types the stop reads. */
 export const GOOGLE_CONNECT_EVENT_TYPES = Object.keys(STOP_BY_EVENT)
 
+export type AgentSetupChoice = 'selected' | 'skipped' | 'noRecord'
+
+/** The Agent setup observation event types (MARKETING.md reversal gate). */
+export const AGENT_SETUP_EVENT_TYPES = ['agent_setup_selected', 'agent_setup_skipped'] as const
+
+/**
+ * Latest Agent setup choice recorded for a signup.
+ */
+export function resolveAgentSetupChoice(events: readonly { type: string, time: number, agent?: string | null }[]): { choice: AgentSetupChoice, agent: string | null } {
+  const latest = events
+    .filter(event => event.type === 'agent_setup_selected' || event.type === 'agent_setup_skipped')
+    .reduce<{ type: string, time: number, agent?: string | null } | null>((last, event) => !last || event.time >= last.time ? event : last, null)
+  if (!latest)
+    return { choice: 'noRecord', agent: null }
+  if (latest.type === 'agent_setup_skipped')
+    return { choice: 'skipped', agent: null }
+  return { choice: 'selected', agent: typeof latest.agent === 'string' && latest.agent ? latest.agent : null }
+}
+
 /**
  * The latest connect record decides. A Connect press with nothing after it is
  * only that: the app sent the reader to Google and saw no return. They may
@@ -65,6 +84,8 @@ export interface FunnelUser {
   setupCompleted: boolean
   /** Set when Google is not connected. */
   googleConnectStop?: GoogleConnectStop
+  agentSetupChoice?: AgentSetupChoice
+  agentSetupRoute?: string | null
   acquisition?: AcquisitionEvidence
   journey?: UserJourney
   feedback?: FeedbackObservation[]
@@ -196,6 +217,7 @@ export function buildFunnelReport(users: FunnelUser[], query: FunnelQuery, now =
       ...stop,
       users: cohort.filter(user => !user.googleConnected && (user.googleConnectStop ?? 'noRecord') === stop.key).length,
     })),
+    agentSetup: summarizeAgentSetup(cohort),
     sources,
     stages,
     days,
@@ -224,6 +246,34 @@ export function summarizeOnboardingAnswers(cohort: FunnelUser[]) {
     })),
     other: answers.flatMap(row => row.answers.other ? [{ userId: row.userId, text: row.answers.other }] : []),
   }
+}
+
+function summarizeAgentSetup(cohort: FunnelUser[]) {
+  let selected = 0
+  let skipped = 0
+  let noRecord = 0
+  let selectedAndConnectedGoogle = 0
+  let skippedAndConnectedGoogle = 0
+  const byRoute: Record<string, number> = {}
+  for (const user of cohort) {
+    const choice = user.agentSetupChoice ?? 'noRecord'
+    if (choice === 'selected') {
+      selected += 1
+      if (user.googleConnected)
+        selectedAndConnectedGoogle += 1
+      if (user.agentSetupRoute)
+        byRoute[user.agentSetupRoute] = (byRoute[user.agentSetupRoute] ?? 0) + 1
+    }
+    else if (choice === 'skipped') {
+      skipped += 1
+      if (user.googleConnected)
+        skippedAndConnectedGoogle += 1
+    }
+    else {
+      noRecord += 1
+    }
+  }
+  return { selected, skipped, noRecord, selectedAndConnectedGoogle, skippedAndConnectedGoogle, byRoute }
 }
 
 export type FunnelReport = ReturnType<typeof buildFunnelReport>

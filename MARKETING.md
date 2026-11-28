@@ -1,7 +1,7 @@
 ---
 scope: how Request Indexing earns attention and trust: who arrives, who we serve, the change we make, positioning, entry points, permission, channels, the metric, and the review gate
 owns: the marketing strategy. VISION.md owns what may be claimed at all. COPY.md owns the words. GLOSSARY.md owns the names. DESIGN.md owns the look.
-evidence: docs/audits/2026-11-17-customer-evidence.md
+evidence: docs/audits/2026-11-17-customer-evidence.md, docs/audits/2026-11-28-customer-evidence.md
 materials: docs/marketing/ (home page plan, channel kit, graded research)
 method: Seth Godin, *This Is Marketing* and *This Is Strategy*, tested against marketing science. Grades: A peer-reviewed or large dataset, B practitioner data, C expert opinion. Sources in docs/marketing/research.md.
 hard-cap: ~230 lines. This file rejects marketing ideas; a section that rejects nothing gets cut.
@@ -18,15 +18,15 @@ If a grade A finding's conditions hold, follow it. If they do not, treat the ide
 
 ## Who arrives today
 
-From [the customer evidence](docs/audits/2026-11-17-customer-evidence.md):
+From [the customer evidence](docs/audits/2026-11-28-customer-evidence.md) (baseline [2026-11-17](docs/audits/2026-11-17-customer-evidence.md)):
 
-- **They search for an action.** "request indexing" and its variants bring at least 37% of all clicks. They want Google to index a page.
+- **They search for an action, or arrive from ChatGPT.** "request indexing" and its variants bring at least 37% of clicks. Across 28 attributed signups, 46% came from Google Search, 32% Direct, and 14% from ChatGPT (`utm:chatgpt.com`).
 - **Most are outside the US.** India brings 21% of clicks, the USA 16%, then Iran, the UK, Bangladesh, and Pakistan.
 - **They write about one problem.** Their pages are not indexed, a whole Site at times, and they do not know why.
-- **They are individual site owners.** 9 in 10 sign in with a consumer email address. Of the accounts with a Site, about 8 in 10 have exactly one.
-- **About half never connect Google.** Under a third connect a Site.
-- **Nobody uses it as an agent door.** No account in the last 90 days holds an active API key.
-- **Search is steady and flat** for 16 months.
+- **They are individual site owners.** 91% sign in with a consumer email address (163 of 180). Of accounts with a linked Site, 80% have 1 Site. Custom-domain signups connect a Site at 47% vs 29% for consumer email.
+- **About half never connect Google.** Read-only Google access (#431) raised Connect Google to 69% (9 of 13, Nov 17 to Nov 23) before dipping to 43% (3 of 7, Nov 24 to Nov 28). From Nov 22 to Nov 28, a `Provisioning` skip bug blocked 6 of 6 connected signups from adding Sites.
+- **Nobody uses it as an agent door.** Across 161 linked accounts on gscdump, 0 open-signup accounts hold an agent entry, MCP call, or CLI session.
+- **Search CTR is rising.** 30-day clicks reached 219 (+8%) with CTR up from 1.19% to 1.85% and mean position 10.2.
 
 **Gap.** Return use is unmeasured, signup source covers about 5% of signups, and the first evidence view records only two opt-in paths that few users take. The Site indexing pages, where users read Google's verdict, record nothing.
 
@@ -178,7 +178,8 @@ The cues that bring someone to us, ranked by the evidence. Each needs a page tha
 
 | Channel | Impact /100 | Grade | Status | Move |
 |---|---|---|---|---|
-| The "request indexing" search, home page | 70 | B | Proven, flat | Keep the words, change the promise |
+| The "request indexing" search, home page | 70 | B | Proven, CTR rising (1.85%) | Keep the words, change the promise |
+| ChatGPT referrals (`utm_source=chatgpt.com`) | 65 | B | 14% of attributed signups (#2 external source) | Keep guides and home copy clear for AI citation |
 | How-to pages for queries at positions 7 to 12 | 65 | B | Pages exist, win few clicks | Rewrite the Search Console guide first |
 | One guide per Google reason | 60 | B/C | No pages | Write the whole-Site case first |
 | IndexNow on the home page and in a setup guide | 55 | C | Product ships it; delivery works since 2026-11-18 | Name it under the H1 and write the key file guide |
@@ -231,5 +232,7 @@ Product surfaces follow the registers in COPY.md. Every claim names its number o
 
 Resolve one, fold it in above, then delete it here.
 
-1. **The Google connect step.** About half of signups stop there. Since #431, stop records on `/admin/funnel` show where each one stops. Read them to find why.
-2. **The paid tier for operators.** What it costs, and when. Marketing quotes no price until one exists.
+1. **Agent-first onboarding reversal gate.** `agent_setup_selected` and `agent_setup_skipped` now record in `pro_events` and `/admin/funnel`. Evaluate after 30 days against the reversal rule above.
+2. **IndexNow verification drop.** 6 of 7 Request Indexing accounts that started IndexNow never verified (4 failed with `key-file-unavailable`), and 0 enabled automatic sending. Inspect where key-file setup stalls.
+3. **The paid tier for operators.** What it costs, and when. Marketing quotes no price until one exists.
+4. **About you role labels.** Add `Site or business owner` alongside `Solo developer` across `@nuxtseo/design-system`, `gscdump.com`, `requestindexing.com`, and `nuxtseo.com` together.

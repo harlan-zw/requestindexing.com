@@ -30,9 +30,10 @@ vi.mock('#components', () => {
 vi.mock('~~/layers/core/app/composables/fetch', () => ({
   fetchSites: async () => ({ data: ref({ sites: [{ siteId: 'ri_1', domain: 'example.com', property: 'sc-domain:example.com', syncStatus: 'synced' }] }) }),
 }))
+const appFetchMock = vi.hoisted(() => vi.fn(async () => ({ _tag: 'Collecting', phase: 'discovering' })))
 // The First Site report's saved read. A new Site is still being inspected.
 vi.mock('~~/layers/core/app/utils/app-fetch', () => ({
-  getAppFetch: () => async () => ({ _tag: 'Collecting', phase: 'discovering' }),
+  getAppFetch: () => appFetchMock,
 }))
 
 const session = ref({ hasSites: true, gscdumpConnected: true })
@@ -70,7 +71,7 @@ async function mount() {
   app.component('ProGscConsentPreview', ProGscConsentPreview)
   // Each action reports its purpose, so a test can count the solid buttons.
   app.component('UiCopyButton', defineComponent({ props: ['label', 'purpose'], setup: props => () => h('button', { 'data-testid': 'copy-setup-prompt', 'data-purpose': props.purpose }, props.label) }))
-  app.component('UiButton', defineComponent({ props: ['to', 'label', 'purpose'], setup: props => () => h('a', { 'href': props.to, 'data-purpose': props.purpose }, props.label) }))
+  app.component('UiButton', defineComponent({ props: ['to', 'label', 'purpose'], setup: (props, { attrs }) => () => props.to ? h('a', { 'href': props.to, 'data-purpose': props.purpose }, props.label) : h('button', { 'type': 'button', 'data-testid': attrs['data-testid'], 'data-purpose': props.purpose, 'onClick': attrs.onClick as () => void }, props.label) }))
   // The Connect action is the step's only way forward, so the stub keeps its
   // test id and link for the assertions below.
   app.component('UButton', defineComponent({
@@ -83,9 +84,10 @@ async function mount() {
   }))
   app.component('UiWizardNav', defineComponent({
     props: { nextLabel: String, nextDisabled: Boolean, skipLabel: String, showNext: { type: Boolean, default: true }, nextPurpose: { type: String, default: 'cta' } },
-    setup: props => () => h('div', [
-      props.skipLabel ? h('button', { 'data-testid': 'step-skip' }, props.skipLabel) : null,
-      props.showNext ? h('button', { 'disabled': props.nextDisabled, 'data-testid': 'step-next', 'data-purpose': props.nextPurpose }, props.nextLabel) : null,
+    emits: ['next', 'skip', 'back'],
+    setup: (props, { emit }) => () => h('div', [
+      props.skipLabel ? h('button', { 'data-testid': 'step-skip', 'onClick': () => emit('skip') }, props.skipLabel) : null,
+      props.showNext ? h('button', { 'disabled': props.nextDisabled, 'data-testid': 'step-next', 'data-purpose': props.nextPurpose, 'onClick': () => emit('next') }, props.nextLabel) : null,
     ]),
   }))
   app.mount(host)
@@ -237,5 +239,29 @@ it('carries the chosen agent through the Connect Google return', async () => {
   const host = await mount()
   expect(host.querySelector('[data-testid="connect-gsc-btn"]')?.getAttribute('href'))
     .toBe('/auth/integrations/gsc/connect?scope=read&returnTo=%2Fpro%2Fdashboard%2Fonboarding%3Fstep%3Dsites%26agent%3Dcoding-agent')
+  route.query = { step: 'sync' }
+})
+
+it('records agent_setup_skipped when Skip agent setup is clicked', async () => {
+  appFetchMock.mockClear()
+  route.query = { step: 'agent' }
+  session.value = { hasSites: false, gscdumpConnected: false }
+  const host = await mount()
+  const skip = host.querySelector<HTMLButtonElement>('[data-testid="step-skip"]')!
+  skip.click()
+  await nextTick()
+  expect(appFetchMock).toHaveBeenCalledWith('/api/pro/onboarding/observation', { method: 'POST', body: { type: 'agent_setup_skipped' } })
+  route.query = { step: 'sync' }
+})
+
+it('records agent_setup_selected with the chosen route when continuing past Agent setup', async () => {
+  appFetchMock.mockClear()
+  route.query = { step: 'agent', agent: 'claude' }
+  session.value = { hasSites: false, gscdumpConnected: false }
+  const host = await mount()
+  const next = host.querySelector<HTMLButtonElement>('[data-testid="step-next"]')!
+  next.click()
+  await nextTick()
+  expect(appFetchMock).toHaveBeenCalledWith('/api/pro/onboarding/observation', { method: 'POST', body: { type: 'agent_setup_selected', agent: 'claude' } })
   route.query = { step: 'sync' }
 })

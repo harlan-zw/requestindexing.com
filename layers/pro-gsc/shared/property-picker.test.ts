@@ -106,6 +106,17 @@ describe('projectPropertyPicker', () => {
     expect(propertyPickerBlocksConnect(state)).toBe(false)
   })
 
+  it('blocks nothing while gscdump is still provisioning the account', () => {
+    const state = projectPropertyPicker(loaded({
+      connected: true,
+      properties: [],
+      error: { reason: 'USER_PROVISIONING', message: 'Preparing your Search Console workspace.' },
+    }))
+
+    expect(state).toEqual({ _tag: 'Provisioning', message: 'Preparing your Search Console workspace.' })
+    expect(propertyPickerBlocksConnect(state)).toBe(false)
+  })
+
   // The 2026-10-01 replay: the realtime resync re-read the list about 3 s
   // after load, and the picker went back to "Reading your Search Console
   // properties." until the second read landed, 10 to 13 s in all.
