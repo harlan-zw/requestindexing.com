@@ -31,8 +31,7 @@ defineSlots<{
 const setupPrompt = computed(() => route ? buildAgentSetupPrompt(route, place) : '')
 const steps = computed(() => route ? agentSetupSteps(route) : [])
 
-// One solid button: the first step's action. Onboarding's Continue stays
-// secondary, because no read can confirm that the agent connected.
+// The first setup action on Developers is the primary button.
 const primaryStep = computed(() => steps.value.find(step => step.action)?.key ?? null)
 </script>
 
@@ -91,7 +90,7 @@ const primaryStep = computed(() => steps.value.find(step => step.action)?.key ??
         </div>
       </div>
 
-      <div v-if="route === option.route" data-agent-setup="route" class="px-4 pb-4">
+      <div v-if="place === 'developers' && route === option.route" data-agent-setup="route" class="px-4 pb-4">
         <ol>
           <li
             v-for="(step, index) in steps"

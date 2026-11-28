@@ -97,7 +97,8 @@ export const AGENT_SETUP_COPY = {
   runCommands: 'Run the commands yourself',
   copyCommands: 'Copy commands',
   copyServerUrl: 'Copy server URL',
-  next: 'Next, connect Google here. Your agent reads your Sites after you connect them.',
+  next: 'Finish setting up your agent after your first Site report.',
+  finish: (agent: string) => `Set up ${agent}`,
   continue: 'Continue',
   /** The skip line under the heading. Harlan's words, 2026-11-24. */
   skipLead: 'You can set up agents later, and connect more than one.',

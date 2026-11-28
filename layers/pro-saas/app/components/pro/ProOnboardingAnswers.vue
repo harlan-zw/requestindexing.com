@@ -7,18 +7,16 @@ import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { UiIcon, UiOnboardingAnswers, UTextarea } from '#components'
 import { ONBOARDING_ANSWERS_COPY as copy, EMPTY_ONBOARDING_ANSWERS, ONBOARDING_INTENTS, ONBOARDING_INTENTS_QUESTION } from '#layers/pro-saas/shared/onboarding-answers'
 
-// The "About you" card on the sync step. Every answer is optional and saves
-// as it is tapped, so a user who leaves early keeps what they gave. It never
-// gates setup: the wizard's own buttons finish setup whatever this card does.
-// `UiOnboardingAnswers` owns the questions and the answer logic; this card
-// draws the controls through its slots and owns the heading, Skip, Save and
-// every write.
+// Every answer is optional. Save as people answer and allow them to advance
+// even when answers cannot be loaded or saved.
+const emit = defineEmits(['back', 'continue'])
 
-const { data } = useFetch<OnboardingAnswersState>('/api/pro/onboarding/answers', { server: false, lazy: true })
+const { data, status } = useFetch<OnboardingAnswersState>('/api/pro/onboarding/answers', { server: false, lazy: true })
 
 const answers = ref<OnboardingAnswers>({ ...EMPTY_ONBOARDING_ANSWERS })
 const otherText = ref('')
-const status = ref<'open' | 'failed' | 'saved' | 'skipped'>('open')
+const saveFailed = ref(false)
+const leaving = ref(false)
 watch(() => data.value, (state) => {
   if (state?._tag !== 'Open')
     return
@@ -26,7 +24,8 @@ watch(() => data.value, (state) => {
   otherText.value = state.answers.other ?? ''
 }, { immediate: true })
 
-const visible = computed(() => data.value?._tag === 'Open' && (status.value === 'open' || status.value === 'failed'))
+const visible = computed(() => data.value?._tag === 'Open')
+const loading = computed(() => status.value === 'idle' || status.value === 'pending')
 
 const answersCopy: Partial<OnboardingAnswersCopy> = {
   intentsQuestion: ONBOARDING_INTENTS_QUESTION,
@@ -43,14 +42,12 @@ function save(close = false) {
   const body: OnboardingAnswersWrite = { answers: { ...answers.value, other: other || undefined }, close }
   const write = writes.then(() => getAppFetch()<OnboardingAnswersWriteResult>('/api/pro/onboarding/answers', { method: 'POST', body, retry: 0 }))
     .then((result) => {
-      if (result._tag === 'Closed' && !close)
-        status.value = 'skipped'
-      else if (status.value === 'failed')
-        status.value = 'open'
+      if (result._tag === 'Closed')
+        data.value = { _tag: 'Closed' }
+      saveFailed.value = false
     })
     .catch(() => {
-      // The card is optional. A failed write shows a note and setup continues.
-      status.value = 'failed'
+      saveFailed.value = true
     })
   writes = write
   return write
@@ -90,11 +87,25 @@ function update(next: OnboardingAnswersDraft) {
   void save()
 }
 
-async function close(outcome: 'saved' | 'skipped') {
+async function back() {
+  if (leaving.value)
+    return
+  leaving.value = true
+  flushText()
+  await writes
+  emit('back')
+}
+
+async function advance() {
+  if (leaving.value)
+    return
+  leaving.value = true
   clearTimeout(textTimer)
   textTimer = undefined
-  status.value = outcome
-  await save(true)
+  if (visible.value)
+    void save(true)
+  await writes
+  emit('continue')
 }
 
 const cardClass = 'relative flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 pr-8 text-left text-sm outline-none transition-[background-color,border-color,box-shadow] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-default active:translate-y-px'
@@ -103,25 +114,17 @@ const restClass = 'border-accented bg-default/80 hover:border-primary/60 hover:b
 </script>
 
 <template>
-  <details
-    v-if="visible"
-    class="group rounded-(--ui-radius) border border-default bg-elevated/40 p-4 sm:p-5"
-    data-testid="onboarding-answers"
-  >
-    <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-      <div class="space-y-0.5">
-        <h2 id="onboarding-answers-heading" class="text-base font-semibold text-highlighted">
-          {{ copy.heading }}
-        </h2>
-        <p class="text-sm text-muted">
-          {{ copy.description }}
-        </p>
-      </div>
-      <UiIcon name="i-lucide-chevron-down" class="size-4 shrink-0 text-dimmed transition-transform group-open:rotate-180" aria-hidden="true" />
-    </summary>
+  <section class="space-y-5" data-testid="onboarding-answers">
+    <div class="flex flex-wrap items-start justify-between gap-x-4">
+      <UiAuthHeading size="md" :title="copy.heading" :description="copy.description" />
+      <UiButton purpose="link" class="min-h-11" :label="copy.skip" :disabled="leaving" @click="advance" />
+    </div>
 
-    <div class="mt-5 space-y-5 border-t border-default pt-5" aria-labelledby="onboarding-answers-heading">
-      <!-- The layer spaces its questions 24px and 10px apart; this card keeps 20px and 8px. -->
+    <p v-if="!visible" class="text-sm text-muted" role="status">
+      {{ loading ? copy.loading : copy.unavailable }}
+    </p>
+
+    <div v-if="visible">
       <UiOnboardingAnswers
         :model-value="draft"
         :intents="ONBOARDING_INTENTS"
@@ -177,17 +180,17 @@ const restClass = 'border-accented bg-default/80 hover:border-primary/60 hover:b
           </div>
         </template>
       </UiOnboardingAnswers>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <UButton color="neutral" variant="outline" class="min-h-11" :label="copy.done" data-testid="onboarding-answers-done" @click="close('saved')" />
-        <UButton color="neutral" variant="ghost" class="min-h-11" :label="copy.skip" data-testid="onboarding-answers-skip" @click="close('skipped')" />
-        <p v-if="status === 'failed'" role="status" class="text-sm text-muted">
-          {{ copy.failed }}
-        </p>
-      </div>
     </div>
-  </details>
-  <p v-else-if="status === 'saved'" role="status" class="text-sm text-muted">
-    {{ copy.saved }}
-  </p>
+    <p v-if="saveFailed" role="status" class="text-sm text-muted">
+      {{ copy.failed }}
+    </p>
+    <UiWizardNav
+      can-back
+      :busy="leaving"
+      :next-disabled="loading && !visible"
+      :next-loading="leaving"
+      @back="back"
+      @next="advance"
+    />
+  </section>
 </template>

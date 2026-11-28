@@ -24,7 +24,7 @@ export interface OnboardingStepGuide {
   facts: readonly string[]
 }
 
-export const ONBOARDING_STEP_GUIDES: Record<OnboardingStep, OnboardingStepGuide> = {
+export const ONBOARDING_STEP_GUIDES: Record<Exclude<OnboardingStep, 'help'>, OnboardingStepGuide> = {
   // The questions match what the Setup prompt asks the agent to report: how
   // many URLs have an indexed verdict, and where the rest stopped
   // (`agent-setup.ts`, SAVED_VERDICTS). gscdump finds its account by Google

@@ -142,7 +142,7 @@ export async function signInOrCreate({ event, provider, identity }: SignInOrCrea
     if (source)
       deleteCookie(event, 'auth-source')
     // A saved page continues first. Otherwise a new user opens Agent setup.
-    // Skip agent setup moves on to Connect Google.
+    // Skip agent setup moves on to About you.
     return sendRedirect(event, pageTask ? PAGE_TASK_ROUTE : ONBOARDING_AGENT_SETUP_PATH)
   }
 

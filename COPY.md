@@ -582,12 +582,12 @@ article 17209137. Check both before you change either string.
 | Gemini, allow step | Sign in and allow access · Gemini opens gscdump. {account} |
 | Ask step | Ask your first question · Paste the Setup prompt into a new {app} chat. |
 | Google account sentence | Sign in with the Google account that owns your Search Console property. |
-| Next step note | Next, connect Google here. Your agent reads your Sites after you connect them. |
-| Continue action | Continue, a secondary button shown once the reader chooses an agent. It is the footer's only button |
+| Next step note | Finish setting up your agent after your first Site report. |
+| Continue action | Continue, shown once the reader chooses an agent |
+| First Site report action | Set up {agent} |
 | Skip action | Skip agent setup, a link with a next icon on the right of the Skip line's bar |
 
-**One solid button: the first step's action.** Continue stays secondary. gscdump makes Continue
-solid after its server confirms the connection. This app has no such read.
+Continue opens About you. The first Site report offers setup for the chosen agent. On Developers, the first setup action is the primary button.
 
 **The step shows no connection status.** gscdump reports no browser sign-in or MCP grant to
 Request Indexing, so the step cannot confirm a connection. Never show "Connected" or "Waiting"
@@ -893,8 +893,8 @@ The reader selects Check again.
 
 ## About you
 
-The optional card on the last setup step. Every answer saves when the reader taps it.
-It never gates setup. `layers/pro-saas/shared/onboarding-answers.ts` holds the card strings.
+The optional step after Agent setup. Every answer saves when the reader taps it.
+The reader can continue to Connect Google at any time. `layers/pro-saas/shared/onboarding-answers.ts` holds the step strings.
 `@nuxtseo/design-system` holds the shared questions and options, in `app/components/element/onboarding-answers.ts`.
 The goals question and its options are Request Indexing's own, in `layers/pro-saas/shared/onboarding-answers.ts`.
 
@@ -903,7 +903,7 @@ The goals question and its options are Request Indexing's own, in `layers/pro-sa
 | Card heading | About you |
 | Card detail | Optional. Your answers help us improve Request Indexing. |
 | Role question | What best describes you? |
-| Role options | Solo developer, Agency or freelancer, In-house team, Building an SEO tool, Something else |
+| Role options | Solo developer, Site or business owner, Agency or freelancer, In-house team, Building an SEO tool, Something else |
 | Site count question | How many websites do you look after? |
 | Site count options | 1, 2–5, 6–20, 21+ |
 | SEO question | How comfortable are you with SEO? |
@@ -912,9 +912,9 @@ The goals question and its options are Request Indexing's own, in `layers/pro-sa
 | Goals options | Get new pages indexed, Find why pages are not indexed, Watch indexing across many sites, Recover after a launch or migration |
 | Free text label | Anything else? Optional |
 | Free text placeholder | Tell us what you want to get indexed |
-| Save action | Save answers |
-| Skip action | Skip |
-| Saved | Answers saved. |
+| Skip action | Skip for now |
+| Loading questions | Loading questions… |
+| Questions unavailable | Questions could not load. You can still continue. |
 | Save failed | Your answer could not save. You can still finish setup. |
 | Admin heading | Onboarding Answers |
 | Admin explanation | Self-reported answers from the optional About you card. Unanswered questions are not counted. |
@@ -1063,7 +1063,6 @@ The dashboard shows the current indexing evidence.
 While authoritative first collection runs with no inspected URLs, show the existing neutral waiting state.
 An empty discovery snapshot does not establish a missing sitemap.
 
-The About you card follows the step's buttons, so it never pushes the report or Go to dashboard down.
 
 | Asset | String |
 | --- | --- |

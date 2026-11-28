@@ -9,8 +9,9 @@ import ProSetupFirstSiteReport from '~~/layers/indexing/app/components/ProSetupF
 
 import ProOnboardingStepGuide from '~~/layers/pro-saas/app/components/pro/ProOnboardingStepGuide.vue'
 import { FIRST_REPORT_COPY } from '#layers/indexing/shared/first-report'
-import { parseAgentSetupRoute } from '#layers/pro-gsc/shared/agent-setup'
+import { AGENT_SETUP_COPY, AGENT_SETUP_OPTIONS, parseAgentSetupRoute } from '#layers/pro-gsc/shared/agent-setup'
 import { parseGscConnectReturn } from '#layers/pro-gsc/shared/gsc-grant'
+import { PRO_SHELL_ROUTES } from '#layers/pro-saas/app/pro-shell'
 import { readProErrorMessage } from '#layers/pro-saas/shared/errors'
 import { GSC_CONNECT_COPY } from '#layers/pro-saas/shared/gsc-connect-copy'
 import {
@@ -24,8 +25,7 @@ import {
 import { ONBOARDING_STEP_GUIDES } from '#layers/pro-saas/shared/onboarding-step-guide'
 import { PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
 
-// First-run setup, four steps, the step in the URL. Agent setup leads, and a
-// new signup opens it by URL; Skip agent setup moves on to Connect Google.
+// First-run setup keeps the step in the URL. Agent setup leads, then About you.
 //
 // The steps are registered on `@nuxtseo/pro-shell`'s Step registry
 // (`shared/onboarding.ts`), and the shell's flow resolves the current one. The
@@ -79,7 +79,7 @@ const sitesBlocked = ref(false)
 
 const finishing = ref(false)
 
-async function finish(options: { skipSites?: boolean } = {}) {
+async function finish(options: { skipSites?: boolean, setupAgent?: AgentSetupRoute } = {}) {
   if (finishing.value)
     return
   finishing.value = true
@@ -89,7 +89,9 @@ async function finish(options: { skipSites?: boolean } = {}) {
       body: options.skipSites ? { skipSites: true } : undefined,
     })
     await refreshSession()
-    await navigateTo(DASHBOARD_ROUTE)
+    await navigateTo(options.setupAgent
+      ? { path: PRO_SHELL_ROUTES.developers, query: { agent: options.setupAgent } }
+      : DASHBOARD_ROUTE)
   }
   catch (err: unknown) {
     // The server says why, for example that Google must be connected first.
@@ -113,12 +115,13 @@ const flow = useProShellOnboardingFlow({
 const currentStep = computed(() => parseOnboardingStep(flow.current.value?.id) ?? 'connect')
 // Agent setup has its own exit, Skip agent setup, so the exit question
 // shows on the web steps only.
-const feedbackStep = computed(() => currentStep.value === 'agent' ? null : currentStep.value)
+const feedbackStep = computed(() => currentStep.value === 'agent' || currentStep.value === 'help' ? null : currentStep.value)
 
 // Agent setup keeps the chosen agent in `?agent=`. Step moves keep every
 // other query key, and the Google return carries it, so Back reopens Agent
 // setup with the same choice.
 const agent = ref(parseAgentSetupRoute(route.query.agent))
+const chosenAgent = computed(() => AGENT_SETUP_OPTIONS.find(option => option.route === agent.value))
 watch(agent, (value) => {
   if (value && route.query.agent !== value)
     void navigateTo({ query: { ...route.query, agent: value } }, { replace: true })
@@ -134,8 +137,14 @@ function recordAgentObservation(body: { type: 'agent_setup_skipped' } | { type: 
   void getAppFetch()('/api/pro/onboarding/observation', { method: 'POST', body }).catch(() => {})
 }
 
-function handleAgentSkip(skip: () => void) {
+async function handleAgentSkip(skip: () => void) {
   recordAgentObservation({ type: 'agent_setup_skipped' })
+  if (route.query.agent) {
+    const query = { ...route.query }
+    delete query.agent
+    agent.value = null
+    await navigateTo({ query }, { replace: true })
+  }
   skip()
 }
 
@@ -162,7 +171,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
 <template>
   <ProShellOnboardingFrame
     :flow="flow"
-    :aside="currentStep !== 'sync' || hasSites"
+    :aside="currentStep !== 'help' && (currentStep !== 'sync' || hasSites)"
     :next-disabled="currentStep === 'sync' && !hasSites"
     :next-loading="finishing"
   >
@@ -174,6 +183,10 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         @skip="handleAgentSkip(controls.skip)"
         @next="handleAgentNext(controls.next)"
       />
+    </template>
+
+    <template #step-help="{ controls }">
+      <ProOnboardingAnswers @back="controls.back()" @continue="controls.next()" />
     </template>
 
     <template #step-connect="{ step, controls }">
@@ -234,7 +247,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
            advance, so the footer is empty; after, it offers Continue. There
            is no skip (COPY.md, Connect Google assets). A member of a Team
            that already has a Site may continue without a grant. Back
-           reopens Agent setup. -->
+           reopens About you. -->
       <UiWizardNav
         can-back
         :divider="false"
@@ -272,13 +285,19 @@ useSeoMeta({ title: 'Set up Request Indexing' })
       />
     </template>
 
-    <!-- The First Site report is the step's result, so it comes straight
-         after the heading. About you follows the step's buttons: it is
-         optional, and it must not push the result or Go to dashboard down. -->
+    <!-- The First Site report is the step's result and follows the heading. -->
     <template #step-sync>
       <div v-if="hasSites" class="space-y-5">
         <UiAuthHeading size="md" :title="FIRST_REPORT_COPY.heading" />
         <ProSetupFirstSiteReport />
+        <UiButton
+          v-if="chosenAgent"
+          purpose="secondary"
+          class="min-h-11"
+          :label="AGENT_SETUP_COPY.finish(chosenAgent.label)"
+          :loading="finishing"
+          @click="finish({ setupAgent: chosenAgent.route })"
+        />
       </div>
       <UiAuthHeading
         v-else
@@ -289,14 +308,13 @@ useSeoMeta({ title: 'Set up Request Indexing' })
     </template>
 
     <template #after>
-      <ProOnboardingAnswers v-if="currentStep === 'sync'" />
       <ProSetupExitFeedback v-if="feedbackStep" :step="feedbackStep" />
     </template>
 
     <!-- Native 2-column grid from `lg` (1024px) via ProShellOnboardingFrame's `#aside`
          slot so 1280px laptops and wider desktops keep the step guide beside the step. -->
     <template #aside>
-      <div v-if="currentStep !== 'sync' || hasSites" class="mt-6 lg:mt-0 lg:sticky lg:top-6">
+      <div v-if="currentStep !== 'help' && (currentStep !== 'sync' || hasSites)" class="mt-6 lg:mt-0 lg:sticky lg:top-6">
         <ProOnboardingStepGuide :guide="ONBOARDING_STEP_GUIDES[currentStep]" :name="currentStep" />
       </div>
     </template>

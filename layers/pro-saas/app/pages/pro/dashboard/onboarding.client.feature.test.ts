@@ -202,7 +202,7 @@ it('opens Agent setup with Skip agent setup and no connection status', async () 
   expect(host.textContent).toContain('Choose your agent')
   expect(host.querySelector('[data-testid="step-skip"]')?.textContent).toBe('Skip agent setup')
   expect(host.querySelector('[data-agent-route="claude"]')?.getAttribute('aria-pressed')).toBe('true')
-  expect(host.querySelector('a[href="https://claude.ai/directory/gscdump"]')).not.toBeNull()
+  expect(host.querySelector('a[href="https://claude.ai/directory/gscdump"]')).toBeNull()
   // Request Indexing cannot read an agent connection, so it claims none.
   expect(host.textContent).not.toMatch(/connected|waiting/i)
   route.query = { step: 'sync' }
@@ -218,18 +218,12 @@ it('leads Agent setup with the skip line, and shows Continue only once an agent 
   route.query = { step: 'sync' }
 })
 
-it.each([
-  ['coding-agent', 'Copy setup prompt'],
-  ['claude', 'Add to Claude'],
-  ['chatgpt', 'Open setup steps'],
-  ['gemini', 'Open Gemini'],
-])('shows one solid action on the %s route, with Continue secondary', async (agent, action) => {
+it.each(['coding-agent', 'claude', 'chatgpt', 'gemini'])('defers the %s authorization and shows Continue after a choice', async (agent) => {
   route.query = { step: 'agent', agent }
   session.value = { hasSites: false, gscdumpConnected: false }
   const host = await mount()
-  // No read confirms the agent, so Continue never takes the solid button.
-  expect([...host.querySelectorAll('[data-purpose="cta"]')].map(node => node.textContent)).toEqual([action])
-  expect(host.querySelector('[data-testid="step-next"]')?.getAttribute('data-purpose')).toBe('secondary')
+  expect(host.querySelector('[data-agent-setup="route"]')).toBeNull()
+  expect(host.querySelector('[data-testid="step-next"]')?.getAttribute('data-purpose')).toBe('cta')
   route.query = { step: 'sync' }
 })
 
