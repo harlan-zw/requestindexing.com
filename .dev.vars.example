@@ -1,5 +1,5 @@
-# Copy this to .dev.vars and fill in your values
-# These are used by wrangler for local development
+# Copy this file to .dev.vars for Wrangler development.
+# For pnpm dev, follow the Stripe instructions in docs/runbooks/stripe-reconciliation.md.
 
 NUXT_KEY=your-session-key
 NUXT_POSTMARK_API_KEY=
@@ -13,3 +13,8 @@ NUXT_GSCDUMP_WEBHOOK_SECRET=
 NUXT_GSCDUMP_WEBHOOK_URL=
 # Point at a local gscdump.com instance. Must be the `/api` root, not `/api/partner`.
 NUXT_GSCDUMP_API_URL=
+
+# Optional. Rehearse Stripe subscription updates with a sandbox and local D1.
+NUXT_STRIPE_RECONCILIATION_ENABLED=false
+NUXT_STRIPE_SECRET_KEY=
+NUXT_STRIPE_WEBHOOK_SECRET=
