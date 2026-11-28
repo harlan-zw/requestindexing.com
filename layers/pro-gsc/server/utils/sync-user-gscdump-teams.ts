@@ -13,6 +13,76 @@ import { and, eq, exists, isNull, or } from 'drizzle-orm'
 import { teamMemberships, teams, users } from '#layers/pro-saas/server/database'
 import { useGscdumpTeamsClient } from './gscdump-teams-client'
 
+interface TeamMirrorTarget {
+  id: number
+  name: string
+  personalTeam: boolean
+  gscdumpTeamId: string | null
+}
+
+interface TeamMirrorOwner {
+  userId: number
+  gscdumpUserId: string
+  mode: 'regular' | 'account-recovery' | 'personal-team-repair'
+}
+
+async function syncOwnedGscdumpTeam(
+  db: ReturnType<typeof useDrizzle>,
+  teamsClient: ReturnType<typeof useGscdumpTeamsClient>,
+  team: TeamMirrorTarget,
+  { userId, gscdumpUserId, mode }: TeamMirrorOwner,
+): Promise<string | null> {
+  const recoveringPersonalTeam = mode !== 'regular' && team.personalTeam
+  const result = await teamsClient.createTeam(
+    { ownerUserId: gscdumpUserId, name: team.name, personalTeam: team.personalTeam },
+    { actorUserId: userId, proTeamId: team.id },
+  )
+  const canonicalId = result?.team?.id
+  if (!canonicalId) {
+    if (recoveringPersonalTeam)
+      throw new Error('Could not recover the gscdump Personal Team.')
+    return null
+  }
+
+  const currentIdentity = db.select({ id: users.userId }).from(users).where(and(
+    eq(users.userId, userId),
+    eq(users.gscdumpUserId, gscdumpUserId),
+    mode === 'account-recovery' && recoveringPersonalTeam ? eq(users.gscdumpRecoveryLinkReconcileUserId, gscdumpUserId) : undefined,
+  ))
+  const previousMirror = team.gscdumpTeamId === null ? isNull(teams.gscdumpTeamId) : eq(teams.gscdumpTeamId, team.gscdumpTeamId)
+  const updated = await db.update(teams)
+    .set({ gscdumpTeamId: canonicalId, updatedAt: Date.now() })
+    .where(and(
+      eq(teams.teamId, team.id),
+      eq(teams.ownerId, userId),
+      eq(teams.personalTeam, team.personalTeam),
+      // A concurrent repair may already have applied the same canonical ID.
+      recoveringPersonalTeam ? or(previousMirror, eq(teams.gscdumpTeamId, canonicalId)) : previousMirror,
+      exists(currentIdentity),
+    ))
+    .returning({ id: teams.teamId })
+    .get()
+  if (!updated && recoveringPersonalTeam)
+    throw new Error('The Personal Team changed during gscdump recovery.')
+  return updated ? canonicalId : null
+}
+
+/** Resolve just this Site's owning Personal Team for an explicit relink. */
+export async function repairOwnedGscdumpPersonalTeam(
+  event: H3Event,
+  db: ReturnType<typeof useDrizzle>,
+  { teamId, userId, gscdumpUserId }: Omit<TeamMirrorOwner, 'mode'> & { teamId: number },
+): Promise<string | null> {
+  const team = await db.select({
+    id: teams.teamId,
+    name: teams.name,
+    personalTeam: teams.personalTeam,
+    gscdumpTeamId: teams.gscdumpTeamId,
+  }).from(teams).where(and(eq(teams.teamId, teamId), eq(teams.ownerId, userId), eq(teams.personalTeam, true))).get()
+
+  return team ? syncOwnedGscdumpTeam(db, useGscdumpTeamsClient(event), team, { userId, gscdumpUserId, mode: 'personal-team-repair' }) : null
+}
+
 export async function syncUserGscdumpTeams(event: H3Event | undefined, opts: {
   userId: number
   gscdumpUserId: string
@@ -37,37 +107,8 @@ export async function syncUserGscdumpTeams(event: H3Event | undefined, opts: {
     ))
     .all()
 
-  for (const team of ownTeams) {
-    const recoveringPersonalTeam = mode !== 'regular' && team.personalTeam
-    // gscdump returns the canonical Personal Team for this owner.
-    const result = await teamsClient.createTeam(
-      { ownerUserId: gscdumpUserId, name: team.name, personalTeam: team.personalTeam },
-      { actorUserId: userId, proTeamId: team.id },
-    )
-    if (!result?.team?.id) {
-      if (recoveringPersonalTeam)
-        throw new Error('Could not recover the gscdump Personal Team.')
-      continue
-    }
-
-    const currentIdentity = db.select({ id: users.userId }).from(users).where(and(
-      eq(users.userId, userId),
-      eq(users.gscdumpUserId, gscdumpUserId),
-      mode === 'account-recovery' && recoveringPersonalTeam ? eq(users.gscdumpRecoveryLinkReconcileUserId, gscdumpUserId) : undefined,
-    ))
-    const updated = await db.update(teams)
-      .set({ gscdumpTeamId: result.team.id, updatedAt: Date.now() })
-      .where(and(
-        eq(teams.teamId, team.id),
-        eq(teams.ownerId, userId),
-        team.gscdumpTeamId === null ? isNull(teams.gscdumpTeamId) : eq(teams.gscdumpTeamId, team.gscdumpTeamId),
-        exists(currentIdentity),
-      ))
-      .returning({ id: teams.teamId })
-      .get()
-    if (!updated && recoveringPersonalTeam)
-      throw new Error('The Personal Team changed during gscdump recovery.')
-  }
+  for (const team of ownTeams)
+    await syncOwnedGscdumpTeam(db, teamsClient, team, opts)
 
   // The rollout verifies only owned Personal Teams. Shared Teams and memberships stay untouched.
   if (mode === 'personal-team-repair')

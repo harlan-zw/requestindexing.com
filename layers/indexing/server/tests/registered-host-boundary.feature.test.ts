@@ -8,7 +8,8 @@ import { migratedDatabase, proDatabase } from '~~/tests/support/migrated-d1'
 import proxy from '#layers/pro-gsc/server/api/_gscdump/[surface]/v1/[...path]'
 import disconnect from '#layers/pro-gsc/server/api/pro/gsc-disconnect-site.post'
 import properties from '#layers/pro-gsc/server/api/pro/gsc-properties.get'
-import { autoLinkGsc } from '#layers/pro-gsc/server/utils/auto-link-gsc'
+import link from '#layers/pro-gsc/server/api/pro/sites/[id]/link-gsc.post'
+import { autoLinkGsc, waitForReadyGscdumpUser } from '#layers/pro-gsc/server/utils/auto-link-gsc'
 import { releaseGscdumpSite } from '#layers/pro-gsc/server/utils/release-gscdump-site'
 import { requireCurrentTeam } from '#layers/pro-saas/server/utils/require-current-team'
 import { requireTeamSite } from '#layers/pro-saas/server/utils/require-team-site'
@@ -28,6 +29,8 @@ const external = vi.hoisted(() => ({
   deleteSite: vi.fn(),
   register: vi.fn(),
   available: vi.fn(),
+  createTeam: vi.fn(),
+  updateSiteTeam: vi.fn(),
   relay: vi.fn(),
   caller: {} as Caller,
 }))
@@ -39,7 +42,7 @@ vi.mock('#layers/pro-gsc/server/utils/gscdump-client', async () => ({
   ...await vi.importActual<Record<string, unknown>>('#layers/pro-gsc/server/utils/gscdump-client'),
   useGscdumpClient: () => ({ getUserLifecycle: external.lifecycle, getRegisteredHostIdentity: external.identity, getAvailableSites: external.available, getIndexingUrls: external.urls, getIndexingDiagnostics: external.diagnostics, deleteSite: external.deleteSite, registerSite: external.register, waitForUserReady: async () => {}, readSiteAccess: async () => ({ _tag: 'Readable' }) }),
 }))
-vi.mock('#layers/pro-gsc/server/utils/gscdump-origin', () => ({ getGscdumpApiUrl: () => 'https://engine.test/api', getGscdumpWebhookUrl: () => 'https://request.test/api/webhooks/gscdump', createGscdumpPublicV1Client: () => ({ getRegisteredHostIdentity: (input: { params: { siteId: string } }) => external.identity(input.params.siteId).then(data => ({ data })), getSiteIndexingApiGrant: external.grant, createSiteGoogleSubmission: external.submit }) }))
+vi.mock('#layers/pro-gsc/server/utils/gscdump-origin', () => ({ getGscdumpApiUrl: () => 'https://engine.test/api', getGscdumpWebhookUrl: () => 'https://request.test/api/webhooks/gscdump', createGscdumpPublicV1Client: () => ({ getRegisteredHostIdentity: (input: { params: { siteId: string } }) => external.identity(input.params.siteId).then(data => ({ data })), getSiteIndexingApiGrant: external.grant, createSiteGoogleSubmission: external.submit, createTeam: external.createTeam, updateSiteTeam: external.updateSiteTeam }) }))
 vi.mock('#layers/pro-gsc/server/utils/onboarding', () => ({ updateOnboardingState: async () => {} }))
 
 const cases = [
@@ -79,6 +82,8 @@ beforeEach(() => {
   vi.stubGlobal('setResponseHeader', setResponseHeader)
   vi.stubGlobal('requireCurrentTeam', requireCurrentTeam)
   vi.stubGlobal('requireTeamSite', requireTeamSite)
+  vi.stubGlobal('autoLinkGsc', autoLinkGsc)
+  vi.stubGlobal('waitForReadyGscdumpUser', waitForReadyGscdumpUser)
   vi.stubGlobal('useRuntimeConfig', () => ({ googleIndexing: {}, public: {} }))
   vi.stubGlobal('fetch', external.relay)
   external.lifecycle.mockReset().mockResolvedValue({ sites: [{ siteId: 's_engine', requestedUrl: 'https://other.test' }] })
@@ -97,6 +102,8 @@ beforeEach(() => {
   external.submit.mockReset().mockResolvedValue({ data: { submissionReceipt: { _tag: 'accepted' } } })
   external.deleteSite.mockReset().mockResolvedValue({ success: true })
   external.register.mockReset().mockResolvedValue({ _tag: 'Registered', registration: { siteId: 's_exact' } })
+  external.createTeam.mockReset().mockResolvedValue({ data: { team: { id: 't_owner' } } })
+  external.updateSiteTeam.mockReset().mockResolvedValue({ data: { ok: true, teamId: 't_owner' } })
   external.available.mockReset().mockResolvedValue({ sites: [{ siteUrl: 'sc-domain:example.com', siteId: 's_engine', registered: true, permissionLevel: 'siteOwner' }] })
   external.relay.mockReset().mockResolvedValue(new Response('{}', { status: 200 }))
 })
@@ -245,6 +252,92 @@ describe('automatic links bind the requested host', () => {
     await expect(autoLinkGsc({ db: proDatabase(sqlite) as never, user: { _tag: 'ReadyGscdumpUser', gscdumpUserId: 'u_owner' }, siteId: 'local', origin: 'https://example.com' })).rejects.toMatchObject({ statusCode: 503 })
     expect(sqlite.prepare('SELECT gscdump_site_id FROM sites WHERE id = \'local\'').get()).toMatchObject({ gscdump_site_id: 's_engine' })
     expect(external.register).not.toHaveBeenCalled()
+  })
+})
+
+describe('explicitly linking Search Console to an owning Personal Team', () => {
+  function relink() {
+    return request({ route: link, method: 'POST', query: '' }, { gscSiteUrl: 'sc-domain:example.com' })
+  }
+
+  it('repairs the stale Team before proving a cached registration', async () => {
+    sqlite.prepare('UPDATE teams SET gscdump_team_id = ? WHERE team_id = 1').run('t_stale')
+    external.lifecycle.mockResolvedValue({ sites: [{ siteId: 's_engine', requestedUrl: 'https://example.com' }] })
+
+    await expect(relink()).resolves.toMatchObject({ success: true, gscdumpSiteId: 's_engine' })
+    expect(sqlite.prepare('SELECT gscdump_team_id FROM teams WHERE team_id = 1').get()).toMatchObject({ gscdump_team_id: 't_owner' })
+    expect(external.register).not.toHaveBeenCalled()
+    expect(external.updateSiteTeam).not.toHaveBeenCalled()
+  })
+
+  it('leaves the Site pointer intact if an existing registration cannot bind', async () => {
+    sqlite.prepare('UPDATE teams SET gscdump_team_id = ? WHERE team_id = 1').run('t_stale')
+    external.lifecycle.mockResolvedValue({ sites: [] })
+    external.register.mockResolvedValue({ _tag: 'Registered', registration: { siteId: 's_exact', existing: true } })
+    external.updateSiteTeam.mockRejectedValue(new Error('Team migration is required'))
+
+    await expect(relink()).rejects.toMatchObject({ statusCode: 503 })
+    expect(external.updateSiteTeam).toHaveBeenCalledWith({ params: { siteId: 's_exact' }, body: { teamId: 't_owner' } })
+    expect(sqlite.prepare('SELECT gscdump_site_id FROM sites WHERE id = ?').get('local')).toMatchObject({ gscdump_site_id: 's_engine' })
+  })
+
+  it('replaces an absent registration for the saved host under a covering Domain property', async () => {
+    sqlite.prepare('UPDATE teams SET gscdump_team_id = ? WHERE team_id = 1').run('t_stale')
+    sqlite.prepare('UPDATE sites SET domain = ? WHERE id = ?').run('www.example.com', 'local')
+    external.lifecycle.mockResolvedValue({ sites: [] })
+
+    await expect(relink()).resolves.toMatchObject({ success: true, gscdumpSiteId: 's_exact', gscdumpSiteUrl: 'www.example.com' })
+    expect(external.register).toHaveBeenCalledWith(expect.objectContaining({ requestedUrl: 'www.example.com', gscPropertyUrl: 'sc-domain:example.com' }))
+    expect(external.updateSiteTeam).not.toHaveBeenCalled()
+    external.identity.mockResolvedValue({ identity: { siteId: 's_exact', requestedUrl: 'https://www.example.com', userId: 'u_owner', teamId: 't_owner' } })
+    sqlite.prepare('UPDATE users SET gscdump_api_key = ? WHERE user_id = 1').run('user-key')
+    const coverage = await request({
+      route: proxy,
+      method: 'GET',
+      query: '?startDate=2026-10-01&endDate=2026-10-31&searchType=web',
+    }, {}, { surface: 'partner', path: 'sites/s_exact/analytics/coverage' }) as Response
+    expect(coverage.status).toBe(200)
+    expect(external.relay).toHaveBeenCalledOnce()
+  })
+
+  it('binds a reusable engine registration before replacing the pointer', async () => {
+    external.lifecycle.mockResolvedValue({ sites: [] })
+    external.register.mockResolvedValue({ _tag: 'Registered', registration: { siteId: 's_exact', existing: true } })
+    external.updateSiteTeam.mockImplementationOnce(async () => {
+      expect(sqlite.prepare('SELECT gscdump_site_id FROM sites WHERE id = ?').get('local')).toMatchObject({ gscdump_site_id: 's_engine' })
+      return { data: { ok: true, teamId: 't_owner' } }
+    })
+
+    await expect(relink()).resolves.toMatchObject({ success: true, gscdumpSiteId: 's_exact' })
+    expect(sqlite.prepare('SELECT gscdump_site_id FROM sites WHERE id = ?').get('local')).toMatchObject({ gscdump_site_id: 's_exact' })
+  })
+
+  it('preserves the old pointer when the canonical Team cannot be resolved', async () => {
+    external.createTeam.mockRejectedValueOnce(new Error('Team service unavailable'))
+
+    await expect(relink()).rejects.toMatchObject({ statusCode: 503 })
+    expect(sqlite.prepare('SELECT gscdump_site_id FROM sites WHERE id = ?').get('local')).toMatchObject({ gscdump_site_id: 's_engine' })
+    expect(external.register).not.toHaveBeenCalled()
+  })
+
+  it('preserves the old pointer when the owner changes Google accounts during registration', async () => {
+    external.lifecycle.mockResolvedValue({ sites: [] })
+    external.register.mockImplementationOnce(async () => {
+      sqlite.prepare('UPDATE users SET gscdump_user_id = ? WHERE user_id = 1').run('u_changed')
+      return { _tag: 'Registered', registration: { siteId: 's_exact' } }
+    })
+
+    await expect(relink()).rejects.toMatchObject({ statusCode: 503 })
+    expect(sqlite.prepare('SELECT gscdump_site_id FROM sites WHERE id = ?').get('local')).toMatchObject({ gscdump_site_id: 's_engine' })
+  })
+
+  it('does not repair a Shared Team as a Personal Team', async () => {
+    sqlite.exec('UPDATE teams SET personal_team = 0 WHERE team_id = 1')
+    external.caller.memberships[0]!.isPersonal = false
+    external.lifecycle.mockResolvedValue({ sites: [{ siteId: 's_engine', requestedUrl: 'https://example.com' }] })
+
+    await expect(relink()).resolves.toMatchObject({ success: true, gscdumpSiteId: 's_engine' })
+    expect(external.createTeam).not.toHaveBeenCalled()
   })
 })
 

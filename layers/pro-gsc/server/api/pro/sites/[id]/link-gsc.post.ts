@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm'
-import { normalizeRegistrationTarget } from 'gscdump'
+import { matchGscSite, normalizeRegistrationTarget } from 'gscdump'
 import { z } from 'zod'
 import { useGscdumpTeamsClient } from '#layers/pro-gsc/server/utils/gscdump-teams-client'
+import { repairOwnedGscdumpPersonalTeam } from '#layers/pro-gsc/server/utils/sync-user-gscdump-teams'
 import { refusalError } from '#layers/pro-gsc/server/utils/user-entitlements'
 import { sites, teams, users } from '#layers/pro-saas/server/database'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
@@ -15,9 +16,15 @@ const bodySchema = z.object({
 export default defineProApiHandler({ body: bodySchema, site: { ability: 'write-data' } }, async ({ event, body, site: access }) => {
   const { db, siteId, caller } = access
   const { gscSiteUrl } = body
-  const registrationTarget = normalizeRegistrationTarget(gscSiteUrl)
-  if (!registrationTarget)
+  const requestedTarget = normalizeRegistrationTarget(gscSiteUrl)
+  if (!requestedTarget)
     throw createError({ statusCode: 400, message: 'Invalid Search Console property' })
+
+  const ownsPersonalTeam = access.isOwner && caller.memberships.some(team => team.teamId === access.teamId && team.isPersonal)
+  const origin = ownsPersonalTeam ? access.site.domain ?? access.site.property : requestedTarget
+  const registrationTarget = normalizeRegistrationTarget(origin)
+  if (!registrationTarget || (ownsPersonalTeam && !matchGscSite(origin, gscSiteUrl)))
+    throw createError({ statusCode: 403, statusMessage: 'gsc_site_host_mismatch' })
 
   // Get user's gscdump ID
   const [user] = await db.select({ gscdumpUserId: users.gscdumpUserId })
@@ -28,13 +35,44 @@ export default defineProApiHandler({ body: bodySchema, site: { ability: 'write-d
   if (!user?.gscdumpUserId)
     throw createError({ statusCode: 400, message: 'Google account not connected to gscdump. Please reconnect your Google account.' })
 
+  const { gscdumpUserId } = user
+  const ready = await waitForReadyGscdumpUser(gscdumpUserId)
+  let personalTeam
+  if (ownsPersonalTeam) {
+    const gscdumpTeamId = await repairOwnedGscdumpPersonalTeam(event, db, {
+      teamId: access.teamId,
+      userId: caller.user.id,
+      gscdumpUserId,
+    }).catch((cause: unknown) => {
+      throw Object.assign(createError({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable' }), { cause })
+    })
+    if (!gscdumpTeamId)
+      throw createError({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable' })
+
+    personalTeam = {
+      teamId: access.teamId,
+      ownerId: caller.user.id,
+      gscdumpTeamId,
+      async bindExistingSite(upstreamSiteId: string) {
+        const result = await useGscdumpTeamsClient(event).bindSiteToTeam(
+          gscdumpUserId,
+          upstreamSiteId,
+          { teamId: gscdumpTeamId },
+          { actorUserId: caller.user.id, proTeamId: access.teamId },
+        )
+        return result?.teamId === gscdumpTeamId
+      },
+    }
+  }
+
   // Delegate to autoLinkGsc which handles: find matching GSC property, register if needed, update site row
   const link = await autoLinkGsc({
     db,
-    user: await waitForReadyGscdumpUser(user.gscdumpUserId),
+    user: ready,
     siteId,
-    origin: registrationTarget,
+    origin,
     preferredSiteUrl: gscSiteUrl,
+    personalTeam,
   })
 
   if (link._tag === 'Refused')
@@ -46,13 +84,15 @@ export default defineProApiHandler({ body: bodySchema, site: { ability: 'write-d
   // B3 mirror: bind the gscdump userSite to the pro team's mirrored gscdump
   // team. The site's own `team_id` is the authority now, so the mirror no
   // longer depends on whichever team its creator happens to be viewing.
-  const ctx = await db.select({
-    siteOwnerId: sites.ownerId,
-    siteTeamId: sites.teamId,
-  })
-    .from(sites)
-    .where(eq(sites.id, siteId))
-    .get()
+  const ctx = personalTeam
+    ? undefined
+    : await db.select({
+        siteOwnerId: sites.ownerId,
+        siteTeamId: sites.teamId,
+      })
+        .from(sites)
+        .where(eq(sites.id, siteId))
+        .get()
 
   if (ctx?.siteOwnerId) {
     const owner = await db.select({ gscdumpUserId: users.gscdumpUserId })
