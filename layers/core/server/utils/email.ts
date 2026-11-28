@@ -9,6 +9,7 @@ export interface OutgoingEmail {
   to: string
   subject: string
   textBody: string
+  replyTo?: string
   bcc?: string
   /** Extra MIME headers, such as `List-Unsubscribe`. */
   headers?: Record<string, string>
@@ -30,6 +31,7 @@ export interface PostmarkMessage {
   To: string
   Subject: string
   TextBody: string
+  ReplyTo?: string
   Bcc?: string
   Headers?: Array<{ Name: string, Value: string }>
 }
@@ -60,6 +62,7 @@ export function createEmailSender(deps: EmailSenderDeps): (message: OutgoingEmai
       To: message.to,
       Subject: message.subject,
       TextBody: message.textBody,
+      ...(message.replyTo ? { ReplyTo: message.replyTo } : {}),
       ...(message.bcc ? { Bcc: message.bcc } : {}),
       ...(message.headers
         ? { Headers: Object.entries(message.headers).map(([Name, Value]) => ({ Name, Value })) }

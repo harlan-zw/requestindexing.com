@@ -2,6 +2,7 @@ import type { CheckResult } from '@harlan-zw/nuxt-checkin/server'
 import { runChecks } from '@harlan-zw/nuxt-checkin/server'
 import { expect, it } from 'vitest'
 import database from '../server/checks/database'
+import feedback from '../server/checks/feedback'
 import integration from '../server/checks/integration'
 
 function failReason(result: CheckResult): string {
@@ -98,4 +99,39 @@ it('reports a missing binding unavailable', async () => {
   const report = await runChecks([database], { event: { context: { cloudflare: { env: {} } } } })
   expect(report.coverage).toBe('incomplete')
   expect(report.results[0]?.result._tag).toBe('Unavailable')
+})
+
+it('passes feedback checkin when no untriaged reports exist and warns when new reports await review', async () => {
+  const makeDb = (row: { count: number, oldest_created_at: number | null } | Error) => ({
+    prepare: () => ({
+      first: async () => {
+        if (row instanceof Error)
+          throw row
+        return row
+      },
+    }),
+  })
+
+  const empty = await runChecks([feedback], { event: databaseEvent(makeDb({ count: 0, oldest_created_at: null })) })
+  expect(empty.severity).toBe('pass')
+  expect(empty.results[0]?.result).toEqual({ _tag: 'Pass', evidence: { newCount: 0 } })
+
+  const oldest = Math.floor(Date.parse('2026-11-28T00:00:00Z') / 1000)
+  const waiting = await runChecks([feedback], { event: databaseEvent(makeDb({ count: 2, oldest_created_at: oldest })) })
+  expect(waiting.severity).toBe('warn')
+  expect(waiting.results[0]?.result).toMatchObject({
+    _tag: 'Warn',
+    evidence: {
+      newCount: 2,
+      oldestCreatedAt: '2026-11-28T00:00:00.000Z',
+      adminUrl: 'https://requestindexing.com/admin/feedback',
+    },
+  })
+
+  const errored = await runChecks([feedback], { event: databaseEvent(makeDb(new Error('D1_ERROR: no such table: feedback'))) })
+  expect(errored.severity).toBe('fail')
+  expect(failReason(errored.results[0]!.result)).toContain('D1_ERROR')
+
+  const missing = await runChecks([feedback], { event: { context: { cloudflare: { env: {} } } } })
+  expect(missing.results[0]?.result._tag).toBe('Unavailable')
 })

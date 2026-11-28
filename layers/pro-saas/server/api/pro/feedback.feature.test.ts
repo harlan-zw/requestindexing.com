@@ -10,14 +10,17 @@ import { feedbackTriageSet, listDashboardFeedbackHistory } from '../../utils/das
 import feedback from './feedback.post'
 
 interface Context { event: H3Event, db: ReturnType<typeof useDrizzle>, caller: { user: { id: number } }, team: { team: { teamId: number } }, body: unknown }
+const sendEmailMock = vi.hoisted(() => vi.fn())
 vi.mock('#layers/pro-saas/server/utils/handler', () => ({ defineProApiHandler: (options: { body: ZodType }, handle: (context: Context) => unknown) => (context: Context) => handle({ ...context, body: options.body.parse(context.body) }) }))
 vi.mock('#layers/pro-gsc/server/utils/gscdump-browser-origin', () => ({ assertGscdumpBrowserUnsafeMethodOrigin: vi.fn() }))
+vi.mock('~~/layers/core/server/utils/email', () => ({ sendEmail: sendEmailMock }))
 
 let sqlite: ReturnType<typeof migratedDatabase>
 let db: ReturnType<typeof proDatabase>
+let pendingWaitUntil: Promise<unknown>[]
 async function send(body: unknown) {
   return (feedback as unknown as (context: Context) => Promise<unknown>)({
-    event: {} as H3Event,
+    event: { waitUntil: (work: Promise<unknown>) => { pendingWaitUntil.push(work) } } as unknown as H3Event,
     db: db as unknown as ReturnType<typeof useDrizzle>,
     caller: { user: { id: 7 } },
     team: { team: { teamId: 1 } },
@@ -31,13 +34,19 @@ function rows() {
 beforeEach(() => {
   sqlite = migratedDatabase()
   db = proDatabase(sqlite)
+  pendingWaitUntil = []
+  sendEmailMock.mockReset().mockResolvedValue({ _tag: 'Sent' })
   sqlite.prepare('INSERT INTO teams (team_id, public_id, name) VALUES (?, ?, ?)').run(1, 'team-one', 'Team')
   sqlite.prepare('INSERT INTO users (user_id, public_id, name, email, avatar, last_login, sub, current_team_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(7, 'user-7', 'Test', '7@example.test', '', Date.now(), 'sub-7', 1)
 })
-afterEach(() => sqlite.close())
+afterEach(async () => {
+  await Promise.allSettled(pendingWaitUntil)
+  sqlite.close()
+})
 
-it('stores a bug report with its diagnostics where the admin feedback resources read it', async () => {
+it('stores a bug report with its diagnostics where the admin feedback resources read it and alerts the operator', async () => {
   expect(await send({ intent: 'bug', path: '/pro/dashboard/sites/s_1', comment: '  Chart is blank  ', siteId: 's_1', viewport: '390x844', clientErrors: ['TypeError: x'] })).toEqual({ _tag: 'Recorded' })
+  await Promise.all(pendingWaitUntil)
   expect(rows()).toEqual([{
     path: '/pro/dashboard/sites/s_1',
     thumb: null,
@@ -45,6 +54,18 @@ it('stores a bug report with its diagnostics where the admin feedback resources 
     userId: 7,
     metadata: { source: 'dashboard-drawer', teamId: 1, intent: 'bug', siteId: 's_1', viewport: '390x844', clientErrors: ['TypeError: x'] },
   }])
+  expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+    to: 'harlan@harlanzw.com',
+    replyTo: '7@example.test',
+    subject: 'Request Indexing feedback: /pro/dashboard/sites/s_1',
+  }))
+})
+
+it('still records feedback when operator email delivery fails', async () => {
+  sendEmailMock.mockRejectedValueOnce(new Error('Postmark unreachable'))
+  expect(await send({ intent: 'improvement', path: '/pro/dashboard', comment: 'Add export' })).toEqual({ _tag: 'Recorded' })
+  await expect(Promise.all(pendingWaitUntil)).resolves.toBeDefined()
+  expect(rows()).toHaveLength(1)
 })
 
 it('maps the four faces onto the stored thumb and keeps the face in metadata', async () => {
