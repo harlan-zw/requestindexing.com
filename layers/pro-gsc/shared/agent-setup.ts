@@ -145,12 +145,12 @@ const HOSTED_AGENTS: Record<HostedAgentRoute, HostedAgent> = {
   claude: {
     label: 'Claude',
     add: { detail: 'From the Claude directory.', action: 'Add to Claude', to: 'https://claude.ai/directory/gscdump' },
-    approve: 'Approve access',
+    approve: 'Allow access',
   },
   chatgpt: {
     label: 'ChatGPT',
     add: { detail: 'Follow the setup steps on gscdump.com.', action: 'Open setup steps', to: 'https://gscdump.com/mcp/chatgpt' },
-    approve: 'Approve access',
+    approve: 'Allow access',
   },
   gemini: {
     label: 'Gemini',
@@ -160,7 +160,7 @@ const HOSTED_AGENTS: Record<HostedAgentRoute, HostedAgent> = {
       to: 'https://gemini.google.com/',
       paste: GSCDUMP_MCP_URL,
     },
-    approve: 'Sign in and approve access',
+    approve: 'Sign in and allow access',
   },
 }
 
@@ -169,7 +169,7 @@ export function agentSetupSteps(route: AgentSetupRoute): readonly AgentSetupStep
   if (route === 'coding-agent') {
     return [
       { key: 'copy', title: 'Copy the Setup prompt', detail: 'Your agent installs the gscdump CLI and signs in.', action: { _tag: 'CopyPrompt' } },
-      { key: 'approve', title: 'Approve the sign-in', detail: `Your agent opens gscdump in your browser. ${GOOGLE_ACCOUNT_SENTENCE}`, action: null },
+      { key: 'approve', title: 'Authorize the CLI', detail: `Your agent opens gscdump in your browser. ${GOOGLE_ACCOUNT_SENTENCE}`, action: null },
     ]
   }
   const { label: app, add, approve } = HOSTED_AGENTS[route]
@@ -215,7 +215,7 @@ function buildCodingAgentPrompt(place: AgentSetupPlace): string {
 3. Sign in:
    gscdump auth login --mode hosted
    It opens gscdump.com in my browser. If no browser opens, show me the link it prints.
-   Stop and wait. I sign in with the Google account that owns my Search Console property, then I approve the CLI.
+   Stop and wait. I sign in with the Google account that owns my Search Console property, then I authorize the CLI.
    Never ask me for an API key, a password, or a cookie.
 4. Confirm the account:
    gscdump auth status --json
