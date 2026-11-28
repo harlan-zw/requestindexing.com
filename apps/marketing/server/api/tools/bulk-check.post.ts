@@ -2,6 +2,7 @@ import type { BulkCheckRow } from '~~/layers/core/server/app/services/dataforseo
 import type { IndexCheckResult } from '~~/layers/core/server/app/services/site-search'
 import { checkUrlsIndexed, dataForSeoCallContext } from '~~/layers/core/server/app/services/dataforseo'
 import { checkDataForSeoBudget } from '~~/layers/core/server/app/services/dataforseo-spend'
+import { fetchSitemapUrlsFromXml, validatePublicSitemapUrl } from '~~/layers/core/server/app/services/sitemap-fetch'
 import {
   CHECK_INDEX_CACHE_TTL_SECONDS,
   normalizeToolUrlCacheKey,
@@ -17,10 +18,20 @@ export default defineEventHandler(async (event) => {
     const body = await readBody<{ urls?: unknown, sitemapUrl?: unknown }>(event)
 
     let input: string[] = []
+    let rateLimitedUpfront = false
 
     if (typeof body?.sitemapUrl === 'string' && body.sitemapUrl.trim()) {
+      const sitemapUrl = body.sitemapUrl.trim()
+      const validated = validatePublicSitemapUrl(sitemapUrl)
+      if (validated._tag === 'Err')
+        throw createError({ statusCode: 400, message: validated.reason })
+
+      // Enforce per-minute and daily rate limits before performing any outbound sitemap fetch.
+      await checkFreeToolRateLimit(event, { cost: 1 })
+      rateLimitedUpfront = true
+
       try {
-        input = await fetchSitemapUrlsFromXml(body.sitemapUrl.trim())
+        input = await fetchSitemapUrlsFromXml(validated.url.toString())
       }
       catch {
         throw createError({ statusCode: 400, message: 'Could not fetch or parse the sitemap URL' })
@@ -57,8 +68,12 @@ export default defineEventHandler(async (event) => {
     }))
 
     // Weight daily rate limit by uncached URLs (minimum 1 per call) so bulk runs
-    // match single-URL cost fairness without penalizing cache hits.
-    await checkFreeToolRateLimit(event, { cost: Math.max(1, uncachedUrls.length) })
+    // match single-URL cost fairness without penalizing cache hits or double-counting
+    // the upfront sitemap fetch charge.
+    const totalCost = Math.max(1, uncachedUrls.length)
+    const remainingCost = rateLimitedUpfront ? totalCost - 1 : totalCost
+    if (remainingCost > 0)
+      await checkFreeToolRateLimit(event, { cost: remainingCost, skipMinuteLimit: rateLimitedUpfront })
 
     const freshByUrl = new Map<string, BulkCheckRow>()
     if (uncachedUrls.length > 0) {
