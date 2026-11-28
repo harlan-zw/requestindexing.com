@@ -1,12 +1,13 @@
 import type { MockInstance } from 'vitest'
 import type { SiteFleetRow } from '~~/layers/core/app/types'
+import type { BingIntegrationRow } from '#layers/pro-gsc/app/utils/bing-integration-view'
 import { provideProShellOnboardingSteps } from '@nuxtseo/pro-shell/app/composables/useProShellOnboarding'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, createApp, defineComponent, h, nextTick, onMounted, ref, Suspense, toValue, watch } from 'vue'
 import { DASHBOARD_CARD_STEPS } from '#layers/pro-saas/shared/onboarding'
 import Dashboard from './index.vue'
 
-const engine = vi.hoisted(() => ({ daily: vi.fn(), indexing: vi.fn() }))
+const engine = vi.hoisted(() => ({ daily: vi.fn(), indexing: vi.fn(), cardIndexNow: vi.fn() }))
 vi.mock('#layers/pro-gsc/app/composables/useProGscdump', () => ({
   useProGscdump: () => ({ queryAnalyticsReportDetail: engine.daily, getSiteIndexing: engine.indexing }),
 }))
@@ -14,6 +15,12 @@ const sites = ref<SiteFleetRow[]>([])
 const rosterStatus = ref<'success' | 'pending' | 'error'>('success')
 const rosterError = ref<Error | null>(null)
 const invalidation = ref<Record<string, number>>({})
+const bingRows = ref<BingIntegrationRow[]>([])
+const visible = ref(false)
+vi.mock('@vueuse/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vueuse/core')>()
+  return { ...actual, useElementVisibility: () => visible }
+})
 vi.mock('#layers/pro-gsc/app/internal/composables/useGscInvalidation', () => ({ useGscInvalidationMap: () => invalidation }))
 vi.mock('~~/layers/core/app/composables/fetch', () => ({ fetchSites: async () => ({
   data: computed(() => ({ sites: sites.value })),
@@ -34,16 +41,29 @@ vi.mock('nuxt/app', () => ({
   useAppConfig: () => ({}),
 }))
 vi.mock('#layers/pro-saas/app/components/pro/ProNoPropertyNotice.vue', () => ({ default: defineComponent(() => () => null) }))
-vi.mock('@nuxtseo/pro-shell/app/components/ProShellFleetSites.vue', () => ({ default: defineComponent({
-  props: ['rows'],
-  setup: props => () => h('aside', props.rows.map(({ entry }: { entry: { site: { siteId: string }, clicks: { _tag: string, clicks?: number } } }) =>
-    h('p', { 'data-site': entry.site.siteId }, entry.clicks._tag === 'Read' ? `${entry.clicks.clicks} clicks` : entry.clicks._tag))),
-}) }))
+vi.mock('#layers/pro-gsc/app/composables/useProGscdump/useProGscdumpBing', () => ({
+  useProBingIntegration: () => ({ rows: bingRows }),
+}))
+vi.mock('#layers/indexing/app/composables/useSiteSubmissions', () => ({
+  useIndexNowConnection: (engineId: () => string | undefined) => {
+    watch(engineId, (id) => {
+      if (id)
+        engine.cardIndexNow(id)
+    }, { immediate: true })
+    return { data: ref() }
+  },
+}))
+vi.mock('#layers/pro-gsc/app/composables/useProSetupSiteReads', () => ({
+  useProSetupSiteReads: (engineId: () => string | undefined) => ({
+    indexNowConnection: computed(() => engineId() ? { _tag: 'connected' } : null),
+  }),
+}))
 vi.mock('#components', async () => {
   const { default: UiSkeleton } = await import('@nuxtseo/design-system/app/components/element/UiSkeleton.vue')
   const passthrough = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
   const button = defineComponent({ props: ['label'], setup: props => () => h('button', props.label) })
-  return { NuxtLink: passthrough, UiButton: button, UiIcon: passthrough, UiTooltip: passthrough, UiSparkline: passthrough, UiSkeleton }
+  const link = defineComponent({ props: ['to'], setup: (props, { slots }) => () => h('a', { href: props.to }, slots.default?.()) })
+  return { NuxtLink: link, UiButton: button, UiIcon: passthrough, UiTooltip: passthrough, UiSparkline: passthrough, UiSkeleton, UiFavicon: passthrough, UiSourceLogos: passthrough, UiSparkColumns: passthrough }
 })
 Object.assign(globalThis, {
   computed,
@@ -104,8 +124,11 @@ beforeEach(() => {
   rosterStatus.value = 'success'
   rosterError.value = null
   invalidation.value = {}
+  bingRows.value = []
+  visible.value = false
   engine.daily.mockReset()
   engine.indexing.mockReset()
+  engine.cardIndexNow.mockReset()
 })
 let warnings: MockInstance<typeof console.warn>
 beforeEach(() => {
@@ -124,6 +147,30 @@ afterEach(() => {
 })
 
 describe('dashboard reads publish independently', () => {
+  it('opens the supported source reports with the local Site id', async () => {
+    bingRows.value = [{ _tag: 'verify', site: sites.value[0]!, canAct: true }]
+    engine.daily.mockResolvedValue(daily(42))
+    engine.indexing.mockResolvedValue(indexing)
+    const host = await mount()
+    const card = host.querySelector('[data-site="a"]')!
+    expect(card.querySelector('a[href="/pro/dashboard/sites/a/search-console"]')?.textContent).toContain('Search Console')
+    expect(card.querySelector('a[href="/pro/dashboard/sites/a/indexing"]')?.textContent).toContain('20 not indexed')
+    expect(card.querySelector('a[href="/pro/dashboard/sites/a/indexing/indexnow"]')?.textContent).toContain('IndexNow')
+    expect(card.querySelector('a[href="/pro/dashboard/sites/a/indexing/indexnow"]')?.textContent).toContain('Key verified')
+    expect(card.querySelector('a[href="/pro/dashboard/integrations"]')?.textContent).toContain('Bing')
+    expect(host.querySelector('[data-site="b"] a[href="/pro/dashboard/sites/b/webmaster-tools"]')).toBeNull()
+  })
+
+  it('reuses the setup connection for the first linked Site and reads the other card when visible', async () => {
+    engine.daily.mockResolvedValue(daily(42))
+    engine.indexing.mockResolvedValue(indexing)
+    await mount()
+    expect(engine.cardIndexNow).not.toHaveBeenCalled()
+    visible.value = true
+    await flush()
+    expect(engine.cardIndexNow.mock.calls).toEqual([['s_b']])
+  })
+
   it('keeps existing Sites and totals beside a failed roster refresh', async () => {
     engine.daily.mockResolvedValue(daily(42))
     engine.indexing.mockResolvedValue(indexing)
@@ -156,7 +203,7 @@ describe('dashboard reads publish independently', () => {
     const host = await mount()
     a.resolve(daily(42))
     await flush()
-    expect(host.querySelector('[data-site="a"]')?.textContent).toBe('42 clicks')
+    expect(host.querySelector('[data-site="a"]')?.textContent).toContain('42 clicks')
     expect(host.querySelector('section')?.textContent).not.toContain('42')
     b.resolve(daily(8))
     await flush()
@@ -174,7 +221,7 @@ describe('dashboard reads publish independently', () => {
     engine.indexing.mockResolvedValue(indexing)
     const host = await mount()
     expect(host.querySelector('section')?.textContent).toContain('80%')
-    expect(host.querySelectorAll('.ui-skeleton')).toHaveLength(8)
+    expect(host.querySelectorAll('section .ui-skeleton')).toHaveLength(8)
     pendingDaily.resolve(daily(42))
     await flush()
     expect(host.querySelector('section')?.textContent).toContain('84')
@@ -217,7 +264,7 @@ describe('dashboard reads publish independently', () => {
     engine.daily.mockRejectedValueOnce(new Error('Refresh unavailable'))
     invalidation.value = { s_a: 1 }
     await flush()
-    expect(host.querySelector('[data-site="a"]')?.textContent).toBe('42 clicks')
+    expect(host.querySelector('[data-site="a"]')?.textContent).toContain('42 clicks')
     expect(host.querySelector('section')?.textContent).toContain('84')
     expect(host.querySelector('section')?.textContent).toContain('Search Console data could not refresh. Previous values remain visible. Retry to read them again.')
     engine.daily.mockResolvedValue(daily(50))
@@ -235,9 +282,9 @@ describe('dashboard reads publish independently', () => {
     sites.value = [site('a', 's_relinked'), site('b')]
     await flush()
     expect(engine.daily).toHaveBeenCalledTimes(3)
-    expect(host.querySelector('[data-site="a"]')?.textContent).toBe('8 clicks')
+    expect(host.querySelector('[data-site="a"]')?.textContent).toContain('8 clicks')
     older.resolve(daily(42))
     await flush()
-    expect(host.querySelector('[data-site="a"]')?.textContent).toBe('8 clicks')
+    expect(host.querySelector('[data-site="a"]')?.textContent).toContain('8 clicks')
   })
 })

@@ -3,6 +3,7 @@ import type { SitesPreview } from '~~/layers/core/app/types'
 
 definePageMeta({
   layout: 'pro-dashboard',
+  settingsRail: true,
   title: 'Team settings',
   // Not the members glyph: Sites, Members and Settings all used to share it.
   icon: 'i-heroicons-cog-6-tooth',

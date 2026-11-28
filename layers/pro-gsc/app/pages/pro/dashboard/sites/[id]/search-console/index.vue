@@ -40,7 +40,7 @@ definePageMeta({
   icon: 'i-lucide-layout-dashboard',
 })
 
-const { siteId, site, siteName, siteStatus, gscdumpSiteId, isProcessing, isReady, isNotConnected, isLifecycleSettled, hold, gscData, gscStatusError, refreshGscStatus } = useSite('Search Console')
+const { siteId, site, siteName, siteStatus, gscdumpSiteId, isProcessing, isReady, isFullySynced, isNotConnected, isLifecycleSettled, hold, gscData, gscStatusError, refreshGscStatus } = useSite('Search Console')
 const route = useRoute()
 const toast = useToast()
 const teamPolicy = useTeamPolicy(() => site.value?.teamId)
@@ -160,7 +160,27 @@ const demoHeroStats = computed(() => {
 
 // The main chart. `error` is consumed on purpose: dropping it let a failed
 // read render as a synced site with zero traffic.
-const { data: dates, status: datesStatus, error: datesError } = useProGscdumpDates(analyticsSiteId, period, { stableData, compareMode })
+const { data: dates, status: datesStatus, error: datesError, coverage } = useProGscdumpDates(analyticsSiteId, period, { stableData, compareMode })
+
+function hasZeroSearchActivity(metrics: { clicks: number, impressions: number }): boolean {
+  return metrics.clicks === 0 && metrics.impressions === 0
+}
+
+const emptySearchActivity = computed(() => {
+  const report = dates.value
+  const readCompleted = datesStatus.value === 'success' || datesStatus.value === 'empty'
+  if (searchType.value !== 'web' || googleSlice.value || !analyticsSiteId.value || !isFullySynced.value || gscStatusError.value || !readCompleted || datesError.value || !report)
+    return false
+  if (!hasZeroSearchActivity(report.period) || !report.dates.every(hasZeroSearchActivity))
+    return false
+
+  const comparison = coverage.state.value
+  if (comparison === 'off' || comparison === 'refused')
+    return true
+  // The dates reader only supplies a previous report after a successful read.
+  return comparison === 'allowed' && !!report.prevPeriod && !!report.prevDates
+    && hasZeroSearchActivity(report.prevPeriod) && report.prevDates.every(hasZeroSearchActivity)
+})
 
 // Current data gets the first read. Optional panels stay released during a
 // same-scope refresh, including terminal failures, but never across identities.
@@ -175,7 +195,7 @@ watch([detailScope, datesStatus, dates, datesError], ([scope, status, result, er
     releasedDetailScope.value = scope
 }, { immediate: true, flush: 'post' })
 const detailsReady = computed(() => !overlay.value && releasedDetailScope.value === detailScope.value)
-const detailSiteId = computed(() => detailsReady.value ? analyticsSiteId.value : undefined)
+const detailSiteId = computed(() => detailsReady.value && !emptySearchActivity.value ? analyticsSiteId.value : undefined)
 const detailPending = computed(() => !overlay.value && !detailsReady.value && datesStatus.value === 'pending')
 
 // Primary metric only: the overview stays clean, detail pages show every
@@ -507,8 +527,8 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
       <!-- The Search Console read failed. Distinct from the site-load error
            above: the Site is fine, the upstream read is not. -->
       <ProGscReadError v-if="searchState._tag === 'Ready'" :error="datesError" />
-      <ProGscReadError v-if="searchState._tag === 'Ready'" :error="detailColdError" />
-      <div v-if="detailRefreshFailed" class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <ProGscReadError v-if="searchState._tag === 'Ready' && !emptySearchActivity" :error="detailColdError" />
+      <div v-if="!emptySearchActivity && detailRefreshFailed" class="flex flex-wrap items-center gap-x-3 gap-y-1">
         <p class="text-xs text-muted" role="status">
           Search Console data could not refresh. Previous values remain visible. Retry to read them again.
         </p>
@@ -627,6 +647,19 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
       <div v-else-if="searchState._tag === 'Checking'" aria-busy="true" aria-label="Loading Search Console data">
         <UiLoadingState :rows="3" />
       </div>
+
+      <UiEmptyState
+        v-else-if="emptySearchActivity"
+        heading-tag="h2"
+        :animated="false"
+        icon="search"
+        title="No search activity in this period"
+        description="The available Search Console data shows no Web Search impressions for these dates. Indexing shows what Google knows about the Site’s URLs."
+      >
+        <UiButton :to="`/pro/dashboard/sites/${siteId}/indexing`" purpose="secondary" trailing-icon="next">
+          Check indexing
+        </UiButton>
+      </UiEmptyState>
 
       <template v-else>
         <!-- Hero: Metrics + Chart -->

@@ -288,7 +288,13 @@ function onPageError(error: unknown) {
            header: the boundary swaps only the page for this notice, until the
            next navigation. -->
       <ProPageErrorBoundary v-else @error="onPageError">
-        <slot />
+        <div v-if="route.meta.settingsRail" class="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
+          <ProSettingsNav />
+          <div class="min-w-0">
+            <slot />
+          </div>
+        </div>
+        <slot v-else />
         <template #error="{ error, clearError }">
           <UiAlert
             status="error"

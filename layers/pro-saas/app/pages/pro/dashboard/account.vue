@@ -1,21 +1,20 @@
 <script setup lang="ts">
-// The sidebar calls this page "Profile", so it opens with the signed-in
-// person: avatar, name, email and sign-in method. Every field below comes from
-// the session the `pro-saas` session plugin already publishes. No endpoint and
-// no column was added for this page.
+// Account opens with the signed-in person: avatar, name, email and sign-in
+// method. These come from the session the `pro-saas` plugin publishes.
 //
 // The layer that owns `ProConnectedAccounts` opts out of auto-import, so the
 // component is imported by path.
+import type { UiNavLink } from '@nuxtseo/design-system/app/shared/nav'
 import type { IndexingGrant } from '#layers/indexing/shared/contracts/indexing-grant'
 
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { INDEXING_API_UNAVAILABLE } from '#layers/indexing/shared/indexing-copy'
 import ProConnectedAccounts from '#layers/pro-saas-auth/app/components/auth/ProConnectedAccounts.vue'
 import { ACCOUNT_DELETED_PATH, accountDeletionCopy } from '#layers/pro-saas/shared/account-deletion-copy'
-import { resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
 
 definePageMeta({
-  layout: 'user-dashboard',
+  layout: 'pro-dashboard',
+  settingsRail: true,
   title: 'Account',
   icon: 'i-ph-user-circle-duotone',
   description: 'Manage your profile, connected accounts and account data.',
@@ -34,13 +33,11 @@ const displayName = computed(() => user.value?.name || user.value?.email || 'You
 const avatarUrl = computed(() => user.value?.avatarUrl || undefined)
 const providerLabel = computed(() => user.value?.authProvider === 'google' ? 'Google' : 'GitHub')
 
-// This page renders through `user-dashboard`, not the shell that reports a
-// scope-missing grant, so it reports its own.
-const gscScopeMissing = computed(() => resolveGscConnection({
-  gscdumpConnected: !!session.value?.gscdumpConnected,
-  accountStatus: session.value?.gscdumpAccountStatus ?? null,
-  error: route.query.error,
-})._tag === 'ScopeMissing')
+const supportLinks: UiNavLink[] = [
+  { icon: 'mail', label: 'Email', to: 'mailto:harlan@harlanzw.com' },
+  { icon: 'discord', label: 'Discord', to: 'https://discord.gg/275MBUBvgP' },
+  { icon: 'github', label: 'Submit a bug', to: 'https://github.com/harlan-zw/requestindexing.com/issues/new/choose' },
+]
 
 // Identity linking bounces back here with `?notice=` / `?error=` from
 // `attachIdentityToCurrentSession`. Without feedback the round trip through
@@ -137,8 +134,6 @@ async function deleteAccount() {
 
 <template>
   <div class="max-w-3xl space-y-10">
-    <ProGscScopeMissingAlert v-if="gscScopeMissing" retry-to="/pro/dashboard/account" />
-
     <section>
       <ProSectionHeader title="Profile" icon="user" />
       <ProCard variant="default">
@@ -221,6 +216,11 @@ async function deleteAccount() {
           This app has no access to the Indexing API. To grant access, open the Submit to Google page of a Site.
         </p>
       </ProCard>
+    </section>
+
+    <section id="support" class="scroll-mt-24 space-y-2">
+      <ProSectionHeader title="Get help" />
+      <UiNavList label="Get help" :links="supportLinks" />
     </section>
 
     <!-- Demoted on purpose. Deleting the account used to be the only filled
