@@ -93,8 +93,6 @@ const filterOptions = computed<Array<{ value: ManageSitesFilter, label: string }
   { value: 'attention', label: `Needs attention (${attentionCount.value})` },
 ])
 
-const searchWrapRef = useTemplateRef<HTMLElement>('searchWrapRef')
-
 function onSearchEscape(e: KeyboardEvent) {
   if (searchQuery.value !== '') {
     e.preventDefault()
@@ -104,28 +102,6 @@ function onSearchEscape(e: KeyboardEvent) {
     ;(e.target as HTMLInputElement | null)?.blur()
   }
 }
-
-function onSlashKeydown(e: KeyboardEvent) {
-  if (!showTriageControls.value || e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey)
-    return
-  const active = document.activeElement as HTMLElement | null
-  const tag = active?.tagName
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || active?.isContentEditable)
-    return
-  const input = searchWrapRef.value?.querySelector<HTMLInputElement>('input')
-  if (!input || input.offsetParent === null)
-    return
-  e.preventDefault()
-  input.focus()
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', onSlashKeydown)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('keydown', onSlashKeydown)
-})
 
 const loading = computed(() => status.value === 'pending' && !data.value)
 
@@ -288,7 +264,7 @@ async function removeSite() {
         class="flex flex-wrap items-center gap-2.5 border-b border-default px-5 py-3"
         data-testid="sites-triage-bar"
       >
-        <div ref="searchWrapRef" class="w-full sm:w-64">
+        <div class="w-full sm:w-64">
           <UiInput
             :model-value="searchQuery"
             icon="search"
@@ -311,11 +287,6 @@ async function removeSite() {
                 aria-label="Clear search"
                 @click="searchQuery = ''"
               />
-              <kbd
-                v-else
-                class="hidden sm:inline-flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded border border-default/80 bg-muted font-mono text-[10px] font-medium leading-none text-dimmed pointer-events-none"
-                aria-hidden="true"
-              >/</kbd>
             </template>
           </UiInput>
         </div>

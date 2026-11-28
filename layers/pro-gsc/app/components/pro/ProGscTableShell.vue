@@ -2,7 +2,7 @@
 import type { UiTableColumn, UiTableRowId, UiTableSize } from '@nuxtseo/design-system/app/shared/table'
 import { countryData } from '@nuxtseo/design-system/app/utils/countries'
 import { refDebounced } from '@vueuse/core'
-import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { UiAlert, UiButton, UiFilterMenu, UiIcon, UiInput, UiSkeleton, UiTable, UPagination } from '#components'
 import { useProHumanFriendlyNumber } from '#imports'
 import { isMoversFilter } from '../../../shared/utils/gsc-facets'
@@ -121,7 +121,6 @@ const accessibleTableLabel = computed(() => tableLabel || itemLabel || 'Data tab
 const localQ = ref(q)
 const debouncedQ = refDebounced(localQ, 300)
 const isDebouncing = computed(() => localQ.value !== q)
-const searchWrapRef = useTemplateRef<HTMLElement>('searchWrapRef')
 
 const localPage = computed({
   get: () => page,
@@ -172,29 +171,6 @@ function onSearchEscape(e: KeyboardEvent) {
     ;(e.target as HTMLInputElement | null)?.blur()
   }
 }
-
-function onSlashKeydown(e: KeyboardEvent) {
-  if (!searchable || e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey)
-    return
-  const active = document.activeElement as HTMLElement | null
-  const tag = active?.tagName
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || active?.isContentEditable)
-    return
-  const input = searchWrapRef.value?.querySelector<HTMLInputElement>('input')
-  if (!input || input.offsetParent === null)
-    return
-  e.preventDefault()
-  input.focus()
-}
-
-onMounted(() => {
-  if (searchable)
-    document.addEventListener('keydown', onSlashKeydown)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('keydown', onSlashKeydown)
-})
 
 // Wire the presentational GscFilterBar to URL-synced Pro facet state.
 // `countryData` is auto-imported from `design-system/app/utils/countries.ts`.
@@ -293,7 +269,7 @@ function onApplySaved(id: string) {
     <!-- Wraps on a phone, so toolbar chips (an active issue filter) move below
          the search instead of pushing the Filter button off screen. -->
     <div v-if="searchable || filters.length || facets" class="flex flex-wrap items-center justify-between gap-2">
-      <div v-if="searchable" ref="searchWrapRef" class="min-w-48 flex-1 sm:flex-none sm:w-64">
+      <div v-if="searchable" class="min-w-48 flex-1 sm:flex-none sm:w-64">
         <UiInput
           :model-value="localQ" :placeholder="searchPlaceholder"
           :aria-label="searchPlaceholder"
@@ -322,11 +298,6 @@ function onApplySaved(id: string) {
               aria-label="Clear search"
               @click="commitQ('')"
             />
-            <kbd
-              v-else
-              class="hidden sm:inline-flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded border border-default/80 bg-muted font-mono text-[10px] font-medium leading-none text-dimmed pointer-events-none"
-              aria-hidden="true"
-            >/</kbd>
           </template>
         </UiInput>
       </div>

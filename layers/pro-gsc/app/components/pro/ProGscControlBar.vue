@@ -374,7 +374,6 @@ function onApplySavedFilter(id: string) {
         :active-count="facetCount"
         :hide-badge="activeFilterItems.length > 0"
         :loading="switching"
-        shortcut="f"
         @apply-saved="onApplySavedFilter"
         @remove-saved="removeSavedFilter"
         @save="onSaveFilter"
