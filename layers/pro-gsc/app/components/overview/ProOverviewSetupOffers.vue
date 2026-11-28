@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { SetupOffer } from '@nuxtseo/pro-shell/shared/setup-offers'
 import type { SiteFleetRow } from '~~/layers/core/app/types/data'
+import type { useProSetupSiteReads } from '#layers/pro-gsc/app/composables/useProSetupSiteReads'
 import type { FreeAllowanceView } from '#layers/pro-gsc/shared/free-allowance'
 import ProShellSetupOffers from '@nuxtseo/pro-shell/app/components/ProShellSetupOffers.vue'
 import { readProShellConfig, useProShellCopy } from '@nuxtseo/pro-shell/app/composables/useProShellCopy'
 import { useProShellSetupDismissals } from '@nuxtseo/pro-shell/app/composables/useProShellSetupDismissals'
 import { useProBingIntegration } from '#layers/pro-gsc/app/composables/useProGscdump'
-import { useProSetupSiteReads } from '#layers/pro-gsc/app/composables/useProSetupSiteReads'
 import { useProFeedback } from '#layers/pro-saas/app/composables/useProFeedback'
 import { REQUEST_INDEXING_SETUP_OFFER_COPY } from '#layers/pro-saas/app/pro-shell'
 import {
@@ -26,7 +26,11 @@ import {
  * the Free allowance. Every read is client-only, and the cards wait until all
  * of them land, so none reshuffles.
  */
-const { sites } = defineProps<{ sites: readonly SiteFleetRow[] }>()
+const { sites, targetSiteId, siteSetup } = defineProps<{
+  sites: readonly SiteFleetRow[]
+  targetSiteId: string | null
+  siteSetup: ReturnType<typeof useProSetupSiteReads>
+}>()
 
 const proFetch = useProFetch()
 const { data: usage, status: usageStatus } = useLazyFetch<{ allowance: FreeAllowanceView }>('/api/pro/usage', {
@@ -34,11 +38,6 @@ const { data: usage, status: usageStatus } = useLazyFetch<{ allowance: FreeAllow
   server: false,
 })
 const bing = useProBingIntegration(() => sites)
-
-// Both Site offers open one Site: the first linked to gscdump. Read it by its
-// gscdump id; link to it by the app's own id.
-const target = computed(() => sites.find(site => site.gscdumpSiteId) ?? null)
-const siteSetup = useProSetupSiteReads(() => target.value?.gscdumpSiteId)
 
 const routes = readProShellConfig().routes ?? {}
 const copy = useProShellCopy()
@@ -53,7 +52,7 @@ const offers = computed(() => buildOverviewSetupOffers({
   shellCopy: copy.setupOffers,
   copy: REQUEST_INDEXING_SETUP_OFFER_COPY,
   feedbackAction: copy.feedback.action,
-  siteId: target.value?.siteId ?? null,
+  siteId: targetSiteId,
   completion: {
     bing: bingSetupCompletion(bing.state.value),
     anotherSite: anotherSiteCompletion({ siteCount: sites.length, allowance: allowance.value }),

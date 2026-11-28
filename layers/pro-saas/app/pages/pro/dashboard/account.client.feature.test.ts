@@ -1,3 +1,5 @@
+import type { UiNavLink } from '@nuxtseo/design-system/app/shared/nav'
+import type { PropType } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, onMounted, ref, Suspense } from 'vue'
 import ProAccountDeletionScope from '../../../components/pro/ProAccountDeletionScope.vue'
@@ -43,6 +45,15 @@ async function mount() {
   for (const name of ['ProGscScopeMissingAlert', 'ProSectionHeader', 'ProCard', 'UAvatar', 'USkeleton', 'ProNavIcon', 'UAlert'])
     app.component(name, passthrough('div'))
   app.component('ProAccountDeletionScope', ProAccountDeletionScope)
+  app.component('UiNavList', defineComponent({
+    props: {
+      label: String,
+      links: { type: Array as PropType<UiNavLink[]>, required: true },
+    },
+    setup: props => () => h('nav', { 'aria-label': props.label }, props.links.map(link =>
+      h('a', { href: link.to }, link.label),
+    )),
+  }))
   app.component('NuxtLink', passthrough('a'))
   app.component('ULink', defineComponent({
     props: ['to'],
@@ -97,6 +108,16 @@ async function confirmDelete(host: HTMLElement) {
   button(dialog, 'Delete my account')!.click()
   await flush()
 }
+
+it('offers the existing help channels from the account support link', async () => {
+  const host = await mount()
+  const links = [...host.querySelectorAll('#support [aria-label="Get help"] a')]
+  expect(links.map(link => link.getAttribute('href'))).toEqual([
+    'mailto:harlan@harlanzw.com',
+    'https://discord.gg/275MBUBvgP',
+    'https://github.com/harlan-zw/requestindexing.com/issues/new/choose',
+  ])
+})
 
 describe('account page delete', () => {
   // UX replay N5: the dialog said only "We delete all data linked to your

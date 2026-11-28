@@ -1,18 +1,18 @@
 <script lang="ts" setup>
 import type { OverviewSiteEntry } from '#layers/pro-gsc/app/components/overview/overview-sites'
 import type { OverviewSnapshotKey, OverviewSnapshotSite } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
-import ProShellFleetSites from '@nuxtseo/pro-shell/app/components/ProShellFleetSites.vue'
 import { useProShellOnboardingFlow, useProShellOnboardingSteps } from '@nuxtseo/pro-shell/app/composables/useProShellOnboarding'
-import { PRO_SHELL_TONE_DOT, PRO_SHELL_TONE_TEXT } from '@nuxtseo/pro-shell/shared/fleet-sites'
 import { useJobListener } from '~~/layers/core/app/composables/events'
 import { fetchSites } from '~~/layers/core/app/composables/fetch'
-import { UiTooltip } from '#components'
 import { isOverviewReadTarget, overviewFleetRows, overviewSiteLabel, soleSiteLandingPath } from '#layers/pro-gsc/app/components/overview/overview-sites'
 import { overviewReadRange, overviewSiteClicks, overviewSnapshotCards } from '#layers/pro-gsc/app/components/overview/overview-snapshot'
 import ProOverviewOnboardingCard from '#layers/pro-gsc/app/components/overview/ProOverviewOnboardingCard.vue'
 import ProOverviewSetupOffers from '#layers/pro-gsc/app/components/overview/ProOverviewSetupOffers.vue'
+import ProOverviewSiteCards from '#layers/pro-gsc/app/components/overview/ProOverviewSiteCards.vue'
 import ProOverviewSnapshot from '#layers/pro-gsc/app/components/overview/ProOverviewSnapshot.vue'
+import { useProBingIntegration } from '#layers/pro-gsc/app/composables/useProGscdump/useProGscdumpBing'
 import { useProOverviewReads } from '#layers/pro-gsc/app/composables/useProOverviewReads'
+import { useProSetupSiteReads } from '#layers/pro-gsc/app/composables/useProSetupSiteReads'
 import ProNoPropertyNotice from '#layers/pro-saas/app/components/pro/ProNoPropertyNotice.vue'
 import { useNoSearchConsoleProperty } from '#layers/pro-saas/app/composables/useNoSearchConsoleProperty'
 import { DASHBOARD_CARD_FLOW, resolveGscConnection } from '#layers/pro-saas/shared/onboarding'
@@ -22,8 +22,7 @@ import { DASHBOARD_CARD_FLOW, resolveGscConnection } from '#layers/pro-saas/shar
 //
 //   0 Sites  "How do I start?"            -> the setup card
 //   1 Site   redirected to that Site before this page renders
-//   n Sites  "Which Site needs me first?"  -> the live banner, the Sites
-//                                            column, the Search Console band
+//   n Sites  "Which Site needs me first?"  -> the Site cards and the snapshot
 //
 // Both other shapes carry `@nuxtseo/pro-shell`'s setup offers ("Finish setting
 // up") under the setup card. A one-Site account meets its IndexNow and Watched
@@ -68,6 +67,9 @@ const noProperty = useNoSearchConsoleProperty(() => !sites.value.length)
 const range = overviewReadRange()
 // A redirecting page reads nothing: the Site page owns that Site's reads.
 const { reads, pendingSources, refresh: refreshReads } = useProOverviewReads(() => landing ? [] : sites.value, range)
+const bing = useProBingIntegration(() => landing ? [] : sites.value)
+const setupTarget = computed(() => landing ? null : sites.value.find(site => site.gscdumpSiteId) ?? null)
+const setupReads = useProSetupSiteReads(() => setupTarget.value?.gscdumpSiteId, { showIndexNowStatus: true })
 
 const entries = computed<OverviewSiteEntry[]>(() => sites.value.map((site): OverviewSiteEntry => {
   const daily = reads.value[site.siteId]?.daily
@@ -129,36 +131,25 @@ useJobListener('sites/sync-finished', async ({ siteId }) => {
       <UiCard>
         <ProNoPropertyNotice heading-tag="h2" :email="session?.gscEmail ?? null" gsc-return-to="/pro/dashboard" />
       </UiCard>
-      <ProOverviewSetupOffers :sites="sites" />
+      <ProOverviewSetupOffers :sites="sites" :target-site-id="setupTarget?.siteId ?? null" :site-setup="setupReads" />
     </template>
 
     <template v-else-if="!error && !sites.length">
       <ProOverviewOnboardingCard v-if="cardStep" :step="cardStep" />
-      <ProOverviewSetupOffers :sites="sites" />
+      <ProOverviewSetupOffers :sites="sites" :target-site-id="setupTarget?.siteId ?? null" :site-setup="setupReads" />
     </template>
 
     <template v-else-if="sites.length">
       <ProOverviewOnboardingCard v-if="cardStep" :step="cardStep" />
-      <ProOverviewSetupOffers :sites="sites" />
-      <!-- The status is the gscdump lifecycle (overview-sites.ts). Only a state
-           the owner must act on spends colour, so a calm roster paints once. -->
-      <ProShellFleetSites :rows="fleetRows">
-        <template #status="{ row }">
-          <UiTooltip
-            :title="row.detail.label"
-            :description="row.detail.action ? `${row.detail.summary} ${row.detail.action}` : row.detail.summary"
-            side="top"
-            align="end"
-            size="sm"
-            trigger-as="button"
-          >
-            <span class="flex min-h-11 min-w-0 items-center gap-1.5 sm:min-h-0">
-              <span class="size-1.5 shrink-0 rounded-full" :class="PRO_SHELL_TONE_DOT[row.detail.tone]" aria-hidden="true" />
-              <span class="truncate text-xs" :class="row.detail.urgent ? PRO_SHELL_TONE_TEXT[row.detail.tone] : 'text-dimmed'">{{ row.detail.label }}</span>
-            </span>
-          </UiTooltip>
-        </template>
-      </ProShellFleetSites>
+      <ProOverviewSetupOffers :sites="sites" :target-site-id="setupTarget?.siteId ?? null" :site-setup="setupReads" />
+      <ProOverviewSiteCards
+        :rows="fleetRows"
+        :sites="sites"
+        :bing-rows="bing.rows.value"
+        :reads="reads"
+        :setup-site-id="setupTarget?.siteId ?? null"
+        :setup-index-now="setupReads.indexNowConnection.value"
+      />
       <ProOverviewSnapshot :cards="cards" :pending-keys="pendingKeys" :failed-sites="failedSites" :refresh-failed="refreshFailed" @retry="refreshReads()" />
     </template>
   </div>

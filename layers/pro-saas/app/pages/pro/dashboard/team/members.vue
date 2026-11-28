@@ -13,6 +13,7 @@ import { createTeamInviteAdapter } from '../../../../utils/team-invite'
 
 definePageMeta({
   layout: 'pro-dashboard',
+  settingsRail: true,
   title: 'Members',
   icon: 'i-heroicons-user-group',
   description: 'Manage your team members.',

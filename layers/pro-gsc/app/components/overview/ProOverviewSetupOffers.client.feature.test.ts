@@ -3,6 +3,7 @@ import { resolveProShellCopy } from '@nuxtseo/pro-shell/shared/copy'
 import { selectSetupOffers } from '@nuxtseo/pro-shell/shared/setup-offers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, createApp, defineComponent, h, nextTick, ref, toValue, watch } from 'vue'
+import { useProSetupSiteReads } from '#layers/pro-gsc/app/composables/useProSetupSiteReads'
 import { PRO_SHELL_COPY_OVERRIDES, PRO_SHELL_ROUTES } from '#layers/pro-saas/app/pro-shell'
 import SetupOffers from './ProOverviewSetupOffers.vue'
 
@@ -81,7 +82,13 @@ const apps: ReturnType<typeof createApp>[] = []
 async function mount(sites: SiteFleetRow[]) {
   const host = document.createElement('div')
   document.body.appendChild(host)
-  const app = createApp({ setup: () => () => h(SetupOffers, { sites }) })
+  const app = createApp({
+    setup() {
+      const target = sites.find(site => site.gscdumpSiteId)
+      const siteSetup = useProSetupSiteReads(() => target?.gscdumpSiteId, { showIndexNowStatus: true })
+      return () => h(SetupOffers, { sites, targetSiteId: target?.siteId ?? null, siteSetup })
+    },
+  })
   app.component('OgBrand', defineComponent({ render: () => null }))
   app.mount(host)
   apps.push(app)
@@ -143,17 +150,18 @@ describe('dashboard home setup offers', () => {
     ])
   })
 
-  it('keeps the other offers when a Site read fails, and reads nothing for a viewer', async () => {
+  it('keeps the other offers after a read fails and shares only IndexNow status with viewers', async () => {
     engine.indexNow.mockRejectedValue(new Error('engine down'))
     engine.watched.mockResolvedValue({ watched: [], limit: 50, cadenceDays: 7, meta: { siteUrl: 'sc-domain:b.example' } })
     const failed = await mount([site('b', 's_engine_b')])
     expect(offers(failed).map(([key]) => key)).toEqual(['beta-feedback', 'watched-urls', 'another-site'])
 
     canWrite.value = false
-    engine.indexNow.mockReset()
+    engine.indexNow.mockReset().mockResolvedValue({ _tag: 'disconnected', host: 'b.example' })
     engine.watched.mockReset()
     const viewer = await mount([site('b', 's_engine_b')])
-    expect(engine.indexNow).not.toHaveBeenCalled()
+    expect(engine.indexNow).toHaveBeenCalledExactlyOnceWith('s_engine_b')
+    expect(engine.watched).not.toHaveBeenCalled()
     expect(offers(viewer).map(([key]) => key)).toEqual(['beta-feedback', 'another-site'])
   })
 

@@ -1121,7 +1121,7 @@ Harlan's global writing rules already apply and are not repeated here: no em das
 Wording calls this file does not settle. Add one here, resolve it, fold the answer into the
 section above, then delete it from this list.
 
-1. **No support channel is named here.** The account shell's "Get help" menu links an email
+1. **No support channel is named here.** Account's "Get help" section links an email
    address, Discord, and GitHub issues, but this file names none of them as the product's
    support channel. Refusal and hold copy carries no contact line until one is chosen and
    recorded as a canonical asset.

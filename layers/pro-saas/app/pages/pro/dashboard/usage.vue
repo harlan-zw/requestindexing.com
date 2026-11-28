@@ -12,7 +12,8 @@ import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import { FREE_ALLOWANCE_HEADING, FREE_ALLOWANCE_NONE, FREE_ALLOWANCE_READ_FAILURE, meterRows } from '#layers/pro-gsc/shared/entitlement-copy'
 
 definePageMeta({
-  layout: 'user-dashboard',
+  layout: 'pro-dashboard',
+  settingsRail: true,
   title: 'Usage',
   icon: 'i-ph-gauge-duotone',
   description: 'Your Free allowance, counted for your account across every Site.',
