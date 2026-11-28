@@ -5,6 +5,10 @@
  * can change, and how to take the access back.
  */
 export const GSC_CONNECT_COPY = {
+  signupHeading: 'Create your Request Indexing account',
+  signupExampleHeading: 'What you can check',
+  signupOpening: 'Opening Request Indexing…',
+  signupAccess: 'After About you, connect Search Console with read-only access.',
   signupDescription: 'See which pages Google indexed and why others are missing. Start free.',
   /** COPY.md "Search Console read access". The saved-page setup uses it too. */
   readAccess: 'Setup asks for read-only Search Console access. If an action needs more access, we ask then.',
@@ -25,7 +29,7 @@ export const GSC_CONNECT_COPY = {
     scope: 'View Search Console data for your verified sites',
     signedInAs: 'Signed in as',
   },
-  signupMissingScope: 'Sign in again and tick the Search Console box on Google\'s screen so we can check your pages.',
+  signupMissingScope: 'Sign in, then connect Search Console during setup.',
   connectMissingScope: 'Connect again and tick the Search Console box on Google\'s screen so we can check your pages.',
   githubSignIn: 'Connect a Google account to read Search Console. You can still sign in with GitHub.',
   cancelled: {

@@ -664,6 +664,9 @@ changes. The step has no disclosure rows. Strings live in `layers/pro-saas/share
 
 | Asset | String |
 | --- | --- |
+| Signup heading | Create your Request Indexing account |
+| Opening account or dashboard | Opening Request Indexing… |
+| URL Inspection example heading | What you can check |
 | Signup description | See which pages Google indexed and why others are missing. Start free. |
 | Consent preview lead | Google will ask you to allow |
 | Consent preview chip | Read-only |
@@ -674,8 +677,8 @@ changes. The step has no disclosure rows. Strings live in `layers/pro-saas/share
 | Access changes | the Search Console access sentence in Truth rules, verbatim. A fact in the Connect Google step guide |
 | Access removal | Remove this access at any time in your Google Account. In the consent preview. "your Google Account" is the link |
 | Access removal action | your Google Account, a link to `https://myaccount.google.com/connections` |
-| Signup access note | the Search Console read access string, verbatim. On `/pro/onboarding` below the provider buttons |
-| Signup scope missing | Sign in again and tick the Search Console box on Google's screen so we can check your pages. |
+| Signup access note | After About you, connect Search Console with read-only access. |
+| Signup scope missing | Sign in, then connect Search Console during setup. |
 | Connect scope missing | Connect again and tick the Search Console box on Google's screen so we can check your pages. |
 | GitHub sign-in note | Connect a Google account to read Search Console. You can still sign in with GitHub. |
 | Cancelled, title | Search Console is not connected |

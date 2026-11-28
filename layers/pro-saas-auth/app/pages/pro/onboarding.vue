@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AuthProviderId } from '#layers/pro-saas-auth/shared/types/auth'
+import ProShellOnboardingSurface from '@nuxtseo/pro-shell/app/components/ProShellOnboardingSurface.vue'
 import { GSC_CONNECT_COPY } from '#layers/pro-saas/shared/gsc-connect-copy'
 import { ONBOARDING_ROUTE, resolveGscConnection, resolveOnboardingResumeStep } from '#layers/pro-saas/shared/onboarding'
 import { PAGE_SETUP_COPY, PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-task'
@@ -7,9 +8,11 @@ import { PAGE_SETUP_COPY, PAGE_TASK_ROUTE } from '#layers/pro-saas/shared/page-t
 // The signup door. A signed-out visitor gets the provider buttons; a signed-in
 // one is never left here, because this page's only job is to route them on.
 definePageMeta({
-  layout: 'auth',
+  layout: false,
   pageTransition: { name: 'auth-content', mode: 'out-in' },
 })
+
+useHead({ htmlAttrs: { class: 'dashboard-theme' } })
 
 const { loggedIn, session, fetch: fetchSession } = useUserSession()
 await fetchSession()
@@ -18,9 +21,7 @@ const hasSavedPage = computed(() => savedPage.value?._tag === 'Available')
 
 const { features } = useProSaasFeatures()
 
-// `/get-started` used to carry this. Google sends a consent screen where the
-// Search Console scope can be unticked, and the account is then useless to us,
-// so the door that started the flow is the door that reports the refusal.
+// Older Google returns can still bring this marker back to signup.
 const route = useRoute()
 const missingScope = computed(() => route.query.error === 'missing-scope')
 
@@ -106,59 +107,83 @@ if (import.meta.client) {
 
 useRobotsRule(false)
 useSeoMeta({
-  title: 'Get started',
+  title: GSC_CONNECT_COPY.signupHeading,
   description: 'Connect Google Search Console and see which of your pages Google has indexed, and why the rest are not.',
 })
 </script>
 
 <template>
-  <div data-testid="onboarding-entry">
-    <template v-if="!loggedIn">
-      <div v-if="savedPage?._tag === 'Available'" class="mb-6 space-y-2">
-        <h1 class="text-2xl font-semibold">
-          {{ PAGE_SETUP_COPY.heading }}
-        </h1>
-        <p class="break-all text-sm">
-          {{ savedPage.url }}
-        </p>
-        <p class="text-sm text-muted">
-          {{ PAGE_SETUP_COPY.signIn }}
-        </p>
+  <ProShellOnboardingSurface
+    class="min-h-screen overflow-clip! [&_.max-w-6xl]:max-w-[66rem]"
+    :wide="!hasSavedPage"
+    :show-exit="false"
+  >
+    <template #brand>
+      <div class="flex flex-1 justify-center">
+        <NuxtLink to="/" aria-label="Request Indexing home" class="inline-flex min-h-11 items-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          <OgBrand :size="34" wordmark semantic />
+        </NuxtLink>
       </div>
-      <UiAuthHeading
-        v-else
-        title="Get your pages indexed"
-        :description="GSC_CONNECT_COPY.signupDescription"
-      />
-
-      <ProAlert
-        v-if="missingScope"
-        data-testid="onboarding-missing-scope"
-        color="warning"
-        title="Search Console access is missing"
-        :description="GSC_CONNECT_COPY.signupMissingScope"
-        class="mb-4"
-      />
-
-      <UiAuthProviders :providers="providers" class="[&_a]:min-h-11" @select="rememberProvider" />
-
-      <p class="mt-4 text-sm text-muted">
-        {{ GSC_CONNECT_COPY.readAccess }}
-      </p>
-
-      <ProSetupExample v-if="savedPage?._tag !== 'Available'" class="mt-4" :record-view="false" :expanded="!missingScope" />
-
-      <p class="mt-7 text-sm text-muted">
-        Already have an account?
-        <ULink to="/login" class="font-medium text-highlighted transition-colors hover:text-primary">
-          Sign in
-        </ULink>
-      </p>
     </template>
+
+    <div
+      v-if="!loggedIn"
+      data-testid="onboarding-entry"
+      class="grid items-start gap-8"
+      :class="{ 'lg:grid-cols-[minmax(0,1fr)_22rem]': !hasSavedPage }"
+    >
+      <section class="min-w-0">
+        <div v-if="savedPage?._tag === 'Available'" class="mb-6 space-y-2">
+          <h1 class="text-2xl font-semibold">
+            {{ PAGE_SETUP_COPY.heading }}
+          </h1>
+          <p class="wrap-anywhere text-sm">
+            {{ savedPage.url }}
+          </p>
+          <p class="text-sm text-muted">
+            {{ PAGE_SETUP_COPY.signIn }}
+          </p>
+        </div>
+        <UiAuthHeading
+          v-else
+          :title="GSC_CONNECT_COPY.signupHeading"
+          :description="GSC_CONNECT_COPY.signupDescription"
+        />
+
+        <ProAlert
+          v-if="missingScope"
+          data-testid="onboarding-missing-scope"
+          color="warning"
+          title="Search Console access is missing"
+          :description="GSC_CONNECT_COPY.signupMissingScope"
+          class="mb-4"
+        />
+
+        <UiAuthProviders :providers="providers" class="[&_a]:min-h-11" @select="rememberProvider" />
+
+        <p class="mt-4 text-sm text-muted">
+          {{ hasSavedPage ? GSC_CONNECT_COPY.readAccess : GSC_CONNECT_COPY.signupAccess }}
+        </p>
+
+        <p class="mt-2 flex flex-wrap items-center gap-x-1 text-sm text-muted">
+          Already have an account?
+          <ULink to="/login" class="inline-flex min-h-11 items-center font-medium text-highlighted underline underline-offset-4 transition-colors hover:text-primary">
+            Sign in
+          </ULink>
+        </p>
+      </section>
+
+      <aside v-if="!hasSavedPage" aria-labelledby="signup-example-heading" class="min-w-0 space-y-3">
+        <h2 id="signup-example-heading" class="text-base font-semibold text-highlighted">
+          {{ GSC_CONNECT_COPY.signupExampleHeading }}
+        </h2>
+        <ProSetupExample layout="panel" :record-view="false" />
+      </aside>
+    </div>
 
     <div v-else class="flex min-h-[120px] w-full items-center justify-center gap-2 text-muted" role="status" aria-live="polite">
       <UIcon name="i-heroicons-arrow-path" class="size-5 animate-spin" aria-hidden="true" />
-      <span>Opening your dashboard.</span>
+      <span>{{ GSC_CONNECT_COPY.signupOpening }}</span>
     </div>
-  </div>
+  </ProShellOnboardingSurface>
 </template>
