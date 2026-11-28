@@ -202,7 +202,7 @@ async function mount() {
   const app = createApp({ render: () => h(Page as Component) })
   app.provide(routeLocationKey, { fullPath: '/pro/dashboard/sites/s_app/search-console' } as never)
   const pass = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
-  for (const name of ['NuxtLink', 'ProPageZone', 'UiAlert', 'UButton', 'UiIcon', 'UIcon', 'UiSampleDataOverlay', 'UiSectionHeader', 'ProSectionHeader', 'UiStats', 'UiTooltip', 'UiTrend', 'ULink', 'ClientOnly', 'UiPopover', 'UiSparkline', 'ProFavicon', 'UiLoadingState']) app.component(name, pass)
+  for (const name of ['NuxtLink', 'ProPageZone', 'UiAlert', 'UButton', 'UiIcon', 'UIcon', 'UiSampleDataOverlay', 'UiSectionHeader', 'ProSectionHeader', 'UiStats', 'UiTooltip', 'UiTrend', 'ULink', 'ClientOnly', 'UiPopover', 'UiSparkline', 'ProFavicon', 'UiLoadingState', 'UiFilterBarSkeleton']) app.component(name, pass)
   app.component('UiButton', defineComponent({ setup: (_, { slots }) => () => h('button', slots.default?.()) }))
   app.component('UiSkeleton', UiSkeleton)
   app.component('UiDataList', UiDataList)

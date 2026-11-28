@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { GscColumn } from '@gscdump/sdk/period-presets'
+import type { ActiveFilterItem } from '@nuxtseo/design-system/app/components/element/UiActiveFilters.vue'
 import type { GscDimension } from '../../../shared/gsc-dimension'
 import { countryData } from '@nuxtseo/design-system/app/utils/countries'
-import { computed, ref } from 'vue'
-import { UiFilterMenu, UiIcon, UiInput, UiMetricToggle, UiTogglePill } from '#components'
+import { computed, ref, useTemplateRef, watch } from 'vue'
+import { UiActiveFilters, UiDataToolbar, UiFilterMenu, UiIcon, UiInput, UiMetricToggle, UiTogglePill } from '#components'
 import { useGscSavedFilters } from '../../composables/useGscSavedFilters'
 import { GSC_COLUMN_OPTIONS, GSC_COLUMN_TOOLTIPS, GSC_ENTITY_COUNT_OPTIONS, useProGscFilters } from '../../composables/useProGscFilters'
 import { selectedFilterValues, toggleFilterValue } from '../../utils/google-search-slice'
@@ -36,6 +37,7 @@ const {
   ],
   deviceClicks = null,
   switching = false,
+  label = 'Search Console filters',
 } = defineProps<{
   showCompare?: boolean
   showStable?: boolean
@@ -64,6 +66,8 @@ const {
   switching?: boolean
   /** Site the `annotations` slot controls, when a surface fills it. */
   siteId?: string
+  /** Accessible name of the toolbar. */
+  label?: string
 }>()
 
 const view = defineModel<'graph' | 'table' | 'trend'>('view', { default: 'graph' })
@@ -288,6 +292,36 @@ function onSaveFilter() {
   })
 }
 
+const activeFilterItems = computed<ActiveFilterItem[]>(() =>
+  menuDimensions.value
+    .filter(d => Boolean(dimensionValues.value[d.value]))
+    .map(d => ({
+      key: d.value,
+      label: d.label,
+      value: dimensionValues.value[d.value]!,
+      icon: d.icon,
+    })),
+)
+
+const filterMenuRef = useTemplateRef<{ openDimension: (value: string) => void }>('filterMenuRef')
+
+function onEditFilter(item: ActiveFilterItem) {
+  filterMenuRef.value?.openDimension(item.key)
+}
+
+function onRemoveFilter(item: ActiveFilterItem) {
+  if (item.key === 'country')
+    country.value = ''
+  else if (item.key === 'device')
+    device.value = ''
+  else if (item.key === 'googleBrand')
+    selectGoogleBrand('')
+  else if (item.key === 'brand')
+    brand.value = ''
+  else if (item.key === 'questions')
+    questions.value = ''
+}
+
 function onApplySavedFilter(id: string) {
   const sf = saved.value.find(s => s.id === id)
   if (!sf)
@@ -300,207 +334,229 @@ function onApplySavedFilter(id: string) {
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center gap-2">
-    <DateRangePicker
-      v-model:period="period"
-      v-model:compare-mode="compareMode"
-      v-model:stable-data="stableData"
-      :show-compare="showCompare"
-      :show-stable="showStable"
-    />
-    <SearchTypePicker v-model:search-type="searchType" :switching="switching" />
+  <UiDataToolbar
+    :label="label"
+    :overflow="false"
+    :refreshing="switching"
+  >
+    <template #scope>
+      <DateRangePicker
+        v-model:period="period"
+        v-model:compare-mode="compareMode"
+        v-model:stable-data="stableData"
+        :show-compare="showCompare"
+        :show-stable="showStable"
+      />
+      <SearchTypePicker v-model:search-type="searchType" :switching="switching" />
 
-    <!-- Order follows the dependency chain: search type gates the Dimension
-         options, and the Dimension drives the "Show as" representations — so the
-         segment sits before the one it parameterises. -->
-    <!-- Breakdown dimension — flat segmented control, gated by search type
-         (Discover/Google News drop Query + Country). Promoted out of the old
-         dropdown so Queries and Pages read as first-class slices in the toolbar
-         row instead of hiding one click deep. -->
-    <UiTogglePill
-      v-if="showDimension"
-      v-model="dimension"
-      :options="gatedDimensions"
-      label="Breakdown"
-      class="max-w-full overflow-x-auto"
-    />
+      <!-- Order follows the dependency chain: search type gates the Dimension
+           options, and the Dimension drives the "Show as" representations — so the
+           segment sits before the one it parameterises. -->
+      <!-- Breakdown dimension — flat segmented control, gated by search type
+           (Discover/Google News drop Query + Country). Promoted out of the old
+           dropdown so Queries and Pages read as first-class slices in the toolbar
+           row instead of hiding one click deep. -->
+      <UiTogglePill
+        v-if="showDimension"
+        v-model="dimension"
+        :options="gatedDimensions"
+        label="Breakdown"
+      />
+
+      <!-- Country/Device/Brand facets only apply to query-bearing slices (not Discover/Google News). -->
+      <UiFilterMenu
+        v-if="showFilterMenu"
+        ref="filterMenuRef"
+        :searchable="false"
+        :dimensions="menuDimensions"
+        :dimension-values="dimensionValues"
+        :saved-filters="saved"
+        :active-count="facetCount"
+        :hide-badge="activeFilterItems.length > 0"
+        :loading="switching"
+        @apply-saved="onApplySavedFilter"
+        @remove-saved="removeSavedFilter"
+        @save="onSaveFilter"
+        @clear="resetFacets"
+      >
+        <!-- Dimension value pickers (seogets two-level popover). -->
+        <template #picker="{ dimension: dim, close }">
+          <!-- Country: searchable flag list -->
+          <div v-if="dim === 'country'" class="space-y-1.5">
+            <UiInput
+              :model-value="countrySearch" placeholder="Search countries…"
+              aria-label="Search countries"
+              icon="search"
+              size="xs"
+              autocomplete="off"
+              class="w-full"
+              @update:model-value="countrySearch = $event ?? ''"
+            />
+            <button
+              v-if="country"
+              type="button"
+              class="cursor-pointer w-full flex items-center gap-2 px-1.5 py-1 rounded-md text-xs text-muted hover:text-default hover:bg-[var(--ui-bg-elevated)]/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              @click="country = ''; close()"
+            >
+              <UiIcon name="globe" class="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
+              <span class="flex-1 text-left">All countries</span>
+            </button>
+            <div class="max-h-56 overflow-y-auto -mx-0.5">
+              <button
+                v-for="c in filteredCountries"
+                :key="c.value"
+                type="button"
+                :aria-pressed="countriesSelected.includes(c.value)"
+                class="cursor-pointer w-full flex items-center gap-2 px-1.5 py-1 rounded-md text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                :class="countriesSelected.includes(c.value) ? 'text-default bg-elevated' : 'text-muted hover:text-default hover:bg-[var(--ui-bg-elevated)]/50'"
+                @click="siteSearchConsole ? country = toggleFilterValue(country, c.value) : (country = c.value, close())"
+              >
+                <UiIcon :name="c.icon" class="size-4 shrink-0 rounded-sm" aria-hidden="true" />
+                <span class="flex-1 text-left truncate">{{ c.label }}</span>
+                <UiIcon v-if="countriesSelected.includes(c.value)" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Device: options with their share of clicks -->
+          <div v-if="dim === 'device'" class="space-y-1">
+            <button
+              v-if="device"
+              type="button"
+              class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-mini text-muted hover:text-default hover:bg-[var(--ui-bg-elevated)]/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              @click="device = ''; close()"
+            >
+              <UiIcon name="layers" class="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
+              <span class="flex-1 text-left">All devices</span>
+            </button>
+            <button
+              v-for="d in DEVICE_OPTIONS"
+              :key="d.value"
+              type="button"
+              :aria-pressed="devicesSelected.includes(d.value)"
+              class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-mini font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              :class="devicesSelected.includes(d.value) ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
+              @click="siteSearchConsole ? device = toggleFilterValue(device, d.value) : (device = device === d.value ? '' : d.value, close())"
+            >
+              <UiIcon :name="d.icon" class="size-3.5 shrink-0" aria-hidden="true" />
+              <span class="flex-1 text-left">{{ d.label }}</span>
+              <span v-if="deviceClicks" class="text-dimmed tabular-nums">{{ devicePct(d.value) }}%</span>
+            </button>
+          </div>
+
+          <div v-if="dim === 'googleBrand'" class="space-y-1">
+            <button
+              v-for="option in googleBrandOptions"
+              :key="option.value"
+              type="button"
+              :aria-pressed="googleBrand === option.value"
+              class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-mini font-medium focus-visible:ring-2 focus-visible:ring-primary"
+              :class="googleBrand === option.value ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
+              @click="selectGoogleBrand(option.value); close()"
+            >
+              <span class="flex-1 text-left">{{ option.label }}</span>
+              <UiIcon v-if="googleBrand === option.value" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />
+            </button>
+          </div>
+
+          <!-- Brand: classify queries by the site's brand terms (regex facet). -->
+          <div v-if="dim === 'brand'" class="space-y-1">
+            <button
+              v-if="brand"
+              type="button"
+              class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-mini text-muted hover:text-default hover:bg-[var(--ui-bg-elevated)]/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              @click="brand = ''; close()"
+            >
+              <UiIcon name="i-lucide-tag" class="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
+              <span class="flex-1 text-left">All queries</span>
+            </button>
+            <button
+              v-for="b in BRAND_OPTIONS"
+              :key="b.value"
+              type="button"
+              :aria-pressed="brand === b.value"
+              class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-mini font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              :class="brand === b.value ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
+              @click="brand = brand === b.value ? '' : b.value; close()"
+            >
+              <span class="flex-1 text-left">{{ b.label }}</span>
+              <UiIcon v-if="brand === b.value" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />
+            </button>
+          </div>
+
+          <!-- Questions: classify queries by question-intent (regex on canonical query). -->
+          <div v-if="dim === 'questions'" class="space-y-1">
+            <button
+              v-if="questions"
+              type="button"
+              class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-mini text-muted hover:text-default hover:bg-[var(--ui-bg-elevated)]/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              @click="questions = ''; close()"
+            >
+              <UiIcon name="i-lucide-help-circle" class="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
+              <span class="flex-1 text-left">All queries</span>
+            </button>
+            <button
+              v-for="qOpt in QUESTION_OPTIONS"
+              :key="qOpt.value"
+              type="button"
+              :aria-pressed="questions === qOpt.value"
+              class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-mini font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              :class="questions === qOpt.value ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
+              @click="questions = questions === qOpt.value ? '' : qOpt.value; close()"
+            >
+              <span class="flex-1 text-left">{{ qOpt.label }}</span>
+              <UiIcon v-if="questions === qOpt.value" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />
+            </button>
+          </div>
+        </template>
+      </UiFilterMenu>
+    </template>
 
     <!-- "Show as" — dimension-aware representation segment (replaces the old
          Graph/Table toggle). Labels relabel per dimension: Trend/Ranked/Map for
          the primary viz, Scoreboard for the dense table. -->
-    <UiTogglePill
-      v-if="showView"
-      v-model="view"
-      :options="showAsOptions"
-      label="Show as"
-    />
+    <template v-if="showView" #mode>
+      <UiTogglePill
+        v-model="view"
+        :options="showAsOptions"
+        label="Show as"
+      />
+    </template>
+
+    <template v-if="activeFilterItems.length" #chips>
+      <UiActiveFilters
+        :items="activeFilterItems"
+        @edit="onEditFilter"
+        @remove="onRemoveFilter"
+        @clear="resetFacets"
+      />
+    </template>
 
     <!-- Icon-only metric toggles (clicks/views/CTR/position) plus the two
          entity counts (queries/pages), seogets-style. Each carries a tooltip —
          a row of four-plus bare glyphs is otherwise a guessing game. -->
-    <UiMetricToggle
-      v-if="showMetrics"
-      icon-only
-      :options="metricToggleOptions"
-      :model-value="activeMetricToggles"
-      @toggle="onMetricToggle"
-    />
+    <template v-if="showMetrics || $slots.annotations" #metrics>
+      <div class="flex items-center gap-2">
+        <UiMetricToggle
+          v-if="showMetrics"
+          icon-only
+          :options="metricToggleOptions"
+          :model-value="activeMetricToggles"
+          @toggle="onMetricToggle"
+        />
 
-    <!-- Chart annotations sit here, joined like the metric toggle beside them.
-         The annotation model is not in this app yet, so the bar owns the slot
-         and its chrome while a later surface fills it. -->
-    <div
-      v-if="$slots.annotations"
-      class="flex items-center gap-0.5 p-0.5 rounded-lg bg-[var(--ui-bg-elevated)]/60 border border-default"
-      role="group"
-      aria-label="Chart annotations"
-    >
-      <slot name="annotations" :site-id="siteId" />
-    </div>
-
-    <!-- Country/Device/Brand facets only apply to query-bearing slices (not Discover/Google News). -->
-    <UiFilterMenu
-      v-if="showFilterMenu"
-      :searchable="false"
-      :dimensions="menuDimensions"
-      :dimension-values="dimensionValues"
-      :saved-filters="saved"
-      :active-count="facetCount"
-      @apply-saved="onApplySavedFilter"
-      @remove-saved="removeSavedFilter"
-      @save="onSaveFilter"
-      @clear="resetFacets"
-    >
-      <!-- Dimension value pickers (seogets two-level popover). -->
-      <template #picker="{ dimension: dim, close }">
-        <!-- Country: searchable flag list -->
-        <div v-if="dim === 'country'" class="space-y-1.5">
-          <UiInput
-            :model-value="countrySearch" placeholder="Search countries…"
-            aria-label="Search countries"
-            icon="search"
-            size="xs"
-            autocomplete="off"
-            class="w-full"
-            @update:model-value="countrySearch = $event ?? ''"
-          />
-          <button
-            v-if="country"
-            type="button"
-            class="cursor-pointer w-full flex items-center gap-2 px-1.5 py-1 rounded-md text-xs text-muted hover:text-default hover:bg-[var(--ui-bg-elevated)]/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            @click="country = ''; close()"
-          >
-            <UiIcon name="globe" class="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
-            <span class="flex-1 text-left">All countries</span>
-          </button>
-          <div class="max-h-56 overflow-y-auto -mx-0.5">
-            <button
-              v-for="c in filteredCountries"
-              :key="c.value"
-              type="button"
-              :aria-pressed="countriesSelected.includes(c.value)"
-              class="cursor-pointer w-full flex items-center gap-2 px-1.5 py-1 rounded-md text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              :class="countriesSelected.includes(c.value) ? 'text-default bg-elevated' : 'text-muted hover:text-default hover:bg-[var(--ui-bg-elevated)]/50'"
-              @click="siteSearchConsole ? country = toggleFilterValue(country, c.value) : (country = c.value, close())"
-            >
-              <UiIcon :name="c.icon" class="size-4 shrink-0 rounded-sm" aria-hidden="true" />
-              <span class="flex-1 text-left truncate">{{ c.label }}</span>
-              <UiIcon v-if="countriesSelected.includes(c.value)" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />
-            </button>
-          </div>
+        <!-- Chart annotations sit here, joined like the metric toggle beside them.
+             The annotation model is not in this app yet, so the bar owns the slot
+             and its chrome while a later surface fills it. -->
+        <div
+          v-if="$slots.annotations"
+          class="flex items-center gap-0.5 p-0.5 rounded-lg bg-[var(--ui-bg-elevated)]/60 border border-default"
+          role="group"
+          aria-label="Chart annotations"
+        >
+          <slot name="annotations" :site-id="siteId" />
         </div>
-
-        <!-- Device: options with their share of clicks -->
-        <div v-if="dim === 'device'" class="space-y-1">
-          <button
-            v-if="device"
-            type="button"
-            class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-mini text-muted hover:text-default hover:bg-[var(--ui-bg-elevated)]/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            @click="device = ''; close()"
-          >
-            <UiIcon name="layers" class="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
-            <span class="flex-1 text-left">All devices</span>
-          </button>
-          <button
-            v-for="d in DEVICE_OPTIONS"
-            :key="d.value"
-            type="button"
-            :aria-pressed="devicesSelected.includes(d.value)"
-            class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-mini font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            :class="devicesSelected.includes(d.value) ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
-            @click="siteSearchConsole ? device = toggleFilterValue(device, d.value) : (device = device === d.value ? '' : d.value, close())"
-          >
-            <UiIcon :name="d.icon" class="size-3.5 shrink-0" aria-hidden="true" />
-            <span class="flex-1 text-left">{{ d.label }}</span>
-            <span v-if="deviceClicks" class="text-dimmed tabular-nums">{{ devicePct(d.value) }}%</span>
-          </button>
-        </div>
-
-        <div v-if="dim === 'googleBrand'" class="space-y-1">
-          <button
-            v-for="option in googleBrandOptions"
-            :key="option.value"
-            type="button"
-            :aria-pressed="googleBrand === option.value"
-            class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-mini font-medium focus-visible:ring-2 focus-visible:ring-primary"
-            :class="googleBrand === option.value ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
-            @click="selectGoogleBrand(option.value); close()"
-          >
-            <span class="flex-1 text-left">{{ option.label }}</span>
-            <UiIcon v-if="googleBrand === option.value" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />
-          </button>
-        </div>
-
-        <!-- Brand: classify queries by the site's brand terms (regex facet). -->
-        <div v-if="dim === 'brand'" class="space-y-1">
-          <button
-            v-if="brand"
-            type="button"
-            class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-mini text-muted hover:text-default hover:bg-[var(--ui-bg-elevated)]/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            @click="brand = ''; close()"
-          >
-            <UiIcon name="i-lucide-tag" class="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
-            <span class="flex-1 text-left">All queries</span>
-          </button>
-          <button
-            v-for="b in BRAND_OPTIONS"
-            :key="b.value"
-            type="button"
-            :aria-pressed="brand === b.value"
-            class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-mini font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            :class="brand === b.value ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
-            @click="brand = brand === b.value ? '' : b.value; close()"
-          >
-            <span class="flex-1 text-left">{{ b.label }}</span>
-            <UiIcon v-if="brand === b.value" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />
-          </button>
-        </div>
-
-        <!-- Questions: classify queries by question-intent (regex on canonical query). -->
-        <div v-if="dim === 'questions'" class="space-y-1">
-          <button
-            v-if="questions"
-            type="button"
-            class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-mini text-muted hover:text-default hover:bg-[var(--ui-bg-elevated)]/50 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            @click="questions = ''; close()"
-          >
-            <UiIcon name="i-lucide-help-circle" class="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
-            <span class="flex-1 text-left">All queries</span>
-          </button>
-          <button
-            v-for="qOpt in QUESTION_OPTIONS"
-            :key="qOpt.value"
-            type="button"
-            :aria-pressed="questions === qOpt.value"
-            class="cursor-pointer w-full flex items-center gap-2 px-2 py-1.5 rounded-md border text-mini font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            :class="questions === qOpt.value ? 'border-accented text-default' : 'border-transparent text-muted hover:text-default'"
-            @click="questions = questions === qOpt.value ? '' : qOpt.value; close()"
-          >
-            <span class="flex-1 text-left">{{ qOpt.label }}</span>
-            <UiIcon v-if="questions === qOpt.value" name="check" class="size-3 text-primary shrink-0" aria-hidden="true" />
-          </button>
-        </div>
-      </template>
-    </UiFilterMenu>
-  </div>
+      </div>
+    </template>
+  </UiDataToolbar>
 </template>

@@ -73,6 +73,20 @@ function formatRange(start: string, end: string) {
   return `${rangeFmt.format(s)} – ${rangeFmtYear.format(e)}`
 }
 
+const SHORT_CALENDAR_LABELS: Record<string, string> = {
+  'this-week': 'WTD',
+  'this-month': 'MTD',
+  'last-month': 'Last mo',
+  'this-quarter': 'QTD',
+  'this-year': 'YTD',
+}
+
+function getPeriodShortLabel(period: Period): string {
+  if (parseCustomPeriod(period))
+    return `${dateRange.value.days}d`
+  return SHORT_CALENDAR_LABELS[period] ?? period
+}
+
 function selectPeriod(p: Period) {
   period.value = p
   open.value = false
@@ -86,23 +100,29 @@ function selectPeriod(p: Period) {
       type="button"
       :aria-label="`Date range: ${getPeriodLabel(period)}`"
       :aria-expanded="open"
-      class="min-h-11 cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 border focus-visible:ring-2 focus-visible:ring-primary sm:min-h-0"
+      class="min-h-11 sm:min-h-0 sm:h-8 cursor-pointer inline-flex items-center gap-2 px-2.5 rounded-lg text-xs font-medium transition-colors duration-150 border outline-none focus-visible:ring-2 focus-visible:ring-primary"
       :class="[
         open
-          ? 'border-accented bg-elevated text-default'
-          : 'border-default bg-muted text-muted hover:text-default hover:border-accented',
+          ? 'border-accented bg-elevated text-highlighted'
+          : 'border-default bg-default text-default hover:border-accented hover:bg-muted/60',
       ]"
     >
-      <UiIcon name="calendar" class="size-3.5" aria-hidden="true" />
-      <span>{{ getPeriodLabel(period) }}</span>
+      <UiIcon name="calendar" class="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
+      <span data-toolbar-label class="whitespace-nowrap">{{ getPeriodLabel(period) }}</span>
+      <span data-toolbar-short class="hidden whitespace-nowrap">{{ getPeriodShortLabel(period) }}</span>
       <span
         v-if="showCompare && compareMode !== 'none'"
-        class="text-mini px-1.5 py-0.5 rounded-sm font-semibold"
-        :class="compareMode === 'year' ? `${periodVizColors.current.bg} ${periodVizColors.current.text}` : `${periodVizColors.comparison.bg} ${periodVizColors.comparison.text}`"
+        data-toolbar-label
+        class="inline-flex items-center gap-1.5 border-l border-default/80 pl-2 text-mini font-normal text-muted whitespace-nowrap"
       >
+        <span
+          class="size-1.5 rounded-full shrink-0"
+          :class="compareMode === 'year' ? periodVizColors.current.dot : periodVizColors.comparison.dot"
+          aria-hidden="true"
+        />
         vs {{ compareMode === 'year' ? 'YoY' : 'prev' }}
       </span>
-      <UiIcon name="expand" class="size-3 text-dimmed -mr-0.5" aria-hidden="true" />
+      <UiIcon name="expand" data-toolbar-chevron class="size-3 shrink-0 text-dimmed -mr-0.5" aria-hidden="true" />
     </button>
 
     <!-- Popover content -->

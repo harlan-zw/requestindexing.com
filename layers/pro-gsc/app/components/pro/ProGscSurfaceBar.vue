@@ -59,9 +59,7 @@ watch([supportsQueries, supportsDimensions], () => {
 
 <template>
   <div class="flex flex-col gap-2">
-    <div class="flex items-center gap-2 sm:gap-3 flex-wrap" role="toolbar" aria-label="Search Console filters">
-      <ProGscControlBar v-bind="barProps" :site-id="siteId" class="w-full min-w-0" />
-    </div>
+    <ProGscControlBar v-bind="barProps" :site-id="siteId" class="w-full min-w-0" />
     <p v-if="siteSearchConsole && gscData?.gscPropertyUrl" class="text-xs text-muted">
       Search Console property <span class="break-all text-default">{{ gscData.gscPropertyUrl }}</span>
     </p>

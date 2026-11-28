@@ -120,6 +120,7 @@ const accessibleTableLabel = computed(() => tableLabel || itemLabel || 'Data tab
 
 const localQ = ref(q)
 const debouncedQ = refDebounced(localQ, 300)
+const isDebouncing = computed(() => localQ.value !== q)
 
 const localPage = computed({
   get: () => page,
@@ -159,6 +160,16 @@ function commitQ(value = localQ.value) {
   if (value !== q)
     emit('update:q', value)
   emit('update:page', 1)
+}
+
+function onSearchEscape(e: KeyboardEvent) {
+  if (localQ.value !== '') {
+    e.preventDefault()
+    commitQ('')
+  }
+  else {
+    ;(e.target as HTMLInputElement | null)?.blur()
+  }
 }
 
 // Wire the presentational GscFilterBar to URL-synced Pro facet state.
@@ -265,14 +276,21 @@ function onApplySaved(id: string) {
           icon="search"
           autocomplete="off"
           size="sm"
-          :ui="{ base: 'min-h-11 sm:min-h-10' }"
+          :ui="{ base: 'min-h-11 sm:min-h-0 sm:h-8' }"
           data-inp-target="gsc-table-search"
           @update:model-value="localQ = $event ?? ''"
           @keydown.enter="commitQ()"
+          @keydown.escape="onSearchEscape"
         >
           <template #trailing>
+            <UiIcon
+              v-if="isDebouncing"
+              name="loading"
+              class="size-3 animate-spin text-dimmed"
+              aria-hidden="true"
+            />
             <UiButton
-              v-if="localQ !== ''"
+              v-else-if="localQ !== ''"
               purpose="quiet"
               icon="close"
               size="xs"
@@ -292,6 +310,7 @@ function onApplySaved(id: string) {
           :saved-filters="saved"
           :active-count="activeCount"
           :show-saved="showSavedFilters"
+          :loading="isLoading && !isLoadingMore"
           @apply-preset="onApplyPreset"
           @apply-saved="onApplySaved"
           @remove-saved="removeSavedFilter"
@@ -343,8 +362,8 @@ function onApplySaved(id: string) {
       <span v-else>Comparison unavailable. Both periods need complete recorded Search Console data.</span>
     </div>
 
-    <!-- Loading skeleton (suppressed while paging in load-more — the table stays put) -->
-    <div v-if="isLoading && !isLoadingMore" class="rounded-xl border border-default overflow-hidden">
+    <!-- Loading skeleton (cold-load only; in-place refetches keep loaded rows visible and dimmed) -->
+    <div v-if="isLoading && !isLoadingMore && !rows.length" class="rounded-xl border border-default overflow-hidden">
       <slot name="skeleton">
         <div class="bg-[var(--ui-bg-elevated)]/50 px-5 py-3 border-b border-default">
           <div class="flex gap-8">
@@ -423,6 +442,7 @@ function onApplySaved(id: string) {
       :sorting="tableSorting"
       disable-pagination
       row-hover
+      :class="isLoading && !isLoadingMore && rows.length > 0 ? 'opacity-60 transition-opacity duration-150' : 'transition-opacity duration-150'"
       @row-click="emit('rowClick', $event)"
       @sort-column="emit('sortColumn', $event)"
     >

@@ -127,7 +127,7 @@ function mount(component: any) {
   const app = createApp(component)
   app.config.warnHandler = () => {}
   const passthrough = defineComponent({ props: ['title', 'label'], setup: (props, { slots }) => () => h('div', [props.title, props.label, slots.default?.(), slots.action?.(), slots.text?.()]) })
-  for (const name of ['UiAlert', 'UiEmptyState', 'ProPageZone', 'ProSectionHeader', 'UiSectionHeader', 'UiTooltip', 'UiTableShell', 'UiTableTh', 'UiTableTd']) app.component(name, passthrough)
+  for (const name of ['UiAlert', 'UiEmptyState', 'ProPageZone', 'ProSectionHeader', 'UiSectionHeader', 'UiTooltip', 'UiTableShell', 'UiTableTh', 'UiTableTd', 'UiFilterBarSkeleton']) app.component(name, passthrough)
   app.component('UiEntitySummary', defineComponent({ props: ['value', 'tooltipDescription'], setup: (p, { slots }) => () => h('div', { 'data-summary': '', 'data-description': p.tooltipDescription }, [slots.heading?.(), p.value]) }))
   app.component('UiButton', defineComponent({ props: ['to'], setup: (p, { slots }) => () => p.to ? h('a', { href: p.to }, slots.default?.()) : h('button', slots.default?.()) }))
   app.component('NuxtLink', defineComponent({ props: ['to'], setup: (p, { slots }) => () => h('a', { href: p.to }, slots.default?.()) }))

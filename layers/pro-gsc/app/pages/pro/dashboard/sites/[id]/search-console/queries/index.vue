@@ -46,7 +46,10 @@ const hasRows = ref(true)
     </template>
   </UiAlert>
 
-  <UiSkeleton v-else-if="siteStatus !== 'success'" :lines="4" />
+  <div v-else-if="siteStatus !== 'success'" class="flex flex-col gap-5">
+    <UiFilterBarSkeleton :show-search="false" :show-mode="false" show-metrics label="Loading Search Console filters" />
+    <UiSkeleton :lines="4" />
+  </div>
 
   <UiEmptyState
     v-else-if="!gscdumpSiteId"
@@ -57,7 +60,10 @@ const hasRows = ref(true)
     <ConnectSearchConsoleButton />
   </UiEmptyState>
 
-  <UiSkeleton v-else-if="!isLifecycleSettled" :lines="4" />
+  <div v-else-if="!isLifecycleSettled" class="flex flex-col gap-5">
+    <UiFilterBarSkeleton :show-search="false" :show-mode="false" show-metrics label="Loading Search Console filters" />
+    <UiSkeleton :lines="4" />
+  </div>
 
   <UiAlert v-else-if="syncStatusError" status="error" title="Search Console sync status could not load.">
     <template #action>

@@ -644,7 +644,8 @@ function rowTooltipLines(row: GscdumpDataRow): Array<{ label: string, value: str
 
       <!-- Linked, and the lifecycle has not answered yet. The dashboard waits,
            so an empty read cannot show before the overlay replaces it. -->
-      <div v-else-if="searchState._tag === 'Checking'" aria-busy="true" aria-label="Loading Search Console data">
+      <div v-else-if="searchState._tag === 'Checking'" class="flex flex-col gap-5" aria-busy="true" aria-label="Loading Search Console data">
+        <UiFilterBarSkeleton :show-search="false" :show-mode="false" show-metrics label="Loading Search Console filters" />
         <UiLoadingState :rows="3" />
       </div>
 
