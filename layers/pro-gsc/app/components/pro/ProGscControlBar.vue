@@ -2,6 +2,7 @@
 import type { GscColumn } from '@gscdump/sdk/period-presets'
 import type { ActiveFilterItem } from '@nuxtseo/design-system/app/components/element/UiActiveFilters.vue'
 import type { GscDimension } from '../../../shared/gsc-dimension'
+import { gscMetricColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
 import { countryData } from '@nuxtseo/design-system/app/utils/countries'
 import { computed, ref, useTemplateRef, watch } from 'vue'
 import { UiActiveFilters, UiDataToolbar, UiFilterMenu, UiIcon, UiInput, UiMetricToggle, UiTogglePill } from '#components'
@@ -532,14 +533,13 @@ function onApplySavedFilter(id: string) {
       />
     </template>
 
-    <!-- Icon-only metric toggles (clicks/views/CTR/position) plus the two
-         entity counts (queries/pages), seogets-style. Each carries a tooltip —
-         a row of four-plus bare glyphs is otherwise a guessing game. -->
     <template v-if="showMetrics || $slots.annotations" #metrics>
       <div class="flex items-center gap-2">
         <UiMetricToggle
           v-if="showMetrics"
-          icon-only
+          chip
+          :colors="gscMetricColors"
+          :compare="compareMode !== 'none'"
           :options="metricToggleOptions"
           :model-value="activeMetricToggles"
           @toggle="onMetricToggle"
@@ -550,7 +550,7 @@ function onApplySavedFilter(id: string) {
              and its chrome while a later surface fills it. -->
         <div
           v-if="$slots.annotations"
-          class="flex items-center gap-0.5 p-0.5 rounded-lg bg-[var(--ui-bg-elevated)]/60 border border-default"
+          class="flex items-center gap-0.5 p-[3px] rounded-lg bg-[var(--ui-bg-elevated)]/60 border border-default"
           role="group"
           aria-label="Chart annotations"
         >

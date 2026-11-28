@@ -129,11 +129,14 @@ const localPage = computed({
 const tableSorting = computed(() => sort
   ? [{ id: sort.column, desc: sort.direction === 'desc' }]
   : [])
+// Wire the presentational GscFilterBar to URL-synced Pro facet state.
+// `countryData` is auto-imported from `design-system/app/utils/countries.ts`.
+const { country, device, compareMode, googleSlice } = useProGscFilters()
 const cachedEvidence = computed(() => hasCachedData ?? rows.length > 0)
 const blockingError = computed(() => error && !cachedEvidence.value ? error : null)
 const refreshError = computed(() => error && cachedEvidence.value ? error : null)
 const hasActiveFilter = computed(() =>
-  Boolean(q || (filter && filter !== 'default') || hasExternalFilter),
+  Boolean(q || (filter && filter !== 'default') || hasExternalFilter || country?.value || device?.value),
 )
 const paginationUi = {
   first: 'min-h-11 min-w-11 sm:min-h-8 sm:min-w-8',
@@ -172,9 +175,6 @@ function onSearchEscape(e: KeyboardEvent) {
   }
 }
 
-// Wire the presentational GscFilterBar to URL-synced Pro facet state.
-// `countryData` is auto-imported from `design-system/app/utils/countries.ts`.
-const { country, device, compareMode, googleSlice } = useProGscFilters()
 const countryItems = computed(() =>
   Object.entries(countryData)
     .map(([code, d]) => ({ label: d.name, value: code, icon: `i-circle-flags:${d.alpha2}` }))
@@ -273,7 +273,7 @@ function onApplySaved(id: string) {
         <UiInput
           :model-value="localQ" :placeholder="searchPlaceholder"
           :aria-label="searchPlaceholder"
-          icon="search"
+          leading-icon="search"
           autocomplete="off"
           size="sm"
           :ui="{ base: 'min-h-11 sm:min-h-0 sm:h-8' }"
@@ -304,6 +304,7 @@ function onApplySaved(id: string) {
       <div class="flex flex-wrap items-center justify-end gap-1">
         <slot name="toolbar" />
         <UiFilterMenu
+          :label="facets ? 'Filter' : 'Presets'"
           :searchable="false"
           :preset-filters="presetFilters"
           :active-preset="filter"
