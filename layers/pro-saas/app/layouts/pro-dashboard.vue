@@ -221,8 +221,8 @@ function onPageError(error: unknown) {
     </template>
 
     <template #sidebar>
-      <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" class="flex-1" />
-      <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" class="flex-1" />
+      <ProSingleSiteSidebarNav v-if="scopedSite" :site="scopedSite" class="min-h-full flex-1" />
+      <ProFleetSidebarNav v-else :sites="sites" :loading="sitesLoading" class="min-h-full flex-1" />
     </template>
 
     <template #mobile="{ closeNav }">
