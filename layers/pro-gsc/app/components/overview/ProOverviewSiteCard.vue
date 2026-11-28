@@ -5,8 +5,8 @@ import type { BingIntegrationRow } from '../../utils/bing-integration-view'
 import type { OverviewFleetRow } from './overview-sites'
 import { PRO_SHELL_TONE_TEXT } from '@nuxtseo/pro-shell/shared/fleet-sites'
 import { useElementVisibility, whenever } from '@vueuse/core'
-import { computed, ref, useTemplateRef } from 'vue'
-import { NuxtLink, UiFavicon, UiSkeleton, UiSourceLogos, UiSparkColumns } from '#components'
+import { computed, ref, useId, useTemplateRef } from 'vue'
+import { NuxtLink, UiFavicon, UiSkeleton, UiSourceLogos, UiSparkColumns, UiTooltip } from '#components'
 import { useIndexNowConnection } from '#layers/indexing/app/composables/useSiteSubmissions'
 
 const { row, gscdumpSiteId, bingRow, indexing, setupIndexNow } = defineProps<{
@@ -19,6 +19,7 @@ const { row, gscdumpSiteId, bingRow, indexing, setupIndexNow } = defineProps<{
 }>()
 
 const card = useTemplateRef<HTMLElement>('card')
+const descriptionId = useId()
 const visible = useElementVisibility(card)
 const seen = ref(false)
 whenever(visible, () => {
@@ -100,24 +101,32 @@ const sources = computed(() => {
 
     <ul class="grid flex-1 auto-rows-fr grid-cols-2 gap-px overflow-hidden rounded-xl border border-default bg-[var(--ui-border)]">
       <li v-for="(source, index) in sources" :key="source.id" class="min-w-0 bg-elevated" :class="index === sources.length - 1 && index % 2 === 0 ? 'col-span-2' : ''">
-        <NuxtLink
-          :to="source.to"
-          :title="source.detail || undefined"
-          class="group flex h-full min-h-16 flex-col gap-1 px-2.5 py-2 outline-none transition-colors hover:bg-accented focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+        <UiTooltip
+          trigger-as="child"
+          :title="source.status || source.label"
+          :description="source.detail"
+          :disabled="!source.detail"
         >
-          <span class="flex items-center gap-1.5 text-sm font-medium text-highlighted">
-            <UiSourceLogos :sources="[source]" :dither="true" size="inline" aria-hidden="true" />
-            {{ source.label }}
-          </span>
-          <span v-if="source.status" class="text-sm leading-tight" :class="source.class">{{ source.status }}</span>
-          <template v-if="source.id === 'search'">
-            <UiSkeleton v-if="row.spark._tag === 'Reading'" type="text" :base="72" :range="24" class="!h-3" aria-hidden="true" />
-            <template v-else-if="row.spark._tag === 'Read' && row.spark.data.length">
-              <span v-if="row.entry.clicks._tag === 'Read'" class="text-sm text-muted">{{ row.entry.clicks.clicks.toLocaleString('en-US') }} clicks</span>
-              <UiSparkColumns :data="[...row.spark.data]" size="sm" tone="neutral" aria-hidden="true" class="mt-auto block" />
+          <NuxtLink
+            :to="source.to"
+            :aria-describedby="source.detail ? `${descriptionId}-${source.id}` : undefined"
+            class="group flex h-full min-h-16 flex-col gap-1 px-2.5 py-2 outline-none transition-colors hover:bg-accented focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+          >
+            <span class="flex items-center gap-1.5 text-sm font-medium text-highlighted">
+              <UiSourceLogos :sources="[source]" :dither="true" size="inline" aria-hidden="true" />
+              {{ source.label }}
+            </span>
+            <span v-if="source.status" class="text-sm leading-tight" :class="source.class">{{ source.status }}</span>
+            <template v-if="source.id === 'search'">
+              <UiSkeleton v-if="row.spark._tag === 'Reading'" type="text" :base="72" :range="24" class="!h-3" aria-hidden="true" />
+              <template v-else-if="row.spark._tag === 'Read' && row.spark.data.length">
+                <span v-if="row.entry.clicks._tag === 'Read'" class="text-sm text-muted">{{ row.entry.clicks.clicks.toLocaleString('en-US') }} clicks</span>
+                <UiSparkColumns :data="[...row.spark.data]" size="sm" tone="neutral" aria-hidden="true" class="mt-auto block" />
+              </template>
             </template>
-          </template>
-        </NuxtLink>
+          </NuxtLink>
+        </UiTooltip>
+        <span v-if="source.detail" :id="`${descriptionId}-${source.id}`" class="sr-only">{{ source.detail }}</span>
       </li>
     </ul>
   </article>
