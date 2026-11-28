@@ -15,6 +15,8 @@ const FEEDBACK_HISTORY_PAGE_SIZE = 50
 
 export type DashboardFeedbackWrite = { _tag: 'Recorded' } | { _tag: 'Unavailable' }
 
+export type DashboardFeedbackRecord = { _tag: 'Recorded', feedbackId: number } | { _tag: 'Unavailable' }
+
 export interface DashboardFeedbackRow {
   path: string
   thumb: 'up' | 'down' | null
@@ -56,8 +58,8 @@ export function toDashboardFeedbackRow(input: FeedbackSubmitInput, author: Dashb
 }
 
 /** Stores one report. A failed write is a value: the drawer then shows its retry message. */
-export async function recordDashboardFeedback(db: ReturnType<typeof useDrizzle>, row: DashboardFeedbackRow): Promise<DashboardFeedbackWrite> {
-  return db.insert(feedback).values(row).returning({ id: feedback.feedbackId }).then((rows): DashboardFeedbackWrite => rows.length ? { _tag: 'Recorded' } : { _tag: 'Unavailable' }).catch((error: unknown): DashboardFeedbackWrite => {
+export async function recordDashboardFeedback(db: ReturnType<typeof useDrizzle>, row: DashboardFeedbackRow): Promise<DashboardFeedbackRecord> {
+  return db.insert(feedback).values(row).returning({ id: feedback.feedbackId }).then((rows): DashboardFeedbackRecord => rows[0] ? { _tag: 'Recorded', feedbackId: rows[0].id } : { _tag: 'Unavailable' }).catch((error: unknown): DashboardFeedbackRecord => {
     logWarn('feedback.record_failed', error, { fn: 'recordDashboardFeedback', userId: row.userId })
     return { _tag: 'Unavailable' }
   })

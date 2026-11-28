@@ -138,10 +138,11 @@ export function filterPickerProperties(properties: readonly PickerProperty[], qu
 /**
  * Whether the picker leaves nothing to connect right now. The wizard offers
  * "Skip and connect it later" on this, the way nuxtseo.com reveals its skip
- * after a Site fails. A list still loading blocks nothing.
+ * after a Site fails. A list still loading or an account still provisioning
+ * in gscdump blocks nothing yet.
  */
 export function propertyPickerBlocksConnect(state: PropertyPickerState): boolean {
-  if (state._tag === 'Loading')
+  if (state._tag === 'Loading' || state._tag === 'Provisioning')
     return false
   if (state._tag === 'Properties')
     return !state.properties.some(property => property.verified)

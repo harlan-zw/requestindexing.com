@@ -17,6 +17,8 @@ export type GoogleConnectEventType
 
 export type ProEventType
   = | 'signed_up'
+    | 'agent_setup_selected'
+    | 'agent_setup_skipped'
     | 'page_task_started'
     | 'page_evidence_viewed'
     | 'page_inspection_started'

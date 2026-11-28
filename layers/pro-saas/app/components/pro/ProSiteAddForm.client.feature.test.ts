@@ -27,11 +27,12 @@ function addVerifyDomains(host: HTMLElement): string[] {
   return [...host.querySelectorAll('[data-add-verify]')].map(el => el.getAttribute('data-add-verify')!)
 }
 
+const refreshSpy = vi.fn(async () => undefined)
 Object.assign(globalThis, {
   useFetch: (url: string) => ({
     data: url === '/api/sites/preview' ? reads.preview : reads.properties,
     status: reads.status,
-    refresh: vi.fn(async () => undefined),
+    refresh: url === '/api/sites/preview' ? vi.fn(async () => undefined) : refreshSpy,
   }),
   useUserSession: () => ({ session: ref({ gscEmail: 'agent@example.com' }) }),
   $fetch: post,
@@ -39,10 +40,10 @@ Object.assign(globalThis, {
 
 const apps: ReturnType<typeof createApp>[] = []
 
-function mount(onBlocked = vi.fn(), { suspense = true, targetUrl = undefined as string | undefined } = {}) {
+function mount(onBlocked = vi.fn(), { suspense = true, targetUrl = undefined as string | undefined, onUnblocked = vi.fn() } = {}) {
   const host = document.createElement('div')
   document.body.appendChild(host)
-  const form = () => h(ProSiteAddForm, { gscReturnTo: '/pro/dashboard/onboarding?step=sites', onBlocked, targetUrl })
+  const form = () => h(ProSiteAddForm, { gscReturnTo: '/pro/dashboard/onboarding?step=sites', onBlocked, onUnblocked, targetUrl })
   const app = createApp({
     render: () => suspense ? h(Suspense, null, { default: form }) : form(),
   })
@@ -97,6 +98,7 @@ async function flush() {
 
 beforeEach(() => {
   post.mockReset()
+  refreshSpy.mockReset()
   reads.preview.value = { sites: [], siteAllowance: { _tag: 'Uncapped' } }
   reads.status.value = 'success'
   toast = { add: vi.fn() }
@@ -293,5 +295,33 @@ describe('connect a Site', () => {
 
     expect(host.querySelector('[data-testid="gsc-property-filter"]')).toBeNull()
     expect(host.querySelectorAll('[data-testid="gsc-property"]')).toHaveLength(8)
+  })
+
+  it('does not block onboarding while gscdump is provisioning, polls automatically, and emits unblocked when properties arrive', async () => {
+    vi.useFakeTimers()
+    try {
+      reads.properties.value = { connected: true, properties: [], error: { reason: 'USER_PROVISIONING', message: 'Preparing your Search Console workspace.' } }
+      const onBlocked = vi.fn()
+      const onUnblocked = vi.fn()
+
+      const host = mount(onBlocked, { onUnblocked })
+      await vi.advanceTimersByTimeAsync(10)
+
+      expect(host.textContent).toContain('Search Console setup is in progress')
+      expect(onBlocked).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(3100)
+      expect(refreshSpy).toHaveBeenCalledTimes(1)
+
+      reads.properties.value = { connected: true, properties: [{ siteUrl: 'sc-domain:ready.dev', permissionLevel: 'siteOwner' }] }
+      await vi.advanceTimersByTimeAsync(10)
+
+      expect(onBlocked).not.toHaveBeenCalled()
+      expect(onUnblocked).toHaveBeenCalled()
+      expect(host.querySelectorAll('[data-testid="gsc-property"]')).toHaveLength(1)
+    }
+    finally {
+      vi.useRealTimers()
+    }
   })
 })

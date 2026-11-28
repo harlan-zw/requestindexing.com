@@ -1,12 +1,13 @@
 <script setup lang="ts">
+import type { AgentSetupRoute } from '#layers/pro-gsc/shared/agent-setup'
 import ProShellOnboardingFrame from '@nuxtseo/pro-shell/app/components/ProShellOnboardingFrame.vue'
 import { useProShellCopy } from '@nuxtseo/pro-shell/app/composables/useProShellCopy'
 import { useProShellOnboardingFlow, useProShellOnboardingSteps } from '@nuxtseo/pro-shell/app/composables/useProShellOnboarding'
 import { REQUEST_HONOUR } from '@nuxtseo/pro-shell/shared/onboarding'
 import { getAppFetch } from '~~/layers/core/app/utils/app-fetch'
 import ProSetupFirstSiteReport from '~~/layers/indexing/app/components/ProSetupFirstSiteReport.vue'
-import ProOnboardingStepGuide from '~~/layers/pro-saas/app/components/pro/ProOnboardingStepGuide.vue'
 
+import ProOnboardingStepGuide from '~~/layers/pro-saas/app/components/pro/ProOnboardingStepGuide.vue'
 import { FIRST_REPORT_COPY } from '#layers/indexing/shared/first-report'
 import { parseAgentSetupRoute } from '#layers/pro-gsc/shared/agent-setup'
 import { parseGscConnectReturn } from '#layers/pro-gsc/shared/gsc-grant'
@@ -128,6 +129,22 @@ watch(() => route.query.agent, (value) => {
     agent.value = parsed
 })
 
+function recordAgentObservation(body: { type: 'agent_setup_skipped' } | { type: 'agent_setup_selected', agent: AgentSetupRoute }) {
+  // Best-effort onboarding choice telemetry; must never block wizard navigation.
+  void getAppFetch()('/api/pro/onboarding/observation', { method: 'POST', body }).catch(() => {})
+}
+
+function handleAgentSkip(skip: () => void) {
+  recordAgentObservation({ type: 'agent_setup_skipped' })
+  skip()
+}
+
+function handleAgentNext(next: () => void) {
+  if (agent.value)
+    recordAgentObservation({ type: 'agent_setup_selected', agent: agent.value })
+  next()
+}
+
 const returnToSites = computed(() => onboardingConnectReturnTo(agent.value))
 // Read-only, as nuxtseo.com's setup asks: every setup step works with it, and
 // Google's consent screen then lists one Search Console line instead of three.
@@ -154,8 +171,8 @@ useSeoMeta({ title: 'Set up Request Indexing' })
         v-model:agent="agent"
         :title="step.copy.title"
         :description="step.copy.description"
-        @skip="controls.skip()"
-        @next="controls.next()"
+        @skip="handleAgentSkip(controls.skip)"
+        @next="handleAgentNext(controls.next)"
       />
     </template>
 
@@ -231,7 +248,7 @@ useSeoMeta({ title: 'Set up Request Indexing' })
     <template #step-sites="{ step, controls }">
       <div class="space-y-5">
         <UiAuthHeading size="md" :title="step.copy.title" :description="step.copy.description" />
-        <ProSiteAddForm :gsc-return-to="returnToSites" @changed="siteCount = $event" @blocked="sitesBlocked = true" />
+        <ProSiteAddForm :gsc-return-to="returnToSites" @changed="siteCount = $event" @blocked="sitesBlocked = true" @unblocked="sitesBlocked = false" />
         <p v-if="step.skippable" class="flex flex-wrap items-center gap-x-1 text-sm text-muted">
           Can't connect your Site right now?
           <UButton
