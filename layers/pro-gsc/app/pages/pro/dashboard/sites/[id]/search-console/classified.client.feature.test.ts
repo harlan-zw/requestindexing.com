@@ -1,3 +1,5 @@
+import type { GscComparisonCoverageState } from '#layers/pro-gsc/app/composables/useGscComparisonCoverage'
+import type { GscdumpDataDetailResponse } from '#layers/pro-gsc/shared/gscdump-api'
 import { afterEach, expect, it, vi } from 'vitest'
 import { computed, createApp, defineComponent, effectScope, h, nextTick, reactive, ref, toValue, watchEffect } from 'vue'
 import { periodToDateRange } from '#layers/pro-gsc/app/composables/useGscPeriod'
@@ -13,6 +15,16 @@ const clear = vi.fn(() => {
   googleSlice.value = null
 })
 const row = { queryCanonical: 'example', clicks: 20, impressions: 100, ctr: 0.2, position: 2, variantCount: 2 }
+const activePeriod = { clicks: 20, impressions: 100, ctr: 0.2, position: 2 }
+const emptyPeriod = { clicks: 0, impressions: 0, ctr: 0, position: 0 }
+const recordedDates = ref<GscdumpDataDetailResponse['daily']>([])
+const recordedPeriod = ref(activePeriod)
+const previousDates = ref<GscdumpDataDetailResponse['daily'] | null>(null)
+const previousPeriod = ref<typeof emptyPeriod | null>(null)
+const comparisonCoverage = ref<GscComparisonCoverageState>('off')
+const syncComplete = ref(true)
+const dateReadStatus = ref<'pending' | 'success' | 'empty' | 'error'>('success')
+const dateReadError = ref<Error | null>(null)
 const queryRows = ref<any[]>([row])
 const route = reactive({ path: '/pro/dashboard/sites/one/search-console', params: { keyword: 'example' }, query: {} as Record<string, string> })
 const states = new Map<string, ReturnType<typeof ref>>()
@@ -41,7 +53,7 @@ vi.mock('#components', () => ({
   UiSparkline: defineComponent({ render: () => h('span') }),
 }))
 vi.mock('#layers/pro-gsc/app/components/overview/ProSiteSetupOffers.vue', () => ({ default: defineComponent({ render: () => h('div') }) }))
-vi.mock('#layers/pro-gsc/app/components/pro/ProCardGsc.vue', () => ({ default: defineComponent({ render: () => h('div') }) }))
+vi.mock('#layers/pro-gsc/app/components/pro/ProCardGsc.vue', () => ({ default: defineComponent({ render: () => h('div', { 'aria-label': 'Search performance chart' }) }) }))
 vi.mock('#layers/pro-gsc/app/components/pro/ProGscReadError.vue', () => ({ default: defineComponent({ render: () => h('div') }) }))
 vi.mock('#layers/pro-gsc/app/components/pro/ProGscSurfaceBar.vue', () => ({ default: defineComponent({ render: () => h('div') }) }))
 vi.mock('#layers/pro-gsc/app/internal/components/pro/ProSparklineCell.vue', () => ({ default: defineComponent({ render: () => h('span', { 'data-spark': '' }) }) }))
@@ -69,7 +81,12 @@ vi.mock('#layers/pro-gsc/app/composables/useProGscdump', () => ({
       if (toValue(site) && toValue(opts?.filter))
         reads.calls.push('daily')
     })
-    return { data: ref({ dates: [], period: { clicks: 20, impressions: 100, ctr: 0.2, position: 2 } }), status: ref('success'), error: ref(null) }
+    return {
+      data: computed(() => ({ dates: recordedDates.value, period: recordedPeriod.value, prevDates: previousDates.value, prevPeriod: previousPeriod.value })),
+      coverage: { state: comparisonCoverage },
+      status: dateReadStatus,
+      error: dateReadError,
+    }
   },
   useProGscdumpTableData: (opts: any) => {
     watchEffect(() => {
@@ -101,7 +118,7 @@ Object.assign(globalThis, {
   toValue,
   useNuxtQuery: () => ({ data: ref(null) }),
   useTeamPolicy: () => ({ can: () => true }),
-  useSite: () => ({ siteId: ref('one'), site: ref({ url: 'https://example.com', teamId: 1 }), siteName: ref('example.com'), siteStatus: ref('success'), gscdumpSiteId: ref('s_engine'), isProcessing: ref(false), isReady: ref(true), isNotConnected: ref(false), isLifecycleSettled: ref(true), hold: ref(null), gscData: ref({}), gscStatusError: ref(null) }),
+  useSite: () => ({ siteId: ref('one'), site: ref({ url: 'https://example.com', teamId: 1 }), siteName: ref('example.com'), siteStatus: ref('success'), gscdumpSiteId: ref('s_engine'), isProcessing: ref(false), isReady: ref(true), isFullySynced: syncComplete, isNotConnected: ref(false), isLifecycleSettled: ref(true), hold: ref(null), gscData: ref({}), gscStatusError: ref(null) }),
 })
 const apps: ReturnType<typeof createApp>[] = []
 function mount(component: any) {
@@ -110,9 +127,9 @@ function mount(component: any) {
   const app = createApp(component)
   app.config.warnHandler = () => {}
   const passthrough = defineComponent({ props: ['title', 'label'], setup: (props, { slots }) => () => h('div', [props.title, props.label, slots.default?.(), slots.action?.(), slots.text?.()]) })
-  for (const name of ['UiAlert', 'ProPageZone', 'ProSectionHeader', 'UiSectionHeader', 'UiTooltip', 'UiTableShell', 'UiTableTh', 'UiTableTd']) app.component(name, passthrough)
+  for (const name of ['UiAlert', 'UiEmptyState', 'ProPageZone', 'ProSectionHeader', 'UiSectionHeader', 'UiTooltip', 'UiTableShell', 'UiTableTh', 'UiTableTd']) app.component(name, passthrough)
   app.component('UiEntitySummary', defineComponent({ props: ['value', 'tooltipDescription'], setup: (p, { slots }) => () => h('div', { 'data-summary': '', 'data-description': p.tooltipDescription }, [slots.heading?.(), p.value]) }))
-  app.component('UiButton', defineComponent({ setup: (_, { slots }) => () => h('button', slots.default?.()) }))
+  app.component('UiButton', defineComponent({ props: ['to'], setup: (p, { slots }) => () => p.to ? h('a', { href: p.to }, slots.default?.()) : h('button', slots.default?.()) }))
   app.component('NuxtLink', defineComponent({ props: ['to'], setup: (p, { slots }) => () => h('a', { href: p.to }, slots.default?.()) }))
   app.component('UiPopover', defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) }))
   app.component('ULink', defineComponent({ props: ['to'], setup: (p, { slots }) => () => h('a', { href: p.to }, slots.default?.()) }))
@@ -127,6 +144,14 @@ afterEach(() => {
   reads.calls = []
   googleSlice.value = { searchType: 'web', googleBrand: 'BRANDED', countries: [], devices: [] }
   clear.mockClear()
+  recordedDates.value = []
+  recordedPeriod.value = activePeriod
+  previousDates.value = null
+  previousPeriod.value = null
+  comparisonCoverage.value = 'off'
+  syncComplete.value = true
+  dateReadStatus.value = 'success'
+  dateReadError.value = null
   queryRows.value = [row]
   detailScopes.splice(0).forEach(scope => scope.stop())
   states.clear()
@@ -135,6 +160,53 @@ afterEach(() => {
   route.path = '/pro/dashboard/sites/one/search-console'
   readRows.mockClear()
   readRecorded.mockClear()
+})
+
+it.each([
+  { label: 'no daily rows', daily: [] },
+  { label: 'zero-filled daily rows', daily: [{ date: '2026-10-20', ...emptyPeriod }] },
+])('shows one indexing action for a successful empty Web Search period with $label', async ({ daily }) => {
+  googleSlice.value = null
+  recordedDates.value = daily
+  recordedPeriod.value = emptyPeriod
+  dateReadStatus.value = daily.length ? 'success' : 'empty'
+  const host = mount(Overview)
+  await nextTick()
+  expect(host.textContent).toContain('No search activity in this period')
+  expect(host.querySelector('a[href="/pro/dashboard/sites/one/indexing"]')?.textContent?.trim()).toBe('Check indexing')
+  expect(host.querySelector('[aria-label="Search performance chart"]')).toBeNull()
+  expect(host.textContent).not.toContain('Search Queries')
+})
+
+it('keeps the report while comparison resolves or still has activity', async () => {
+  googleSlice.value = null
+  recordedPeriod.value = emptyPeriod
+  dateReadStatus.value = 'empty'
+  comparisonCoverage.value = 'checking'
+  const host = mount(Overview)
+  await nextTick()
+  expect(host.querySelector('[aria-label="Search performance chart"]')).not.toBeNull()
+  comparisonCoverage.value = 'allowed'
+  previousDates.value = [{ date: '2026-09-20', ...activePeriod }]
+  previousPeriod.value = activePeriod
+  await nextTick()
+  expect(host.querySelector('[aria-label="Search performance chart"]')).not.toBeNull()
+  previousDates.value = []
+  previousPeriod.value = emptyPeriod
+  await nextTick()
+  expect(host.textContent).toContain('No search activity in this period')
+})
+
+it.each(['loading', 'failed', 'filtered', 'syncing', 'impressions only'])('keeps the report for a %s read', async (state) => {
+  googleSlice.value = state === 'filtered' ? googleSlice.value : null
+  recordedPeriod.value = state === 'impressions only' ? { ...emptyPeriod, impressions: 7 } : emptyPeriod
+  dateReadStatus.value = state === 'loading' ? 'pending' : state === 'failed' ? 'error' : 'success'
+  dateReadError.value = state === 'failed' ? new Error('Could not load report') : null
+  syncComplete.value = state !== 'syncing'
+  const host = mount(Overview)
+  await nextTick()
+  expect(host.querySelector('[aria-label="Search performance chart"]')).not.toBeNull()
+  expect(host.textContent).not.toContain('No search activity in this period')
 })
 
 it.each([

@@ -23,6 +23,7 @@ import ProNoPropertyNotice from '#layers/pro-saas/app/components/pro/ProNoProper
 
 definePageMeta({
   layout: 'pro-dashboard',
+  settingsRail: true,
   title: 'Integrations',
   icon: 'i-lucide-plug',
 })

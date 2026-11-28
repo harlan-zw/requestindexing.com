@@ -155,7 +155,7 @@ beforeEach(() => {
   setup.indexNow.mockReset().mockResolvedValue(INDEXNOW_VERIFIED)
   setup.watched.mockReset().mockResolvedValue(WATCHING_ONE)
   setup.openFeedback.mockReset()
-  vi.stubGlobal('useSite', () => ({ siteId: routeId, site: ref({ url: 'https://example.com' }), siteStatus, gscdumpSiteId: engineId, isProcessing: ref(false), isReady: ready, isNotConnected: demo, isLifecycleSettled: ref(true), hold: ref(false), gscData: ref(null), gscStatusError: ref(null), refreshGscStatus: vi.fn() }))
+  vi.stubGlobal('useSite', () => ({ siteId: routeId, site: ref({ url: 'https://example.com' }), siteStatus, gscdumpSiteId: engineId, isProcessing: ref(false), isReady: ready, isFullySynced: ready, isNotConnected: demo, isLifecycleSettled: ref(true), hold: ref(false), gscData: ref(null), gscStatusError: ref(null), refreshGscStatus: vi.fn() }))
   vi.stubGlobal('useFetch', () => {
     demoReads()
     return { data: ref(null) }

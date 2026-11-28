@@ -14,19 +14,23 @@ type WatchedRecord = GscdumpV1OperationResponse<'partner.sites.indexing.watched.
  * gscdump id, never its app id. The dashboard home passes its first linked
  * Site, and a Site's page passes itself.
  *
- * A Team role that cannot write sets up neither one, so it triggers no read.
- * A failed read hides only its own offer. Both reads are client-only.
+ * A Team role that cannot write sets up neither one. The dashboard can still
+ * share the IndexNow read with its source card to show the connection status.
  */
-export function useProSetupSiteReads(gscdumpSiteId: MaybeRefOrGetter<string | null | undefined>) {
+export function useProSetupSiteReads(
+  gscdumpSiteId: MaybeRefOrGetter<string | null | undefined>,
+  { showIndexNowStatus = false }: { showIndexNowStatus?: boolean } = {},
+) {
   const { caller, isAdmin } = useCaller()
   const teamPolicy = useTeamPolicy(() => caller.value?.currentTeamId)
   const canWrite = computed(() => isAdmin.value || teamPolicy.can('write-data'))
   const linkedSiteId = computed(() => toValue(gscdumpSiteId) || undefined)
   const readSiteId = computed(() => caller.value && canWrite.value ? linkedSiteId.value : undefined)
+  const indexNowSiteId = computed(() => caller.value && (showIndexNowStatus || canWrite.value) ? linkedSiteId.value : undefined)
 
   const indexNow = useGscdumpQuery<IndexNowConnection>(
-    () => `setup-offers:indexnow:${readSiteId.value ?? ''}`,
-    readSiteId,
+    () => `setup-offers:indexnow:${indexNowSiteId.value ?? ''}`,
+    indexNowSiteId,
     (id, client) => client.getSiteIndexNowConnection({ params: { siteId: id } }, true),
     [],
   )
@@ -53,6 +57,7 @@ export function useProSetupSiteReads(gscdumpSiteId: MaybeRefOrGetter<string | nu
 
   return {
     indexNow: computed(() => indexNowSetupCompletion(siteRead(indexNow))),
+    indexNowConnection: computed(() => indexNow.status.value === 'success' ? indexNow.data.value ?? null : null),
     watchedUrls: computed(() => watchedUrlsSetupCompletion(siteRead(watched))),
   }
 }

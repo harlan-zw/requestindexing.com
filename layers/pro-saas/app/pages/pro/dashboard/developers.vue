@@ -26,6 +26,7 @@ import { CONNECT_SITE_ROUTE } from '#layers/pro-saas/shared/onboarding'
 // until the reader leaves the page.
 definePageMeta({
   layout: 'pro-dashboard',
+  settingsRail: true,
   title: 'Developers',
   icon: 'i-heroicons-command-line',
 })
