@@ -33,7 +33,7 @@ If you manage several properties, the [feature list](https://seogets.com/feature
 
 ## Request Indexing's scope and limits
 
-Request Indexing's [source is MIT licensed](https://github.com/harlan-zw/requestindexing.com/blob/main/LICENSE). It is free during beta within your Free allowance, which gscdump sets and enforces. Through gscdump, it inspects sitemap URLs with URL Inspection, keeps 28-day verdict changes and Watched URLs, retains Search Console history past Google's 16-month window within your Free allowance, and sends new and changed sitemap URLs to Bing and other engines with IndexNow once you verify a key file.
+Request Indexing's [source is MIT licensed](https://github.com/harlan-zw/requestindexing.com/blob/main/LICENSE). You can start free within your Free allowance, which gscdump sets and enforces. Through gscdump, it inspects sitemap URLs with URL Inspection, keeps 28-day verdict changes and Watched URLs, retains Search Console history past Google's 16-month window within your Free allowance, and sends new and changed sitemap URLs to Bing and other engines with IndexNow once you verify a key file.
 
 This comparison did not confirm an unlimited row allowance or a hosted retention SLA for Request Indexing. Its Google Indexing API limit (5 Submissions a day per Site, 7-day wait per accepted URL) also differs from Google's project quotas. If request volume affects your choice, read [which quota applies to you](/google-indexing-api-quota).
 

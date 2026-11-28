@@ -88,7 +88,7 @@ Use URL Inspection for the status Google stored.
 
 ## Request Indexing
 
-[Request Indexing](https://requestindexing.com) is an open source, MIT licensed web app. It is free during beta within your Free allowance.
+[Request Indexing](https://requestindexing.com) is an open source, MIT licensed web app. Start free within your Free allowance.
 Sign in with Google to read your Search Console properties.
 The dashboard reads Google's URL Inspection verdicts across your sitemaps, tracks Watched URLs, verifies an IndexNow key with optional Automatic sending for new and changed sitemap URLs, and submits eligible URLs to the Google Indexing API (up to 5 per day per Site, with a 7-day wait after Google accepts a URL).
 A Submission is a notification accepted by Google or IndexNow. It is not evidence that a page is indexed.

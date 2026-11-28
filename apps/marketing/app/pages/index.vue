@@ -33,7 +33,7 @@ const faqItems = [
   {
     label: 'What does it cost?',
     icon: 'i-heroicons-banknotes',
-    content: 'Free, with a Free allowance. No card needed.',
+    content: 'Start free, within your Free allowance. No card needed.',
   },
   {
     label: 'Can I see the code?',
@@ -228,7 +228,7 @@ const linkClass = 'underline decoration-primary/30 underline-offset-4 hover:deco
             <div class="text-pretty mx-auto max-w-[50rem] xl:col-span-7 xl:ml-0 mb-10 xl:mb-0 flex flex-col justify-center">
               <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 text-primary px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] mb-6 mx-auto lg:mx-0 self-center lg:self-start">
                 <span class="size-1.5 rounded-full bg-primary animate-pulse" />
-                Free during beta &middot; Open source
+                Start free &middot; Open source
               </div>
               <h1 class="font-title font-bold leading-[0.98] tracking-[-0.045em] text-default text-center text-6xl sm:text-7xl lg:text-left lg:text-[5rem] xl:text-[6rem] mb-6">
                 Get your pages <span class="italic text-primary">indexed</span>.

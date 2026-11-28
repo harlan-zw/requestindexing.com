@@ -184,7 +184,7 @@ export default defineNuxtConfig({
   site: {
     url: 'https://requestindexing.com',
     name: 'Request Indexing',
-    description: 'Monitor and request Google indexing for your pages',
+    description: 'See which pages Google indexed, read the reason for the rest, and send updates with IndexNow.',
     defaultLocale: 'en',
     indexable: true,
   },
