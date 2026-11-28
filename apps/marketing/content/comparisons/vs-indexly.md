@@ -37,7 +37,7 @@ Its [MIT licensed source](https://github.com/harlan-zw/requestindexing.com/blob/
 | How many requests can I send? | Each tool's own limit, and Google's project quota |
 | Will a notification prove indexing? | No. Check index status separately, for example with the free [Google Index Checker](/tools/google-indexing-checker) |
 
-Request Indexing is free during beta. Its Submission limit applies to each Site and is separate from Google's quota; [the quota guide](/google-indexing-api-quota) explains which limit applies. For Indexly's billing options, see its [pricing page](https://indexly.ai/pricing), and check the billing interval and included features before you pick a plan.
+You can start free on Request Indexing within your Free allowance. Its Submission limit applies to each Site and is separate from Google's quota; [the quota guide](/google-indexing-api-quota) explains which limit applies. For Indexly's billing options, see its [pricing page](https://indexly.ai/pricing), and check the billing interval and included features before you pick a plan.
 
 ## Check your content type first
 

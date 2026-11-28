@@ -5,7 +5,7 @@
  * can change, and how to take the access back.
  */
 export const GSC_CONNECT_COPY = {
-  signupDescription: 'See which pages Google indexed and why others are missing. Free during beta.',
+  signupDescription: 'See which pages Google indexed and why others are missing. Start free.',
   /** COPY.md "Search Console read access". The saved-page setup uses it too. */
   readAccess: 'Setup asks for read-only Search Console access. If an action needs more access, we ask then.',
   /** COPY.md Truth rules, the Search Console access sentence, verbatim. */

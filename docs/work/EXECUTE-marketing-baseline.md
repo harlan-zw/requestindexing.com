@@ -37,7 +37,7 @@ Done means: the home page, onboarding emails, and listing text in production mat
 - [x] Tone fixes the audit found: "Google is deleting your data.", "No dark arts.", the "Instant" tag, "The complete Google Indexing API guide" (#420); "low domain authority" folklore on the tool pages (#439)
 - [x] `/tools` closing action leads with Google's reason and IndexNow, not the Indexing API (#439)
 - [x] Privacy page: name the first-touch cookie, gscdump, DataForSEO, and Postmark next to Fathom (#439)
-- [ ] "Free during beta" or "Free, with a Free allowance": one phrase across every surface
+- [x] Pricing phrase unified to "Start free" (with "within your Free allowance" where scope applies)
 
 ## Log
 

@@ -52,7 +52,7 @@ export const ONBOARDING_STEP_GUIDES: Record<OnboardingStep, OnboardingStepGuide>
       // COPY.md, Truth rules, the Search Console access sentence, verbatim.
       GSC_CONNECT_COPY.changes,
       // COPY.md, Landing page assets, FAQ 5, verbatim.
-      'Free, with a Free allowance. No card needed.',
+      'Start free, within your Free allowance. No card needed.',
     ],
   },
   // What a Site gives: Google's reason for a URL it left out. The state is

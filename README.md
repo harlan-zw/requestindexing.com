@@ -11,7 +11,7 @@ Search Console data and multi-engine submission, in one small app.
 <td align="center">
 <img alt="" width="800" height="0" /><br>
 <i></i> <a href="https://requestindexing.com/">requestindexing.com</a> <br>
-<sup>MIT · Cloudflare-native · free during beta</sup><br>
+<sup>MIT · Cloudflare-native · start free</sup><br>
 <sub>Built by <a href="https://harlanzw.com">Harlan Wilton</a> · maintainer of <a href="https://nuxtseo.com">Nuxt SEO</a><br> Follow <a href="https://twitter.com/harlan_zw">@harlan_zw</a> · Join <a href="https://discord.gg/275MBUBvgP">Discord</a></sub><br>
 <img alt="" width="800" height="0" />
 </td>
@@ -20,7 +20,7 @@ Search Console data and multi-engine submission, in one small app.
 </p>
 
 > [!NOTE]
-> Free during beta. See [VISION.md](./VISION.md) for what this is and, more importantly, what it is not.
+> Start free within your Free allowance. See [VISION.md](./VISION.md) for what this is and, more importantly, what it is not.
 
 Connect Search Console, see which pages are indexed and which are not, and submit the ones that need it.
 

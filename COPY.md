@@ -22,7 +22,7 @@ These exact strings. Do not paraphrase them per page.
 | Landing H1 | Get your pages indexed. | `apps/marketing/app/pages/index.vue`; reuses the tagline |
 | Partial Search Console sync status | `Partially synced` | Cached partial sync fallback in the Site list; authoritative lifecycle takes precedence |
 | Partial Search Console sync detail | Some Search Console sync jobs failed. | Site overview tooltip; does not assert data availability |
-| Site description | Monitor and request Google indexing for your pages | `nuxt.config.ts` site description, which feeds every page's meta description |
+| Site description | See which pages Google indexed, read the reason for the rest, and send updates with IndexNow. | `nuxt.config.ts` site description, which feeds every page's fallback meta description |
 | Landing meta title | Request Google Indexing and See Why Pages Are Not Indexed | `apps/marketing/app/pages/index.vue`; `app.vue` appends ` · Request Indexing` |
 | Landing meta description | Request Google indexing for your pages, then see which URLs Google has indexed, which it has not, and the reason it gives. Free and open source. | the landing page only |
 | Agent link | Use an AI agent: gscdump | public footer, links to gscdump.com/mcp. Outside onboarding, agent users go to gscdump (MARKETING.md, Boundary with gscdump). Agent setup stays in onboarding, and the Developers page stays inside the dashboard |
@@ -44,7 +44,7 @@ plan's words. No other string repeats it.
 
 | Asset | String |
 | --- | --- |
-| Hero badge | Free during beta · Open source |
+| Hero badge | Start free · Open source |
 | Hero sub-headline | Send new and changed pages to Bing and other search engines with IndexNow, automatically once your key is verified. For Google, see which pages it indexed, and the reason it gives for the rest. |
 | Hero limit line | Nobody can force Google to index a page. Request Indexing shows what Google decided, and why. |
 | Primary action, signed out | Get started free. Links to `/pro/onboarding`. A phone shows "Get started". The closing action uses the same label |
@@ -96,7 +96,7 @@ plan's words. No other string repeats it.
 | FAQ 2 | Why is my whole Site not indexed? · Start with the stage where most URLs stop. The Why pages stop card on your Indexing page names it. If Google does not know the URLs, add a sitemap and link to them from your home page. |
 | FAQ 3 | Is it safe for my Google account? · Request Indexing uses Google's public APIs, your own Google sign-in, and Google's published limits. |
 | FAQ 4 | Does the Indexing API work for blog posts? · Google documents it for job posting and livestream pages only. Use URL Inspection or a sitemap for other pages. IndexNow takes any page type, for Bing and other participating search engines. |
-| FAQ 5 | What does it cost? · Free, with a Free allowance. No card needed. |
+| FAQ 5 | What does it cost? · Start free, within your Free allowance. No card needed. |
 | FAQ 6 | Can I see the code? · Yes. The whole project is on GitHub under the MIT license. Read it, fork it, or build your own version. |
 | Closing action | Find out which of your pages Google has indexed · Free and open source. · Get started free · View on GitHub |
 | Guides menu, Indexing API guide | API Overview. The header guides menu, linking `/google-indexing-api` |
@@ -664,7 +664,7 @@ changes. The step has no disclosure rows. Strings live in `layers/pro-saas/share
 
 | Asset | String |
 | --- | --- |
-| Signup description | See which pages Google indexed and why others are missing. Free during beta. |
+| Signup description | See which pages Google indexed and why others are missing. Start free. |
 | Consent preview lead | Google will ask you to allow |
 | Consent preview chip | Read-only |
 | Consent preview scope | View Search Console data for your verified sites. Google's own description of the `webmasters.readonly` scope, verbatim, from Google's OAuth 2.0 scopes page. Change it only when Google does |
@@ -1121,14 +1121,11 @@ Harlan's global writing rules already apply and are not repeated here: no em das
 Wording calls this file does not settle. Add one here, resolve it, fold the answer into the
 section above, then delete it from this list.
 
-2. **Three descriptions of the product ship.** The site description, the landing meta
-   description, and the README second sentence describe Request Indexing three ways, and only
-   the README mentions multi-engine. Decide which is canonical for a one-sentence slot.
-3. **No support channel is named here.** The account shell's "Get help" menu links an email
+1. **No support channel is named here.** The account shell's "Get help" menu links an email
    address, Discord, and GitHub issues, but this file names none of them as the product's
    support channel. Refusal and hold copy carries no contact line until one is chosen and
    recorded as a canonical asset.
-4. **The account deletion assets were written without a review.** They replaced "We revoke your
+2. **The account deletion assets were written without a review.** They replaced "We revoke your
    Google account tokens", which was false (UX replay N1). The blast radius is nuxtseo.com's
    sentence with Team and Site in place of workspace and site. Confirm the four strings, or
    change them here first.
