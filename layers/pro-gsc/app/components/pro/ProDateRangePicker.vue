@@ -117,7 +117,7 @@ function selectPeriod(p: Period) {
       >
         <span
           class="size-1.5 rounded-full shrink-0"
-          :class="compareMode === 'year' ? periodVizColors.current.dot : periodVizColors.comparison.dot"
+          :style="{ backgroundColor: compareMode === 'year' ? periodVizColors.current.color : periodVizColors.comparison.color }"
           aria-hidden="true"
         />
         vs {{ compareMode === 'year' ? 'YoY' : 'prev' }}

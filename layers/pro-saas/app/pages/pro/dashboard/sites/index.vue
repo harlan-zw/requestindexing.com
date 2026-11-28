@@ -267,7 +267,7 @@ async function removeSite() {
         <div class="w-full sm:w-64">
           <UiInput
             :model-value="searchQuery"
-            icon="search"
+            leading-icon="search"
             placeholder="Search Sites..."
             aria-label="Search Sites"
             autocomplete="off"
