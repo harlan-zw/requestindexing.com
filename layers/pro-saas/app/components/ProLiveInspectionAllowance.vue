@@ -18,7 +18,7 @@ const meter = computed(() => data.value?.allowance._tag === 'Metered'
 <template>
   <div class="border-t border-default px-4 py-3 text-sm">
     <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-      <span>Free allowance<span v-if="meter" class="ms-2 font-mono tabular-nums">{{ meter.value }}</span></span>
+      <span>Free allowance<span v-if="meter" class="ms-2 tabular-nums">{{ meter.value }}</span></span>
       <NuxtLink to="/pro/dashboard/usage" class="text-primary hover:underline">
         Usage
       </NuxtLink>

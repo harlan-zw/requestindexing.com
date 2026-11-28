@@ -2,7 +2,7 @@
 import type { RejectionClusterRow } from '#layers/indexing/app/utils/indexing-rejection-clusters'
 import { withQuery } from 'ufo'
 import { computed } from 'vue'
-import { NuxtLink, UiButton, UiSkeleton } from '#components'
+import { NuxtLink, UiButton, UiChartSkeleton } from '#components'
 import { clusterRejectedUrls } from '#layers/indexing/app/utils/indexing-rejection-clusters'
 
 // Refused URLs, grouped by route family.
@@ -49,9 +49,7 @@ function clusterTo(pathPattern: string): string {
       </NuxtLink>
     </div>
 
-    <div v-if="loading" class="space-y-1.5">
-      <UiSkeleton v-for="index in 3" :key="index" type="block" class="h-6 w-full rounded-md" />
-    </div>
+    <UiChartSkeleton v-if="loading" variant="wash" :height="120" />
 
     <div v-else-if="failed" class="flex flex-wrap items-center justify-between gap-3">
       <p class="text-sm text-muted">
@@ -67,7 +65,7 @@ function clusterTo(pathPattern: string): string {
         <li v-for="cluster in report.clusters" :key="cluster.pathPattern">
           <NuxtLink
             :to="clusterTo(cluster.pathPattern)"
-            class="relative flex min-h-11 items-center gap-2.5 overflow-hidden rounded-md px-2 py-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:min-h-0"
+            class="relative flex min-h-11 items-center gap-2.5 overflow-hidden rounded-md px-2 py-1 transition-colors hover:bg-elevated/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:min-h-0"
           >
             <span
               class="absolute inset-y-0 left-0 rounded-md bg-accented/50"

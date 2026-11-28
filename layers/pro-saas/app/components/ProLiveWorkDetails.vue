@@ -20,7 +20,7 @@ defineProps<{ work: LiveWork<SiteFleetRow>[], showNames: boolean }>()
               <span class="size-1.5 shrink-0 rounded-full" :class="activity.phase === 'running' ? 'bg-primary motion-safe:animate-pulse' : activity.phase === 'paused' ? 'bg-warning' : 'bg-dimmed'" aria-hidden="true" />
               <span>{{ activity.label }}</span>
               <UProgress v-if="activity.percent != null" :model-value="activity.percent" :aria-label="activity.label" size="xs" class="max-w-14" />
-              <span v-if="activity.percent != null" class="font-mono text-muted tabular-nums">{{ activity.percent }}%</span>
+              <span v-if="activity.percent != null" class="text-muted tabular-nums">{{ activity.percent }}%</span>
             </div>
             <p v-if="activity.source === 'search-console' && site.syncedRange.oldest && site.syncedRange.newest" class="mt-1 ps-3.5 text-xs text-muted">
               {{ site.syncedRange.oldest }} to {{ site.syncedRange.newest }} synced

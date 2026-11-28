@@ -1,19 +1,31 @@
 import type { App } from 'vue'
+import UiChartFrame from '@nuxtseo/design-system/app/components/data/UiChartFrame.vue'
 import { gscMetricColors } from '@nuxtseo/design-system/app/composables/dataVizColors'
 import { calcTrendPercent } from '@nuxtseo/design-system/app/composables/formatting'
 import { afterEach, expect, it, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, onMounted, ref, useId } from 'vue'
 import ProCardGsc from './ProCardGsc.vue'
 
-vi.mock('../../composables/useProGscFilters', () => ({ useProGscFilters: () => ({ period: ref('7d'), compareMode: ref('previous'), stableData: ref(false) }) }))
-vi.mock('motion-v', async (importOriginal) => {
-  const original = await importOriginal<typeof import('motion-v')>()
-  const pass = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
-  return { ...original, AnimatePresence: pass, motion: { div: pass } }
+vi.mock('../../composables/useProGscFilters', async () => {
+  const { ref } = await import('vue')
+  return { useProGscFilters: () => ({ period: ref('7d'), compareMode: ref('previous'), stableData: ref(false) }) }
 })
-vi.mock('#components', () => {
+vi.mock('motion-v', async (importOriginal) => {
+  const [{ defineComponent, h, ref }, original] = await Promise.all([
+    import('vue'),
+    importOriginal<typeof import('motion-v')>(),
+  ])
   const pass = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
-  return { ClientOnly: pass, UiButton: pass, UiIcon: pass, UiSkeleton: pass }
+  return { ...original, AnimatePresence: pass, motion: { div: pass }, useReducedMotion: () => ref(true) }
+})
+vi.mock('#components', async () => {
+  const [{ defineComponent, h }, { default: UiChartBrushOverlay }, { default: UiChartTooltip }] = await Promise.all([
+    import('vue'),
+    import('@nuxtseo/design-system/app/components/data/UiChartBrushOverlay.vue'),
+    import('@nuxtseo/design-system/app/components/data/UiChartTooltip.vue'),
+  ])
+  const pass = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
+  return { ClientOnly: pass, UiButton: pass, UiChartAnnotations: pass, UiChartBrushOverlay, UiChartDataReveal: pass, UiChartSkeleton: pass, UiChartTooltip, UiIcon: pass, UiSkeleton: pass }
 })
 // Replace SVG layout only. The real shared chart supplies the tick values and formatter.
 vi.mock('@unovis/vue', () => {
@@ -50,32 +62,31 @@ it('keeps seven reporting days aligned across axis, hover, comparison, drag and 
   app = createApp({ setup: () => () => h(ProCardGsc, props.value) })
   Object.assign(app.config.globalProperties, { gscMetricColors, useProHumanFriendlyNumber: (n: number) => String(n) })
   const pass = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) })
-  for (const name of ['ClientOnly', 'UiTrend', 'UIcon', 'UiSkeleton', 'UiPopover', 'UiSparkline', 'UiIcon', 'ProFavicon'])
+  for (const name of ['ClientOnly', 'UiTrend', 'UIcon', 'UiSkeleton', 'UiChartSkeleton', 'UiEmptyState', 'UiSyncDot', 'UiPopover', 'UiSparkline', 'UiIcon', 'ProFavicon'])
     app.component(name, pass)
+  app.component('UiChartFrame', UiChartFrame)
   const host = document.createElement('div')
   document.body.appendChild(host)
   app.mount(host)
   await nextTick()
   const chart = host.querySelector('.touch-pan-y') as HTMLElement
-  const graph = host.querySelector('[data-ui="ProGraphGsc"]')!.parentElement!
-  chart.getBoundingClientRect = graph.getBoundingClientRect = () => ({ left: 0, width: 600 }) as DOMRect
+  chart.getBoundingClientRect = () => ({ left: 0, top: 0, width: 600, height: 220 }) as DOMRect
   const pointer = (target: EventTarget, type: string, x: number) => {
     const event = new Event(type, { bubbles: true })
-    Object.assign(event, { button: 0, clientX: x, clientY: 0, pointerId: 1, pointerType: 'mouse' })
+    Object.assign(event, { button: 0, clientX: x, clientY: 100, pointerId: 1, pointerType: 'mouse' })
     target.dispatchEvent(event)
   }
   expect(host.querySelector('[data-axis]')?.textContent).toContain('19 Thu')
-  pointer(graph, 'pointermove', 600)
+  pointer(chart, 'mousemove', 600)
   await nextTick()
-  expect(host.querySelector('.absolute.top-1')?.textContent).toContain('Thu, Nov 19, 2026')
-  expect(host.querySelector('.absolute.bottom-9')?.textContent?.trim()).toBe('Thu, Nov 19, 2026')
+  expect(host.querySelector('.ui-popover-content')?.textContent).toContain('Thu, Nov 19')
   expect(host.textContent).toContain('Thu, Nov 12, 2026')
   expect(host.textContent).toContain('Nov 13 → Nov 19')
   pointer(chart, 'pointerdown', 200)
   pointer(window, 'pointermove', 600)
   await new Promise(resolve => requestAnimationFrame(resolve))
   await nextTick()
-  expect(Array.from(host.querySelectorAll('.absolute.bottom-9'), el => el.textContent?.trim())).toEqual(['Nov 15', 'Nov 19'])
+  expect(Array.from(host.querySelectorAll('.bg-inverted.rounded-full'), el => el.textContent?.trim())).toEqual(['Nov 15', 'Nov 19'])
   expect(host.textContent).toContain('5 days')
   pointer(window, 'pointerup', 600)
   await nextTick()
