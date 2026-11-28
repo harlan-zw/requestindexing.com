@@ -9,7 +9,7 @@ import { feedback as feedbackTable } from '../../database/_surface'
 import { feedbackTriageSet, listDashboardFeedbackHistory } from '../../utils/dashboard-feedback'
 import feedback from './feedback.post'
 
-interface Context { event: H3Event, db: ReturnType<typeof useDrizzle>, caller: { user: { id: number } }, team: { team: { teamId: number } }, body: unknown }
+interface Context { event: H3Event, db: ReturnType<typeof useDrizzle>, caller: { user: { id: number, email: string | null } }, team: { team: { teamId: number } }, body: unknown }
 const sendEmailMock = vi.hoisted(() => vi.fn())
 vi.mock('#layers/pro-saas/server/utils/handler', () => ({ defineProApiHandler: (options: { body: ZodType }, handle: (context: Context) => unknown) => (context: Context) => handle({ ...context, body: options.body.parse(context.body) }) }))
 vi.mock('#layers/pro-gsc/server/utils/gscdump-browser-origin', () => ({ assertGscdumpBrowserUnsafeMethodOrigin: vi.fn() }))
@@ -18,11 +18,12 @@ vi.mock('~~/layers/core/server/utils/email', () => ({ sendEmail: sendEmailMock }
 let sqlite: ReturnType<typeof migratedDatabase>
 let db: ReturnType<typeof proDatabase>
 let pendingWaitUntil: Promise<unknown>[]
-async function send(body: unknown) {
+let observedQueries: string[]
+async function send(body: unknown, email: string | null = '7@example.test') {
   return (feedback as unknown as (context: Context) => Promise<unknown>)({
     event: { waitUntil: (work: Promise<unknown>) => { pendingWaitUntil.push(work) } } as unknown as H3Event,
     db: db as unknown as ReturnType<typeof useDrizzle>,
-    caller: { user: { id: 7 } },
+    caller: { user: { id: 7, email } },
     team: { team: { teamId: 1 } },
     body,
   })
@@ -33,7 +34,10 @@ function rows() {
 
 beforeEach(() => {
   sqlite = migratedDatabase()
-  db = proDatabase(sqlite)
+  observedQueries = []
+  db = proDatabase(sqlite, (statements) => {
+    observedQueries.push(...statements.map(statement => statement.sql))
+  })
   pendingWaitUntil = []
   sendEmailMock.mockReset().mockResolvedValue({ _tag: 'Sent' })
   sqlite.prepare('INSERT INTO teams (team_id, public_id, name) VALUES (?, ?, ?)').run(1, 'team-one', 'Team')
@@ -59,6 +63,25 @@ it('stores a bug report with its diagnostics where the admin feedback resources 
     replyTo: '7@example.test',
     subject: 'Request Indexing feedback: /pro/dashboard/sites/s_1',
   }))
+})
+
+it('uses caller.user.email directly without re-querying users', async () => {
+  expect(await send({ intent: 'bug', path: '/pro/dashboard', comment: 'Identity email test' }, 'identity@example.test')).toEqual({ _tag: 'Recorded' })
+  await Promise.all(pendingWaitUntil)
+  expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+    replyTo: 'identity@example.test',
+  }))
+  expect(observedQueries.some(sql => /\bfrom\s+"?users"?\b/i.test(sql))).toBe(false)
+
+  sendEmailMock.mockClear()
+  observedQueries = []
+  expect(await send({ intent: 'bug', path: '/pro/dashboard', comment: 'No email test' }, null)).toEqual({ _tag: 'Recorded' })
+  await Promise.all(pendingWaitUntil)
+  expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+    to: 'harlan@harlanzw.com',
+  }))
+  expect(sendEmailMock.mock.calls[0]?.[0]).not.toHaveProperty('replyTo')
+  expect(observedQueries.some(sql => /\bfrom\s+"?users"?\b/i.test(sql))).toBe(false)
 })
 
 it('still records feedback when operator email delivery fails', async () => {
@@ -108,7 +131,7 @@ it('returns only the account submissions with public resolutions and hides inter
   await (feedback as unknown as (context: Context) => Promise<unknown>)({
     event: {} as H3Event,
     db: db as unknown as ReturnType<typeof useDrizzle>,
-    caller: { user: { id: 8 } },
+    caller: { user: { id: 8, email: '8@example.test' } },
     team: { team: { teamId: 1 } },
     body: { path: '/pro/dashboard', sentiment: 'love', comment: 'Other user' },
   })

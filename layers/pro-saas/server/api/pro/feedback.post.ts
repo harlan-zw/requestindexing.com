@@ -1,10 +1,8 @@
 import type { DashboardFeedbackWrite } from '#layers/pro-saas/server/utils/dashboard-feedback'
 import { feedbackSubmitSchema } from '@nuxtseo/pro-shell/shared/contracts'
-import { eq } from 'drizzle-orm'
 import { sendEmail } from '~~/layers/core/server/utils/email'
 import { logWarn } from '~~/shared/logging'
 import { assertGscdumpBrowserUnsafeMethodOrigin } from '#layers/pro-gsc/server/utils/gscdump-browser-origin'
-import { users } from '#layers/pro-saas/server/database/_surface'
 import { recordDashboardFeedback, toDashboardFeedbackRow } from '#layers/pro-saas/server/utils/dashboard-feedback'
 import { sendFeedbackReceivedEmail } from '#layers/pro-saas/server/utils/feedback-received-email'
 import { defineProApiHandler } from '#layers/pro-saas/server/utils/handler'
@@ -20,21 +18,18 @@ export default defineProApiHandler({ team: true, body: feedbackSubmitSchema }, a
   if (record._tag !== 'Recorded')
     return record
 
-  const notify = (async () => {
-    const [reporter] = await db.select({ email: users.email }).from(users).where(eq(users.userId, caller.user.id)).limit(1)
-    await sendFeedbackReceivedEmail({ send: sendEmail }, {
-      feedbackId: record.feedbackId,
-      path: body.path,
-      intent: body.intent ?? 'other',
-      sentiment: body.sentiment ?? null,
-      comment: body.comment ?? null,
-      reporterEmail: reporter?.email ?? null,
-      userId: caller.user.id,
-      siteId: body.siteId ?? null,
-      viewport: body.viewport ?? null,
-      clientErrors: body.clientErrors ?? null,
-    })
-  })().catch((error: unknown) => {
+  const notify = sendFeedbackReceivedEmail({ send: sendEmail }, {
+    feedbackId: record.feedbackId,
+    path: body.path,
+    intent: body.intent ?? 'other',
+    sentiment: body.sentiment ?? null,
+    comment: body.comment ?? null,
+    reporterEmail: caller.user.email,
+    userId: caller.user.id,
+    siteId: body.siteId ?? null,
+    viewport: body.viewport ?? null,
+    clientErrors: body.clientErrors ?? null,
+  }).catch((error: unknown) => {
     logWarn('email.send_failed', error, { stage: 'feedback_received', feedbackId: record.feedbackId, userId: caller.user.id })
   })
 

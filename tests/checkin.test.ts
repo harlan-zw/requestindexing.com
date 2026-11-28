@@ -4,6 +4,7 @@ import { expect, it } from 'vitest'
 import database from '../server/checks/database'
 import feedback from '../server/checks/feedback'
 import integration from '../server/checks/integration'
+import { migratedDatabase } from './support/migrated-d1'
 
 function failReason(result: CheckResult): string {
   if (result._tag !== 'Fail')
@@ -101,36 +102,82 @@ it('reports a missing binding unavailable', async () => {
   expect(report.results[0]?.result._tag).toBe('Unavailable')
 })
 
-it('passes feedback checkin when no untriaged reports exist and warns when new reports await review', async () => {
-  const makeDb = (row: { count: number, oldest_created_at: number | null } | Error) => ({
-    prepare: () => ({
-      first: async () => {
-        if (row instanceof Error)
-          throw row
-        return row
+it('ignores anonymous tool thumbs for warning severity while surfacing them as signal', async () => {
+  const sqlite = migratedDatabase()
+  try {
+    const db = {
+      prepare: (sql: string) => ({
+        first: async () => sqlite.prepare(sql).get() ?? null,
+      }),
+    }
+
+    const empty = await runChecks([feedback], { event: databaseEvent(db) })
+    expect(empty.severity).toBe('pass')
+    expect(empty.results[0]?.result).toEqual({
+      _tag: 'Pass',
+      evidence: { newCount: 0, toolThumbsDown: 0, toolThumbsUp: 0 },
+    })
+
+    // Anonymous free-tool votes should surface as signal without turning daily checkin into Warn.
+    const thumbTs = Math.floor(Date.parse('2026-11-20T00:00:00Z') / 1000)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, metadata, user_id, created_at) VALUES (?, ?, NULL, ?, NULL, ?)').run('/tools/sitemap', 'up', JSON.stringify({ source: 'tool-feedback', toolId: 'sitemap' }), thumbTs)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, metadata, user_id, created_at) VALUES (?, ?, NULL, ?, NULL, ?)').run('/blog/post', 'up', JSON.stringify({ source: 'site-feedback' }), thumbTs)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, metadata, user_id, created_at) VALUES (?, ?, NULL, ?, NULL, ?)').run('/tools/meta', 'down', JSON.stringify({ source: 'tool-feedback', toolId: 'meta' }), thumbTs)
+
+    const thumbsOnly = await runChecks([feedback], { event: databaseEvent(db) })
+    expect(thumbsOnly.severity).toBe('pass')
+    expect(thumbsOnly.results[0]?.result).toEqual({
+      _tag: 'Pass',
+      evidence: { newCount: 0, toolThumbsDown: 1, toolThumbsUp: 2 },
+    })
+
+    // Actionable reports (signed-in dashboard feedback, written comments, and nullified-user account-delete churn rows) trigger Warn.
+    const reportOldest = Math.floor(Date.parse('2026-11-28T00:00:00Z') / 1000)
+    const reportNewer = Math.floor(Date.parse('2026-11-28T06:00:00Z') / 1000)
+    sqlite.prepare('INSERT INTO teams (team_id, public_id, name) VALUES (?, ?, ?)').run(1, 'team-1', 'Team')
+    sqlite.prepare('INSERT INTO users (user_id, public_id, name, email, avatar, last_login, sub, current_team_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(7, 'u-7', 'Test', '7@example.test', '', Date.now(), 'sub-7', 1)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, metadata, user_id, created_at) VALUES (?, ?, NULL, ?, NULL, ?)').run('/pro/dashboard/account/delete', 'down', JSON.stringify({ type: 'account_delete', reasons: ['price'] }), reportOldest)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, metadata, user_id, created_at) VALUES (?, ?, NULL, ?, ?, ?)').run('/pro/dashboard', 'up', JSON.stringify({ source: 'dashboard-drawer' }), 7, reportNewer)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, metadata, user_id, created_at) VALUES (?, NULL, ?, ?, NULL, ?)').run('/tools/meta', 'Broken parser', JSON.stringify({ source: 'tool-feedback' }), reportNewer)
+    sqlite.prepare('INSERT INTO feedback (path, thumb, comment, user_id, status, created_at) VALUES (?, NULL, ?, ?, ?, ?)').run('/pro/dashboard', 'Already triaged', 7, 'triaged', thumbTs)
+
+    const waiting = await runChecks([feedback], { event: databaseEvent(db) })
+    expect(waiting.severity).toBe('warn')
+    expect(waiting.results[0]?.result).toMatchObject({
+      _tag: 'Warn',
+      evidence: {
+        newCount: 3,
+        oldestCreatedAt: '2026-11-28T00:00:00.000Z',
+        toolThumbsDown: 1,
+        toolThumbsUp: 2,
+        adminUrl: 'https://requestindexing.com/admin/feedback',
       },
+    })
+  }
+  finally {
+    sqlite.close()
+  }
+
+  const errored = await runChecks([feedback], {
+    event: databaseEvent({
+      prepare: () => ({
+        first: async () => {
+          throw new Error('D1_ERROR: no such table: feedback')
+        },
+      }),
     }),
   })
-
-  const empty = await runChecks([feedback], { event: databaseEvent(makeDb({ count: 0, oldest_created_at: null })) })
-  expect(empty.severity).toBe('pass')
-  expect(empty.results[0]?.result).toEqual({ _tag: 'Pass', evidence: { newCount: 0 } })
-
-  const oldest = Math.floor(Date.parse('2026-11-28T00:00:00Z') / 1000)
-  const waiting = await runChecks([feedback], { event: databaseEvent(makeDb({ count: 2, oldest_created_at: oldest })) })
-  expect(waiting.severity).toBe('warn')
-  expect(waiting.results[0]?.result).toMatchObject({
-    _tag: 'Warn',
-    evidence: {
-      newCount: 2,
-      oldestCreatedAt: '2026-11-28T00:00:00.000Z',
-      adminUrl: 'https://requestindexing.com/admin/feedback',
-    },
-  })
-
-  const errored = await runChecks([feedback], { event: databaseEvent(makeDb(new Error('D1_ERROR: no such table: feedback'))) })
   expect(errored.severity).toBe('fail')
   expect(failReason(errored.results[0]!.result)).toContain('D1_ERROR')
+
+  const emptyRow = await runChecks([feedback], {
+    event: databaseEvent({
+      prepare: () => ({
+        first: async () => null,
+      }),
+    }),
+  })
+  expect(emptyRow.severity).toBe('fail')
 
   const missing = await runChecks([feedback], { event: { context: { cloudflare: { env: {} } } } })
   expect(missing.results[0]?.result._tag).toBe('Unavailable')
