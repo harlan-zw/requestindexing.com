@@ -59,7 +59,7 @@ export function getRemainingRequests(count: number | null, tier: Tier): number {
 const FREE_TOOL_DAILY_LIMIT = 50
 const FEEDBACK_DAILY_LIMIT = 20
 
-export async function checkFreeToolRateLimit(event: H3Event, opts?: { cost?: number }) {
+export async function checkFreeToolRateLimit(event: H3Event, opts?: { cost?: number, skipMinuteLimit?: boolean }) {
   // Skip rate limiting in development
   if (import.meta.dev)
     return
@@ -73,20 +73,22 @@ export async function checkFreeToolRateLimit(event: H3Event, opts?: { cost?: num
   const key = `ip:${ip}`
 
   // Per-minute check (native Cloudflare binding)
-  const cf = resolveCloudflareBindings<Record<string, RateLimiter>>(event)
-  const limiter = cf?.RL_FREE_TOOLS
+  if (!opts?.skipMinuteLimit) {
+    const cf = resolveCloudflareBindings<Record<string, RateLimiter>>(event)
+    const limiter = cf?.RL_FREE_TOOLS
 
-  if (limiter) {
-    const { success } = await limiter.limit({ key })
-    if (!success) {
-      setResponseHeaders(event, {
-        'X-RateLimit-Limit': String(FREE_TOOL_DAILY_LIMIT),
-        'Retry-After': '60',
-      })
-      throw createError({
-        statusCode: 429,
-        message: 'Rate limit exceeded. Please wait a minute before checking again.',
-      })
+    if (limiter) {
+      const { success } = await limiter.limit({ key })
+      if (!success) {
+        setResponseHeaders(event, {
+          'X-RateLimit-Limit': String(FREE_TOOL_DAILY_LIMIT),
+          'Retry-After': '60',
+        })
+        throw createError({
+          statusCode: 429,
+          message: 'Rate limit exceeded. Please wait a minute before checking again.',
+        })
+      }
     }
   }
 

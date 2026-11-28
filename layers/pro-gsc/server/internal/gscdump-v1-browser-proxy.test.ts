@@ -1,6 +1,8 @@
 import type { Caller } from '#layers/pro-saas/shared/caller'
 import { describe, expect, it } from 'vitest'
 import {
+  extractSiteIndexingEvidenceObservation,
+  isSiteIndexingEvidenceOperation,
   resolveGscdumpV1ProxyOperation,
   selectGscdumpV1ProxyBody,
   selectGscdumpV1ProxyTarget,
@@ -259,5 +261,34 @@ describe('selectGscdumpV1SiteAccess', () => {
   it('lets an admin caller bypass membership entirely', () => {
     const caller = makeCaller({ isAdmin: true })
     expect(selectGscdumpV1SiteAccess(caller, { teamIds: [] }, true)).toEqual({ _tag: 'allowed' })
+  })
+})
+
+describe('site indexing evidence observation', () => {
+  it('recognizes only the Site indexing evidence read operations', () => {
+    expect(isSiteIndexingEvidenceOperation('partner.sites.indexing.get')).toBe(true)
+    expect(isSiteIndexingEvidenceOperation('partner.sites.indexing.diagnostics.get')).toBe(true)
+    expect(isSiteIndexingEvidenceOperation('partner.sites.indexing.urls.list')).toBe(true)
+    expect(isSiteIndexingEvidenceOperation('partner.sites.sitemaps.get')).toBe(false)
+  })
+
+  it('extracts positive inspection counts and ignores empty snapshots', () => {
+    expect(extractSiteIndexingEvidenceObservation('partner.sites.indexing.diagnostics.get', { summary: { totalUrls: 42 } }))
+      .toEqual({ count: 42, source: 'diagnostics' })
+    expect(extractSiteIndexingEvidenceObservation('partner.sites.indexing.diagnostics.get', { summary: { totalUrls: 0 } }))
+      .toBeNull()
+
+    expect(extractSiteIndexingEvidenceObservation('partner.sites.indexing.urls.list', { urls: [{ url: 'https://example.com/' }] }))
+      .toEqual({ count: 1, source: 'urls' })
+    expect(extractSiteIndexingEvidenceObservation('partner.sites.indexing.urls.list', { urls: [] }))
+      .toBeNull()
+
+    expect(extractSiteIndexingEvidenceObservation('partner.sites.indexing.get', { meta: { inspectedCount: 12 } }))
+      .toEqual({ count: 12, source: 'overview' })
+    expect(extractSiteIndexingEvidenceObservation('partner.sites.indexing.get', { meta: { inspectedCount: 0 } }))
+      .toBeNull()
+
+    expect(extractSiteIndexingEvidenceObservation('partner.sites.sitemaps.get', { sitemaps: [{}] }))
+      .toBeNull()
   })
 })

@@ -61,6 +61,8 @@ export const PRERENDERED_PAGE_PATHS = [
   '/comparisons/vs-indexly',
   '/comparisons/vs-seo-gets',
   '/comparisons/vs-tagparrot',
+  '/crawled-currently-not-indexed',
+  '/discovered-currently-not-indexed',
   '/google-indexing-api',
   '/google-indexing-api-node-js',
   '/google-indexing-api-quota',

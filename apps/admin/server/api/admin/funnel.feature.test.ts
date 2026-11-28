@@ -131,6 +131,15 @@ describe('admin funnel endpoint', () => {
     expect(event.res.headers.get('Cache-Control')).toBe('private, no-store')
     expect(JSON.stringify(result)).not.toContain('must-not-leak')
   })
+  it('counts site_evidence_viewed as Viewed Google evidence in the funnel', async () => {
+    const insert = sqlite.prepare('INSERT INTO pro_events (user_id, type, created_at, payload) VALUES (1, ?, ?, ?)')
+    insert.run('signed_up', Date.parse('2026-10-01T00:00:00Z'), null)
+    insert.run('site_added', Date.parse('2026-10-02T00:00:00Z'), null)
+    insert.run('site_evidence_viewed', Date.parse('2026-10-03T12:00:00Z'), JSON.stringify({ siteId: 's_1', count: 18, source: 'diagnostics' }))
+    const result = await read()
+    expect(result.evidenceViewed).toBe(1)
+    expect(result.users[0]?.journey?.stageTimes.evidenceViewed).toBe('2026-10-03T12:00:00.000Z')
+  })
   it('reports Onboarding Answers in the funnel and in shared customer insights, ignoring a malformed row', async () => {
     sqlite.exec(`INSERT INTO users (user_id, public_id, name, email, avatar, last_login, sub, current_team_id, created_at, onboarding_answers)
       VALUES (2, 'u_two', 'Bo', 'bo@example.test', '', 1, 'google-2', 1, '2026-04-22 15:13:53', '{"role":"ceo","intents":[]}');`)

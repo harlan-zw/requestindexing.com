@@ -13,7 +13,7 @@ Done means: the home page, onboarding emails, and listing text in production mat
 - [x] Home page plan, channel kit, and graded research in `docs/marketing/`
 - [x] Twelve live truth-rule breaks fixed (#405)
 - [x] History past 16 months: the home page history line names the Free allowance (#420)
-- [ ] `apps/marketing/public/skills/google-indexing/SKILL.md` never names IndexNow
+- [x] `apps/marketing/public/skills/google-indexing/SKILL.md` updated to cover IndexNow, Watched URLs, and all current diagnosis guides
 - [x] H1 decided 2026-11-17: keep "Get your pages indexed." and say what each engine does under it
 - [x] Audience decided 2026-11-17: the long tail comes in free; multi-Site operators pay later
 - [x] IndexNow delivery: every production attempt got HTTP 429 until gscdump.com#1222 moved delivery to a relay. The first Submission after it got HTTP 202 (2026-11-18)
@@ -21,7 +21,7 @@ Done means: the home page, onboarding emails, and listing text in production mat
 - [x] IndexNow setup guide with the key file (#422, review notes #424)
 - [ ] Contact the people who paid for the old Pro plan (deferred 2026-11-17)
 - [x] Read the admin funnel; set the metric baseline and the 60-day target
-- [x] Confirm the "Viewed Google evidence" event records: checked 2026-11-19. Both events still count nobody, and so do the inspection and first-report starts that lead to them. The recorders work, but few users take those two opt-in paths. The Site indexing pages, where users read Google's verdict, record no event. Connect a Site stays the metric until a Site page records evidence views
+- [x] Confirm the "Viewed Google evidence" event records: checked 2026-11-19. Both onboarding events worked, but few users took those opt-in paths. Added `site_evidence_viewed` through the gscdump proxy when Site indexing pages return real URL Inspection verdicts, wired into `/admin/funnel` alongside `page_evidence_viewed` and `first_report_evidence_viewed`
 - [x] Record where signups stop at the Google connect step: read-only Google access and stop records (#431), Connect Google required before setup finishes (#432)
 - [ ] Read the stop records and find why about half of signups stop at the Google connect step
 - [ ] Send the flip-test question; record the counts in `docs/audits/`

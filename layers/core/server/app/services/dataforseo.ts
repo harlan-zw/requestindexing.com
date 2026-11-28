@@ -332,25 +332,4 @@ export async function getDomainOverview(domain: string, ctx?: DataForSeoCallCont
   }
 }
 
-export async function fetchSitemapUrlsFromXml(sitemapUrl: string): Promise<string[]> {
-  const response = await $fetch<string>(sitemapUrl, { responseType: 'text' })
-  const urls: string[] = []
-  const extractLocations = (xml: string) => Array.from(
-    xml.matchAll(/<loc>([^<]*)<\/loc>/g),
-    match => match[1]?.trim(),
-  ).filter((location): location is string => Boolean(location))
-
-  if (response.includes('<sitemapindex')) {
-    const childUrls = extractLocations(response)
-
-    for (const childUrl of childUrls.slice(0, 5)) {
-      const childResponse = await $fetch<string>(childUrl, { responseType: 'text' }).catch(() => '')
-      urls.push(...extractLocations(childResponse))
-    }
-  }
-  else {
-    urls.push(...extractLocations(response))
-  }
-
-  return urls
-}
+export { fetchSitemapUrlsFromXml, validatePublicSitemapUrl } from './sitemap-fetch'

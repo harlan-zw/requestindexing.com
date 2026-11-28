@@ -25,6 +25,18 @@ export const GUIDE_NAV_ITEMS: readonly GuideNavItem[] = [
     category: 'search-console',
   },
   {
+    label: 'Crawled - Not Indexed',
+    icon: 'i-heroicons-document-magnifying-glass',
+    to: '/crawled-currently-not-indexed',
+    category: 'search-console',
+  },
+  {
+    label: 'Discovered - Not Indexed',
+    icon: 'i-heroicons-exclamation-triangle',
+    to: '/discovered-currently-not-indexed',
+    category: 'search-console',
+  },
+  {
     label: 'Set Up IndexNow',
     icon: 'i-heroicons-paper-airplane',
     to: '/indexnow-setup',

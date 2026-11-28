@@ -14,6 +14,10 @@ keywords:
   - discovered currently not indexed
   - crawled currently not indexed
 relatedPages:
+  - path: /crawled-currently-not-indexed
+    title: "Crawled - currently not indexed"
+  - path: /discovered-currently-not-indexed
+    title: "Discovered - currently not indexed"
   - path: /why-is-my-site-not-indexed
     title: Why is my site not indexed?
   - path: /request-indexing-google-search-console
@@ -56,7 +60,7 @@ Google has not seen this URL before. URL Inspection shows this label.
 
 Google found the URL, but it has not crawled the page yet. Google says that it usually delays the crawl so that it does not overload your site. So the last crawl date is empty.
 
-**First fix:** Link to it from your indexed pages. Cut thin URLs, such as empty tag pages.
+**First fix:** Link to it from your indexed pages. Cut thin URLs, such as empty tag pages. Read the full [Discovered - currently not indexed guide](/discovered-currently-not-indexed) for crawl capacity, server error, and verification checks.
 
 ## Google could not fetch the URL
 
@@ -151,7 +155,7 @@ The page is marked as the canonical, but Google chose another URL as the canonic
 
 Google crawled the page but did not index it. Google says that it does not index every page, and that many sites see this reason. It does not always mean that something is wrong. The label alone does not say why.
 
-**First fix:** Compare it with similar pages on your site. Improve it, or merge it into the stronger page.
+**First fix:** Compare it with similar pages on your site. Improve it, or merge it into the stronger page. Read the full [Crawled - currently not indexed guide](/crawled-currently-not-indexed) for rendering, canonical, and section-level checks.
 
 ## See the reason for every URL in your sitemaps
 
