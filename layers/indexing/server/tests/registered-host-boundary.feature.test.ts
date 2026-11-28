@@ -224,6 +224,14 @@ describe('automatic links bind the requested host', () => {
     expect(external.register).not.toHaveBeenCalled()
   })
 
+  it('replaces a cached link when the engine confirms the Site is missing', async () => {
+    external.lifecycle.mockResolvedValue({ sites: [] })
+
+    await expect(autoLinkGsc({ db: proDatabase(sqlite) as never, user: { _tag: 'ReadyGscdumpUser', gscdumpUserId: 'u_owner' }, siteId: 'local', origin: 'https://example.com' })).resolves.toEqual({ _tag: 'Linked', gscdumpSiteId: 's_exact' })
+    expect(sqlite.prepare('SELECT gscdump_site_id FROM sites WHERE id = \'local\'').get()).toMatchObject({ gscdump_site_id: 's_exact' })
+    expect(external.deleteSite).not.toHaveBeenCalled()
+  })
+
   it('registers the local host instead of reusing a broad-property Site for another host', async () => {
     sqlite.exec('UPDATE sites SET gscdump_site_id = NULL, domain = \'www.example.com\' WHERE id = \'local\'')
     external.lifecycle.mockResolvedValue({ sites: [{ siteId: 's_engine', requestedUrl: 'https://example.com' }] })

@@ -93,8 +93,8 @@ export async function autoLinkGsc(opts: {
   const [existing] = await db.select({ gscdumpSiteId: sites.gscdumpSiteId }).from(sites).where(eq(sites.id, siteId))
 
   if (existing?.gscdumpSiteId) {
-    const reusable = await assertLocalRegisteredGscSiteScope(db, siteId, existing.gscdumpSiteId, id => gscdump.getRegisteredHostIdentity(id), origin)
-      .then(() => true)
+    const reusable = await assertLocalRegisteredGscSiteScope(db, siteId, existing.gscdumpSiteId, id => gscdump.getRegisteredHostIdentity(id), origin, 'relink')
+      .then(admission => admission._tag === 'Registered')
       .catch((error: unknown) => {
         if (isError(error) && error.statusCode === 403)
           return false

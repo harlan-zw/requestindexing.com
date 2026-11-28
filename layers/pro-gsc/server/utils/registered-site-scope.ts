@@ -9,6 +9,7 @@ import { registeredHost } from '../../shared/registered-site-host'
 
 interface Registration { identity: { siteId: string, requestedUrl: string, userId: string, teamId: string } }
 interface LinkedSite { localSiteId: string, domain: string | null, property: string, principalIds: readonly string[], upstreamTeamId: string | null }
+type RegisteredSiteOperation = 'read' | 'delete' | 'relink'
 export type RegisteredSiteAdmission = { _tag: 'Registered' } | { _tag: 'Absent' }
 
 /** gscdump's own account of a refused identity read: a pending catalog, an outage, or a missing Site. */
@@ -31,7 +32,7 @@ export async function assertLocalRegisteredGscSiteScope(
   upstreamSiteId: string,
   readIdentity: (siteId: string) => Promise<Registration>,
   expectedSiteUrl?: string,
-  operation: 'read' | 'delete' = 'read',
+  operation: RegisteredSiteOperation = 'read',
 ): Promise<RegisteredSiteAdmission> {
   const teamOwner = alias(users, 'scope_team_owner')
   const siteOwner = alias(users, 'scope_site_owner')
@@ -58,13 +59,13 @@ export async function assertRegisteredGscSiteScope(
   siteId: string,
   linkedSites: readonly LinkedSite[],
   readIdentity: (siteId: string) => Promise<Registration>,
-  operation: 'read' | 'delete' = 'read',
+  operation: RegisteredSiteOperation = 'read',
 ): Promise<RegisteredSiteAdmission> {
   const localHosts = linkedSites.map(site => registeredHost(site.domain ?? site.property))
   if (!localHosts.length || localHosts.some(host => !host))
     throw createError({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable' })
   const registration = await readIdentity(siteId).catch((error: unknown) => {
-    if (operation === 'delete' && isGscdumpV1Error(error) && error.code === 'site_not_found' && error.status === 404)
+    if ((operation === 'delete' || operation === 'relink') && isGscdumpV1Error(error) && error.code === 'site_not_found' && error.status === 404)
       return null
     logWarn('gscdump.site_access.read_failed', error, { gscdumpSiteId: siteId, ...engineRefusal(error) })
     const responseError = createError({ statusCode: 503, statusMessage: 'gsc_site_scope_unavailable' })
