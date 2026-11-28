@@ -2,8 +2,7 @@
 // missing, which is the point: an empty secret used to be baked in as an empty
 // `var` and only surfaced as a runtime 500.
 //
-// Stripe is deliberately absent. Billing was removed for the free-only beta;
-// there is no paid tier and no Stripe keys to require.
+// Stripe reconciliation is sandbox-only. Production deploys have no Stripe keys.
 export const CLOUDFLARE_REQUIRED_SECRETS = [
   'NUXT_APP_SECRET',
   'NUXT_DATAFORSEO_LOGIN',

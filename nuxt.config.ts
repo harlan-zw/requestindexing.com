@@ -453,6 +453,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     appSecret: '',
     checkinToken: '',
+    // Sandbox subscription reconciliation only. Payments remain disabled.
+    stripeReconciliationEnabled: false,
+    stripeSecretKey: '',
+    stripeWebhookSecret: '',
     // Gates the daily sync fan-out. The Free allowance email always sends.
     // Override with NUXT_NOTIFICATIONS_ENABLED.
     notificationsEnabled: true,

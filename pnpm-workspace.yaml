@@ -223,6 +223,7 @@ catalog:
   reka-ui: ^2.10.5
   scule: ^1.3.0
   sitemapper: ^4.1.6
+  stripe: 22.6.2
   tailwindcss: ^4.3.3
   typescript: 6.0.3
   ufo: ^1.6.4

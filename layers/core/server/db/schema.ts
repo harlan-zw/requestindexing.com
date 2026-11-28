@@ -93,6 +93,25 @@ export const users = sqliteTable('users', {
   gscdumpUserIdIdx: index('users_gscdump_user_id_idx').on(t.gscdumpUserId),
 }))
 
+// Request Indexing's Stripe account binding. gscdump owns the usage and allowances.
+export const stripeBillingAccounts = sqliteTable('stripe_billing_accounts', {
+  id: text('id').primaryKey().notNull().$defaultFn(() => crypto.randomUUID()),
+  userId: integer('user_id').notNull().unique().references(() => users.userId, { onDelete: 'cascade' }),
+  customerId: text('customer_id').notNull().unique(),
+  subscriptionId: text('subscription_id').notNull().unique(),
+  stripeStatus: text('stripe_status', { enum: ['incomplete', 'incomplete_expired', 'trialing', 'active', 'past_due', 'canceled', 'unpaid', 'paused'] }),
+  lastReconciledEventId: text('last_reconciled_event_id'),
+  reconciledAt: integer('reconciled_at'),
+})
+
+export const stripeWebhookReceipts = sqliteTable('stripe_webhook_receipts', {
+  eventId: text('event_id').primaryKey().notNull(),
+  billingAccountId: text('billing_account_id').notNull().references(() => stripeBillingAccounts.id, { onDelete: 'cascade' }),
+  reconciledAt: integer('reconciled_at').notNull(),
+}, t => ({
+  accountIdx: index('stripe_webhook_receipts_account_idx').on(t.billingAccountId),
+}))
+
 export const googleOAuthClients = sqliteTable('google_oauth_clients', {
   googleOAuthClientId: integer('google_oauth_client_id').notNull().primaryKey(),
   label: text('label').notNull(),
